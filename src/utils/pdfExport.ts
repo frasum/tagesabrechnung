@@ -414,6 +414,91 @@ export const generateDailySummaryPDF = (data: PDFExportData): void => {
     });
   }
 
+  // BARGELD Formula Explanation
+  yPos = (doc as any).lastAutoTable.finalY + 15;
+  
+  if (yPos > 180) {
+    doc.addPage();
+    yPos = 20;
+  }
+
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Wie wird BARGELD berechnet?', margin, yPos);
+  yPos += 8;
+
+  // Formula breakdown table
+  const formulaData = [
+    ['+ Kellner Umsatz', formatCurrency(data.totals.kellnerUmsatz)],
+    ['+ Gutschein VK', formatCurrency(data.session.vouchers_sold || 0)],
+    ['+ Sonstige Einnahmen', formatCurrency(data.session.sonstige_einnahme || 0)],
+    ['+ Hilf Mahl', formatCurrency(data.totals.totalHilfMahl)],
+    ['= Summe Einnahmen', formatCurrency(totalRevenue)],
+    ['', ''],
+    ['− Terminals (1+2)', formatCurrency((data.session.terminal_1_total || 0) + (data.session.terminal_2_total || 0))],
+    ['− OpenTabs', formatCurrency(data.session.opentabs_deduction || 0)],
+    ['− Gutschein EL + FineDine', formatCurrency((data.session.vouchers_redeemed || 0) + (data.session.finedine_vouchers || 0))],
+    ['− Vorschuss + Einladung', formatCurrency((data.session.vorschuss || 0) + (data.session.einladung || 0))],
+    ['− Offene Rechnungen', formatCurrency(data.totals.totalOpenInvoices)],
+    ['− Ausgaben', formatCurrency(data.totals.totalExpenses)],
+    ['− Lieferplattformen', formatCurrency(data.totals.totalDeliveryRevenue)],
+    ['= Summe Abzüge', formatCurrency(totalDeductions)],
+    ['', ''],
+    ['= BARGELD', formatCurrency(data.totals.bargeld)],
+  ];
+
+  const bargeldIsPositive = data.totals.bargeld >= 0;
+
+  autoTable(doc, {
+    startY: yPos,
+    margin: { left: margin, right: margin },
+    head: [['Formel-Position', 'Betrag']],
+    body: formulaData,
+    theme: 'plain',
+    headStyles: { fillColor: [51, 65, 85], fontSize: 9, textColor: 255 },
+    bodyStyles: { fontSize: 9 },
+    columnStyles: { 1: { halign: 'right' } },
+    didParseCell: function(cellHookData) {
+      // Style additions (green)
+      if (cellHookData.section === 'body' && cellHookData.row.index >= 0 && cellHookData.row.index <= 3) {
+        cellHookData.cell.styles.textColor = [22, 101, 52];
+      }
+      // Style "Summe Einnahmen" row
+      if (cellHookData.section === 'body' && cellHookData.row.index === 4) {
+        cellHookData.cell.styles.fontStyle = 'bold';
+        cellHookData.cell.styles.fillColor = [220, 252, 231];
+        cellHookData.cell.styles.textColor = [22, 101, 52];
+      }
+      // Style deductions (red)
+      if (cellHookData.section === 'body' && cellHookData.row.index >= 6 && cellHookData.row.index <= 12) {
+        cellHookData.cell.styles.textColor = [185, 28, 28];
+      }
+      // Style "Summe Abzüge" row
+      if (cellHookData.section === 'body' && cellHookData.row.index === 13) {
+        cellHookData.cell.styles.fontStyle = 'bold';
+        cellHookData.cell.styles.fillColor = [254, 226, 226];
+        cellHookData.cell.styles.textColor = [185, 28, 28];
+      }
+      // Empty row - hide
+      if (cellHookData.section === 'body' && (cellHookData.row.index === 5 || cellHookData.row.index === 14)) {
+        cellHookData.cell.styles.minCellHeight = 2;
+        cellHookData.cell.styles.cellPadding = 0;
+      }
+      // Final BARGELD row
+      if (cellHookData.section === 'body' && cellHookData.row.index === 15) {
+        cellHookData.cell.styles.fontStyle = 'bold';
+        cellHookData.cell.styles.fontSize = 11;
+        if (bargeldIsPositive) {
+          cellHookData.cell.styles.fillColor = [220, 252, 231];
+          cellHookData.cell.styles.textColor = [22, 101, 52];
+        } else {
+          cellHookData.cell.styles.fillColor = [254, 226, 226];
+          cellHookData.cell.styles.textColor = [185, 28, 28];
+        }
+      }
+    },
+  });
+
   // Footer
   const pageCount = doc.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
