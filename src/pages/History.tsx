@@ -104,12 +104,8 @@ export default function History() {
                 modifiers={{
                   hasSession: sessions.map(s => new Date(s.session_date)),
                 }}
-                modifiersStyles={{
-                  hasSession: {
-                    backgroundColor: 'hsl(var(--primary) / 0.1)',
-                    color: 'hsl(var(--primary))',
-                    fontWeight: 600,
-                  },
+                modifiersClassNames={{
+                  hasSession: 'bg-primary/20 text-primary font-semibold rounded-full',
                 }}
               />
             </CardContent>
