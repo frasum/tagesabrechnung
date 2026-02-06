@@ -34,6 +34,7 @@ export interface WaiterShift {
   session_id: string;
   waiter_name: string;
   pos_sales: number;
+  kassiert_brutto: number;
   card_total: number;
   hilf_mahl: number;
   open_invoices: number;

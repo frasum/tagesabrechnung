@@ -32,6 +32,7 @@ export default function WaiterCashUp() {
   // Form state for new waiter
   const [newWaiterName, setNewWaiterName] = useState('');
   const [newPosSales, setNewPosSales] = useState(0);
+  const [newKassiertBrutto, setNewKassiertBrutto] = useState(0);
   const [newCardTotal, setNewCardTotal] = useState(0);
   const [newHilfMahl, setNewHilfMahl] = useState(0);
   const [newOpenInvoices, setNewOpenInvoices] = useState(0);
@@ -73,6 +74,7 @@ export default function WaiterCashUp() {
         session_id: session.id,
         waiter_name: newWaiterName.trim(),
         pos_sales: newPosSales,
+        kassiert_brutto: newKassiertBrutto,
         card_total: newCardTotal,
         hilf_mahl: newHilfMahl,
         open_invoices: newOpenInvoices,
@@ -82,6 +84,7 @@ export default function WaiterCashUp() {
       // Reset form
       setNewWaiterName('');
       setNewPosSales(0);
+      setNewKassiertBrutto(0);
       setNewCardTotal(0);
       setNewHilfMahl(0);
       setNewOpenInvoices(0);
@@ -130,9 +133,15 @@ export default function WaiterCashUp() {
     }
   };
 
-  // Calculate waiter tip: cash handed in - differenz - kitchen tip
+  // Calculate expected cash: kassiert_brutto + hilf_mahl - open_invoices - card_total
+  const calculateExpected = (shift: typeof waiterShifts[0]) => {
+    return (shift.kassiert_brutto || 0) + shift.hilf_mahl - shift.open_invoices - shift.card_total;
+  };
+
+  // Calculate waiter tip: cash handed in - expected - kitchen tip
   const calculateWaiterTip = (shift: typeof waiterShifts[0]) => {
-    return shift.cash_handed_in - shift.differenz - shift.kitchen_tip;
+    const expected = calculateExpected(shift);
+    return shift.cash_handed_in - expected - shift.kitchen_tip;
   };
 
   const formatCurrency = (value: number) => {
@@ -208,20 +217,25 @@ export default function WaiterCashUp() {
                     <CurrencyInput value={newPosSales} onChange={setNewPosSales} />
                   </div>
                   <div>
-                    <Label>Kartenzahlung (KK)</Label>
-                    <CurrencyInput value={newCardTotal} onChange={setNewCardTotal} />
+                    <Label>Kassiert Brutto</Label>
+                    <CurrencyInput value={newKassiertBrutto} onChange={setNewKassiertBrutto} />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
+                    <Label>Kartenzahlung (KK)</Label>
+                    <CurrencyInput value={newCardTotal} onChange={setNewCardTotal} />
+                  </div>
+                  <div>
                     <Label>Hilf Mahl</Label>
                     <CurrencyInput value={newHilfMahl} onChange={setNewHilfMahl} />
                   </div>
-                  <div>
-                    <Label>Offene Rechnungen</Label>
-                    <CurrencyInput value={newOpenInvoices} onChange={setNewOpenInvoices} />
-                  </div>
+                </div>
+
+                <div>
+                  <Label>Offene Rechnungen</Label>
+                  <CurrencyInput value={newOpenInvoices} onChange={setNewOpenInvoices} />
                 </div>
 
                 <div>
@@ -232,13 +246,13 @@ export default function WaiterCashUp() {
                 {/* Preview Calculations */}
                 <div className="bg-muted rounded-lg p-4 space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Differenz:</span>
+                    <span className="text-muted-foreground">Erwartet (Kassiert + HilfM - Offen - Karte):</span>
                     <span className="font-medium tabular-nums">
-                      {formatCurrency(newPosSales + newHilfMahl - newOpenInvoices - newCardTotal)}
+                      {formatCurrency(newKassiertBrutto + newHilfMahl - newOpenInvoices - newCardTotal)}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Küchen Trinkgeld (2%):</span>
+                    <span className="text-muted-foreground">Küchen Trinkgeld (2% vom POS):</span>
                     <span className="font-medium tabular-nums">
                       {formatCurrency(newPosSales * 0.02)}
                     </span>
@@ -248,7 +262,7 @@ export default function WaiterCashUp() {
                     <span className="font-medium tabular-nums">
                       {formatCurrency(
                         newCashHandedIn - 
-                        (newPosSales + newHilfMahl - newOpenInvoices - newCardTotal) - 
+                        (newKassiertBrutto + newHilfMahl - newOpenInvoices - newCardTotal) - 
                         (newPosSales * 0.02)
                       )}
                     </span>
@@ -363,22 +377,24 @@ export default function WaiterCashUp() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Name</TableHead>
-                          <TableHead className="text-right">POS Umsatz</TableHead>
-                          <TableHead className="text-right">Karte (KK)</TableHead>
-                          <TableHead className="text-right">Hilf Mahl</TableHead>
-                          <TableHead className="text-right">Offene Rg.</TableHead>
+                          <TableHead className="text-right">POS</TableHead>
+                          <TableHead className="text-right">Kassiert</TableHead>
+                          <TableHead className="text-right">Karte</TableHead>
+                          <TableHead className="text-right">HilfM</TableHead>
+                          <TableHead className="text-right">Offen</TableHead>
                           <TableHead className="text-right">Erwartet</TableHead>
                           <TableHead className="text-right">Abgegeben</TableHead>
-                          <TableHead className="text-right">Abweichung</TableHead>
-                          <TableHead className="text-right">Küchen TG</TableHead>
-                          <TableHead className="text-right">Kellner TG</TableHead>
+                          <TableHead className="text-right">Abweich.</TableHead>
+                          <TableHead className="text-right">K.TG</TableHead>
+                          <TableHead className="text-right">W.TG</TableHead>
                           <TableHead></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {waiterShifts.map((shift) => {
+                          const expected = calculateExpected(shift);
                           const waiterTip = calculateWaiterTip(shift);
-                          const abweichung = shift.cash_handed_in - shift.differenz;
+                          const abweichung = shift.cash_handed_in - expected;
                           return (
                             <TableRow
                               key={shift.id}
@@ -388,10 +404,11 @@ export default function WaiterCashUp() {
                             >
                               <TableCell className="font-medium">{shift.waiter_name}</TableCell>
                               <TableCell className="text-right tabular-nums">{formatCurrency(shift.pos_sales)}</TableCell>
+                              <TableCell className="text-right tabular-nums">{formatCurrency(shift.kassiert_brutto || 0)}</TableCell>
                               <TableCell className="text-right tabular-nums">{formatCurrency(shift.card_total)}</TableCell>
                               <TableCell className="text-right tabular-nums">{formatCurrency(shift.hilf_mahl)}</TableCell>
                               <TableCell className="text-right tabular-nums">{formatCurrency(shift.open_invoices)}</TableCell>
-                              <TableCell className="text-right tabular-nums">{formatCurrency(shift.differenz)}</TableCell>
+                              <TableCell className="text-right tabular-nums">{formatCurrency(expected)}</TableCell>
                               <TableCell className="text-right tabular-nums">{formatCurrency(shift.cash_handed_in)}</TableCell>
                               <TableCell className={`text-right tabular-nums font-semibold ${abweichung < 0 ? 'text-destructive' : abweichung > 0 ? 'text-success' : ''}`}>
                                 {abweichung > 0 ? '+' : ''}{formatCurrency(abweichung)}

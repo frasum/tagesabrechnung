@@ -29,6 +29,7 @@ interface Session {
 interface WaiterShift {
   waiter_name: string;
   pos_sales: number;
+  kassiert_brutto: number;
   card_total: number;
   hilf_mahl: number;
   open_invoices: number;
@@ -164,19 +165,27 @@ export const generateDailySummaryPDF = (data: PDFExportData): void => {
     autoTable(doc, {
       startY: yPos,
       margin: { left: margin, right: margin },
-      head: [['Name', 'POS Umsatz', 'Karten', 'Hilf Mahl', 'Differenz', 'Küchen TG', 'Kellner TG']],
-      body: data.waiterShifts.map(shift => [
-        shift.waiter_name,
-        formatCurrency(shift.pos_sales),
-        formatCurrency(shift.card_total),
-        formatCurrency(shift.hilf_mahl),
-        formatCurrency(shift.differenz),
-        formatCurrency(shift.kitchen_tip),
-        formatCurrency(shift.cash_handed_in - shift.differenz - shift.kitchen_tip),
-      ]),
+      head: [['Name', 'POS', 'Kassiert', 'Karten', 'HilfM', 'Erwartet', 'Abgeg.', 'Abw.', 'K.TG', 'W.TG']],
+      body: data.waiterShifts.map(shift => {
+        const expected = (shift.kassiert_brutto || 0) + shift.hilf_mahl - shift.open_invoices - shift.card_total;
+        const abweichung = shift.cash_handed_in - expected;
+        const waiterTip = shift.cash_handed_in - expected - shift.kitchen_tip;
+        return [
+          shift.waiter_name,
+          formatCurrency(shift.pos_sales),
+          formatCurrency(shift.kassiert_brutto || 0),
+          formatCurrency(shift.card_total),
+          formatCurrency(shift.hilf_mahl),
+          formatCurrency(expected),
+          formatCurrency(shift.cash_handed_in),
+          formatCurrency(abweichung),
+          formatCurrency(shift.kitchen_tip),
+          formatCurrency(waiterTip),
+        ];
+      }),
       theme: 'striped',
-      headStyles: { fillColor: [51, 65, 85], fontSize: 8 },
-      bodyStyles: { fontSize: 8 },
+      headStyles: { fillColor: [51, 65, 85], fontSize: 7 },
+      bodyStyles: { fontSize: 7 },
       columnStyles: {
         1: { halign: 'right' },
         2: { halign: 'right' },
@@ -184,6 +193,9 @@ export const generateDailySummaryPDF = (data: PDFExportData): void => {
         4: { halign: 'right' },
         5: { halign: 'right' },
         6: { halign: 'right' },
+        7: { halign: 'right' },
+        8: { halign: 'right' },
+        9: { halign: 'right' },
       },
     });
 

@@ -97,6 +97,7 @@ export default function DailySummary() {
       waiterShifts: waiterShifts.map(w => ({
         waiter_name: w.waiter_name,
         pos_sales: w.pos_sales || 0,
+        kassiert_brutto: w.kassiert_brutto || 0,
         card_total: w.card_total || 0,
         hilf_mahl: w.hilf_mahl || 0,
         open_invoices: w.open_invoices || 0,

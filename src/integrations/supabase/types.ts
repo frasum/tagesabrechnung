@@ -247,6 +247,7 @@ export type Database = {
           differenz: number | null
           hilf_mahl: number | null
           id: string
+          kassiert_brutto: number | null
           kitchen_tip: number | null
           open_invoices: number | null
           pos_sales: number | null
@@ -260,6 +261,7 @@ export type Database = {
           differenz?: number | null
           hilf_mahl?: number | null
           id?: string
+          kassiert_brutto?: number | null
           kitchen_tip?: number | null
           open_invoices?: number | null
           pos_sales?: number | null
@@ -273,6 +275,7 @@ export type Database = {
           differenz?: number | null
           hilf_mahl?: number | null
           id?: string
+          kassiert_brutto?: number | null
           kitchen_tip?: number | null
           open_invoices?: number | null
           pos_sales?: number | null
