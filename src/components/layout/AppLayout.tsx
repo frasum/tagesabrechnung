@@ -8,7 +8,8 @@ import {
   History, 
   Menu,
   X,
-  Euro
+  Euro,
+  BarChart3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,7 @@ const navItems = [
   { href: '/manager', label: 'Manager Dashboard', icon: Settings },
   { href: '/kitchen', label: 'Küchen Trinkgeld', icon: ChefHat },
   { href: '/summary', label: 'Tagesabrechnung', icon: FileText },
+  { href: '/statistics', label: 'Statistiken', icon: BarChart3 },
   { href: '/history', label: 'Verlauf', icon: History },
 ];
 
