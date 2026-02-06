@@ -1,0 +1,381 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
+export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.1"
+  }
+  public: {
+    Tables: {
+      card_transactions: {
+        Row: {
+          amount: number
+          card_type: string
+          created_at: string
+          id: string
+          waiter_shift_id: string
+        }
+        Insert: {
+          amount: number
+          card_type: string
+          created_at?: string
+          id?: string
+          waiter_shift_id: string
+        }
+        Update: {
+          amount?: number
+          card_type?: string
+          created_at?: string
+          id?: string
+          waiter_shift_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "card_transactions_waiter_shift_id_fkey"
+            columns: ["waiter_shift_id"]
+            isOneToOne: false
+            referencedRelation: "waiter_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expenses: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string
+          id: string
+          session_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description: string
+          id?: string
+          session_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string
+          id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kitchen_shifts: {
+        Row: {
+          created_at: string
+          hours_worked: number | null
+          id: string
+          session_id: string
+          shift_end: string
+          shift_start: string
+          staff_name: string
+        }
+        Insert: {
+          created_at?: string
+          hours_worked?: number | null
+          id?: string
+          session_id: string
+          shift_end: string
+          shift_start: string
+          staff_name: string
+        }
+        Update: {
+          created_at?: string
+          hours_worked?: number | null
+          id?: string
+          session_id?: string
+          shift_end?: string
+          shift_start?: string
+          staff_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kitchen_shifts_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sessions: {
+        Row: {
+          created_at: string
+          einladung: number | null
+          finedine_vouchers: number | null
+          gustoco_revenue: number | null
+          id: string
+          is_finalized: boolean | null
+          notes: string | null
+          opentabs_deduction: number | null
+          orderhut_revenue: number | null
+          ordersmart_revenue: number | null
+          pos_total: number | null
+          session_date: string
+          sonstige_einnahme: number | null
+          spicery_counter: number | null
+          terminal_1_total: number | null
+          terminal_2_total: number | null
+          ubereats_revenue: number | null
+          updated_at: string
+          vorschuss: number | null
+          vouchers_redeemed: number | null
+          vouchers_sold: number | null
+          wolt_revenue: number | null
+        }
+        Insert: {
+          created_at?: string
+          einladung?: number | null
+          finedine_vouchers?: number | null
+          gustoco_revenue?: number | null
+          id?: string
+          is_finalized?: boolean | null
+          notes?: string | null
+          opentabs_deduction?: number | null
+          orderhut_revenue?: number | null
+          ordersmart_revenue?: number | null
+          pos_total?: number | null
+          session_date: string
+          sonstige_einnahme?: number | null
+          spicery_counter?: number | null
+          terminal_1_total?: number | null
+          terminal_2_total?: number | null
+          ubereats_revenue?: number | null
+          updated_at?: string
+          vorschuss?: number | null
+          vouchers_redeemed?: number | null
+          vouchers_sold?: number | null
+          wolt_revenue?: number | null
+        }
+        Update: {
+          created_at?: string
+          einladung?: number | null
+          finedine_vouchers?: number | null
+          gustoco_revenue?: number | null
+          id?: string
+          is_finalized?: boolean | null
+          notes?: string | null
+          opentabs_deduction?: number | null
+          orderhut_revenue?: number | null
+          ordersmart_revenue?: number | null
+          pos_total?: number | null
+          session_date?: string
+          sonstige_einnahme?: number | null
+          spicery_counter?: number | null
+          terminal_1_total?: number | null
+          terminal_2_total?: number | null
+          ubereats_revenue?: number | null
+          updated_at?: string
+          vorschuss?: number | null
+          vouchers_redeemed?: number | null
+          vouchers_sold?: number | null
+          wolt_revenue?: number | null
+        }
+        Relationships: []
+      }
+      waiter_shifts: {
+        Row: {
+          card_total: number | null
+          cash_handed_in: number | null
+          created_at: string
+          differenz: number | null
+          hilf_mahl: number | null
+          id: string
+          kitchen_tip: number | null
+          open_invoices: number | null
+          pos_sales: number | null
+          session_id: string
+          waiter_name: string
+        }
+        Insert: {
+          card_total?: number | null
+          cash_handed_in?: number | null
+          created_at?: string
+          differenz?: number | null
+          hilf_mahl?: number | null
+          id?: string
+          kitchen_tip?: number | null
+          open_invoices?: number | null
+          pos_sales?: number | null
+          session_id: string
+          waiter_name: string
+        }
+        Update: {
+          card_total?: number | null
+          cash_handed_in?: number | null
+          created_at?: string
+          differenz?: number | null
+          hilf_mahl?: number | null
+          id?: string
+          kitchen_tip?: number | null
+          open_invoices?: number | null
+          pos_sales?: number | null
+          session_id?: string
+          waiter_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "waiter_shifts_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+}
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const
