@@ -23,6 +23,7 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
   const [hourlyRate, setHourlyRate] = useState('');
   const [notes, setNotes] = useState('');
   const [isActive, setIsActive] = useState(true);
+  const [pinCode, setPinCode] = useState('');
 
   useEffect(() => {
     if (staff) {
@@ -32,6 +33,7 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       setHourlyRate(staff.hourly_rate?.toString() || '');
       setNotes(staff.notes || '');
       setIsActive(staff.is_active ?? true);
+      setPinCode(''); // Don't show existing PIN
     } else {
       setName('');
       setRole('waiter');
@@ -39,8 +41,15 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       setHourlyRate('');
       setNotes('');
       setIsActive(true);
+      setPinCode('');
     }
   }, [staff, open]);
+
+  const handlePinChange = (value: string) => {
+    // Only allow digits and max 4 characters
+    const sanitized = value.replace(/\D/g, '').slice(0, 4);
+    setPinCode(sanitized);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,6 +62,7 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       hourly_rate: hourlyRate ? parseFloat(hourlyRate) : undefined,
       notes: notes.trim() || undefined,
       is_active: isActive,
+      pin_code: pinCode.length === 4 ? pinCode : undefined,
     });
   };
 
@@ -88,6 +98,24 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
                 <SelectItem value="kitchen">Küche</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="pinCode">Login-Code (4 Ziffern)</Label>
+            <Input
+              id="pinCode"
+              type="password"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={pinCode}
+              onChange={(e) => handlePinChange(e.target.value)}
+              placeholder={staff ? '••••  (leer = unverändert)' : '••••'}
+              maxLength={4}
+              className="tracking-[0.3em]"
+            />
+            <p className="text-xs text-muted-foreground">
+              {staff ? 'Leer lassen um den bestehenden Code zu behalten' : 'Für die Anmeldung in der App'}
+            </p>
           </div>
 
           <div className="space-y-2">

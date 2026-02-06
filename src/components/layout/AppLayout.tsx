@@ -1,5 +1,5 @@
 import { ReactNode, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Users, 
   Settings, 
@@ -10,10 +10,12 @@ import {
   Menu,
   X,
   Euro,
-  BarChart3
+  BarChart3,
+  LogOut
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -31,8 +33,14 @@ const navItems = [
 
 export function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, logout } = useAuth();
 
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
   return (
     <div className="min-h-screen bg-background">
       {/* Mobile Header */}
@@ -76,6 +84,13 @@ export function AppLayout({ children }: AppLayoutProps) {
                 </Link>
               );
             })}
+            <button
+              onClick={() => { setMobileMenuOpen(false); handleLogout(); }}
+              className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors text-destructive hover:bg-sidebar-accent w-full"
+            >
+              <LogOut className="w-5 h-5" />
+              Abmelden
+            </button>
           </nav>
         )}
       </header>
@@ -110,7 +125,20 @@ export function AppLayout({ children }: AppLayoutProps) {
           })}
         </nav>
 
-        <div className="px-4 py-4 border-t border-sidebar-border">
+        <div className="px-4 py-4 border-t border-sidebar-border space-y-3">
+          {user && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-sidebar-foreground truncate">{user.name}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleLogout}
+                className="text-sidebar-foreground hover:text-destructive hover:bg-sidebar-accent"
+              >
+                <LogOut className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
           <p className="text-xs text-sidebar-foreground/60">
             Restaurant Cash System v1.0
           </p>

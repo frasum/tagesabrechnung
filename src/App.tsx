@@ -3,6 +3,9 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import Login from "./pages/Login";
 import WaiterCashUp from "./pages/WaiterCashUp";
 import ManagerDashboard from "./pages/ManagerDashboard";
 import KitchenTipSplit from "./pages/KitchenTipSplit";
@@ -20,16 +23,19 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<WaiterCashUp />} />
-          <Route path="/manager" element={<ManagerDashboard />} />
-          <Route path="/kitchen" element={<KitchenTipSplit />} />
-          <Route path="/summary" element={<DailySummary />} />
-          <Route path="/statistics" element={<Statistics />} />
-          <Route path="/history" element={<History />} />
-          <Route path="/staff" element={<StaffManagement />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/" element={<ProtectedRoute><WaiterCashUp /></ProtectedRoute>} />
+            <Route path="/manager" element={<ProtectedRoute><ManagerDashboard /></ProtectedRoute>} />
+            <Route path="/kitchen" element={<ProtectedRoute><KitchenTipSplit /></ProtectedRoute>} />
+            <Route path="/summary" element={<ProtectedRoute><DailySummary /></ProtectedRoute>} />
+            <Route path="/statistics" element={<ProtectedRoute><Statistics /></ProtectedRoute>} />
+            <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
+            <Route path="/staff" element={<ProtectedRoute><StaffManagement /></ProtectedRoute>} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

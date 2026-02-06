@@ -23,6 +23,7 @@ export interface StaffInput {
   hourly_rate?: number;
   notes?: string;
   is_active?: boolean;
+  pin_code?: string;
 }
 
 export function useStaff(role?: StaffRole) {
