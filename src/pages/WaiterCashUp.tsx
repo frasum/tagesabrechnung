@@ -367,8 +367,9 @@ export default function WaiterCashUp() {
                           <TableHead className="text-right">Karte (KK)</TableHead>
                           <TableHead className="text-right">Hilf Mahl</TableHead>
                           <TableHead className="text-right">Offene Rg.</TableHead>
-                          <TableHead className="text-right">Bargeld</TableHead>
-                          <TableHead className="text-right">Differenz</TableHead>
+                          <TableHead className="text-right">Erwartet</TableHead>
+                          <TableHead className="text-right">Abgegeben</TableHead>
+                          <TableHead className="text-right">Abweichung</TableHead>
                           <TableHead className="text-right">Küchen TG</TableHead>
                           <TableHead className="text-right">Kellner TG</TableHead>
                           <TableHead></TableHead>
@@ -377,6 +378,7 @@ export default function WaiterCashUp() {
                       <TableBody>
                         {waiterShifts.map((shift) => {
                           const waiterTip = calculateWaiterTip(shift);
+                          const abweichung = shift.cash_handed_in - shift.differenz;
                           return (
                             <TableRow
                               key={shift.id}
@@ -389,8 +391,11 @@ export default function WaiterCashUp() {
                               <TableCell className="text-right tabular-nums">{formatCurrency(shift.card_total)}</TableCell>
                               <TableCell className="text-right tabular-nums">{formatCurrency(shift.hilf_mahl)}</TableCell>
                               <TableCell className="text-right tabular-nums">{formatCurrency(shift.open_invoices)}</TableCell>
-                              <TableCell className="text-right tabular-nums">{formatCurrency(shift.cash_handed_in)}</TableCell>
                               <TableCell className="text-right tabular-nums">{formatCurrency(shift.differenz)}</TableCell>
+                              <TableCell className="text-right tabular-nums">{formatCurrency(shift.cash_handed_in)}</TableCell>
+                              <TableCell className={`text-right tabular-nums font-semibold ${abweichung < 0 ? 'text-destructive' : abweichung > 0 ? 'text-success' : ''}`}>
+                                {abweichung > 0 ? '+' : ''}{formatCurrency(abweichung)}
+                              </TableCell>
                               <TableCell className="text-right tabular-nums">{formatCurrency(shift.kitchen_tip)}</TableCell>
                               <TableCell className={`text-right tabular-nums font-medium ${waiterTip < 0 ? 'text-destructive' : 'text-success'}`}>
                                 {formatCurrency(waiterTip)}
