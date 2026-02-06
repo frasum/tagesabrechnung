@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
-import { Plus, AlertTriangle, CheckCircle, FileText, Euro, CreditCard, Truck, Receipt, Download } from 'lucide-react';
+import { Plus, AlertTriangle, CheckCircle, FileText, Euro, CreditCard, Truck, Receipt, Download, HelpCircle, ChevronDown } from 'lucide-react';
 import { generateDailySummaryPDF } from '@/utils/pdfExport';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { DateSelector } from '@/components/shared/DateSelector';
 import { StatCard } from '@/components/shared/StatCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -467,6 +468,110 @@ export default function DailySummary() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Formula Explanation */}
+            <Collapsible>
+              <Card className="border-muted">
+                <CollapsibleTrigger className="w-full">
+                  <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                    <CardTitle className="flex items-center justify-between text-base">
+                      <div className="flex items-center gap-2">
+                        <HelpCircle className="w-5 h-5 text-muted-foreground" />
+                        Wie wird BARGELD berechnet?
+                      </div>
+                      <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                    </CardTitle>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="pt-0 space-y-4">
+                    {/* Formula */}
+                    <div className="p-4 bg-muted/50 rounded-lg font-mono text-sm">
+                      <p className="font-semibold text-foreground mb-2">Formel:</p>
+                      <p className="text-success">+ Kellner Umsatz</p>
+                      <p className="text-success">+ Gutschein VK</p>
+                      <p className="text-success">+ Sonstige Einnahmen</p>
+                      <p className="text-success">+ Hilf Mahl</p>
+                      <p className="text-destructive">− Terminal 1 + 2</p>
+                      <p className="text-destructive">− OpenTabs Abzug</p>
+                      <p className="text-destructive">− Gutschein EL</p>
+                      <p className="text-destructive">− FineDine Gutscheine</p>
+                      <p className="text-destructive">− Vorschuss</p>
+                      <p className="text-destructive">− Einladung</p>
+                      <p className="text-destructive">− Offene Rechnungen</p>
+                      <p className="text-destructive">− Ausgaben</p>
+                      <p className="text-destructive">− Lieferplattformen</p>
+                      <p className="border-t border-border mt-2 pt-2 font-bold">= BARGELD</p>
+                    </div>
+
+                    {/* Live Calculation */}
+                    <div className="space-y-2">
+                      <p className="font-semibold text-sm text-muted-foreground">Aktuelle Berechnung:</p>
+                      <Table>
+                        <TableBody>
+                          <TableRow>
+                            <TableCell className="text-success">+ Kellner Umsatz</TableCell>
+                            <TableCell className="text-right tabular-nums text-success">{formatCurrency(kellnerUmsatz)}</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="text-success">+ Gutschein VK</TableCell>
+                            <TableCell className="text-right tabular-nums text-success">{formatCurrency(session?.vouchers_sold || 0)}</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="text-success">+ Sonstige Einnahmen</TableCell>
+                            <TableCell className="text-right tabular-nums text-success">{formatCurrency(session?.sonstige_einnahme || 0)}</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="text-success">+ Hilf Mahl</TableCell>
+                            <TableCell className="text-right tabular-nums text-success">{formatCurrency(totalHilfMahl)}</TableCell>
+                          </TableRow>
+                          <TableRow className="border-t">
+                            <TableCell className="font-medium">Summe Einnahmen</TableCell>
+                            <TableCell className="text-right tabular-nums font-medium text-success">
+                              {formatCurrency(kellnerUmsatz + (session?.vouchers_sold || 0) + (session?.sonstige_einnahme || 0) + totalHilfMahl)}
+                            </TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="text-destructive">− Terminals (1+2)</TableCell>
+                            <TableCell className="text-right tabular-nums text-destructive">{formatCurrency((session?.terminal_1_total || 0) + (session?.terminal_2_total || 0))}</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="text-destructive">− OpenTabs</TableCell>
+                            <TableCell className="text-right tabular-nums text-destructive">{formatCurrency(session?.opentabs_deduction || 0)}</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="text-destructive">− Gutschein EL + FineDine</TableCell>
+                            <TableCell className="text-right tabular-nums text-destructive">{formatCurrency((session?.vouchers_redeemed || 0) + (session?.finedine_vouchers || 0))}</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="text-destructive">− Vorschuss + Einladung</TableCell>
+                            <TableCell className="text-right tabular-nums text-destructive">{formatCurrency((session?.vorschuss || 0) + (session?.einladung || 0))}</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="text-destructive">− Offene Rechnungen</TableCell>
+                            <TableCell className="text-right tabular-nums text-destructive">{formatCurrency(totalOpenInvoices)}</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="text-destructive">− Ausgaben</TableCell>
+                            <TableCell className="text-right tabular-nums text-destructive">{formatCurrency(totalExpenses)}</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="text-destructive">− Lieferplattformen</TableCell>
+                            <TableCell className="text-right tabular-nums text-destructive">{formatCurrency(totalDeliveryRevenue)}</TableCell>
+                          </TableRow>
+                          <TableRow className="border-t-2 bg-muted/30">
+                            <TableCell className="font-bold text-lg">= BARGELD</TableCell>
+                            <TableCell className={`text-right tabular-nums font-bold text-lg ${bargeld >= 0 ? 'text-success' : 'text-destructive'}`}>
+                              {formatCurrency(bargeld)}
+                            </TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
 
             {/* Final Result */}
             <Card className={bargeld >= 0 ? "border-success/30 bg-success/5" : "border-destructive/30 bg-destructive/5"}>
