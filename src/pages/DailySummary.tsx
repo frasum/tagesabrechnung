@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
-import { Plus, AlertTriangle, CheckCircle, FileText, Euro, CreditCard, Truck, Receipt } from 'lucide-react';
+import { Plus, AlertTriangle, CheckCircle, FileText, Euro, CreditCard, Truck, Receipt, Download } from 'lucide-react';
+import { generateDailySummaryPDF } from '@/utils/pdfExport';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { DateSelector } from '@/components/shared/DateSelector';
 import { StatCard } from '@/components/shared/StatCard';
@@ -83,6 +84,50 @@ export default function DailySummary() {
     }
   };
 
+  const handleExportPDF = () => {
+    if (!session) return;
+    
+    generateDailySummaryPDF({
+      session,
+      waiterShifts: waiterShifts.map(w => ({
+        waiter_name: w.waiter_name,
+        pos_sales: w.pos_sales || 0,
+        card_total: w.card_total || 0,
+        hilf_mahl: w.hilf_mahl || 0,
+        open_invoices: w.open_invoices || 0,
+        cash_handed_in: w.cash_handed_in || 0,
+        differenz: w.differenz || 0,
+        kitchen_tip: w.kitchen_tip || 0,
+      })),
+      kitchenShifts: kitchenShifts.map(k => ({
+        staff_name: k.staff_name,
+        hours_worked: k.hours_worked || 0,
+      })),
+      expenses: expenses.map(e => ({
+        description: e.description,
+        amount: e.amount,
+      })),
+      totals: {
+        kellnerUmsatz,
+        totalCardTotal,
+        totalHilfMahl,
+        totalOpenInvoices,
+        totalKitchenTip,
+        totalWaiterTip,
+        totalExpenses,
+        totalDeliveryRevenue,
+        bargeld,
+        posMismatch,
+        cardTerminalMismatch,
+      },
+    });
+    
+    toast({ 
+      title: 'PDF erstellt', 
+      description: 'Die Tagesabrechnung wurde als PDF heruntergeladen.' 
+    });
+  };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value);
   };
@@ -110,7 +155,15 @@ export default function DailySummary() {
               Komplette Übersicht für {format(selectedDate, "EEEE, d. MMMM yyyy", { locale: de })}
             </p>
           </div>
-          <DateSelector date={selectedDate} onDateChange={setSelectedDate} />
+          <div className="flex items-center gap-2">
+            <DateSelector date={selectedDate} onDateChange={setSelectedDate} />
+            {session && (
+              <Button onClick={handleExportPDF} variant="outline" className="gap-2">
+                <Download className="w-4 h-4" />
+                PDF Export
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* No Session State */}
