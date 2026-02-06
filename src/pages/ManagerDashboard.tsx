@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { Plus, Trash2, Settings, Truck, Receipt, Wallet } from 'lucide-react';
+import { Plus, Trash2, Settings, Truck, Receipt, Wallet, HelpCircle, ChevronDown } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { DateSelector } from '@/components/shared/DateSelector';
 import { CurrencyInput } from '@/components/shared/CurrencyInput';
@@ -9,6 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import {
   useSession,
@@ -17,6 +19,7 @@ import {
   useExpenses,
   useCreateExpense,
   useDeleteExpense,
+  useWaiterShifts,
 } from '@/hooks/useSession';
 
 export default function ManagerDashboard() {
@@ -59,6 +62,7 @@ export default function ManagerDashboard() {
   const { data: expenses = [] } = useExpenses(session?.id);
   const createExpense = useCreateExpense();
   const deleteExpense = useDeleteExpense();
+  const { data: waiterShifts = [] } = useWaiterShifts(session?.id);
 
   // Sync form data with session
   useEffect(() => {
@@ -170,6 +174,37 @@ export default function ManagerDashboard() {
   };
 
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+
+  // Calculate BARGELD preview using waiter data
+  const kellnerUmsatz = waiterShifts.reduce((sum, w) => sum + (w.pos_sales || 0), 0);
+  const totalHilfMahl = waiterShifts.reduce((sum, w) => sum + (w.hilf_mahl || 0), 0);
+  const totalOpenInvoices = waiterShifts.reduce((sum, w) => sum + (w.open_invoices || 0), 0);
+
+  // Delivery revenue
+  const totalDeliveryRevenue = 
+    formData.ordersmart_revenue +
+    formData.gustoco_revenue +
+    formData.orderhut_revenue +
+    formData.wolt_revenue +
+    formData.ubereats_revenue +
+    formData.takeaway_total;
+
+  // BARGELD calculation (same formula as DailySummary)
+  const bargeldPreview = 
+    kellnerUmsatz +
+    formData.vouchers_sold +
+    formData.sonstige_einnahme -
+    formData.terminal_1_total -
+    formData.terminal_2_total -
+    formData.opentabs_deduction -
+    formData.vouchers_redeemed -
+    formData.vorschuss -
+    formData.einladung -
+    totalOpenInvoices -
+    totalExpenses +
+    totalHilfMahl -
+    totalDeliveryRevenue -
+    formData.finedine_vouchers;
 
   if (sessionLoading) {
     return (
@@ -471,6 +506,113 @@ export default function ManagerDashboard() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* BARGELD Calculation Breakdown */}
+            <Collapsible className="group" defaultOpen={true}>
+              <Card className="border-muted">
+                <CollapsibleTrigger className="w-full">
+                  <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                    <CardTitle className="flex items-center justify-between text-base">
+                      <div className="flex items-center gap-2">
+                        <HelpCircle className="w-5 h-5 text-muted-foreground" />
+                        Wie wird BARGELD berechnet?
+                      </div>
+                      <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                    </CardTitle>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="pt-0 space-y-4">
+                    {/* Formula */}
+                    <div className="p-4 bg-muted/50 rounded-lg font-mono text-sm">
+                      <p className="font-semibold text-foreground mb-2">Formel:</p>
+                      <p className="text-success">+ Kellner Umsatz</p>
+                      <p className="text-success">+ Gutschein VK</p>
+                      <p className="text-success">+ Sonstige Einnahmen</p>
+                      <p className="text-success">+ Hilf Mahl</p>
+                      <p className="text-destructive">− Terminal 1 + 2</p>
+                      <p className="text-destructive">− OpenTabs Abzug</p>
+                      <p className="text-destructive">− Gutschein EL</p>
+                      <p className="text-destructive">− FineDine Gutscheine</p>
+                      <p className="text-destructive">− Vorschuss</p>
+                      <p className="text-destructive">− Einladung</p>
+                      <p className="text-destructive">− Offene Rechnungen</p>
+                      <p className="text-destructive">− Ausgaben</p>
+                      <p className="text-destructive">− Lieferplattformen</p>
+                      <p className="border-t border-border mt-2 pt-2 font-bold">= BARGELD</p>
+                    </div>
+
+                    {/* Live Calculation */}
+                    <div className="space-y-2">
+                      <p className="font-semibold text-sm text-muted-foreground">Aktuelle Berechnung (Vorschau):</p>
+                      <Table>
+                        <TableBody>
+                          <TableRow>
+                            <TableCell className="text-success">+ Kellner Umsatz</TableCell>
+                            <TableCell className="text-right tabular-nums text-success">{formatCurrency(kellnerUmsatz)}</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="text-success">+ Gutschein VK</TableCell>
+                            <TableCell className="text-right tabular-nums text-success">{formatCurrency(formData.vouchers_sold)}</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="text-success">+ Sonstige Einnahmen</TableCell>
+                            <TableCell className="text-right tabular-nums text-success">{formatCurrency(formData.sonstige_einnahme)}</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="text-success">+ Hilf Mahl</TableCell>
+                            <TableCell className="text-right tabular-nums text-success">{formatCurrency(totalHilfMahl)}</TableCell>
+                          </TableRow>
+                          <TableRow className="border-t">
+                            <TableCell className="font-medium">Summe Einnahmen</TableCell>
+                            <TableCell className="text-right tabular-nums font-medium text-success">
+                              {formatCurrency(kellnerUmsatz + formData.vouchers_sold + formData.sonstige_einnahme + totalHilfMahl)}
+                            </TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="text-destructive">− Terminals (1+2)</TableCell>
+                            <TableCell className="text-right tabular-nums text-destructive">{formatCurrency(formData.terminal_1_total + formData.terminal_2_total)}</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="text-destructive">− OpenTabs</TableCell>
+                            <TableCell className="text-right tabular-nums text-destructive">{formatCurrency(formData.opentabs_deduction)}</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="text-destructive">− Gutschein EL + FineDine</TableCell>
+                            <TableCell className="text-right tabular-nums text-destructive">{formatCurrency(formData.vouchers_redeemed + formData.finedine_vouchers)}</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="text-destructive">− Vorschuss + Einladung</TableCell>
+                            <TableCell className="text-right tabular-nums text-destructive">{formatCurrency(formData.vorschuss + formData.einladung)}</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="text-destructive">− Offene Rechnungen</TableCell>
+                            <TableCell className="text-right tabular-nums text-destructive">{formatCurrency(totalOpenInvoices)}</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="text-destructive">− Ausgaben</TableCell>
+                            <TableCell className="text-right tabular-nums text-destructive">{formatCurrency(totalExpenses)}</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="text-destructive">− Lieferplattformen</TableCell>
+                            <TableCell className="text-right tabular-nums text-destructive">{formatCurrency(totalDeliveryRevenue)}</TableCell>
+                          </TableRow>
+                          <TableRow className="border-t-2 bg-muted/30">
+                            <TableCell className="font-bold text-lg">= BARGELD (Vorschau)</TableCell>
+                            <TableCell className={`text-right tabular-nums font-bold text-lg ${bargeldPreview >= 0 ? 'text-success' : 'text-destructive'}`}>
+                              {formatCurrency(bargeldPreview)}
+                            </TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Hinweis: Die finale Berechnung erfolgt auf der Tagesabrechnung-Seite mit allen Kellner-Abrechnungen.
+                      </p>
+                    </div>
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
 
             {/* Save Button */}
             <div className="flex justify-end">
