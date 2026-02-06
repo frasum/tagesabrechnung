@@ -335,13 +335,17 @@ export const generateDailySummaryPDF = (data: PDFExportData): void => {
   doc.text('Trinkgeld Übersicht', margin, yPos);
   yPos += 6;
 
+  const waiterCount = data.waiterShifts.length;
+  const tipPerWaiter = waiterCount > 0 ? data.totals.totalWaiterTip / waiterCount : 0;
+
   autoTable(doc, {
     startY: yPos,
     margin: { left: margin, right: margin },
     head: [['Kategorie', 'Betrag']],
     body: [
       ['Küchen Trinkgeld (2%)', formatCurrency(data.totals.totalKitchenTip)],
-      ['Kellner Trinkgeld', formatCurrency(data.totals.totalWaiterTip)],
+      ['Kellner Trinkgeld Pool', formatCurrency(data.totals.totalWaiterTip)],
+      [`→ Pro Kellner (${waiterCount})`, formatCurrency(tipPerWaiter)],
       ['Gesamt Trinkgeld', formatCurrency(data.totals.totalKitchenTip + data.totals.totalWaiterTip)],
     ],
     theme: 'striped',
@@ -350,6 +354,10 @@ export const generateDailySummaryPDF = (data: PDFExportData): void => {
     columnStyles: { 1: { halign: 'right' } },
     didParseCell: function(data) {
       if (data.row.index === 2) {
+        data.cell.styles.textColor = [100, 100, 100];
+        data.cell.styles.fontSize = 8;
+      }
+      if (data.row.index === 3) {
         data.cell.styles.fontStyle = 'bold';
         data.cell.styles.fillColor = [220, 252, 231];
       }

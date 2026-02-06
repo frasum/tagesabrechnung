@@ -36,7 +36,17 @@ export default function DailySummary() {
   const totalHilfMahl = waiterShifts.reduce((sum, w) => sum + w.hilf_mahl, 0);
   const totalOpenInvoices = waiterShifts.reduce((sum, w) => sum + w.open_invoices, 0);
   const totalKitchenTip = waiterShifts.reduce((sum, w) => sum + w.kitchen_tip, 0);
-  const totalWaiterTip = waiterShifts.reduce((sum, w) => sum + (w.cash_handed_in - w.differenz - w.kitchen_tip), 0);
+  
+  // Waiter tip pool calculation
+  const calculateExpected = (w: typeof waiterShifts[0]) => 
+    (w.kassiert_brutto || 0) + w.hilf_mahl - w.open_invoices - w.card_total;
+  const waiterTipPool = waiterShifts.reduce((sum, w) => 
+    sum + (w.cash_handed_in - calculateExpected(w) - w.kitchen_tip), 0);
+  const waiterCount = waiterShifts.length;
+  const tipPerWaiter = waiterCount > 0 ? waiterTipPool / waiterCount : 0;
+  
+  // Keep totalWaiterTip for backward compatibility in calculations
+  const totalWaiterTip = waiterTipPool;
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
 
   // Delivery revenue
@@ -439,15 +449,44 @@ export default function DailySummary() {
                         <TableCell className="text-right tabular-nums font-medium text-success">{formatCurrency(totalKitchenTip)}</TableCell>
                       </TableRow>
                       <TableRow>
-                        <TableCell>Kellner Trinkgeld</TableCell>
-                        <TableCell className="text-right tabular-nums font-medium text-success">{formatCurrency(totalWaiterTip)}</TableCell>
+                        <TableCell>Kellner Trinkgeld Pool</TableCell>
+                        <TableCell className="text-right tabular-nums font-medium text-success">{formatCurrency(waiterTipPool)}</TableCell>
                       </TableRow>
+                      {waiterCount > 0 && (
+                        <TableRow>
+                          <TableCell className="pl-6 text-muted-foreground">→ Pro Kellner ({waiterCount})</TableCell>
+                          <TableCell className="text-right tabular-nums font-medium text-success">{formatCurrency(tipPerWaiter)}</TableCell>
+                        </TableRow>
+                      )}
                       <TableRow className="border-t-2">
                         <TableCell className="font-semibold">Gesamt Trinkgeld</TableCell>
                         <TableCell className="text-right tabular-nums font-semibold text-success">{formatCurrency(totalKitchenTip + totalWaiterTip)}</TableCell>
                       </TableRow>
                     </TableBody>
                   </Table>
+
+                  {/* Waiter Pool Distribution */}
+                  {waiterShifts.length > 0 && (
+                    <div className="mt-4 pt-4 border-t">
+                      <p className="text-sm font-medium mb-2">Kellner Pool-Verteilung ({waiterCount} Kellner)</p>
+                      <div className="space-y-1">
+                        {waiterShifts.map((shift) => {
+                          const contribution = shift.cash_handed_in - calculateExpected(shift) - shift.kitchen_tip;
+                          return (
+                            <div key={shift.id} className="flex justify-between text-sm">
+                              <span>{shift.waiter_name}</span>
+                              <div className="flex gap-4">
+                                <span className={`tabular-nums text-xs ${contribution >= 0 ? 'text-muted-foreground' : 'text-destructive'}`}>
+                                  (Beitrag: {contribution >= 0 ? '+' : ''}{formatCurrency(contribution)})
+                                </span>
+                                <span className="tabular-nums font-medium">{formatCurrency(tipPerWaiter)}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   {kitchenShifts.length > 0 && (
                     <div className="mt-4 pt-4 border-t">

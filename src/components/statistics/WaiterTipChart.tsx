@@ -36,7 +36,7 @@ const CustomTooltip = ({ active, payload }: any) => {
         <p className="font-medium text-foreground mb-2">{data.name}</p>
         <div className="space-y-1 text-sm">
           <div className="flex justify-between gap-4">
-            <span className="text-muted-foreground">Gesamt TG:</span>
+            <span className="text-muted-foreground">Pool-Anteil gesamt:</span>
             <span className="font-medium tabular-nums">{formatCurrency(data.totalTip)}</span>
           </div>
           <div className="flex justify-between gap-4">
@@ -44,7 +44,7 @@ const CustomTooltip = ({ active, payload }: any) => {
             <span className="font-medium tabular-nums">{data.shiftsCount}</span>
           </div>
           <div className="flex justify-between gap-4">
-            <span className="text-muted-foreground">Ø/Schicht:</span>
+            <span className="text-muted-foreground">Ø Pool-Anteil/Schicht:</span>
             <span className="font-medium tabular-nums">{formatCurrency(data.avgTipPerShift)}</span>
           </div>
         </div>
@@ -134,7 +134,7 @@ export function WaiterTipChart({ data }: WaiterTipChartProps) {
                     <th className="text-left p-2 font-medium">#</th>
                     <th className="text-left p-2 font-medium">Name</th>
                     <th className="text-right p-2 font-medium">Schichten</th>
-                    <th className="text-right p-2 font-medium">Gesamt TG</th>
+                    <th className="text-right p-2 font-medium">Pool-Anteil</th>
                     <th className="text-right p-2 font-medium">Ø/Schicht</th>
                   </tr>
                 </thead>

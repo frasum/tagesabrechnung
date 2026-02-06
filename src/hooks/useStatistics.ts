@@ -182,24 +182,41 @@ export function useStatistics(timeRange: TimeRange = 'month') {
         daysWithData: dailyStats.length,
       };
 
-      // Calculate waiter tip stats per person
-      const waiterTipMap: Record<string, { totalTip: number; shiftsCount: number }> = {};
-      waiterShifts.forEach((shift: any) => {
-        const name = shift.waiter_name;
-        const tip = (shift.cash_handed_in || 0) - (shift.differenz || 0) - (shift.kitchen_tip || 0);
-        if (!waiterTipMap[name]) {
-          waiterTipMap[name] = { totalTip: 0, shiftsCount: 0 };
-        }
-        waiterTipMap[name].totalTip += tip;
-        waiterTipMap[name].shiftsCount += 1;
+      // Calculate waiter tip stats per person using pool system
+      // For each session, calculate the pool and distribute equally
+      const waiterTipMap: Record<string, { totalPoolShare: number; shiftsCount: number }> = {};
+      
+      (sessions || []).forEach(session => {
+        const sessionShifts = shiftsBySession[session.id] || [];
+        if (sessionShifts.length === 0) return;
+        
+        // Calculate pool for this session
+        let sessionPool = 0;
+        sessionShifts.forEach((shift: any) => {
+          const expected = (shift.kassiert_brutto || 0) + (shift.hilf_mahl || 0) - (shift.open_invoices || 0) - (shift.card_total || 0);
+          const contribution = (shift.cash_handed_in || 0) - expected - (shift.kitchen_tip || 0);
+          sessionPool += contribution;
+        });
+        
+        // Distribute equally among all waiters in this session
+        const sharePerWaiter = sessionPool / sessionShifts.length;
+        
+        sessionShifts.forEach((shift: any) => {
+          const name = shift.waiter_name;
+          if (!waiterTipMap[name]) {
+            waiterTipMap[name] = { totalPoolShare: 0, shiftsCount: 0 };
+          }
+          waiterTipMap[name].totalPoolShare += sharePerWaiter;
+          waiterTipMap[name].shiftsCount += 1;
+        });
       });
 
       const waiterTipStats: WaiterTipStats[] = Object.entries(waiterTipMap)
         .map(([name, data]) => ({
           name,
-          totalTip: data.totalTip,
+          totalTip: data.totalPoolShare,
           shiftsCount: data.shiftsCount,
-          avgTipPerShift: data.shiftsCount > 0 ? data.totalTip / data.shiftsCount : 0,
+          avgTipPerShift: data.shiftsCount > 0 ? data.totalPoolShare / data.shiftsCount : 0,
         }))
         .sort((a, b) => b.totalTip - a.totalTip);
 

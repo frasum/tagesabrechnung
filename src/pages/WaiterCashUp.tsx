@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { Plus, Trash2, CreditCard, User } from 'lucide-react';
+import { Plus, Trash2, CreditCard, User, Users } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { DateSelector } from '@/components/shared/DateSelector';
 import { CurrencyInput } from '@/components/shared/CurrencyInput';
+import { StatCard } from '@/components/shared/StatCard';
 import { StaffSelect } from '@/components/shared/StaffSelect';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -138,11 +139,17 @@ export default function WaiterCashUp() {
     return (shift.kassiert_brutto || 0) + shift.hilf_mahl - shift.open_invoices - shift.card_total;
   };
 
-  // Calculate waiter tip: cash handed in - expected - kitchen tip
-  const calculateWaiterTip = (shift: typeof waiterShifts[0]) => {
+  // Calculate individual contribution to the tip pool
+  const calculateContribution = (shift: typeof waiterShifts[0]) => {
     const expected = calculateExpected(shift);
     return shift.cash_handed_in - expected - shift.kitchen_tip;
   };
+
+  // Calculate pool totals
+  const waiterCount = waiterShifts.length;
+  const totalPool = waiterShifts.reduce((sum, shift) => sum + calculateContribution(shift), 0);
+  const tipPerWaiter = waiterCount > 0 ? totalPool / waiterCount : 0;
+  const totalKitchenTip = waiterShifts.reduce((sum, shift) => sum + shift.kitchen_tip, 0);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value);
@@ -191,7 +198,32 @@ export default function WaiterCashUp() {
 
         {/* Session Content */}
         {session && (
-          <div className="grid lg:grid-cols-2 gap-6">
+          <div className="space-y-6">
+            {/* Pool Stats */}
+            {waiterShifts.length > 0 && (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard
+                  label="Kellner TG Pool"
+                  value={totalPool}
+                  icon={<Users className="w-5 h-5" />}
+                  variant={totalPool >= 0 ? 'success' : 'error'}
+                />
+                <StatCard
+                  label={`Pro Kellner (${waiterCount})`}
+                  value={tipPerWaiter}
+                  icon={<User className="w-5 h-5" />}
+                  variant={tipPerWaiter >= 0 ? 'success' : 'error'}
+                />
+                <StatCard
+                  label="Küchen TG Pool"
+                  value={totalKitchenTip}
+                  icon={<Users className="w-5 h-5" />}
+                  variant="success"
+                />
+              </div>
+            )}
+
+            <div className="grid lg:grid-cols-2 gap-6">
             {/* Add Waiter Form */}
             <Card>
               <CardHeader>
@@ -386,14 +418,15 @@ export default function WaiterCashUp() {
                           <TableHead className="text-right">Abgegeben</TableHead>
                           <TableHead className="text-right">Abweich.</TableHead>
                           <TableHead className="text-right">K.TG</TableHead>
-                          <TableHead className="text-right">W.TG</TableHead>
+                          <TableHead className="text-right">Beitrag</TableHead>
+                          <TableHead className="text-right">Anteil</TableHead>
                           <TableHead></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {waiterShifts.map((shift) => {
                           const expected = calculateExpected(shift);
-                          const waiterTip = calculateWaiterTip(shift);
+                          const contribution = calculateContribution(shift);
                           const abweichung = shift.cash_handed_in - expected;
                           return (
                             <TableRow
@@ -414,8 +447,11 @@ export default function WaiterCashUp() {
                                 {abweichung > 0 ? '+' : ''}{formatCurrency(abweichung)}
                               </TableCell>
                               <TableCell className="text-right tabular-nums">{formatCurrency(shift.kitchen_tip)}</TableCell>
-                              <TableCell className={`text-right tabular-nums font-medium ${waiterTip < 0 ? 'text-destructive' : 'text-success'}`}>
-                                {formatCurrency(waiterTip)}
+                              <TableCell className={`text-right tabular-nums ${contribution >= 0 ? 'text-success' : 'text-destructive'}`}>
+                                {contribution >= 0 ? '+' : ''}{formatCurrency(contribution)}
+                              </TableCell>
+                              <TableCell className={`text-right tabular-nums font-semibold ${tipPerWaiter >= 0 ? 'text-success' : 'text-destructive'}`}>
+                                {formatCurrency(tipPerWaiter)}
                               </TableCell>
                               <TableCell>
                                 <Button
@@ -432,12 +468,53 @@ export default function WaiterCashUp() {
                             </TableRow>
                           );
                         })}
+                        {/* Totals Row */}
+                        {waiterShifts.length > 0 && (
+                          <TableRow className="bg-muted/50 font-semibold border-t-2">
+                            <TableCell>GESAMT</TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {formatCurrency(waiterShifts.reduce((sum, s) => sum + s.pos_sales, 0))}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {formatCurrency(waiterShifts.reduce((sum, s) => sum + (s.kassiert_brutto || 0), 0))}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {formatCurrency(waiterShifts.reduce((sum, s) => sum + s.card_total, 0))}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {formatCurrency(waiterShifts.reduce((sum, s) => sum + s.hilf_mahl, 0))}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {formatCurrency(waiterShifts.reduce((sum, s) => sum + s.open_invoices, 0))}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {formatCurrency(waiterShifts.reduce((sum, s) => sum + calculateExpected(s), 0))}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {formatCurrency(waiterShifts.reduce((sum, s) => sum + s.cash_handed_in, 0))}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {formatCurrency(waiterShifts.reduce((sum, s) => sum + (s.cash_handed_in - calculateExpected(s)), 0))}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {formatCurrency(totalKitchenTip)}
+                            </TableCell>
+                            <TableCell className={`text-right tabular-nums ${totalPool >= 0 ? 'text-success' : 'text-destructive'}`}>
+                              {formatCurrency(totalPool)}
+                            </TableCell>
+                            <TableCell className={`text-right tabular-nums ${totalPool >= 0 ? 'text-success' : 'text-destructive'}`}>
+                              {formatCurrency(totalPool)}
+                            </TableCell>
+                            <TableCell></TableCell>
+                          </TableRow>
+                        )}
                       </TableBody>
                     </Table>
                   </div>
                 )}
               </CardContent>
             </Card>
+            </div>
           </div>
         )}
       </div>
