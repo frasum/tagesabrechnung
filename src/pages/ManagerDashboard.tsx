@@ -42,6 +42,10 @@ export default function ManagerDashboard() {
     einladung: 0,
     sonstige_einnahme: 0,
     notes: '',
+    // New fields from Excel
+    takeaway_total: 0,
+    spicery_transactions: 0,
+    card_total_gl: 0,
   });
 
   // Expense form
@@ -77,6 +81,9 @@ export default function ManagerDashboard() {
         einladung: session.einladung || 0,
         sonstige_einnahme: session.sonstige_einnahme || 0,
         notes: session.notes || '',
+        takeaway_total: session.takeaway_total || 0,
+        spicery_transactions: session.spicery_transactions || 0,
+        card_total_gl: session.card_total_gl || 0,
       });
     } else {
       setFormData({
@@ -97,6 +104,9 @@ export default function ManagerDashboard() {
         einladung: 0,
         sonstige_einnahme: 0,
         notes: '',
+        takeaway_total: 0,
+        spicery_transactions: 0,
+        card_total_gl: 0,
       });
     }
   }, [session]);
@@ -243,6 +253,23 @@ export default function ManagerDashboard() {
                       onChange={(v) => updateField('terminal_2_total', v)}
                     />
                   </div>
+                  <div>
+                    <Label>KK Gesamtliste (GL)</Label>
+                    <CurrencyInput
+                      value={formData.card_total_gl}
+                      onChange={(v) => updateField('card_total_gl', v)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Spicery Transaktionen</Label>
+                    <Input
+                      type="number"
+                      value={formData.spicery_transactions || ''}
+                      onChange={(e) => updateField('spicery_transactions', parseInt(e.target.value) || 0)}
+                      placeholder="0"
+                      className="text-right tabular-nums"
+                    />
+                  </div>
                 </CardContent>
               </Card>
 
@@ -288,6 +315,13 @@ export default function ManagerDashboard() {
                     <CurrencyInput
                       value={formData.ubereats_revenue}
                       onChange={(v) => updateField('ubereats_revenue', v)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Take-Away Gesamt</Label>
+                    <CurrencyInput
+                      value={formData.takeaway_total}
+                      onChange={(v) => updateField('takeaway_total', v)}
                     />
                   </div>
                 </CardContent>

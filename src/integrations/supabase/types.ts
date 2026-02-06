@@ -118,6 +118,7 @@ export type Database = {
       }
       sessions: {
         Row: {
+          card_total_gl: number | null
           created_at: string
           einladung: number | null
           finedine_vouchers: number | null
@@ -132,6 +133,8 @@ export type Database = {
           session_date: string
           sonstige_einnahme: number | null
           spicery_counter: number | null
+          spicery_transactions: number | null
+          takeaway_total: number | null
           terminal_1_total: number | null
           terminal_2_total: number | null
           ubereats_revenue: number | null
@@ -142,6 +145,7 @@ export type Database = {
           wolt_revenue: number | null
         }
         Insert: {
+          card_total_gl?: number | null
           created_at?: string
           einladung?: number | null
           finedine_vouchers?: number | null
@@ -156,6 +160,8 @@ export type Database = {
           session_date: string
           sonstige_einnahme?: number | null
           spicery_counter?: number | null
+          spicery_transactions?: number | null
+          takeaway_total?: number | null
           terminal_1_total?: number | null
           terminal_2_total?: number | null
           ubereats_revenue?: number | null
@@ -166,6 +172,7 @@ export type Database = {
           wolt_revenue?: number | null
         }
         Update: {
+          card_total_gl?: number | null
           created_at?: string
           einladung?: number | null
           finedine_vouchers?: number | null
@@ -180,6 +187,8 @@ export type Database = {
           session_date?: string
           sonstige_einnahme?: number | null
           spicery_counter?: number | null
+          spicery_transactions?: number | null
+          takeaway_total?: number | null
           terminal_1_total?: number | null
           terminal_2_total?: number | null
           ubereats_revenue?: number | null

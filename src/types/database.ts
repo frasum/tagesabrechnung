@@ -23,6 +23,10 @@ export interface Session {
   is_finalized: boolean;
   created_at: string;
   updated_at: string;
+  // New fields from Excel
+  takeaway_total: number;
+  spicery_transactions: number;
+  card_total_gl: number;
 }
 
 export interface WaiterShift {

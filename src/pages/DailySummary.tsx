@@ -44,7 +44,8 @@ export default function DailySummary() {
       (session.gustoco_revenue || 0) +
       (session.orderhut_revenue || 0) +
       (session.wolt_revenue || 0) +
-      (session.ubereats_revenue || 0)
+      (session.ubereats_revenue || 0) +
+      (session.takeaway_total || 0)
     : 0;
 
   // BARGELD calculation
@@ -74,6 +75,9 @@ export default function DailySummary() {
   // Card Terminal Mismatch: Check if terminals match waiter card totals
   const terminalTotal = session ? (session.terminal_1_total || 0) + (session.terminal_2_total || 0) : 0;
   const cardTerminalMismatch = terminalTotal - totalCardTotal;
+
+  // KK GL Mismatch: Check if card_total_gl matches waiter card totals
+  const cardGLMismatch = session ? (session.card_total_gl || 0) - totalCardTotal : 0;
 
   const handleCreateSession = async () => {
     try {
@@ -185,8 +189,8 @@ export default function DailySummary() {
         {session && (
           <div className="space-y-6">
             {/* Alert Cards */}
-            {(posMismatch !== 0 || cardTerminalMismatch !== 0) && (
-              <div className="grid sm:grid-cols-2 gap-4">
+            {(posMismatch !== 0 || cardTerminalMismatch !== 0 || cardGLMismatch !== 0) && (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {posMismatch !== 0 && (
                   <Card className="border-destructive/30 bg-destructive/5">
                     <CardContent className="py-4 flex items-center gap-3">
@@ -214,6 +218,22 @@ export default function DailySummary() {
                         </p>
                         <p className="text-sm font-semibold text-destructive mt-1">
                           Differenz: {formatCurrency(cardTerminalMismatch)}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+                {cardGLMismatch !== 0 && (session.card_total_gl || 0) > 0 && (
+                  <Card className="border-destructive/30 bg-destructive/5">
+                    <CardContent className="py-4 flex items-center gap-3">
+                      <AlertTriangle className="w-5 h-5 text-destructive" />
+                      <div>
+                        <p className="font-medium text-destructive">KK GL Differenz</p>
+                        <p className="text-sm text-muted-foreground">
+                          KK Gesamtliste ({formatCurrency(session.card_total_gl || 0)}) stimmt nicht mit Kellner-Karten ({formatCurrency(totalCardTotal)}) überein.
+                        </p>
+                        <p className="text-sm font-semibold text-destructive mt-1">
+                          Differenz: {formatCurrency(cardGLMismatch)}
                         </p>
                       </div>
                     </CardContent>
@@ -390,6 +410,10 @@ export default function DailySummary() {
                       <TableRow>
                         <TableCell>UberEats</TableCell>
                         <TableCell className="text-right tabular-nums">{formatCurrency(session.ubereats_revenue || 0)}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>Take-Away Gesamt</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatCurrency(session.takeaway_total || 0)}</TableCell>
                       </TableRow>
                       <TableRow className="border-t-2">
                         <TableCell className="font-semibold">Gesamt</TableCell>

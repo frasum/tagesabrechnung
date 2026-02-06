@@ -20,6 +20,10 @@ interface Session {
   vorschuss?: number;
   einladung?: number;
   sonstige_einnahme?: number;
+  // New fields from Excel
+  takeaway_total?: number;
+  spicery_transactions?: number;
+  card_total_gl?: number;
 }
 
 interface WaiterShift {
@@ -297,6 +301,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): void => {
       ['Orderhut', formatCurrency(data.session.orderhut_revenue || 0)],
       ['Wolt', formatCurrency(data.session.wolt_revenue || 0)],
       ['UberEats', formatCurrency(data.session.ubereats_revenue || 0)],
+      ['Take-Away Gesamt', formatCurrency(data.session.takeaway_total || 0)],
       ['Gesamt', formatCurrency(data.totals.totalDeliveryRevenue)],
     ],
     theme: 'striped',
@@ -304,7 +309,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): void => {
     bodyStyles: { fontSize: 9 },
     columnStyles: { 1: { halign: 'right' } },
     didParseCell: function(data) {
-      if (data.row.index === 5) {
+      if (data.row.index === 6) {
         data.cell.styles.fontStyle = 'bold';
       }
     },
