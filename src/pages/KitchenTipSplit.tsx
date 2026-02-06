@@ -4,6 +4,7 @@ import { Plus, Trash2, ChefHat, Clock } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { DateSelector } from '@/components/shared/DateSelector';
 import { StatCard } from '@/components/shared/StatCard';
+import { StaffSelect } from '@/components/shared/StaffSelect';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -167,12 +168,12 @@ export default function KitchenTipSplit() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <Label htmlFor="staffName">Name</Label>
-                    <Input
-                      id="staffName"
+                    <Label>Küchenmitarbeiter auswählen</Label>
+                    <StaffSelect
                       value={staffName}
-                      onChange={(e) => setStaffName(e.target.value)}
-                      placeholder="Mitarbeiter Name"
+                      onValueChange={setStaffName}
+                      role="kitchen"
+                      placeholder="Mitarbeiter wählen"
                     />
                   </div>
 

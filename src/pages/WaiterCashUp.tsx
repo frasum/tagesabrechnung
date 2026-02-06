@@ -4,8 +4,8 @@ import { Plus, Trash2, CreditCard, User } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { DateSelector } from '@/components/shared/DateSelector';
 import { CurrencyInput } from '@/components/shared/CurrencyInput';
+import { StaffSelect } from '@/components/shared/StaffSelect';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -193,12 +193,12 @@ export default function WaiterCashUp() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="waiterName">Name</Label>
-                  <Input
-                    id="waiterName"
+                  <Label>Kellner auswählen</Label>
+                  <StaffSelect
                     value={newWaiterName}
-                    onChange={(e) => setNewWaiterName(e.target.value)}
-                    placeholder="Kellner Name"
+                    onValueChange={setNewWaiterName}
+                    role="waiter"
+                    placeholder="Kellner wählen"
                   />
                 </div>
 
