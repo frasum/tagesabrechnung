@@ -32,6 +32,8 @@ import { StatCard } from '@/components/shared/StatCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useStatistics } from '@/hooks/useStatistics';
+import { WaiterTipChart } from '@/components/statistics/WaiterTipChart';
+import { KitchenTipChart } from '@/components/statistics/KitchenTipChart';
 
 const COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
 
@@ -86,7 +88,7 @@ export default function Statistics() {
     );
   }
 
-  const { dailyStats = [], deliveryBreakdown = [], summary } = data || {};
+  const { dailyStats = [], deliveryBreakdown = [], summary, waiterTipStats = [], kitchenTipStats = [] } = data || {};
 
   // Prepare chart data with formatted dates
   const chartData = dailyStats.map(d => ({
@@ -339,6 +341,12 @@ export default function Statistics() {
                   )}
                 </CardContent>
               </Card>
+            </div>
+
+            {/* Staff Tip Charts */}
+            <div className="grid lg:grid-cols-2 gap-6">
+              <WaiterTipChart data={waiterTipStats} />
+              <KitchenTipChart data={kitchenTipStats} />
             </div>
 
             {/* Expenses & Delivery Trend */}
