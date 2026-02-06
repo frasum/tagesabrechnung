@@ -48,10 +48,13 @@ const formatShortCurrency = (value: number) => {
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
+    const dateStr = payload[0]?.payload?.date;
+    if (!dateStr) return null;
+    
     return (
       <div className="bg-popover border border-border rounded-lg p-3 shadow-lg">
         <p className="font-medium text-foreground mb-2">
-          {format(new Date(label), 'dd. MMMM yyyy', { locale: de })}
+          {format(new Date(dateStr), 'dd. MMMM yyyy', { locale: de })}
         </p>
         {payload.map((entry: any, index: number) => (
           <div key={index} className="flex items-center gap-2 text-sm">
