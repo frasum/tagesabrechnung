@@ -191,6 +191,42 @@ export type Database = {
         }
         Relationships: []
       }
+      staff: {
+        Row: {
+          created_at: string
+          hourly_rate: number | null
+          id: string
+          is_active: boolean | null
+          name: string
+          notes: string | null
+          phone: string | null
+          role: Database["public"]["Enums"]["staff_role"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          hourly_rate?: number | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          role: Database["public"]["Enums"]["staff_role"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          hourly_rate?: number | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          role?: Database["public"]["Enums"]["staff_role"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       waiter_shifts: {
         Row: {
           card_total: number | null
@@ -249,7 +285,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      staff_role: "waiter" | "kitchen"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -376,6 +412,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      staff_role: ["waiter", "kitchen"],
+    },
   },
 } as const

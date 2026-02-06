@@ -5,7 +5,8 @@ import {
   Settings, 
   ChefHat, 
   FileText, 
-  History, 
+  History,
+  UserCog,
   Menu,
   X,
   Euro,
@@ -25,6 +26,7 @@ const navItems = [
   { href: '/summary', label: 'Tagesabrechnung', icon: FileText },
   { href: '/statistics', label: 'Statistiken', icon: BarChart3 },
   { href: '/history', label: 'Verlauf', icon: History },
+  { href: '/staff', label: 'Mitarbeiter', icon: UserCog },
 ];
 
 export function AppLayout({ children }: AppLayoutProps) {
