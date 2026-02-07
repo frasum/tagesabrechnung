@@ -43,11 +43,6 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
       setDisplayValue(numValue === 0 ? '' : numValue.toFixed(2).replace('.', ','));
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter') {
-        e.currentTarget.blur();
-      }
-    };
 
     return (
       <div className="relative">
@@ -59,7 +54,6 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
           onChange={handleChange}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
           className={cn("pr-8 text-right tabular-nums", className)}
           placeholder="0,00"
           {...props}

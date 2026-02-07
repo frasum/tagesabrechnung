@@ -3,7 +3,34 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
-  ({ className, type, ...props }, ref) => {
+  ({ className, type, onKeyDown, ...props }, ref) => {
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        
+        // Find all focusable inputs and textareas
+        const inputs = Array.from(
+          document.querySelectorAll(
+            'input:not([disabled]):not([readonly]):not([type="hidden"]), textarea:not([disabled]):not([readonly])'
+          )
+        ) as HTMLElement[];
+        
+        const currentIndex = inputs.indexOf(e.currentTarget);
+        const nextInput = inputs[currentIndex + 1];
+        
+        // Blur current field (triggers onBlur for formatting)
+        e.currentTarget.blur();
+        
+        // Focus next field
+        if (nextInput) {
+          nextInput.focus();
+        }
+      }
+      
+      // Pass through original onKeyDown
+      onKeyDown?.(e);
+    };
+
     return (
       <input
         type={type}
@@ -12,6 +39,7 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
           className,
         )}
         ref={ref}
+        onKeyDown={handleKeyDown}
         {...props}
       />
     );
