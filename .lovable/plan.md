@@ -1,120 +1,75 @@
 
-# Plan: Kellner-Trinkgeld Pool-System
+# Plan: Kartenzahlungen-Bereich durch Trinkgeld-Pool-Übersicht ersetzen
 
-## Aktueller Zustand vs. gewünschtes Verhalten
+## Übersicht
 
-| Aspekt | Aktuell | Gewünscht |
-|--------|---------|-----------|
-| Kellner TG | Jeder behält sein eigenes | Alle werfen in einen Topf, geteilt durch Anzahl |
-| Küchen TG | Bereits gepoolt (nach Stunden) | Bleibt unverändert |
+Der "Kartenzahlungen"-Bereich auf der rechten Seite hat keine praktische Funktion mehr, da Kartenzahlungen bereits als Summenfeld im Kellner-Formular erfasst werden. Dieser Bereich wird durch eine **Trinkgeld-Pool-Übersicht** ersetzt, die das Poolsystem visuell darstellt.
 
-### Beispiel
+## Was ist der Trinkgeld-Pool?
 
-**Aktuell (individuell):**
-| Kellner | Eigenes TG |
-|---------|------------|
-| Frank | 150,00 € |
-| Max | 80,00 € |
-| Lisa | 120,00 € |
-
-**Neu (gepoolt):**
-| Kellner | Beitrag zum Pool | Anteil (1/3) |
-|---------|------------------|--------------|
-| Frank | 150,00 € | 116,67 € |
-| Max | 80,00 € | 116,67 € |
-| Lisa | 120,00 € | 116,67 € |
-| **Pool Gesamt** | **350,00 €** | |
+Das System funktioniert so:
+1. Jeder Kellner gibt mehr Bargeld ab als "erwartet" - der Überschuss (minus Küchen-Trinkgeld) ist sein **Beitrag zum Pool**
+2. Alle Beiträge werden summiert = **Gesamtpool**
+3. Der Pool wird **gleichmäßig** auf alle Kellner des Abends verteilt
 
 ---
 
-## Umsetzungsplan
+## Neue "Trinkgeld Pool" Karte
 
-### 1. Kellner-Abrechnung (WaiterCashUp.tsx)
+Die neue Karte zeigt:
 
-**Neue Pool-Berechnung hinzufügen:**
+### Kopfbereich
+- Titel: "Trinkgeld Pool" mit Users-Icon
+- Kurze Erklärung: "Pool wird gleichmäßig auf alle Kellner verteilt"
 
-```text
-Für alle Kellner des Tages:
-  pool_total = SUM(cash_handed_in - expected - kitchen_tip)
-  kellner_count = COUNT(waiter_shifts)
-  tip_per_waiter = pool_total / kellner_count
-```
+### Inhalt (wenn Kellner vorhanden)
 
-**Neue UI-Elemente:**
+**Pool-Übersicht:**
+- Anzahl Kellner im Pool
+- Gesamtpool-Summe (prominent)
+- Anteil pro Kellner (Pool ÷ Anzahl)
 
-- StatCard oben: "Kellner TG Pool" mit Gesamtsumme
-- StatCard: "Pro Kellner" mit geteiltem Betrag
-- Tabelle: Spalte "Beitrag" (individuell) + "Anteil" (gleichmäßig)
+**Aufschlüsselung pro Kellner:**
+| Name | Beitrag | Anteil |
+|------|---------|--------|
+| Max  | +15,00 € | 10,00 € |
+| Lisa | +5,00 €  | 10,00 € |
+| **Gesamt** | **20,00 €** | **20,00 €** |
 
-### 2. Tagesabrechnung (DailySummary.tsx)
+Die "Beitrag"-Spalte zeigt, was jeder Kellner zum Pool beigesteuert hat.
+Die "Anteil"-Spalte zeigt, was jeder Kellner vom Pool erhält (immer gleich).
 
-- Pool-Berechnung übernehmen
-- Anzeige: "Kellner Trinkgeld Pool: X € (Y Kellner × Z €)"
-
-### 3. Statistiken (useStatistics.ts)
-
-- Berechnung anpassen: Jeder Kellner erhält den gleichen Anteil pro Schicht
-- Nicht mehr individuelles TG, sondern Pool-Anteil tracken
-
-### 4. PDF Export
-
-- Pool-System in der Zusammenfassung darstellen
-
----
-
-## UI-Mockup für Kellner-Abrechnung
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│  Kellner TG Pool    │  Pro Kellner (3)   │  Küchen TG Pool      │
-│  350,00 €           │  116,67 €          │  125,00 €            │
-└─────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────┐
-│ Kellner Übersicht                                               │
-├─────────────────────────────────────────────────────────────────┤
-│ Name   │ POS  │ Kassiert │ ... │ Beitrag │ Anteil │ K.TG       │
-│ Frank  │ 500  │ 500      │ ... │ +150 €  │ 116,67€│ 10,00 €    │
-│ Max    │ 300  │ 300      │ ... │ +80 €   │ 116,67€│ 6,00 €     │
-│ Lisa   │ 400  │ 400      │ ... │ +120 €  │ 116,67€│ 8,00 €     │
-├─────────────────────────────────────────────────────────────────┤
-│ GESAMT │      │          │     │ 350 €   │ 350 €  │ 24,00 €    │
-└─────────────────────────────────────────────────────────────────┘
-```
+### Leerzustand
+Wenn noch keine Kellner erfasst sind: "Fügen Sie Kellner hinzu, um den Trinkgeld-Pool zu sehen."
 
 ---
 
 ## Technische Änderungen
 
-| Datei | Änderung |
-|-------|----------|
-| `src/pages/WaiterCashUp.tsx` | Pool-Berechnung, neue StatCards, Tabellenspalten anpassen |
-| `src/pages/DailySummary.tsx` | Pool-Anzeige in Zusammenfassung |
-| `src/hooks/useStatistics.ts` | Statistik-Berechnung auf Pool-Anteil umstellen |
-| `src/utils/pdfExport.ts` | Pool-Darstellung im Export |
-| `src/components/statistics/WaiterTipChart.tsx` | Tooltip/Tabelle anpassen (zeigt Pool-Anteil) |
+### Datei: `src/pages/WaiterCashUp.tsx`
+
+1. **Entfernen:**
+   - Kartentransaktions-States und -Funktionen
+   - Import und Verwendung von `useCardTransactions`, `useCreateCardTransaction`, `useDeleteCardTransaction`
+   - Die gesamte "Kartenzahlungen"-Card (Zeilen 307-365)
+
+2. **Hinzufügen:**
+   - Neue "Trinkgeld Pool"-Card mit:
+     - Pool-Statistiken (Anzahl Kellner, Gesamt, Pro Kopf)
+     - Kompakte Tabelle mit Beitrag und Anteil pro Kellner
+     - Farbcodierung: Grün für positive Beiträge, Rot für negative
+
+3. **Betroffene Zeilen:**
+   - Zeilen 33-35: Kartentransaktions-States entfernen
+   - Zeilen 48-52: Hooks entfernen
+   - Zeilen 128-163: Handler-Funktionen entfernen
+   - Zeilen 307-365: Kartenzahlungen-Card durch Pool-Card ersetzen
 
 ---
 
-## Berechnungslogik im Detail
+## Vorteile
 
-```text
-// Für jeden Tag:
-waiterShifts = alle Kellner-Schichten des Tages
-
-// Beitrag jedes Kellners zum Pool
-for each shift:
-  expected = kassiert_brutto + hilf_mahl - open_invoices - card_total
-  contribution = cash_handed_in - expected - kitchen_tip
-
-// Pool-Gesamtsumme
-poolTotal = SUM(contributions)
-
-// Gleichmäßige Verteilung
-waiterCount = waiterShifts.length
-tipPerWaiter = poolTotal / waiterCount
-
-// Statistik pro Person (über Zeitraum):
-personStats[name].totalPoolShare += tipPerWaiter
-personStats[name].shiftsCount += 1
-```
+- Übersichtliche Darstellung des Trinkgeld-Systems
+- Jeder Kellner sieht seinen Beitrag und seinen Anteil
+- Keine ungenutzte Funktionalität mehr
+- Konsistent mit dem bereits implementierten Pool-System
