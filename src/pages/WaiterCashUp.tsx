@@ -332,7 +332,7 @@ export default function WaiterCashUp() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Name</TableHead>
-                          <TableHead className="text-right">POS</TableHead>
+                          <TableHead className="text-right">Umsatz</TableHead>
                           <TableHead className="text-right">Kassiert</TableHead>
                           <TableHead className="text-right">Karte</TableHead>
                           <TableHead className="text-right">HilfM</TableHead>
