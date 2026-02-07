@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export default function Login() {
   const [name, setName] = useState('');
@@ -15,6 +16,7 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +39,8 @@ export default function Login() {
         title: 'Willkommen!',
         description: `Anmeldung erfolgreich als ${name}.`,
       });
-      navigate('/');
+      // Mobile users go to /waiter, desktop users go to /
+      navigate(isMobile ? '/waiter' : '/');
     } else {
       toast({
         title: 'Anmeldung fehlgeschlagen',
