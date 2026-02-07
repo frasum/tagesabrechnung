@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { Plus, Trash2, CreditCard, User, Users } from 'lucide-react';
+import { Plus, Trash2, User, Users } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { DateSelector } from '@/components/shared/DateSelector';
 import { CurrencyInput } from '@/components/shared/CurrencyInput';
@@ -8,18 +8,13 @@ import { StatCard } from '@/components/shared/StatCard';
 import { StaffSelect } from '@/components/shared/StaffSelect';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { useSession, useCreateSession, useWaiterShifts, useCreateWaiterShift, useDeleteWaiterShift, useCardTransactions, useCreateCardTransaction, useDeleteCardTransaction } from '@/hooks/useSession';
-const CARD_TYPES = ['EC', 'Visa', 'Amex', 'Maestro'] as const;
+import { useSession, useCreateSession, useWaiterShifts, useCreateWaiterShift, useDeleteWaiterShift } from '@/hooks/useSession';
 export default function WaiterCashUp() {
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedWaiterId, setSelectedWaiterId] = useState<string | null>(null);
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
 
   // Form state for new waiter
   const [newWaiterName, setNewWaiterName] = useState('');
@@ -30,9 +25,6 @@ export default function WaiterCashUp() {
   const [newOpenInvoices, setNewOpenInvoices] = useState(0);
   const [newCashHandedIn, setNewCashHandedIn] = useState(0);
 
-  // Card transaction form
-  const [newCardType, setNewCardType] = useState<typeof CARD_TYPES[number]>('EC');
-  const [newCardAmount, setNewCardAmount] = useState(0);
 
   // Data hooks
   const {
@@ -45,12 +37,7 @@ export default function WaiterCashUp() {
   } = useWaiterShifts(session?.id);
   const createWaiterShift = useCreateWaiterShift();
   const deleteWaiterShift = useDeleteWaiterShift();
-  const {
-    data: cardTransactions = []
-  } = useCardTransactions(selectedWaiterId || undefined);
-  const createCardTransaction = useCreateCardTransaction();
-  const deleteCardTransaction = useDeleteCardTransaction();
-  const selectedWaiter = waiterShifts.find(w => w.id === selectedWaiterId);
+
   const handleCreateSession = async () => {
     try {
       await createSession.mutateAsync(selectedDate);
@@ -114,7 +101,7 @@ export default function WaiterCashUp() {
         id,
         sessionId: session.id
       });
-      if (selectedWaiterId === id) setSelectedWaiterId(null);
+      
       toast({
         title: 'Kellner gelöscht'
       });
@@ -125,43 +112,6 @@ export default function WaiterCashUp() {
       });
     }
   };
-  const handleAddCardTransaction = async () => {
-    if (!selectedWaiterId || newCardAmount <= 0) return;
-    try {
-      await createCardTransaction.mutateAsync({
-        waiter_shift_id: selectedWaiterId,
-        card_type: newCardType,
-        amount: newCardAmount
-      });
-      setNewCardAmount(0);
-      toast({
-        title: 'Kartenzahlung hinzugefügt'
-      });
-    } catch (error) {
-      toast({
-        title: 'Fehler',
-        variant: 'destructive'
-      });
-    }
-  };
-  const handleDeleteCardTransaction = async (id: string) => {
-    if (!selectedWaiterId) return;
-    try {
-      await deleteCardTransaction.mutateAsync({
-        id,
-        waiterShiftId: selectedWaiterId
-      });
-      toast({
-        title: 'Kartenzahlung gelöscht'
-      });
-    } catch (error) {
-      toast({
-        title: 'Fehler',
-        variant: 'destructive'
-      });
-    }
-  };
-
   // Calculate expected cash: kassiert_brutto + hilf_mahl - open_invoices - card_total
   const calculateExpected = (shift: typeof waiterShifts[0]) => {
     return (shift.kassiert_brutto || 0) + shift.hilf_mahl - shift.open_invoices - shift.card_total;
@@ -304,63 +254,81 @@ export default function WaiterCashUp() {
               </CardContent>
             </Card>
 
-            {/* Card Transactions */}
+            {/* Trinkgeld Pool */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <CreditCard className="w-5 h-5" />
-                  Kartenzahlungen
+                  <Users className="w-5 h-5" />
+                  Trinkgeld Pool
                 </CardTitle>
+                <CardDescription>
+                  Pool wird gleichmäßig auf alle Kellner verteilt
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                {!selectedWaiterId ? <p className="text-muted-foreground text-center py-8">
-                    Wählen Sie einen Kellner aus der Liste, um Kartenzahlungen hinzuzufügen.
-                  </p> : <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      Kartenzahlungen für: <strong>{selectedWaiter?.waiter_name}</strong>
-                    </p>
-
-                    {/* Add Card Transaction */}
-                    <div className="flex gap-2">
-                      <Select value={newCardType} onValueChange={v => setNewCardType(v as typeof CARD_TYPES[number])}>
-                        <SelectTrigger className="w-28">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {CARD_TYPES.map(type => <SelectItem key={type} value={type}>
-                              {type}
-                            </SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                      <CurrencyInput value={newCardAmount} onChange={setNewCardAmount} className="flex-1" />
-                      <Button onClick={handleAddCardTransaction} disabled={newCardAmount <= 0}>
-                        <Plus className="w-4 h-4" />
-                      </Button>
+                {waiterShifts.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">
+                    Fügen Sie Kellner hinzu, um den Trinkgeld-Pool zu sehen.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Pool Summary */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="bg-muted rounded-lg p-3 text-center">
+                        <p className="text-xs text-muted-foreground">Kellner</p>
+                        <p className="text-lg font-semibold">{waiterCount}</p>
+                      </div>
+                      <div className="bg-muted rounded-lg p-3 text-center">
+                        <p className="text-xs text-muted-foreground">Gesamtpool</p>
+                        <p className={`text-lg font-semibold tabular-nums ${totalPool >= 0 ? 'text-success' : 'text-destructive'}`}>
+                          {formatCurrency(totalPool)}
+                        </p>
+                      </div>
+                      <div className="bg-muted rounded-lg p-3 text-center">
+                        <p className="text-xs text-muted-foreground">Pro Kellner</p>
+                        <p className={`text-lg font-semibold tabular-nums ${tipPerWaiter >= 0 ? 'text-success' : 'text-destructive'}`}>
+                          {formatCurrency(tipPerWaiter)}
+                        </p>
+                      </div>
                     </div>
 
-                    {/* Card Transactions List */}
-                    {cardTransactions.length > 0 && <div className="space-y-2">
-                        {cardTransactions.map(tx => <div key={tx.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <span className="text-xs font-medium bg-primary/10 text-primary px-2 py-1 rounded">
-                                {tx.card_type}
-                              </span>
-                              <span className="font-medium tabular-nums">
-                                {formatCurrency(tx.amount)}
-                              </span>
-                            </div>
-                            <Button variant="ghost" size="icon" onClick={() => handleDeleteCardTransaction(tx.id)}>
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            </Button>
-                          </div>)}
-                        <div className="flex justify-between pt-2 border-t">
-                          <span className="font-medium">Summe:</span>
-                          <span className="font-semibold tabular-nums">
-                            {formatCurrency(cardTransactions.reduce((sum, tx) => sum + tx.amount, 0))}
-                          </span>
-                        </div>
-                      </div>}
-                  </div>}
+                    {/* Pool Breakdown Table */}
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead className="text-right">Beitrag</TableHead>
+                          <TableHead className="text-right">Anteil</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {waiterShifts.map(shift => {
+                          const contribution = calculateContribution(shift);
+                          return (
+                            <TableRow key={shift.id}>
+                              <TableCell className="font-medium">{shift.waiter_name}</TableCell>
+                              <TableCell className={`text-right tabular-nums ${contribution >= 0 ? 'text-success' : 'text-destructive'}`}>
+                                {contribution >= 0 ? '+' : ''}{formatCurrency(contribution)}
+                              </TableCell>
+                              <TableCell className={`text-right tabular-nums ${tipPerWaiter >= 0 ? 'text-success' : 'text-destructive'}`}>
+                                {formatCurrency(tipPerWaiter)}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                        <TableRow className="bg-muted/50 font-semibold border-t-2">
+                          <TableCell>Gesamt</TableCell>
+                          <TableCell className={`text-right tabular-nums ${totalPool >= 0 ? 'text-success' : 'text-destructive'}`}>
+                            {formatCurrency(totalPool)}
+                          </TableCell>
+                          <TableCell className={`text-right tabular-nums ${totalPool >= 0 ? 'text-success' : 'text-destructive'}`}>
+                            {formatCurrency(totalPool)}
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -396,9 +364,7 @@ export default function WaiterCashUp() {
                       const expected = calculateExpected(shift);
                       const contribution = calculateContribution(shift);
                       const abweichung = shift.cash_handed_in - expected;
-                      return <TableRow key={shift.id} className={selectedWaiterId === shift.id ? 'bg-muted' : ''} onClick={() => setSelectedWaiterId(shift.id)} style={{
-                        cursor: 'pointer'
-                      }}>
+                      return <TableRow key={shift.id}>
                               <TableCell className="font-medium">{shift.waiter_name}</TableCell>
                               <TableCell className="text-right tabular-nums">{formatCurrency(shift.pos_sales)}</TableCell>
                               <TableCell className="text-right tabular-nums">{formatCurrency(shift.kassiert_brutto || 0)}</TableCell>
