@@ -87,19 +87,32 @@ async function fetchMonthlyStaffTips(monthsBack: number = 12): Promise<MonthlyTi
       waiterShiftsBySession[ws.session_id].push(ws);
     });
 
-    // For each session, calculate the pool and distribute equally
+    // For each session, calculate the pool and distribute equally (team shifts count as 2)
     for (const [sessionId, shiftsInSession] of Object.entries(waiterShiftsBySession)) {
       // Calculate session pool: sum of all differenz values (tip contributions)
       const sessionPool = shiftsInSession.reduce((sum, s) => sum + (s.differenz || 0), 0);
-      const waiterCount = shiftsInSession.length;
       
-      if (waiterCount > 0 && sessionPool > 0) {
-        const tipPerWaiter = sessionPool / waiterCount;
+      // Count waiter shares (team shifts = 2 shares)
+      const waiterShareCount = shiftsInSession.reduce((count, s) => {
+        return count + (s.second_waiter_name ? 2 : 1);
+      }, 0);
+      
+      if (waiterShareCount > 0 && sessionPool > 0) {
+        const tipPerWaiter = sessionPool / waiterShareCount;
         shiftsInSession.forEach(ws => {
+          // Primary waiter
           if (!waiterTipsMap[ws.waiter_name]) {
             waiterTipsMap[ws.waiter_name] = 0;
           }
           waiterTipsMap[ws.waiter_name] += tipPerWaiter;
+          
+          // Second waiter (if exists)
+          if (ws.second_waiter_name) {
+            if (!waiterTipsMap[ws.second_waiter_name]) {
+              waiterTipsMap[ws.second_waiter_name] = 0;
+            }
+            waiterTipsMap[ws.second_waiter_name] += tipPerWaiter;
+          }
         });
       }
     }

@@ -117,10 +117,11 @@ export default function WaiterMobile() {
         });
         toast({ title: 'Gespeichert', description: 'Deine Abrechnung wurde aktualisiert.' });
       } else {
-        // Create new shift
+        // Create new shift (second_waiter_name is null for self-service)
         await createWaiterShift.mutateAsync({
           session_id: sessionId,
           waiter_name: staffName,
+          second_waiter_name: null,
           ...formData,
         });
         toast({ title: 'Gespeichert', description: 'Deine Abrechnung wurde eingereicht.' });
