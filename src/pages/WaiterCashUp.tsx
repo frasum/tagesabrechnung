@@ -249,7 +249,7 @@ export default function WaiterCashUp() {
                     <CurrencyInput value={newPosSales} onChange={setNewPosSales} />
                   </div>
                   <div>
-                    <Label>Kassiert Brutto</Label>
+                    <Label>Abzugebender Betrag</Label>
                     <CurrencyInput value={newKassiertBrutto} onChange={setNewKassiertBrutto} />
                   </div>
                 </div>
