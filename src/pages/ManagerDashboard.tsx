@@ -342,31 +342,10 @@ export default function ManagerDashboard() {
                     />
                   </div>
                   <div>
-                    <Label>Gustoco</Label>
-                    <CurrencyInput
-                      value={formData.gustoco_revenue}
-                      onChange={(v) => updateField('gustoco_revenue', v)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Orderhut</Label>
-                    <CurrencyInput
-                      value={formData.orderhut_revenue}
-                      onChange={(v) => updateField('orderhut_revenue', v)}
-                    />
-                  </div>
-                  <div>
                     <Label>Wolt</Label>
                     <CurrencyInput
                       value={formData.wolt_revenue}
                       onChange={(v) => updateField('wolt_revenue', v)}
-                    />
-                  </div>
-                  <div>
-                    <Label>UberEats</Label>
-                    <CurrencyInput
-                      value={formData.ubereats_revenue}
-                      onChange={(v) => updateField('ubereats_revenue', v)}
                     />
                   </div>
                   <div>
