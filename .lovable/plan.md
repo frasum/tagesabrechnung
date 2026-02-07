@@ -1,73 +1,41 @@
 
-## Plan: Enter-Taste springt global zum nächsten Eingabefeld
+## Plan: Warnungen ins Manager-Dashboard verschieben
 
-### Problem
-Aktuell wird bei Enter nur `blur()` aufgerufen - der Cursor bleibt stehen und springt nicht zum nächsten Feld.
+### Warum das besser ist
+- Der Manager gibt POS Total und Terminal-Werte im Dashboard ein
+- Wenn es eine Differenz zu den Kellner-Daten gibt, sieht er das sofort
+- In der Tagesabrechnung ist es eher eine reine Zusammenfassung
 
-### Lösung
-Die Navigation zum nächsten Feld wird direkt in die Basis-Komponente `Input` eingebaut, sodass es automatisch überall in der App funktioniert.
+### Was gemacht wird
 
-### Technische Umsetzung
+**1. Manager-Dashboard (`src/pages/ManagerDashboard.tsx`)**
 
-**Datei 1: `src/components/ui/input.tsx`**
+Warnkarten hinzufügen, die erscheinen wenn:
+- POS Total nicht mit der Summe der Kellner-Umsätze übereinstimmt
+- Terminal 1+2 nicht mit der Summe der Kellner-Kartenzahlungen übereinstimmen
+- KK Gesamtliste nicht mit Kellner-Karten übereinstimmt (falls eingetragen)
 
-Die Komponente wird erweitert um einen `onKeyDown` Handler:
+Die Warnungen erscheinen direkt unter dem Header, bevor die Eingabefelder kommen.
 
-```typescript
-const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
-  ({ className, type, onKeyDown, ...props }, ref) => {
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        
-        // Alle fokussierbaren Eingabefelder finden
-        const inputs = Array.from(
-          document.querySelectorAll(
-            'input:not([disabled]):not([readonly]):not([type="hidden"]), textarea:not([disabled]):not([readonly])'
-          )
-        ) as HTMLElement[];
-        
-        const currentIndex = inputs.indexOf(e.currentTarget);
-        const nextInput = inputs[currentIndex + 1];
-        
-        // Aktuelles Feld verlassen (löst onBlur für Formatierung aus)
-        e.currentTarget.blur();
-        
-        // Nächstes Feld fokussieren
-        if (nextInput) {
-          nextInput.focus();
-        }
-      }
-      
-      // Originales onKeyDown weitergeben
-      onKeyDown?.(e);
-    };
+**2. Tagesabrechnung (`src/pages/DailySummary.tsx`)**
 
-    return (
-      <input
-        type={type}
-        onKeyDown={handleKeyDown}
-        className={...}
-        ref={ref}
-        {...props}
-      />
-    );
-  }
-);
-```
+Die Warnkarten werden entfernt - die Seite wird zu einer reinen Übersicht ohne Warnungen.
 
-**Datei 2: `src/components/shared/CurrencyInput.tsx`**
+### Berechnung der Differenzen (wird ins Dashboard verschoben)
 
-Der eigene `handleKeyDown` Handler wird entfernt, da die Basis-Komponente das jetzt übernimmt.
+| Prüfung | Formel |
+|---------|--------|
+| POS Differenz | `formData.pos_total - kellnerUmsatz` |
+| Terminal Differenz | `(terminal_1 + terminal_2) - totalCardTotal` |
+| KK GL Differenz | `card_total_gl - totalCardTotal` (nur wenn card_total_gl > 0) |
 
-### Verhalten nach der Änderung
-
-| Aktion | Ergebnis |
-|--------|----------|
-| Enter drücken | Wert wird gespeichert, Cursor springt zum nächsten Feld |
-| Tab drücken | Standard-Browser-Verhalten |
-| Woanders klicken | Wert wird gespeichert (wie bisher) |
+### Design
+Gleiche rote Warnkarten wie bisher:
+- Roter Rahmen und Hintergrund
+- AlertTriangle Icon
+- Beschreibung was nicht stimmt
+- Differenz-Betrag hervorgehoben
 
 ### Dateien die geändert werden
-- `src/components/ui/input.tsx` - Enter-Navigation hinzufügen
-- `src/components/shared/CurrencyInput.tsx` - Eigenes handleKeyDown entfernen
+- `src/pages/ManagerDashboard.tsx` - Warnkarten hinzufügen
+- `src/pages/DailySummary.tsx` - Warnkarten entfernen
