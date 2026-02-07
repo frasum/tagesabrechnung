@@ -160,7 +160,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): void => {
     autoTable(doc, {
       startY: yPos,
       margin: { left: margin, right: margin },
-      head: [['Name', 'POS', 'Kassiert', 'Karten', 'HilfM', 'Erwartet', 'Abgeg.', 'Abw.', 'K.TG', 'W.TG']],
+      head: [['Name', 'POS', 'Kassiert', 'Kredit Karten', 'HilfM', 'Erwartet', 'Abgeg.', 'Abw.', 'K.TG', 'W.TG']],
       body: data.waiterShifts.map(shift => {
         const expected = (shift.kassiert_brutto || 0) + shift.hilf_mahl - shift.open_invoices - shift.card_total;
         const abweichung = shift.cash_handed_in - expected;
