@@ -209,6 +209,7 @@ export default function ManagerDashboard() {
   const totalHilfMahl = waiterShifts.reduce((sum, w) => sum + (w.hilf_mahl || 0), 0);
   const totalOpenInvoices = waiterShifts.reduce((sum, w) => sum + (w.open_invoices || 0), 0);
   const totalCardTotal = waiterShifts.reduce((sum, w) => sum + (w.card_total || 0), 0);
+  const totalKassiertBrutto = waiterShifts.reduce((sum, w) => sum + (w.kassiert_brutto || 0), 0);
 
   // Mismatch calculations for warnings
   const posMismatch = formData.pos_total - kellnerUmsatz;
@@ -352,10 +353,9 @@ export default function ManagerDashboard() {
                 <CardContent className="space-y-4">
                   <div>
                     <Label>Kellner Abzugebender Betrag</Label>
-                    <CurrencyInput
-                      value={formData.spicery_counter}
-                      onChange={(v) => updateField('spicery_counter', v)}
-                    />
+                    <div className="h-10 px-3 flex items-center justify-end rounded-md border bg-muted text-right tabular-nums font-medium">
+                      {new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(totalKassiertBrutto)} €
+                    </div>
                   </div>
                   <div>
                     <Label>Vectron Gesamtumsatz</Label>
