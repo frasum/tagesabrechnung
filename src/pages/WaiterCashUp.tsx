@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { Plus, Trash2, User, Users } from 'lucide-react';
+import { Percent, Plus, Trash2, User, Users } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { DateSelector } from '@/components/shared/DateSelector';
 import { CurrencyInput } from '@/components/shared/CurrencyInput';
@@ -128,6 +128,9 @@ export default function WaiterCashUp() {
   const totalPool = waiterShifts.reduce((sum, shift) => sum + calculateContribution(shift), 0);
   const tipPerWaiter = waiterCount > 0 ? totalPool / waiterCount : 0;
   const totalKitchenTip = waiterShifts.reduce((sum, shift) => sum + shift.kitchen_tip, 0);
+  const totalSales = waiterShifts.reduce((sum, s) => sum + s.pos_sales, 0);
+  const totalTip = totalPool + totalKitchenTip;
+  const tipPercentage = totalSales > 0 ? (totalTip / totalSales) * 100 : 0;
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('de-DE', {
       style: 'currency',
@@ -176,6 +179,7 @@ export default function WaiterCashUp() {
                 <StatCard label="Kellner TG Pool" value={totalPool} icon={<Users className="w-5 h-5" />} variant={totalPool >= 0 ? 'success' : 'error'} />
                 <StatCard label={`Pro Kellner (${waiterCount})`} value={tipPerWaiter} icon={<User className="w-5 h-5" />} variant={tipPerWaiter >= 0 ? 'success' : 'error'} />
                 <StatCard label="Küchen TG Pool" value={totalKitchenTip} icon={<Users className="w-5 h-5" />} variant="success" />
+                <StatCard label="Trinkgeld %" value={`${tipPercentage.toFixed(1)} %`} icon={<Percent className="w-5 h-5" />} variant="success" />
               </div>}
 
             <div className="grid lg:grid-cols-2 gap-6">
