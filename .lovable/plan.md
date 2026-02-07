@@ -1,75 +1,76 @@
 
-# Plan: Kartenzahlungen-Bereich durch Trinkgeld-Pool-Übersicht ersetzen
+# Plan: Trinkgeld-Prozent Kachel hinzufuegen
 
-## Übersicht
+## Uebersicht
 
-Der "Kartenzahlungen"-Bereich auf der rechten Seite hat keine praktische Funktion mehr, da Kartenzahlungen bereits als Summenfeld im Kellner-Formular erfasst werden. Dieser Bereich wird durch eine **Trinkgeld-Pool-Übersicht** ersetzt, die das Poolsystem visuell darstellt.
-
-## Was ist der Trinkgeld-Pool?
-
-Das System funktioniert so:
-1. Jeder Kellner gibt mehr Bargeld ab als "erwartet" - der Überschuss (minus Küchen-Trinkgeld) ist sein **Beitrag zum Pool**
-2. Alle Beiträge werden summiert = **Gesamtpool**
-3. Der Pool wird **gleichmäßig** auf alle Kellner des Abends verteilt
+Hinzufuegen einer vierten StatCard in der oberen Statistik-Leiste, die den prozentualen Anteil des Gesamttrinkgeldes am Tagesumsatz anzeigt.
 
 ---
 
-## Neue "Trinkgeld Pool" Karte
+## Berechnung
 
-Die neue Karte zeigt:
+**Formel:**
+```
+Trinkgeld % = (Kellner-Pool + Kuechen-Pool) / Gesamtumsatz * 100
+```
 
-### Kopfbereich
-- Titel: "Trinkgeld Pool" mit Users-Icon
-- Kurze Erklärung: "Pool wird gleichmäßig auf alle Kellner verteilt"
-
-### Inhalt (wenn Kellner vorhanden)
-
-**Pool-Übersicht:**
-- Anzahl Kellner im Pool
-- Gesamtpool-Summe (prominent)
-- Anteil pro Kellner (Pool ÷ Anzahl)
-
-**Aufschlüsselung pro Kellner:**
-| Name | Beitrag | Anteil |
-|------|---------|--------|
-| Max  | +15,00 € | 10,00 € |
-| Lisa | +5,00 €  | 10,00 € |
-| **Gesamt** | **20,00 €** | **20,00 €** |
-
-Die "Beitrag"-Spalte zeigt, was jeder Kellner zum Pool beigesteuert hat.
-Die "Anteil"-Spalte zeigt, was jeder Kellner vom Pool erhält (immer gleich).
-
-### Leerzustand
-Wenn noch keine Kellner erfasst sind: "Fügen Sie Kellner hinzu, um den Trinkgeld-Pool zu sehen."
+**Beispiel aus Screenshot:**
+- Kellner TG Pool: 210,00 EUR
+- Kuechen TG Pool: 40,00 EUR
+- Gesamt-Trinkgeld: 250,00 EUR
+- Bei Umsatz von 5.000 EUR: 5,0%
 
 ---
 
-## Technische Änderungen
+## Darstellung
+
+Die vierte Kachel zeigt:
+
+| Label | Wert | Icon |
+|-------|------|------|
+| Trinkgeld % | 5,0 % | Percent-Icon |
+
+**Farbcodierung:**
+- Gruen (success): Standardfarbe fuer Trinkgeld-Prozent
+- Fallback bei 0 Umsatz: "0,0 %" anzeigen (Division durch Null vermeiden)
+
+---
+
+## Aenderungen
 
 ### Datei: `src/pages/WaiterCashUp.tsx`
 
-1. **Entfernen:**
-   - Kartentransaktions-States und -Funktionen
-   - Import und Verwendung von `useCardTransactions`, `useCreateCardTransaction`, `useDeleteCardTransaction`
-   - Die gesamte "Kartenzahlungen"-Card (Zeilen 307-365)
+**1. Import erweitern (Zeile 3):**
+- `Percent` Icon von lucide-react hinzufuegen
 
-2. **Hinzufügen:**
-   - Neue "Trinkgeld Pool"-Card mit:
-     - Pool-Statistiken (Anzahl Kellner, Gesamt, Pro Kopf)
-     - Kompakte Tabelle mit Beitrag und Anteil pro Kellner
-     - Farbcodierung: Grün für positive Beiträge, Rot für negative
+**2. Berechnung hinzufuegen (nach Zeile 130):**
+```typescript
+const totalSales = waiterShifts.reduce((sum, s) => sum + s.pos_sales, 0);
+const totalTip = totalPool + totalKitchenTip;
+const tipPercentage = totalSales > 0 ? (totalTip / totalSales) * 100 : 0;
+```
 
-3. **Betroffene Zeilen:**
-   - Zeilen 33-35: Kartentransaktions-States entfernen
-   - Zeilen 48-52: Hooks entfernen
-   - Zeilen 128-163: Handler-Funktionen entfernen
-   - Zeilen 307-365: Kartenzahlungen-Card durch Pool-Card ersetzen
+**3. Vierte StatCard hinzufuegen (Zeile 178, nach Kuechen TG Pool):**
+```tsx
+<StatCard 
+  label="Trinkgeld %" 
+  value={`${tipPercentage.toFixed(1)} %`} 
+  icon={<Percent className="w-5 h-5" />} 
+  variant="success" 
+/>
+```
 
 ---
 
-## Vorteile
+## Ergebnis
 
-- Übersichtliche Darstellung des Trinkgeld-Systems
-- Jeder Kellner sieht seinen Beitrag und seinen Anteil
-- Keine ungenutzte Funktionalität mehr
-- Konsistent mit dem bereits implementierten Pool-System
+Die Statistik-Leiste zeigt dann 4 Kacheln:
+
+```
++------------------+------------------+------------------+------------------+
+| Kellner TG Pool  | Pro Kellner (X)  | Kuechen TG Pool  | Trinkgeld %      |
+| 210,00 EUR       | 210,00 EUR       | 40,00 EUR        | 5,0 %            |
++------------------+------------------+------------------+------------------+
+```
+
+Das Grid ist bereits auf `lg:grid-cols-4` eingestellt, also passt die vierte Kachel perfekt ins Layout.
