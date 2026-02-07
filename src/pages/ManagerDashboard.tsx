@@ -348,12 +348,13 @@ export default function ManagerDashboard() {
                       onChange={(v) => updateField('wolt_revenue', v)}
                     />
                   </div>
-                  <div>
+                  <div className="pt-2 border-t">
                     <Label>Take-Away Gesamt</Label>
-                    <CurrencyInput
-                      value={formData.takeaway_total}
-                      onChange={(v) => updateField('takeaway_total', v)}
-                    />
+                    <div className="h-10 px-3 flex items-center justify-end rounded-md border bg-muted text-right tabular-nums font-medium">
+                      {new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
+                        formData.card_total_gl + formData.ordersmart_revenue + formData.wolt_revenue
+                      )} €
+                    </div>
                   </div>
                 </CardContent>
               </Card>
