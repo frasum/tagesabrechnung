@@ -221,7 +221,7 @@ export default function ManagerDashboard() {
   const posMismatch = formData.pos_total - kellnerUmsatz;
   const terminalTotal = formData.terminal_1_total + formData.terminal_2_total;
   const cardTerminalMismatch = terminalTotal - totalCardTotal;
-  const cardGLMismatch = formData.card_total_gl - totalCardTotal;
+  const waiterCardTotal = waiterShifts.reduce((sum, w) => sum + (w.card_total || 0), 0);
 
   // Delivery revenue
   const totalDeliveryRevenue = 
@@ -276,7 +276,7 @@ export default function ManagerDashboard() {
         </div>
 
         {/* Warning Cards - Show when there are mismatches */}
-        {session && waiterShifts.length > 0 && (posMismatch !== 0 || cardTerminalMismatch !== 0 || (cardGLMismatch !== 0 && formData.card_total_gl > 0)) && (
+        {session && waiterShifts.length > 0 && (posMismatch !== 0 || cardTerminalMismatch !== 0) && (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {posMismatch !== 0 && (
               <Card className="border-destructive/30 bg-destructive/5">
@@ -301,26 +301,10 @@ export default function ManagerDashboard() {
                   <div>
                     <p className="font-medium text-destructive">Terminal Differenz</p>
                     <p className="text-sm text-muted-foreground">
-                      Terminals ({formatCurrency(terminalTotal)}) stimmen nicht mit Kellner-Karten ({formatCurrency(totalCardTotal)}) überein.
+                      Terminals ({formatCurrency(terminalTotal)}) stimmen nicht mit Kartenzahlungen ({formatCurrency(waiterCardTotal)} Kellner + {formatCurrency(formData.card_total_gl)} GL = {formatCurrency(totalCardTotal)}) überein.
                     </p>
                     <p className="text-sm font-semibold text-destructive mt-1">
                       Differenz: {formatCurrency(cardTerminalMismatch)}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-            {cardGLMismatch !== 0 && formData.card_total_gl > 0 && (
-              <Card className="border-destructive/30 bg-destructive/5">
-                <CardContent className="py-4 flex items-center gap-3">
-                  <AlertTriangle className="w-5 h-5 text-destructive shrink-0" />
-                  <div>
-                    <p className="font-medium text-destructive">KK GL Differenz</p>
-                    <p className="text-sm text-muted-foreground">
-                      KK Gesamtliste ({formatCurrency(formData.card_total_gl)}) stimmt nicht mit Kellner-Karten ({formatCurrency(totalCardTotal)}) überein.
-                    </p>
-                    <p className="text-sm font-semibold text-destructive mt-1">
-                      Differenz: {formatCurrency(cardGLMismatch)}
                     </p>
                   </div>
                 </CardContent>
