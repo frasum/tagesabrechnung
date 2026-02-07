@@ -270,7 +270,7 @@ export default function WaiterCashUp() {
                 ) : (
                   <div className="space-y-4">
                     {/* Pool Summary - 4 colored StatCards */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-2 gap-3">
                       <StatCard label="Trinkgeld" value={totalPool} icon={<Users className="w-5 h-5" />} variant={totalPool >= 0 ? 'success' : 'error'} />
                       <StatCard label={`Pro Kellner (${waiterCount})`} value={tipPerWaiter} icon={<User className="w-5 h-5" />} variant={tipPerWaiter >= 0 ? 'success' : 'error'} />
                       <StatCard label="Küche" value={totalKitchenTip} icon={<Users className="w-5 h-5" />} variant="success" />
