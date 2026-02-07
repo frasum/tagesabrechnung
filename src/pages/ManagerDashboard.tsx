@@ -3,6 +3,7 @@ import { format, isToday, isYesterday } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { Plus, Trash2, Settings, Truck, Receipt, Wallet, HelpCircle, ChevronDown, ClipboardList, Clock, CheckCircle2 } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { WaiterQRCode } from '@/components/manager/WaiterQRCode';
 import { DateSelector } from '@/components/shared/DateSelector';
 import { CurrencyInput } from '@/components/shared/CurrencyInput';
 import { Button } from '@/components/ui/button';
@@ -268,6 +269,9 @@ export default function ManagerDashboard() {
         {session && (
           <div className="space-y-6">
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Waiter QR Code */}
+              <WaiterQRCode />
+
               {/* POS & Terminal */}
               <Card>
                 <CardHeader>
