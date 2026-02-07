@@ -166,8 +166,21 @@ export default function ManagerDashboard() {
     }
   };
 
-  const updateField = (field: keyof typeof formData, value: number | string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+  const updateField = async (field: keyof typeof formData, value: number | string) => {
+    const newFormData = { ...formData, [field]: value };
+    setFormData(newFormData);
+    
+    // Auto-save to database
+    if (session?.id) {
+      try {
+        await updateSession.mutateAsync({
+          id: session.id,
+          ...newFormData,
+        });
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+      }
+    }
   };
 
   const formatCurrency = (value: number) => {
