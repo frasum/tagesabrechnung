@@ -378,16 +378,6 @@ export default function ManagerDashboard() {
                       onChange={(v) => updateField('terminal_2_total', v)}
                     />
                   </div>
-                  <div>
-                    <Label>Spicery Transaktionen</Label>
-                    <Input
-                      type="number"
-                      value={formData.spicery_transactions || ''}
-                      onChange={(e) => updateField('spicery_transactions', parseInt(e.target.value) || 0)}
-                      placeholder="0"
-                      className="text-right tabular-nums"
-                    />
-                  </div>
                 </CardContent>
               </Card>
 
