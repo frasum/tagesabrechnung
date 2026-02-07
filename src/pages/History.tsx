@@ -158,7 +158,7 @@ export default function History() {
                             ) : (
                               <span className="inline-flex items-center gap-1 text-muted-foreground text-xs font-medium">
                                 <XCircle className="w-3.5 h-3.5" />
-                                Offen
+                                Offene Rechnung
                               </span>
                             )}
                           </TableCell>
