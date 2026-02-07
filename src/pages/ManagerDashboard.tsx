@@ -368,7 +368,7 @@ export default function ManagerDashboard() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Truck className="w-5 h-5" />
-                    Lieferplattformen
+                    Take Away
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -624,7 +624,7 @@ export default function ManagerDashboard() {
                       <p className="text-destructive">− Einladung</p>
                       <p className="text-destructive">− Offene Rechnungen</p>
                       <p className="text-destructive">− Ausgaben</p>
-                      <p className="text-destructive">− Lieferplattformen</p>
+                      <p className="text-destructive">− Take Away</p>
                       <p className="border-t border-border mt-2 pt-2 font-bold">= BARGELD</p>
                     </div>
 
@@ -676,7 +676,7 @@ export default function ManagerDashboard() {
                             <TableCell className="text-right tabular-nums text-destructive">{formatCurrency(totalExpenses)}</TableCell>
                           </TableRow>
                           <TableRow>
-                            <TableCell className="text-destructive">− Lieferplattformen</TableCell>
+                            <TableCell className="text-destructive">− Take Away</TableCell>
                             <TableCell className="text-right tabular-nums text-destructive">{formatCurrency(totalDeliveryRevenue)}</TableCell>
                           </TableRow>
                           <TableRow className="border-t-2 bg-muted/30">

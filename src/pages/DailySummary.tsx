@@ -212,7 +212,7 @@ export default function DailySummary() {
                 icon={<CreditCard className="w-5 h-5" />}
               />
               <StatCard
-                label="Lieferplattformen"
+                label="Take Away"
                 value={totalDeliveryRevenue}
                 icon={<Truck className="w-5 h-5" />}
               />
@@ -302,7 +302,7 @@ export default function DailySummary() {
                         <TableCell className="text-right tabular-nums">{formatCurrency(totalExpenses)}</TableCell>
                       </TableRow>
                       <TableRow>
-                        <TableCell>Lieferplattformen</TableCell>
+                        <TableCell>Take Away</TableCell>
                         <TableCell className="text-right tabular-nums">{formatCurrency(totalDeliveryRevenue)}</TableCell>
                       </TableRow>
                       <TableRow className="border-t-2">
@@ -331,7 +331,7 @@ export default function DailySummary() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Truck className="w-5 h-5" />
-                    Lieferplattformen Details
+                    Take Away Details
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -462,7 +462,7 @@ export default function DailySummary() {
                       <p className="text-destructive">− Einladung</p>
                       <p className="text-destructive">− Offene Rechnungen</p>
                       <p className="text-destructive">− Ausgaben</p>
-                      <p className="text-destructive">− Lieferplattformen</p>
+                      <p className="text-destructive">− Take Away</p>
                       <p className="border-t border-border mt-2 pt-2 font-bold">= BARGELD</p>
                     </div>
 
@@ -514,7 +514,7 @@ export default function DailySummary() {
                             <TableCell className="text-right tabular-nums text-destructive">{formatCurrency(totalExpenses)}</TableCell>
                           </TableRow>
                           <TableRow>
-                            <TableCell className="text-destructive">− Lieferplattformen</TableCell>
+                            <TableCell className="text-destructive">− Take Away</TableCell>
                             <TableCell className="text-right tabular-nums text-destructive">{formatCurrency(totalDeliveryRevenue)}</TableCell>
                           </TableRow>
                           <TableRow className="border-t-2 bg-muted/30">

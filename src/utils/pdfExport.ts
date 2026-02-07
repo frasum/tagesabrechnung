@@ -137,7 +137,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): void => {
     body: [
       ['Kellner Umsatz', formatCurrency(data.totals.kellnerUmsatz)],
       ['Kartenzahlungen', formatCurrency(data.totals.totalCardTotal)],
-      ['Lieferplattformen', formatCurrency(data.totals.totalDeliveryRevenue)],
+       ['Take Away', formatCurrency(data.totals.totalDeliveryRevenue)],
       ['Hilf Mahl', formatCurrency(data.totals.totalHilfMahl)],
       ['Ausgaben', formatCurrency(data.totals.totalExpenses)],
       ['Offene Rechnungen', formatCurrency(data.totals.totalOpenInvoices)],
@@ -252,7 +252,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): void => {
     ['Einladung', formatCurrency(data.session.einladung || 0)],
     ['Offene Rechnungen', formatCurrency(data.totals.totalOpenInvoices)],
     ['Ausgaben', formatCurrency(data.totals.totalExpenses)],
-    ['Lieferplattformen', formatCurrency(data.totals.totalDeliveryRevenue)],
+    ['Take Away', formatCurrency(data.totals.totalDeliveryRevenue)],
   ];
   const totalDeductions = (data.session.terminal_1_total || 0) +
     (data.session.terminal_2_total || 0) +
@@ -293,7 +293,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): void => {
   // Delivery Platforms
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.text('Lieferplattformen', margin, yPos);
+  doc.text('Take Away', margin, yPos);
   yPos += 6;
 
   autoTable(doc, {
@@ -450,7 +450,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): void => {
     ['− Vorschuss + Einladung', formatCurrency((data.session.vorschuss || 0) + (data.session.einladung || 0))],
     ['− Offene Rechnungen', formatCurrency(data.totals.totalOpenInvoices)],
     ['− Ausgaben', formatCurrency(data.totals.totalExpenses)],
-    ['− Lieferplattformen', formatCurrency(data.totals.totalDeliveryRevenue)],
+    ['− Take Away', formatCurrency(data.totals.totalDeliveryRevenue)],
     ['= Summe Abzüge', formatCurrency(totalDeductions)],
     ['', ''],
     ['= BARGELD', formatCurrency(data.totals.bargeld)],
