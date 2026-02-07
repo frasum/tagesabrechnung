@@ -250,6 +250,7 @@ export type Database = {
           kassiert_brutto: number | null
           kitchen_tip: number | null
           open_invoices: number | null
+          participates_in_pool: boolean
           pos_sales: number | null
           second_waiter_name: string | null
           session_id: string
@@ -266,6 +267,7 @@ export type Database = {
           kassiert_brutto?: number | null
           kitchen_tip?: number | null
           open_invoices?: number | null
+          participates_in_pool?: boolean
           pos_sales?: number | null
           second_waiter_name?: string | null
           session_id: string
@@ -282,6 +284,7 @@ export type Database = {
           kassiert_brutto?: number | null
           kitchen_tip?: number | null
           open_invoices?: number | null
+          participates_in_pool?: boolean
           pos_sales?: number | null
           second_waiter_name?: string | null
           session_id?: string

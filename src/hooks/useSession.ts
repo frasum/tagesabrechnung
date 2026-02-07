@@ -90,6 +90,7 @@ export function useCreateWaiterShift() {
       const normalizedShift = {
         ...shift,
         second_waiter_name: shift.second_waiter_name === 'none' ? null : shift.second_waiter_name,
+        participates_in_pool: shift.participates_in_pool ?? true,
         submitted_at: new Date().toISOString(),
       };
       const { data, error } = await supabase
@@ -132,11 +133,15 @@ export function useUpdateWaiterShift() {
   return useMutation({
     mutationFn: async ({ id, sessionId, ...updates }: { id: string; sessionId: string } & Partial<Omit<WaiterShift, 'id' | 'differenz' | 'kitchen_tip' | 'created_at' | 'submitted_at'>>) => {
       // Normalize "none" value to null for second_waiter_name
-      const normalizedUpdates = {
+      const normalizedUpdates: Record<string, unknown> = {
         ...updates,
         second_waiter_name: updates.second_waiter_name === 'none' ? null : updates.second_waiter_name,
         submitted_at: new Date().toISOString(),
       };
+      // Only include participates_in_pool if provided
+      if (updates.participates_in_pool !== undefined) {
+        normalizedUpdates.participates_in_pool = updates.participates_in_pool;
+      }
       const { data, error } = await supabase
         .from('waiter_shifts')
         .update(normalizedUpdates)
@@ -393,14 +398,18 @@ export function useWaiterTipAverages() {
           return sum + contribution;
         }, 0);
 
-        // Count all waiter shares (team shifts count as 2)
+        // Count all waiter shares (team shifts count as 2, only if participates_in_pool)
         const totalWaiterShares = sessionShifts.reduce((count, shift) => {
+          if (!shift.participates_in_pool) return count;
           return count + (shift.second_waiter_name ? 2 : 1);
         }, 0);
         const sharePerWaiter = totalWaiterShares > 0 ? sessionPool / totalWaiterShares : 0;
 
-        // Aggregate per waiter (including second waiters)
+        // Aggregate per waiter (including second waiters, only if participates_in_pool)
         for (const shift of sessionShifts) {
+          // Skip waiters who don't participate in pool
+          if (!shift.participates_in_pool) continue;
+          
           // Primary waiter
           const name = shift.waiter_name;
           if (!waiterAverages[name]) {

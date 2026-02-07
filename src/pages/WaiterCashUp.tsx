@@ -9,6 +9,7 @@ import { StaffSelect } from '@/components/shared/StaffSelect';
 import { SecondWaiterSelect } from '@/components/shared/SecondWaiterSelect';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
@@ -27,6 +28,7 @@ export default function WaiterCashUp() {
   const [newOpenInvoices, setNewOpenInvoices] = useState(0);
   const [newCashHandedIn, setNewCashHandedIn] = useState(0);
   const [newSecondWaiterName, setNewSecondWaiterName] = useState('none');
+  const [newParticipatesInPool, setNewParticipatesInPool] = useState(true);
   const [editingShiftId, setEditingShiftId] = useState<string | null>(null);
 
 
@@ -62,6 +64,7 @@ export default function WaiterCashUp() {
   const resetForm = () => {
     setNewWaiterName('');
     setNewSecondWaiterName('none');
+    setNewParticipatesInPool(true);
     setNewPosSales(0);
     setNewKassiertBrutto(0);
     setNewCardTotal(0);
@@ -75,6 +78,7 @@ export default function WaiterCashUp() {
     setEditingShiftId(shift.id);
     setNewWaiterName(shift.waiter_name);
     setNewSecondWaiterName(shift.second_waiter_name || 'none');
+    setNewParticipatesInPool(shift.participates_in_pool ?? true);
     setNewPosSales(shift.pos_sales || 0);
     setNewKassiertBrutto(shift.kassiert_brutto || 0);
     setNewCardTotal(shift.card_total || 0);
@@ -115,6 +119,7 @@ export default function WaiterCashUp() {
           sessionId: session.id,
           waiter_name: newWaiterName.trim(),
           second_waiter_name: newSecondWaiterName,
+          participates_in_pool: newParticipatesInPool,
           pos_sales: newPosSales,
           kassiert_brutto: newKassiertBrutto,
           card_total: newCardTotal,
@@ -132,6 +137,7 @@ export default function WaiterCashUp() {
           session_id: session.id,
           waiter_name: newWaiterName.trim(),
           second_waiter_name: newSecondWaiterName,
+          participates_in_pool: newParticipatesInPool,
           pos_sales: newPosSales,
           kassiert_brutto: newKassiertBrutto,
           card_total: newCardTotal,
@@ -182,8 +188,9 @@ export default function WaiterCashUp() {
     return shift.cash_handed_in - expected - shift.kitchen_tip;
   };
 
-  // Calculate pool totals (team shifts count as 2 shares)
+  // Calculate pool totals (team shifts count as 2 shares, only if participates_in_pool)
   const waiterShareCount = waiterShifts.reduce((count, shift) => {
+    if (!shift.participates_in_pool) return count;
     return count + (shift.second_waiter_name ? 2 : 1);
   }, 0);
   const totalPool = waiterShifts.reduce((sum, shift) => sum + calculateContribution(shift), 0);
@@ -240,19 +247,31 @@ export default function WaiterCashUp() {
             {/* Add/Edit Waiter Form */}
             <Card className={editingShiftId ? 'ring-2 ring-primary' : ''}>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  {editingShiftId ? (
-                    <>
-                      <Pencil className="w-5 h-5" />
-                      Kellner bearbeiten: {newWaiterName}
-                    </>
-                  ) : (
-                    <>
-                      <User className="w-5 h-5" />
-                      Neuen Kellner hinzufügen
-                    </>
-                  )}
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    {editingShiftId ? (
+                      <>
+                        <Pencil className="w-5 h-5" />
+                        Kellner bearbeiten: {newWaiterName}
+                      </>
+                    ) : (
+                      <>
+                        <User className="w-5 h-5" />
+                        Neuen Kellner hinzufügen
+                      </>
+                    )}
+                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="participates-in-pool"
+                      checked={newParticipatesInPool}
+                      onCheckedChange={(checked) => setNewParticipatesInPool(checked === true)}
+                    />
+                    <Label htmlFor="participates-in-pool" className="text-sm font-normal cursor-pointer">
+                      Am Pool beteiligt
+                    </Label>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
@@ -393,16 +412,22 @@ export default function WaiterCashUp() {
                       <TableBody>
                         {waiterShifts.map(shift => {
                           const contribution = calculateContribution(shift);
-                          const currentTipPercent = shift.pos_sales > 0 ? (tipPerWaiter / shift.pos_sales) * 100 : 0;
+                          const shiftTipShare = shift.participates_in_pool ? tipPerWaiter : 0;
+                          const currentTipPercent = shift.pos_sales > 0 ? (shiftTipShare / shift.pos_sales) * 100 : 0;
                           const avgData = waiterTipAverages[shift.waiter_name];
                           return (
-                            <TableRow key={shift.id}>
-                              <TableCell className="font-medium">{shift.waiter_name}</TableCell>
+                            <TableRow key={shift.id} className={!shift.participates_in_pool ? 'opacity-60' : ''}>
+                              <TableCell className="font-medium">
+                                {shift.waiter_name}
+                                {!shift.participates_in_pool && (
+                                  <span className="ml-1 text-xs text-muted-foreground">(nicht am Pool)</span>
+                                )}
+                              </TableCell>
                               <TableCell className={`text-right tabular-nums ${contribution >= 0 ? 'text-success' : 'text-destructive'}`}>
                                 {contribution >= 0 ? '+' : ''}{formatCurrency(contribution)}
                               </TableCell>
-                              <TableCell className={`text-right tabular-nums ${tipPerWaiter >= 0 ? 'text-success' : 'text-destructive'}`}>
-                                {formatCurrency(tipPerWaiter)}
+                              <TableCell className={`text-right tabular-nums ${shiftTipShare >= 0 ? 'text-success' : 'text-destructive'}`}>
+                                {formatCurrency(shiftTipShare)}
                               </TableCell>
                               <TableCell className="text-right tabular-nums">
                                 {shift.pos_sales > 0 ? `${currentTipPercent.toFixed(1)} %` : '-'}
@@ -464,15 +489,19 @@ export default function WaiterCashUp() {
                       const expected = calculateExpected(shift);
                       const contribution = calculateContribution(shift);
                       const abweichung = shift.cash_handed_in - expected;
+                      const shiftTipShare = shift.participates_in_pool ? tipPerWaiter : 0;
                       return <TableRow 
                         key={shift.id} 
-                        className={`cursor-pointer transition-colors ${editingShiftId === shift.id ? 'bg-primary/10' : 'hover:bg-muted/50'}`}
+                        className={`cursor-pointer transition-colors ${editingShiftId === shift.id ? 'bg-primary/10' : 'hover:bg-muted/50'} ${!shift.participates_in_pool ? 'opacity-60' : ''}`}
                         onClick={() => handleEditWaiter(shift)}
                       >
                               <TableCell className="font-medium">
                                 {shift.waiter_name}
                                 {shift.second_waiter_name && (
                                   <span className="text-muted-foreground"> + {shift.second_waiter_name}</span>
+                                )}
+                                {!shift.participates_in_pool && (
+                                  <span className="ml-1 text-xs text-muted-foreground">(nicht am Pool)</span>
                                 )}
                               </TableCell>
                               <TableCell className="text-right tabular-nums">{formatCurrency(shift.pos_sales)}</TableCell>
@@ -489,8 +518,8 @@ export default function WaiterCashUp() {
                               <TableCell className={`text-right tabular-nums ${contribution >= 0 ? 'text-success' : 'text-destructive'}`}>
                                 {contribution >= 0 ? '+' : ''}{formatCurrency(contribution)}
                               </TableCell>
-                              <TableCell className={`text-right tabular-nums font-semibold ${tipPerWaiter >= 0 ? 'text-success' : 'text-destructive'}`}>
-                                {formatCurrency(tipPerWaiter)}
+                              <TableCell className={`text-right tabular-nums font-semibold ${shiftTipShare >= 0 ? 'text-success' : 'text-destructive'}`}>
+                                {formatCurrency(shiftTipShare)}
                               </TableCell>
                               <TableCell>
                                 <Button variant="ghost" size="icon" onClick={e => {

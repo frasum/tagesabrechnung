@@ -44,6 +44,7 @@ export interface WaiterShift {
   kitchen_tip: number;
   created_at: string;
   submitted_at: string | null;
+  participates_in_pool: boolean;
 }
 
 export interface CardTransaction {
