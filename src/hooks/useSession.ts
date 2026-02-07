@@ -120,6 +120,29 @@ export function useDeleteWaiterShift() {
   });
 }
 
+export function useUpdateWaiterShift() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, sessionId, ...updates }: { id: string; sessionId: string } & Partial<Omit<WaiterShift, 'id' | 'differenz' | 'kitchen_tip' | 'created_at'>>) => {
+      const { data, error } = await supabase
+        .from('waiter_shifts')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return { ...data, sessionId } as WaiterShift & { sessionId: string };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ 
+        queryKey: ['waiter-shifts', data.sessionId] 
+      });
+    },
+  });
+}
+
 export function useCardTransactions(waiterShiftId: string | undefined) {
   return useQuery({
     queryKey: ['card-transactions', waiterShiftId],

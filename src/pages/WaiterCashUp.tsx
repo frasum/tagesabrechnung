@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { Percent, Plus, Trash2, User, Users } from 'lucide-react';
+import { Pencil, Percent, Plus, Trash2, User, Users, X } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { DateSelector } from '@/components/shared/DateSelector';
 import { CurrencyInput } from '@/components/shared/CurrencyInput';
@@ -11,7 +11,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { useSession, useCreateSession, useWaiterShifts, useCreateWaiterShift, useDeleteWaiterShift } from '@/hooks/useSession';
+import { useSession, useCreateSession, useWaiterShifts, useCreateWaiterShift, useDeleteWaiterShift, useUpdateWaiterShift } from '@/hooks/useSession';
+import type { WaiterShift } from '@/types/database';
 export default function WaiterCashUp() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const { toast } = useToast();
@@ -24,6 +25,7 @@ export default function WaiterCashUp() {
   const [newHilfMahl, setNewHilfMahl] = useState(0);
   const [newOpenInvoices, setNewOpenInvoices] = useState(0);
   const [newCashHandedIn, setNewCashHandedIn] = useState(0);
+  const [editingShiftId, setEditingShiftId] = useState<string | null>(null);
 
 
   // Data hooks
@@ -37,6 +39,7 @@ export default function WaiterCashUp() {
   } = useWaiterShifts(session?.id);
   const createWaiterShift = useCreateWaiterShift();
   const deleteWaiterShift = useDeleteWaiterShift();
+  const updateWaiterShift = useUpdateWaiterShift();
 
   const handleCreateSession = async () => {
     try {
@@ -53,7 +56,33 @@ export default function WaiterCashUp() {
       });
     }
   };
-  const handleAddWaiter = async () => {
+  const resetForm = () => {
+    setNewWaiterName('');
+    setNewPosSales(0);
+    setNewKassiertBrutto(0);
+    setNewCardTotal(0);
+    setNewHilfMahl(0);
+    setNewOpenInvoices(0);
+    setNewCashHandedIn(0);
+    setEditingShiftId(null);
+  };
+
+  const handleEditWaiter = (shift: WaiterShift) => {
+    setEditingShiftId(shift.id);
+    setNewWaiterName(shift.waiter_name);
+    setNewPosSales(shift.pos_sales || 0);
+    setNewKassiertBrutto(shift.kassiert_brutto || 0);
+    setNewCardTotal(shift.card_total || 0);
+    setNewHilfMahl(shift.hilf_mahl || 0);
+    setNewOpenInvoices(shift.open_invoices || 0);
+    setNewCashHandedIn(shift.cash_handed_in || 0);
+  };
+
+  const handleCancelEdit = () => {
+    resetForm();
+  };
+
+  const handleSaveWaiter = async () => {
     if (!session?.id || !newWaiterName.trim()) {
       toast({
         title: 'Fehler',
@@ -63,33 +92,45 @@ export default function WaiterCashUp() {
       return;
     }
     try {
-      await createWaiterShift.mutateAsync({
-        session_id: session.id,
-        waiter_name: newWaiterName.trim(),
-        pos_sales: newPosSales,
-        kassiert_brutto: newKassiertBrutto,
-        card_total: newCardTotal,
-        hilf_mahl: newHilfMahl,
-        open_invoices: newOpenInvoices,
-        cash_handed_in: newCashHandedIn
-      });
-
-      // Reset form
-      setNewWaiterName('');
-      setNewPosSales(0);
-      setNewKassiertBrutto(0);
-      setNewCardTotal(0);
-      setNewHilfMahl(0);
-      setNewOpenInvoices(0);
-      setNewCashHandedIn(0);
-      toast({
-        title: 'Kellner hinzugefügt',
-        description: `${newWaiterName} wurde hinzugefügt.`
-      });
+      if (editingShiftId) {
+        // Update existing
+        await updateWaiterShift.mutateAsync({
+          id: editingShiftId,
+          sessionId: session.id,
+          waiter_name: newWaiterName.trim(),
+          pos_sales: newPosSales,
+          kassiert_brutto: newKassiertBrutto,
+          card_total: newCardTotal,
+          hilf_mahl: newHilfMahl,
+          open_invoices: newOpenInvoices,
+          cash_handed_in: newCashHandedIn
+        });
+        toast({
+          title: 'Kellner aktualisiert',
+          description: `${newWaiterName} wurde aktualisiert.`
+        });
+      } else {
+        // Create new
+        await createWaiterShift.mutateAsync({
+          session_id: session.id,
+          waiter_name: newWaiterName.trim(),
+          pos_sales: newPosSales,
+          kassiert_brutto: newKassiertBrutto,
+          card_total: newCardTotal,
+          hilf_mahl: newHilfMahl,
+          open_invoices: newOpenInvoices,
+          cash_handed_in: newCashHandedIn
+        });
+        toast({
+          title: 'Kellner hinzugefügt',
+          description: `${newWaiterName} wurde hinzugefügt.`
+        });
+      }
+      resetForm();
     } catch (error) {
       toast({
         title: 'Fehler',
-        description: 'Kellner konnte nicht hinzugefügt werden.',
+        description: editingShiftId ? 'Kellner konnte nicht aktualisiert werden.' : 'Kellner konnte nicht hinzugefügt werden.',
         variant: 'destructive'
       });
     }
@@ -176,12 +217,21 @@ export default function WaiterCashUp() {
         {session && <div className="space-y-6">
 
             <div className="grid lg:grid-cols-2 gap-6">
-            {/* Add Waiter Form */}
-            <Card>
+            {/* Add/Edit Waiter Form */}
+            <Card className={editingShiftId ? 'ring-2 ring-primary' : ''}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <User className="w-5 h-5" />
-                  Neuen Kellner hinzufügen
+                  {editingShiftId ? (
+                    <>
+                      <Pencil className="w-5 h-5" />
+                      Kellner bearbeiten: {newWaiterName}
+                    </>
+                  ) : (
+                    <>
+                      <User className="w-5 h-5" />
+                      Neuen Kellner hinzufügen
+                    </>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -244,10 +294,31 @@ export default function WaiterCashUp() {
                   </div>
                 </div>
 
-                <Button onClick={handleAddWaiter} disabled={!newWaiterName.trim() || createWaiterShift.isPending} className="w-full">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Kellner hinzufügen
-                </Button>
+                <div className="flex gap-2">
+                  {editingShiftId && (
+                    <Button variant="outline" onClick={handleCancelEdit} className="flex-1">
+                      <X className="w-4 h-4 mr-2" />
+                      Abbrechen
+                    </Button>
+                  )}
+                  <Button 
+                    onClick={handleSaveWaiter} 
+                    disabled={!newWaiterName.trim() || createWaiterShift.isPending || updateWaiterShift.isPending} 
+                    className="flex-1"
+                  >
+                    {editingShiftId ? (
+                      <>
+                        <Pencil className="w-4 h-4 mr-2" />
+                        Aktualisieren
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Kellner hinzufügen
+                      </>
+                    )}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
 
@@ -351,7 +422,11 @@ export default function WaiterCashUp() {
                       const expected = calculateExpected(shift);
                       const contribution = calculateContribution(shift);
                       const abweichung = shift.cash_handed_in - expected;
-                      return <TableRow key={shift.id}>
+                      return <TableRow 
+                        key={shift.id} 
+                        className={`cursor-pointer transition-colors ${editingShiftId === shift.id ? 'bg-primary/10' : 'hover:bg-muted/50'}`}
+                        onClick={() => handleEditWaiter(shift)}
+                      >
                               <TableCell className="font-medium">{shift.waiter_name}</TableCell>
                               <TableCell className="text-right tabular-nums">{formatCurrency(shift.pos_sales)}</TableCell>
                               <TableCell className="text-right tabular-nums">{formatCurrency(shift.kassiert_brutto || 0)}</TableCell>
