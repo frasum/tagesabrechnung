@@ -1,181 +1,99 @@
 
-# Plan: Kellner-Einträge bearbeitbar machen
+# Plan: Trinkgeld-Prozent pro Kellner anzeigen
 
 ## Übersicht
 
-Klick auf eine Zeile in der Kellnerübersicht lädt die Daten zurück ins Eingabeformular. Das Formular wechselt in den "Bearbeiten-Modus" und speichert Änderungen direkt per Update.
+Zwei neue Spalten in der Kellner-Übersichtstabelle:
+1. **TG %** - Trinkgeld-Prozentsatz der aktuellen Schicht (Pool-Anteil / Umsatz * 100)
+2. **Ø TG %** - Historischer Durchschnitt über alle bisherigen Schichten des Kellners
 
-## Benutzerablauf
+## Berechnung
 
-1. Nutzer klickt auf eine Kellnerzeile in der Übersicht
-2. Alle Werte werden ins Formular geladen
-3. Formular-Titel ändert sich zu "Kellner bearbeiten"
-4. Button zeigt "Aktualisieren" statt "Hinzufügen"
-5. Nach dem Speichern wird das Formular zurückgesetzt
-
+### TG % (Aktuell)
 ```text
-┌─────────────────────────────────────────────────────────┐
-│  Kellner Übersicht                                      │
-├─────────────────────────────────────────────────────────┤
-│  Name     │ Umsatz  │ ... │ Aktionen                    │
-│───────────┼─────────┼─────┼────────────────────────────│
-│  > Max    │ 500€    │ ... │ [🗑️]                        │  ← Klick lädt Max
-│    Lisa   │ 420€    │ ... │ [🗑️]                        │     ins Formular
-└─────────────────────────────────────────────────────────┘
-           │
-           ▼
-┌─────────────────────────────────────────────────────────┐
-│  ✏️ Kellner bearbeiten: Max                             │
-├─────────────────────────────────────────────────────────┤
-│  Kellner: [Max        ▼]                                │
-│  Umsatz:  [500,00€     ]  Abzugeb.: [450,00€    ]      │
-│  ...                                                    │
-│  [Abbrechen]              [✓ Aktualisieren]            │
-└─────────────────────────────────────────────────────────┘
+TG % = (Pool-Anteil / Umsatz) × 100
+     = (tipPerWaiter / shift.pos_sales) × 100
 ```
 
----
+### Ø TG % (Historisch)
+Für jeden Kellner müssen wir alle vergangenen Schichten laden und berechnen:
+```text
+Ø TG % = Summe aller Pool-Anteile / Summe aller Umsätze × 100
+```
 
 ## Technische Umsetzung
 
-### 1. Neuer Hook: `useUpdateWaiterShift`
+### 1. Neuer Hook für historische Durchschnitte
 
 **Datei:** `src/hooks/useSession.ts`
 
-Neuer Mutation-Hook für das direkte Update eines bestehenden Kellner-Eintrags:
+Neuer Hook `useWaiterTipAverages` der alle historischen Schichten lädt und pro Kellner den Durchschnittsprozentsatz berechnet:
 
 ```typescript
-export function useUpdateWaiterShift() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async ({ id, sessionId, ...updates }) => {
-      const { data, error } = await supabase
-        .from('waiter_shifts')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return { ...data, sessionId };
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ 
-        queryKey: ['waiter-shifts', data.sessionId] 
-      });
+export function useWaiterTipAverages() {
+  return useQuery({
+    queryKey: ['waiter-tip-averages'],
+    queryFn: async () => {
+      // 1. Alle Sessions mit ihren Shifts laden
+      // 2. Pro Session den Pool berechnen und gleichmäßig verteilen
+      // 3. Pro Kellner: Summe(Pool-Anteile) / Summe(Umsätze) * 100
+      // 4. Map zurückgeben: { "Name": avgTipPercent }
     },
   });
 }
 ```
 
-### 2. Bearbeiten-State in der Komponente
+### 2. Berechnung der Durchschnitte
 
-**Datei:** `src/pages/WaiterCashUp.tsx`
-
-Neuer State für den Bearbeiten-Modus:
+Die Logik folgt dem bestehenden Pool-System aus `useStatistics.ts`:
 
 ```typescript
-const [editingShiftId, setEditingShiftId] = useState<string | null>(null);
-```
+// Für jede Session:
+const sessionPool = sessionShifts.reduce((sum, shift) => {
+  const expected = kassiert + hilfMahl - openInvoices - cardTotal;
+  const contribution = cashHandedIn - expected - kitchenTip;
+  return sum + contribution;
+}, 0);
 
-### 3. Funktion zum Laden eines Kellners ins Formular
+const sharePerWaiter = sessionPool / sessionShifts.length;
 
-```typescript
-const handleEditWaiter = (shift: WaiterShift) => {
-  setEditingShiftId(shift.id);
-  setNewWaiterName(shift.waiter_name);
-  setNewPosSales(shift.pos_sales);
-  setNewKassiertBrutto(shift.kassiert_brutto || 0);
-  setNewCardTotal(shift.card_total);
-  setNewHilfMahl(shift.hilf_mahl);
-  setNewOpenInvoices(shift.open_invoices);
-  setNewCashHandedIn(shift.cash_handed_in);
+// Aggregieren pro Kellner:
+waiterAverages[name] = {
+  totalPoolShare: ...,  // Summe aller Pool-Anteile
+  totalSales: ...,      // Summe aller Umsätze
+  shiftsCount: ...      // Anzahl Schichten
 };
+
+// Durchschnitt berechnen:
+avgTipPercent = totalSales > 0 ? (totalPoolShare / totalSales) * 100 : 0;
 ```
 
-### 4. Angepasste Speichern-Funktion
+### 3. UI-Anpassungen in WaiterCashUp.tsx
 
-Die `handleAddWaiter` Funktion wird erweitert, um zwischen Hinzufügen und Aktualisieren zu unterscheiden:
+**Neue Spalten in der Tabelle:**
 
-```typescript
-const handleSaveWaiter = async () => {
-  if (editingShiftId) {
-    // Update existing
-    await updateWaiterShift.mutateAsync({
-      id: editingShiftId,
-      sessionId: session.id,
-      waiter_name: newWaiterName,
-      pos_sales: newPosSales,
-      // ... alle Felder
-    });
-    setEditingShiftId(null);
-  } else {
-    // Create new (bestehende Logik)
-  }
-  // Reset form
-};
+| Name | ... | Beitrag | Anteil | TG % | Ø TG % | 🗑️ |
+|------|-----|---------|--------|------|--------|-----|
+| Max  | ... | +50€    | 75€    | 5.2% | 4.8%   | 🗑️ |
+
+**Code-Änderungen:**
+1. Hook importieren und aufrufen
+2. Zwei neue `<TableHead>` Spalten hinzufügen
+3. Pro Zeile TG % berechnen und anzeigen
+4. Ø TG % aus dem Hook-Ergebnis auslesen
+
+### 4. Visuelle Darstellung
+
+```text
+TG %:
+- Berechnung: tipPerWaiter / shift.pos_sales * 100
+- Anzeige: "5.2 %" in neutraler Farbe
+
+Ø TG %:
+- Aus Hook-Daten
+- Grün wenn über aktuellem %, sonst neutral
+- Bei zu wenig Daten: "-" anzeigen
 ```
-
-### 5. Abbrechen-Funktion
-
-```typescript
-const handleCancelEdit = () => {
-  setEditingShiftId(null);
-  // Reset all form fields to 0 / empty
-  setNewWaiterName('');
-  setNewPosSales(0);
-  // ... etc.
-};
-```
-
-### 6. UI-Anpassungen
-
-**Card-Titel:** Dynamisch basierend auf Bearbeiten-Modus
-```tsx
-<CardTitle>
-  {editingShiftId ? (
-    <>
-      <Pencil className="w-5 h-5" />
-      Kellner bearbeiten: {newWaiterName}
-    </>
-  ) : (
-    <>
-      <User className="w-5 h-5" />
-      Neuen Kellner hinzufügen
-    </>
-  )}
-</CardTitle>
-```
-
-**Button-Bereich:** Abbrechen-Button im Bearbeiten-Modus
-```tsx
-<div className="flex gap-2">
-  {editingShiftId && (
-    <Button variant="outline" onClick={handleCancelEdit}>
-      Abbrechen
-    </Button>
-  )}
-  <Button onClick={handleSaveWaiter}>
-    {editingShiftId ? 'Aktualisieren' : 'Kellner hinzufügen'}
-  </Button>
-</div>
-```
-
-**Tabellenzeilen:** Klickbar machen
-```tsx
-<TableRow 
-  key={shift.id}
-  className="cursor-pointer hover:bg-muted/50"
-  onClick={() => handleEditWaiter(shift)}
->
-```
-
-### 7. Visuelles Feedback
-
-- Aktive Zeile wird hervorgehoben wenn sie bearbeitet wird
-- Cursor zeigt Pointer auf Zeilen
-- Formular-Card ändert Farbe/Border im Bearbeiten-Modus
 
 ---
 
@@ -183,12 +101,11 @@ const handleCancelEdit = () => {
 
 | Datei | Änderung |
 |-------|----------|
-| `src/hooks/useSession.ts` | Neuer `useUpdateWaiterShift` Hook |
-| `src/pages/WaiterCashUp.tsx` | Bearbeiten-State, Edit/Cancel Handler, UI-Anpassungen |
+| `src/hooks/useSession.ts` | Neuer `useWaiterTipAverages` Hook |
+| `src/pages/WaiterCashUp.tsx` | 2 neue Spalten: TG %, Ø TG % |
 
 ## Ergebnis
 
-- Kellner können durch Klick auf die Zeile bearbeitet werden
-- Klarer visueller Unterschied zwischen Hinzufügen und Bearbeiten
-- Abbrechen-Button zum Zurücksetzen
-- Daten werden direkt in der Datenbank aktualisiert (keine Duplikate)
+- Jeder Kellner sieht seinen aktuellen Trinkgeld-Prozentsatz
+- Der historische Durchschnitt zeigt die langfristige Performance
+- Der Durchschnitt wird mit der Zeit aussagekräftiger (mehr Daten)
