@@ -306,13 +306,6 @@ export default function ManagerDashboard() {
                     />
                   </div>
                   <div>
-                    <Label>KK Gesamtliste (GL)</Label>
-                    <CurrencyInput
-                      value={formData.card_total_gl}
-                      onChange={(v) => updateField('card_total_gl', v)}
-                    />
-                  </div>
-                  <div>
                     <Label>Spicery Transaktionen</Label>
                     <Input
                       type="number"
@@ -334,6 +327,13 @@ export default function ManagerDashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  <div>
+                    <Label>Takeaway GL</Label>
+                    <CurrencyInput
+                      value={formData.card_total_gl}
+                      onChange={(v) => updateField('card_total_gl', v)}
+                    />
+                  </div>
                   <div>
                     <Label>OrderSmart</Label>
                     <CurrencyInput
