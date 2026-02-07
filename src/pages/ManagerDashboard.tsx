@@ -358,7 +358,7 @@ export default function ManagerDashboard() {
                     />
                   </div>
                   <div>
-                    <Label>POS Gesamtumsatz</Label>
+                    <Label>Vectron Gesamtumsatz</Label>
                     <CurrencyInput
                       value={formData.pos_total}
                       onChange={(v) => updateField('pos_total', v)}
