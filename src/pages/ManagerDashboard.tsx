@@ -42,7 +42,6 @@ export default function ManagerDashboard() {
     vouchers_sold: 0,
     vouchers_redeemed: 0,
     finedine_vouchers: 0,
-    opentabs_deduction: 0,
     vorschuss: 0,
     einladung: 0,
     sonstige_einnahme: 0,
@@ -82,7 +81,7 @@ export default function ManagerDashboard() {
         vouchers_sold: session.vouchers_sold || 0,
         vouchers_redeemed: session.vouchers_redeemed || 0,
         finedine_vouchers: session.finedine_vouchers || 0,
-        opentabs_deduction: session.opentabs_deduction || 0,
+        
         vorschuss: session.vorschuss || 0,
         einladung: session.einladung || 0,
         sonstige_einnahme: session.sonstige_einnahme || 0,
@@ -105,7 +104,7 @@ export default function ManagerDashboard() {
         vouchers_sold: 0,
         vouchers_redeemed: 0,
         finedine_vouchers: 0,
-        opentabs_deduction: 0,
+        
         vorschuss: 0,
         einladung: 0,
         sonstige_einnahme: 0,
@@ -213,7 +212,7 @@ export default function ManagerDashboard() {
     formData.sonstige_einnahme -
     formData.terminal_1_total -
     formData.terminal_2_total -
-    formData.opentabs_deduction -
+    
     formData.vouchers_redeemed -
     formData.vorschuss -
     formData.einladung -
@@ -387,13 +386,6 @@ export default function ManagerDashboard() {
                     <CurrencyInput
                       value={formData.finedine_vouchers}
                       onChange={(v) => updateField('finedine_vouchers', v)}
-                    />
-                  </div>
-                  <div>
-                    <Label>OpenTabs Abzug</Label>
-                    <CurrencyInput
-                      value={formData.opentabs_deduction}
-                      onChange={(v) => updateField('opentabs_deduction', v)}
                     />
                   </div>
                 </CardContent>
@@ -620,10 +612,6 @@ export default function ManagerDashboard() {
                           <TableRow>
                             <TableCell className="text-destructive">− Terminals (1+2)</TableCell>
                             <TableCell className="text-right tabular-nums text-destructive">{formatCurrency(formData.terminal_1_total + formData.terminal_2_total)}</TableCell>
-                          </TableRow>
-                          <TableRow>
-                            <TableCell className="text-destructive">− OpenTabs</TableCell>
-                            <TableCell className="text-right tabular-nums text-destructive">{formatCurrency(formData.opentabs_deduction)}</TableCell>
                           </TableRow>
                           <TableRow>
                             <TableCell className="text-destructive">− Gutschein EL + FineDine</TableCell>
