@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
-import { format } from 'date-fns';
-import { Plus, Trash2, Settings, Truck, Receipt, Wallet, HelpCircle, ChevronDown } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { format, isToday, isYesterday } from 'date-fns';
+import { de } from 'date-fns/locale';
+import { Plus, Trash2, Settings, Truck, Receipt, Wallet, HelpCircle, ChevronDown, ClipboardList, Clock, CheckCircle2 } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { DateSelector } from '@/components/shared/DateSelector';
 import { CurrencyInput } from '@/components/shared/CurrencyInput';
@@ -10,7 +11,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import {
   useSession,
@@ -171,6 +173,21 @@ export default function ManagerDashboard() {
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value);
+  };
+
+  // Format submission timestamp
+  const formatSubmittedAt = (timestamp: string | null) => {
+    if (!timestamp) return null;
+    const date = new Date(timestamp);
+    const timeStr = format(date, 'HH:mm', { locale: de });
+    
+    if (isToday(date)) {
+      return `Heute, ${timeStr} Uhr`;
+    } else if (isYesterday(date)) {
+      return `Gestern, ${timeStr} Uhr`;
+    } else {
+      return `${format(date, 'dd.MM.yyyy', { locale: de })}, ${timeStr} Uhr`;
+    }
   };
 
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
@@ -506,6 +523,57 @@ export default function ManagerDashboard() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Waiter Submissions Overview */}
+            {waiterShifts.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ClipboardList className="w-5 h-5" />
+                    Kellner-Abrechnungen
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Eingereicht</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {waiterShifts.map((shift) => {
+                        const submittedAt = formatSubmittedAt((shift as any).submitted_at);
+                        const hasData = (shift.pos_sales || 0) > 0 || (shift.cash_handed_in || 0) > 0;
+                        
+                        return (
+                          <TableRow key={shift.id}>
+                            <TableCell className="font-medium">{shift.waiter_name}</TableCell>
+                            <TableCell>
+                              {hasData ? (
+                                <Badge variant="default" className="gap-1">
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  Komplett
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  Ausstehend
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right text-sm text-muted-foreground">
+                              {submittedAt || '–'}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
 
             {/* BARGELD Calculation Breakdown */}
             <Collapsible className="group" defaultOpen={true}>

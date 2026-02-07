@@ -252,6 +252,7 @@ export type Database = {
           open_invoices: number | null
           pos_sales: number | null
           session_id: string
+          submitted_at: string | null
           waiter_name: string
         }
         Insert: {
@@ -266,6 +267,7 @@ export type Database = {
           open_invoices?: number | null
           pos_sales?: number | null
           session_id: string
+          submitted_at?: string | null
           waiter_name: string
         }
         Update: {
@@ -280,6 +282,7 @@ export type Database = {
           open_invoices?: number | null
           pos_sales?: number | null
           session_id?: string
+          submitted_at?: string | null
           waiter_name?: string
         }
         Relationships: [

@@ -85,10 +85,13 @@ export function useCreateWaiterShift() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (shift: Omit<WaiterShift, 'id' | 'differenz' | 'kitchen_tip' | 'created_at'>) => {
+    mutationFn: async (shift: Omit<WaiterShift, 'id' | 'differenz' | 'kitchen_tip' | 'created_at' | 'submitted_at'>) => {
       const { data, error } = await supabase
         .from('waiter_shifts')
-        .insert(shift)
+        .insert({
+          ...shift,
+          submitted_at: new Date().toISOString(),
+        })
         .select()
         .single();
       
@@ -124,10 +127,13 @@ export function useUpdateWaiterShift() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, sessionId, ...updates }: { id: string; sessionId: string } & Partial<Omit<WaiterShift, 'id' | 'differenz' | 'kitchen_tip' | 'created_at'>>) => {
+    mutationFn: async ({ id, sessionId, ...updates }: { id: string; sessionId: string } & Partial<Omit<WaiterShift, 'id' | 'differenz' | 'kitchen_tip' | 'created_at' | 'submitted_at'>>) => {
       const { data, error } = await supabase
         .from('waiter_shifts')
-        .update(updates)
+        .update({
+          ...updates,
+          submitted_at: new Date().toISOString(),
+        })
         .eq('id', id)
         .select()
         .single();

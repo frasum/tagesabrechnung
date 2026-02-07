@@ -42,6 +42,7 @@ export interface WaiterShift {
   differenz: number;
   kitchen_tip: number;
   created_at: string;
+  submitted_at: string | null;
 }
 
 export interface CardTransaction {
