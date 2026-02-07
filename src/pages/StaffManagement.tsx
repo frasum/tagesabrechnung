@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { StaffCard } from '@/components/staff/StaffCard';
 import { StaffDialog } from '@/components/staff/StaffDialog';
+import { WaiterQRCode } from '@/components/manager/WaiterQRCode';
 import { useStaff, useCreateStaff, useUpdateStaff, useDeleteStaff, Staff, StaffInput, StaffRole } from '@/hooks/useStaff';
 
 export default function StaffManagement() {
@@ -124,6 +125,9 @@ export default function StaffManagement() {
             </TabsList>
           </Tabs>
         </div>
+
+        {/* QR Code for Waiter Self-Service */}
+        <WaiterQRCode />
 
         {/* Staff List */}
         {filteredStaff.length === 0 ? (
