@@ -340,7 +340,7 @@ export default function ManagerDashboard() {
                     />
                   </div>
                   <div>
-                    <Label>Terminal 1</Label>
+                    <Label>KK Terminal 1</Label>
                     <CurrencyInput
                       value={formData.terminal_1_total}
                       onChange={(v) => updateField('terminal_1_total', v)}

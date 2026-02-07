@@ -270,7 +270,7 @@ export default function DailySummary() {
                   <Table>
                     <TableBody>
                       <TableRow>
-                        <TableCell>Terminal 1</TableCell>
+                        <TableCell>KK Terminal 1</TableCell>
                         <TableCell className="text-right tabular-nums">{formatCurrency(session.terminal_1_total || 0)}</TableCell>
                       </TableRow>
                       <TableRow>
