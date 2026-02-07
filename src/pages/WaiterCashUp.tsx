@@ -486,7 +486,7 @@ export default function WaiterCashUp() {
                           <TableHead className="text-right">Offene Rechnung</TableHead>
                           <TableHead className="text-right">Erwartet</TableHead>
                           <TableHead className="text-right">Abgegebenes Bargeld</TableHead>
-                          <TableHead className="text-right">TIP</TableHead>
+                          <TableHead className="text-right">Trinkgeld</TableHead>
                           <TableHead className="text-right">an die Küche</TableHead>
                           <TableHead className="text-right">Beitrag</TableHead>
                           <TableHead className="text-right">Anteil</TableHead>
