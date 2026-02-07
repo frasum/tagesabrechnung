@@ -333,7 +333,7 @@ export default function WaiterCashUp() {
                 {/* Preview Calculations */}
                 <div className="bg-muted rounded-lg p-4 space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Erwartet (Kassiert + HilfM - Offen - Karte):</span>
+                    <span className="text-muted-foreground">Erwartet (Kassiert + Hilf Mahl - Offen - Kredit Karten):</span>
                     <span className="font-medium tabular-nums">
                       {formatCurrency(newKassiertBrutto + newHilfMahl - newOpenInvoices - newCardTotal)}
                     </span>
@@ -482,7 +482,7 @@ export default function WaiterCashUp() {
                           <TableHead className="text-right">Umsatz</TableHead>
                           <TableHead className="text-right">Abzugebender Betrag</TableHead>
                           <TableHead className="text-right">Kredit Karten</TableHead>
-                          <TableHead className="text-right">HilfM</TableHead>
+                          <TableHead className="text-right">Hilf Mahl</TableHead>
                           <TableHead className="text-right">Offene Rechnung</TableHead>
                           <TableHead className="text-right">Erwartet</TableHead>
                           <TableHead className="text-right">Abgegeben</TableHead>
