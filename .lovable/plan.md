@@ -1,41 +1,31 @@
 
-## Plan: Warnungen ins Manager-Dashboard verschieben
+# Korrektur: Takeaway GL und Kreditkartenumsatz GL trennen
 
-### Warum das besser ist
-- Der Manager gibt POS Total und Terminal-Werte im Dashboard ein
-- Wenn es eine Differenz zu den Kellner-Daten gibt, sieht er das sofort
-- In der Tagesabrechnung ist es eher eine reine Zusammenfassung
+## Problem
+Aktuell nutzen beide Felder ("Takeaway GL" unter Lieferplattformen und "Kreditkartenumsatz GL" unter POS & Terminal) dasselbe Datenbankfeld `card_total_gl`. Wenn du einen Wert in einem Feld eingibst, erscheint dieser automatisch auch im anderen Feld.
 
-### Was gemacht wird
+## Lösung
+Das Feld "Takeaway GL" soll das bereits existierende Datenbankfeld `takeaway_total` verwenden, nicht `card_total_gl`.
 
-**1. Manager-Dashboard (`src/pages/ManagerDashboard.tsx`)**
+## Berechnungslogik
 
-Warnkarten hinzufügen, die erscheinen wenn:
-- POS Total nicht mit der Summe der Kellner-Umsätze übereinstimmt
-- Terminal 1+2 nicht mit der Summe der Kellner-Kartenzahlungen übereinstimmen
-- KK Gesamtliste nicht mit Kellner-Karten übereinstimmt (falls eingetragen)
+### Kreditkartenumsatz GL (card_total_gl)
+- Bleibt im Bereich "POS & Terminal"
+- Wird zu den Kellner-Kartenumsätzen addiert für die Terminal-Differenz-Berechnung
 
-Die Warnungen erscheinen direkt unter dem Header, bevor die Eingabefelder kommen.
+### Takeaway GL (takeaway_total)
+- Bleibt im Bereich "Lieferplattformen"  
+- Wird nur für die Take-Away Gesamt Summe verwendet
+- Hat nichts mit Kreditkartenumsätzen zu tun
 
-**2. Tagesabrechnung (`src/pages/DailySummary.tsx`)**
+### Take-Away Gesamt Berechnung (korrigiert)
+```
+takeaway_total + ordersmart_revenue + wolt_revenue
+```
+(statt aktuell: card_total_gl + ordersmart_revenue + wolt_revenue)
 
-Die Warnkarten werden entfernt - die Seite wird zu einer reinen Übersicht ohne Warnungen.
+## Änderungen
 
-### Berechnung der Differenzen (wird ins Dashboard verschoben)
-
-| Prüfung | Formel |
-|---------|--------|
-| POS Differenz | `formData.pos_total - kellnerUmsatz` |
-| Terminal Differenz | `(terminal_1 + terminal_2) - totalCardTotal` |
-| KK GL Differenz | `card_total_gl - totalCardTotal` (nur wenn card_total_gl > 0) |
-
-### Design
-Gleiche rote Warnkarten wie bisher:
-- Roter Rahmen und Hintergrund
-- AlertTriangle Icon
-- Beschreibung was nicht stimmt
-- Differenz-Betrag hervorgehoben
-
-### Dateien die geändert werden
-- `src/pages/ManagerDashboard.tsx` - Warnkarten hinzufügen
-- `src/pages/DailySummary.tsx` - Warnkarten entfernen
+### ManagerDashboard.tsx
+1. Das CurrencyInput für "Takeaway GL" wird von `card_total_gl` auf `takeaway_total` geändert
+2. Die Berechnung für "Take-Away Gesamt" wird entsprechend angepasst
