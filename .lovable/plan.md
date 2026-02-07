@@ -1,87 +1,43 @@
 
-# Plan: StatCards von oben in Trinkgeld Pool Card verschieben
+# Plan: Trinkgeld Pool Card Höhe optimieren
 
-## Übersicht
+## Problem
 
-Die 4 farbigen StatCards (Kellner TG Pool, Pro Kellner, Küchen TG Pool, Trinkgeld %) werden von der oberen Position entfernt und stattdessen in die Trinkgeld Pool Card integriert - dort ersetzen sie die 3 grauen Zusammenfassungs-Kacheln.
+Die Trinkgeld Pool Card hat derzeit bei wenigen Kellnern (2) viel ungenutzten weißen Raum unten. Die Card soll so dimensioniert sein, dass sie visuell für bis zu 6 Kellner ausgelegt ist.
 
----
+## Lösung
 
-## Aktueller Zustand
-
-**Oben (wird entfernt):**
-```
-+------------------+------------------+------------------+------------------+
-| Kellner TG Pool  | Pro Kellner (2)  | Küchen TG Pool   | Trinkgeld %      |
-| 210,00 €         | 105,00 €         | 40,00 €          | 5,0 %            |
-+------------------+------------------+------------------+------------------+
-```
-
-**In Trinkgeld Pool Card (3 graue Kacheln - wird ersetzt):**
-```
-+--------+ +----------+ +-----------+
-|Kellner | |Gesamtpool| |Pro Kellner|
-|   2    | | 210,00 € | | 105,00 €  |
-+--------+ +----------+ +-----------+
-```
+Die Tabelle innerhalb der Card erhält eine Mindesthöhe, sodass Platz für ca. 6 Kellner-Einträge reserviert ist. Das verhindert, dass die Card bei wenigen Kellnern zu leer wirkt und gewährleistet ein konsistentes Layout.
 
 ---
 
-## Gewünschter Zustand
-
-**Oben:** Keine StatCards mehr (nur Header mit Datum)
-
-**In Trinkgeld Pool Card:** Die 4 farbigen StatCards
-```
-+------------------------------------------+
-| Trinkgeld Pool                           |
-| Pool wird gleichmäßig verteilt           |
-|                                          |
-| +----------+ +----------+ +----------+ +----------+
-| |Kellner   | |Pro Kellner| |Küchen TG | |Trinkgeld|
-| |TG Pool   | |(2)        | |Pool      | |%        |
-| |210,00 €  | |105,00 €   | |40,00 €   | |5,0 %    |
-| +----------+ +----------+ +----------+ +----------+
-|                                          |
-| | Name | Beitrag | Anteil |              |
-| | Max  | +150 €  | 105 €  |              |
-| | Lisa | +60 €   | 105 €  |              |
-+------------------------------------------+
-```
-
----
-
-## Änderungen
+## Technische Umsetzung
 
 ### Datei: `src/pages/WaiterCashUp.tsx`
 
-**1. Obere StatCards entfernen (Zeilen 175-183):**
-Das gesamte Grid mit den 4 StatCards wird entfernt:
-```tsx
-{waiterShifts.length > 0 && <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-    <StatCard ... />
-    <StatCard ... />
-    <StatCard ... />
-    <StatCard ... />
-  </div>}
-```
+**Änderung an der Tabelle (Zeile 281):**
 
-**2. Graue Kacheln in Trinkgeld Pool Card ersetzen (Zeilen 279-297):**
-Die 3 grauen `bg-muted` Kacheln werden durch die 4 farbigen StatCards ersetzt:
+Die Tabelle wird in einen Container mit Mindesthöhe gewickelt:
+
 ```tsx
-<div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-  <StatCard label="Kellner TG Pool" value={totalPool} icon={<Users />} variant={totalPool >= 0 ? 'success' : 'error'} />
-  <StatCard label={`Pro Kellner (${waiterCount})`} value={tipPerWaiter} icon={<User />} variant={tipPerWaiter >= 0 ? 'success' : 'error'} />
-  <StatCard label="Küchen TG Pool" value={totalKitchenTip} icon={<Users />} variant="success" />
-  <StatCard label="Trinkgeld %" value={`${tipPercentage.toFixed(1)} %`} icon={<Percent />} variant="success" />
+{/* Pool Breakdown Table */}
+<div className="min-h-[280px]">
+  <Table>
+    ...
+  </Table>
 </div>
 ```
+
+**Berechnung der Mindesthöhe:**
+- Jede Tabellenzeile: ca. 48px
+- 6 Kellner + 1 Gesamt-Zeile = 7 Zeilen
+- Header-Zeile: ca. 40px
+- Gesamt: ~280px Mindesthöhe
 
 ---
 
 ## Ergebnis
 
-- Die Seite wird aufgeräumter (keine doppelten Informationen)
-- Alle Trinkgeld-relevanten Zahlen sind in einer Card zusammengefasst
-- Die farbigen StatCards mit Icons bleiben erhalten
-- Die Tabelle mit Beitrag/Anteil pro Kellner bleibt unter den StatCards
+- Bei wenigen Kellnern (1-2): Card hat gleichmäßige Größe, kein übermäßiger Leerraum
+- Bei vielen Kellnern (4-6): Tabelle wächst natürlich mit
+- Konsistentes Layout zwischen beiden Cards (Formular links, Pool rechts)
