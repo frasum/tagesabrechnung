@@ -12,7 +12,6 @@ export interface Session {
   vouchers_sold: number;
   vouchers_redeemed: number;
   finedine_vouchers: number;
-  opentabs_deduction: number;
   vorschuss: number;
   einladung: number;
   sonstige_einnahme: number;

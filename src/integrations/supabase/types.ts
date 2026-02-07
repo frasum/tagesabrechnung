@@ -125,7 +125,6 @@ export type Database = {
           id: string
           is_finalized: boolean | null
           notes: string | null
-          opentabs_deduction: number | null
           ordersmart_revenue: number | null
           pos_total: number | null
           session_date: string
@@ -149,7 +148,6 @@ export type Database = {
           id?: string
           is_finalized?: boolean | null
           notes?: string | null
-          opentabs_deduction?: number | null
           ordersmart_revenue?: number | null
           pos_total?: number | null
           session_date: string
@@ -173,7 +171,6 @@ export type Database = {
           id?: string
           is_finalized?: boolean | null
           notes?: string | null
-          opentabs_deduction?: number | null
           ordersmart_revenue?: number | null
           pos_total?: number | null
           session_date?: string

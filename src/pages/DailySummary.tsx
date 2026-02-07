@@ -58,7 +58,7 @@ export default function DailySummary() {
 
   // BARGELD calculation
   // BARGELD = kellner umsatz + gutschein VK + sonstige einnahme - terminal 1 - terminal 2 
-  // - opentabs - gutschein EL - vorschuss - einladung - open invoices - expenses + hilf mahl 
+  // - gutschein EL - vorschuss - einladung - open invoices - expenses + hilf mahl 
   // - all delivery platforms - finedine
   const bargeld = session
     ? kellnerUmsatz +
@@ -66,7 +66,6 @@ export default function DailySummary() {
       (session.sonstige_einnahme || 0) -
       (session.terminal_1_total || 0) -
       (session.terminal_2_total || 0) -
-      (session.opentabs_deduction || 0) -
       (session.vouchers_redeemed || 0) -
       (session.vorschuss || 0) -
       (session.einladung || 0) -
@@ -279,10 +278,6 @@ export default function DailySummary() {
                         <TableCell className="text-right tabular-nums">{formatCurrency(session.terminal_2_total || 0)}</TableCell>
                       </TableRow>
                       <TableRow>
-                        <TableCell>OpenTabs Abzug</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(session.opentabs_deduction || 0)}</TableCell>
-                      </TableRow>
-                      <TableRow>
                         <TableCell>Gutschein EL</TableCell>
                         <TableCell className="text-right tabular-nums">{formatCurrency(session.vouchers_redeemed || 0)}</TableCell>
                       </TableRow>
@@ -316,7 +311,6 @@ export default function DailySummary() {
                           {formatCurrency(
                             (session.terminal_1_total || 0) +
                             (session.terminal_2_total || 0) +
-                            (session.opentabs_deduction || 0) +
                             (session.vouchers_redeemed || 0) +
                             (session.finedine_vouchers || 0) +
                             (session.vorschuss || 0) +
@@ -502,10 +496,6 @@ export default function DailySummary() {
                           <TableRow>
                             <TableCell className="text-destructive">− Terminals (1+2)</TableCell>
                             <TableCell className="text-right tabular-nums text-destructive">{formatCurrency((session?.terminal_1_total || 0) + (session?.terminal_2_total || 0))}</TableCell>
-                          </TableRow>
-                          <TableRow>
-                            <TableCell className="text-destructive">− OpenTabs</TableCell>
-                            <TableCell className="text-right tabular-nums text-destructive">{formatCurrency(session?.opentabs_deduction || 0)}</TableCell>
                           </TableRow>
                           <TableRow>
                             <TableCell className="text-destructive">− Gutschein EL + FineDine</TableCell>

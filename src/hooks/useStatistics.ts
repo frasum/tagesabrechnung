@@ -147,7 +147,6 @@ export function useStatistics(timeRange: TimeRange = 'month', customRange?: Cust
           (session.sonstige_einnahme || 0) -
           (session.terminal_1_total || 0) -
           (session.terminal_2_total || 0) -
-          (session.opentabs_deduction || 0) -
           (session.vouchers_redeemed || 0) -
           (session.vorschuss || 0) -
           (session.einladung || 0) -
