@@ -329,3 +329,82 @@ export function useSessionHistory() {
     },
   });
 }
+
+export interface WaiterTipAverage {
+  totalPoolShare: number;
+  totalSales: number;
+  shiftsCount: number;
+  avgTipPercent: number;
+}
+
+export function useWaiterTipAverages() {
+  return useQuery({
+    queryKey: ['waiter-tip-averages'],
+    queryFn: async () => {
+      // 1. Load all sessions with their shifts
+      const { data: sessions, error: sessionsError } = await supabase
+        .from('sessions')
+        .select('id')
+        .order('session_date', { ascending: false });
+      
+      if (sessionsError) throw sessionsError;
+      if (!sessions || sessions.length === 0) return {};
+
+      // 2. Load all waiter shifts
+      const { data: allShifts, error: shiftsError } = await supabase
+        .from('waiter_shifts')
+        .select('*');
+      
+      if (shiftsError) throw shiftsError;
+      if (!allShifts || allShifts.length === 0) return {};
+
+      // 3. Group shifts by session
+      const shiftsBySession: Record<string, WaiterShift[]> = {};
+      for (const shift of allShifts) {
+        if (!shiftsBySession[shift.session_id]) {
+          shiftsBySession[shift.session_id] = [];
+        }
+        shiftsBySession[shift.session_id].push(shift as WaiterShift);
+      }
+
+      // 4. Calculate pool share per waiter per session
+      const waiterAverages: Record<string, { totalPoolShare: number; totalSales: number; shiftsCount: number }> = {};
+
+      for (const sessionId of Object.keys(shiftsBySession)) {
+        const sessionShifts = shiftsBySession[sessionId];
+        if (sessionShifts.length === 0) continue;
+
+        // Calculate session pool (same logic as in WaiterCashUp)
+        const sessionPool = sessionShifts.reduce((sum, shift) => {
+          const expected = (shift.kassiert_brutto || 0) + (shift.hilf_mahl || 0) - (shift.open_invoices || 0) - (shift.card_total || 0);
+          const contribution = (shift.cash_handed_in || 0) - expected - (shift.kitchen_tip || 0);
+          return sum + contribution;
+        }, 0);
+
+        const sharePerWaiter = sessionPool / sessionShifts.length;
+
+        // Aggregate per waiter
+        for (const shift of sessionShifts) {
+          const name = shift.waiter_name;
+          if (!waiterAverages[name]) {
+            waiterAverages[name] = { totalPoolShare: 0, totalSales: 0, shiftsCount: 0 };
+          }
+          waiterAverages[name].totalPoolShare += sharePerWaiter;
+          waiterAverages[name].totalSales += shift.pos_sales || 0;
+          waiterAverages[name].shiftsCount += 1;
+        }
+      }
+
+      // 5. Calculate average tip percent for each waiter
+      const result: Record<string, WaiterTipAverage> = {};
+      for (const [name, data] of Object.entries(waiterAverages)) {
+        result[name] = {
+          ...data,
+          avgTipPercent: data.totalSales > 0 ? (data.totalPoolShare / data.totalSales) * 100 : 0,
+        };
+      }
+
+      return result;
+    },
+  });
+}
