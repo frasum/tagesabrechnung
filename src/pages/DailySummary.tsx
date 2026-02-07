@@ -52,10 +52,7 @@ export default function DailySummary() {
   // Delivery revenue
   const totalDeliveryRevenue = session
     ? (session.ordersmart_revenue || 0) +
-      (session.gustoco_revenue || 0) +
-      (session.orderhut_revenue || 0) +
       (session.wolt_revenue || 0) +
-      (session.ubereats_revenue || 0) +
       (session.takeaway_total || 0)
     : 0;
 
@@ -347,28 +344,16 @@ export default function DailySummary() {
                   <Table>
                     <TableBody>
                       <TableRow>
+                        <TableCell>Takeaway GL</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatCurrency(session.takeaway_total || 0)}</TableCell>
+                      </TableRow>
+                      <TableRow>
                         <TableCell>OrderSmart</TableCell>
                         <TableCell className="text-right tabular-nums">{formatCurrency(session.ordersmart_revenue || 0)}</TableCell>
                       </TableRow>
                       <TableRow>
-                        <TableCell>Gustoco</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(session.gustoco_revenue || 0)}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>Orderhut</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(session.orderhut_revenue || 0)}</TableCell>
-                      </TableRow>
-                      <TableRow>
                         <TableCell>Wolt</TableCell>
                         <TableCell className="text-right tabular-nums">{formatCurrency(session.wolt_revenue || 0)}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>UberEats</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(session.ubereats_revenue || 0)}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>Take-Away Gesamt</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(session.takeaway_total || 0)}</TableCell>
                       </TableRow>
                       <TableRow className="border-t-2">
                         <TableCell className="font-semibold">Gesamt</TableCell>

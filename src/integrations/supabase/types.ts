@@ -122,12 +122,10 @@ export type Database = {
           created_at: string
           einladung: number | null
           finedine_vouchers: number | null
-          gustoco_revenue: number | null
           id: string
           is_finalized: boolean | null
           notes: string | null
           opentabs_deduction: number | null
-          orderhut_revenue: number | null
           ordersmart_revenue: number | null
           pos_total: number | null
           session_date: string
@@ -137,7 +135,6 @@ export type Database = {
           takeaway_total: number | null
           terminal_1_total: number | null
           terminal_2_total: number | null
-          ubereats_revenue: number | null
           updated_at: string
           vorschuss: number | null
           vouchers_redeemed: number | null
@@ -149,12 +146,10 @@ export type Database = {
           created_at?: string
           einladung?: number | null
           finedine_vouchers?: number | null
-          gustoco_revenue?: number | null
           id?: string
           is_finalized?: boolean | null
           notes?: string | null
           opentabs_deduction?: number | null
-          orderhut_revenue?: number | null
           ordersmart_revenue?: number | null
           pos_total?: number | null
           session_date: string
@@ -164,7 +159,6 @@ export type Database = {
           takeaway_total?: number | null
           terminal_1_total?: number | null
           terminal_2_total?: number | null
-          ubereats_revenue?: number | null
           updated_at?: string
           vorschuss?: number | null
           vouchers_redeemed?: number | null
@@ -176,12 +170,10 @@ export type Database = {
           created_at?: string
           einladung?: number | null
           finedine_vouchers?: number | null
-          gustoco_revenue?: number | null
           id?: string
           is_finalized?: boolean | null
           notes?: string | null
           opentabs_deduction?: number | null
-          orderhut_revenue?: number | null
           ordersmart_revenue?: number | null
           pos_total?: number | null
           session_date?: string
@@ -191,7 +183,6 @@ export type Database = {
           takeaway_total?: number | null
           terminal_1_total?: number | null
           terminal_2_total?: number | null
-          ubereats_revenue?: number | null
           updated_at?: string
           vorschuss?: number | null
           vouchers_redeemed?: number | null

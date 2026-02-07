@@ -36,10 +36,7 @@ export default function ManagerDashboard() {
     terminal_1_total: 0,
     terminal_2_total: 0,
     ordersmart_revenue: 0,
-    gustoco_revenue: 0,
-    orderhut_revenue: 0,
     wolt_revenue: 0,
-    ubereats_revenue: 0,
     vouchers_sold: 0,
     vouchers_redeemed: 0,
     finedine_vouchers: 0,
@@ -47,7 +44,6 @@ export default function ManagerDashboard() {
     einladung: 0,
     sonstige_einnahme: 0,
     notes: '',
-    // New fields from Excel
     takeaway_total: 0,
     spicery_transactions: 0,
     card_total_gl: 0,
@@ -75,14 +71,10 @@ export default function ManagerDashboard() {
         terminal_1_total: session.terminal_1_total || 0,
         terminal_2_total: session.terminal_2_total || 0,
         ordersmart_revenue: session.ordersmart_revenue || 0,
-        gustoco_revenue: session.gustoco_revenue || 0,
-        orderhut_revenue: session.orderhut_revenue || 0,
         wolt_revenue: session.wolt_revenue || 0,
-        ubereats_revenue: session.ubereats_revenue || 0,
         vouchers_sold: session.vouchers_sold || 0,
         vouchers_redeemed: session.vouchers_redeemed || 0,
         finedine_vouchers: session.finedine_vouchers || 0,
-        
         vorschuss: session.vorschuss || 0,
         einladung: session.einladung || 0,
         sonstige_einnahme: session.sonstige_einnahme || 0,
@@ -98,14 +90,10 @@ export default function ManagerDashboard() {
         terminal_1_total: 0,
         terminal_2_total: 0,
         ordersmart_revenue: 0,
-        gustoco_revenue: 0,
-        orderhut_revenue: 0,
         wolt_revenue: 0,
-        ubereats_revenue: 0,
         vouchers_sold: 0,
         vouchers_redeemed: 0,
         finedine_vouchers: 0,
-        
         vorschuss: 0,
         einladung: 0,
         sonstige_einnahme: 0,
@@ -226,10 +214,7 @@ export default function ManagerDashboard() {
   // Delivery revenue
   const totalDeliveryRevenue = 
     formData.ordersmart_revenue +
-    formData.gustoco_revenue +
-    formData.orderhut_revenue +
     formData.wolt_revenue +
-    formData.ubereats_revenue +
     formData.takeaway_total;
 
   // BARGELD calculation (same formula as DailySummary)

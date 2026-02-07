@@ -139,10 +139,8 @@ export function useStatistics(timeRange: TimeRange = 'month', customRange?: Cust
 
         const deliveryRevenue = 
           (session.ordersmart_revenue || 0) +
-          (session.gustoco_revenue || 0) +
-          (session.orderhut_revenue || 0) +
           (session.wolt_revenue || 0) +
-          (session.ubereats_revenue || 0);
+          (session.takeaway_total || 0);
 
         const bargeld = kellnerUmsatz +
           (session.vouchers_sold || 0) +
@@ -172,11 +170,9 @@ export function useStatistics(timeRange: TimeRange = 'month', customRange?: Cust
 
       // Calculate delivery breakdown
       const deliveryBreakdown: DeliveryBreakdown[] = [
+        { name: 'Takeaway GL', value: (sessions || []).reduce((sum, s) => sum + (s.takeaway_total || 0), 0) },
         { name: 'OrderSmart', value: (sessions || []).reduce((sum, s) => sum + (s.ordersmart_revenue || 0), 0) },
-        { name: 'Gustoco', value: (sessions || []).reduce((sum, s) => sum + (s.gustoco_revenue || 0), 0) },
-        { name: 'Orderhut', value: (sessions || []).reduce((sum, s) => sum + (s.orderhut_revenue || 0), 0) },
         { name: 'Wolt', value: (sessions || []).reduce((sum, s) => sum + (s.wolt_revenue || 0), 0) },
-        { name: 'UberEats', value: (sessions || []).reduce((sum, s) => sum + (s.ubereats_revenue || 0), 0) },
       ].filter(d => d.value > 0);
 
       // Calculate summary

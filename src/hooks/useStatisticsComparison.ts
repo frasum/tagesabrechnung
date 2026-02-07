@@ -75,8 +75,7 @@ async function fetchPeriodStats(startDate: Date, endDate: Date): Promise<StatsSu
   });
 
   const totalDelivery = (sessions || []).reduce((sum, s) => 
-    sum + (s.ordersmart_revenue || 0) + (s.gustoco_revenue || 0) + 
-    (s.orderhut_revenue || 0) + (s.wolt_revenue || 0) + (s.ubereats_revenue || 0), 0);
+    sum + (s.ordersmart_revenue || 0) + (s.wolt_revenue || 0) + (s.takeaway_total || 0), 0);
   
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
   const daysWithData = sessions?.length || 0;

@@ -8,10 +8,7 @@ export interface Session {
   terminal_1_total: number;
   terminal_2_total: number;
   ordersmart_revenue: number;
-  gustoco_revenue: number;
-  orderhut_revenue: number;
   wolt_revenue: number;
-  ubereats_revenue: number;
   vouchers_sold: number;
   vouchers_redeemed: number;
   finedine_vouchers: number;

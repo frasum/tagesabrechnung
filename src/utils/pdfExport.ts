@@ -9,10 +9,7 @@ interface Session {
   terminal_1_total?: number;
   terminal_2_total?: number;
   ordersmart_revenue?: number;
-  gustoco_revenue?: number;
-  orderhut_revenue?: number;
   wolt_revenue?: number;
-  ubereats_revenue?: number;
   vouchers_sold?: number;
   vouchers_redeemed?: number;
   finedine_vouchers?: number;
@@ -20,7 +17,6 @@ interface Session {
   vorschuss?: number;
   einladung?: number;
   sonstige_einnahme?: number;
-  // New fields from Excel
   takeaway_total?: number;
   spicery_transactions?: number;
   card_total_gl?: number;
@@ -308,12 +304,9 @@ export const generateDailySummaryPDF = (data: PDFExportData): void => {
     margin: { left: margin, right: margin },
     head: [['Plattform', 'Umsatz']],
     body: [
+      ['Takeaway GL', formatCurrency(data.session.takeaway_total || 0)],
       ['OrderSmart', formatCurrency(data.session.ordersmart_revenue || 0)],
-      ['Gustoco', formatCurrency(data.session.gustoco_revenue || 0)],
-      ['Orderhut', formatCurrency(data.session.orderhut_revenue || 0)],
       ['Wolt', formatCurrency(data.session.wolt_revenue || 0)],
-      ['UberEats', formatCurrency(data.session.ubereats_revenue || 0)],
-      ['Take-Away Gesamt', formatCurrency(data.session.takeaway_total || 0)],
       ['Gesamt', formatCurrency(data.totals.totalDeliveryRevenue)],
     ],
     theme: 'striped',
@@ -321,7 +314,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): void => {
     bodyStyles: { fontSize: 9 },
     columnStyles: { 1: { halign: 'right' } },
     didParseCell: function(data) {
-      if (data.row.index === 6) {
+      if (data.row.index === 3) {
         data.cell.styles.fontStyle = 'bold';
       }
     },
