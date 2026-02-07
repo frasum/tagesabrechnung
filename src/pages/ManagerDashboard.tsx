@@ -167,15 +167,20 @@ export default function ManagerDashboard() {
   };
 
   const updateField = async (field: keyof typeof formData, value: number | string) => {
-    const newFormData = { ...formData, [field]: value };
-    setFormData(newFormData);
+    // Use functional update to get the latest state and avoid race conditions
+    let updatedFormData: typeof formData | null = null;
     
-    // Auto-save to database
-    if (session?.id) {
+    setFormData((prev) => {
+      updatedFormData = { ...prev, [field]: value };
+      return updatedFormData;
+    });
+    
+    // Auto-save to database with the correctly updated data
+    if (session?.id && updatedFormData) {
       try {
         await updateSession.mutateAsync({
           id: session.id,
-          ...newFormData,
+          ...updatedFormData,
         });
       } catch (error) {
         console.error('Auto-save failed:', error);
