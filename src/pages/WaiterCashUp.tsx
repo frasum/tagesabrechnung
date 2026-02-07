@@ -265,7 +265,13 @@ export default function WaiterCashUp() {
                     <Checkbox
                       id="participates-in-pool"
                       checked={newParticipatesInPool}
-                      onCheckedChange={(checked) => setNewParticipatesInPool(checked === true)}
+                      onCheckedChange={(checked) => {
+                        const participates = checked === true;
+                        setNewParticipatesInPool(participates);
+                        if (!participates) {
+                          setNewSecondWaiterName('none');
+                        }
+                      }}
                     />
                     <Label htmlFor="participates-in-pool" className="text-sm font-normal cursor-pointer">
                       Am Pool beteiligt
@@ -279,15 +285,17 @@ export default function WaiterCashUp() {
                   <StaffSelect value={newWaiterName} onValueChange={setNewWaiterName} role="waiter" placeholder="Kellner wählen" />
                 </div>
 
-                <div>
-                  <Label>Zweiter Kellner (optional)</Label>
-                  <SecondWaiterSelect 
-                    value={newSecondWaiterName} 
-                    onValueChange={setNewSecondWaiterName} 
-                    excludeWaiter={newWaiterName}
-                    placeholder="Keiner (Einzelschicht)"
-                  />
-                </div>
+                {newParticipatesInPool && (
+                  <div>
+                    <Label>Zweiter Kellner (optional)</Label>
+                    <SecondWaiterSelect 
+                      value={newSecondWaiterName} 
+                      onValueChange={setNewSecondWaiterName} 
+                      excludeWaiter={newWaiterName}
+                      placeholder="Keiner (Einzelschicht)"
+                    />
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
