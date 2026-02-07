@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
-import { QrCode, Download, Copy, Check, ExternalLink } from 'lucide-react';
+import { QrCode, Download, Copy, Check, ExternalLink, Printer } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -92,26 +93,35 @@ export function WaiterQRCode() {
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={handleDownloadQR}
-            className="flex-1"
           >
             <Download className="w-4 h-4 mr-2" />
-            QR herunterladen
+            QR laden
           </Button>
           <Button
             variant="outline"
             size="sm"
             asChild
-            className="flex-1"
           >
             <a href={WAITER_URL} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="w-4 h-4 mr-2" />
-              Seite öffnen
+              Öffnen
             </a>
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
+            asChild
+            className="col-span-2"
+          >
+            <Link to="/qr-poster" target="_blank">
+              <Printer className="w-4 h-4 mr-2" />
+              Poster drucken
+            </Link>
           </Button>
         </div>
 

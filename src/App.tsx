@@ -14,6 +14,7 @@ import DailySummary from "./pages/DailySummary";
 import Statistics from "./pages/Statistics";
 import History from "./pages/History";
 import StaffManagement from "./pages/StaffManagement";
+import WaiterQRPoster from "./pages/WaiterQRPoster";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/statistics" element={<ProtectedRoute><Statistics /></ProtectedRoute>} />
             <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
             <Route path="/staff" element={<ProtectedRoute><StaffManagement /></ProtectedRoute>} />
+            <Route path="/qr-poster" element={<WaiterQRPoster />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
