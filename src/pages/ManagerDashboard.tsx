@@ -414,7 +414,7 @@ export default function ManagerDashboard() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <Label>Gutschein VK (verkauft)</Label>
+                    <Label>Gutschein Verkauf (verkauft)</Label>
                     <CurrencyInput
                       value={formData.vouchers_sold}
                       onChange={(v) => updateField('vouchers_sold', v)}
@@ -638,7 +638,7 @@ export default function ManagerDashboard() {
                             <TableCell className="text-right tabular-nums text-success">{formatCurrency(kellnerUmsatz)}</TableCell>
                           </TableRow>
                           <TableRow>
-                            <TableCell className="text-success">+ Gutschein VK</TableCell>
+                            <TableCell className="text-success">+ Gutschein Verkauf</TableCell>
                             <TableCell className="text-right tabular-nums text-success">{formatCurrency(formData.vouchers_sold)}</TableCell>
                           </TableRow>
                           <TableRow>

@@ -236,7 +236,7 @@ export default function DailySummary() {
                         <TableCell className="text-right tabular-nums font-medium">{formatCurrency(kellnerUmsatz)}</TableCell>
                       </TableRow>
                       <TableRow>
-                        <TableCell>Gutschein VK</TableCell>
+                        <TableCell>Gutschein Verkauf</TableCell>
                         <TableCell className="text-right tabular-nums">{formatCurrency(session.vouchers_sold || 0)}</TableCell>
                       </TableRow>
                       <TableRow>
@@ -476,7 +476,7 @@ export default function DailySummary() {
                             <TableCell className="text-right tabular-nums text-success">{formatCurrency(kellnerUmsatz)}</TableCell>
                           </TableRow>
                           <TableRow>
-                            <TableCell className="text-success">+ Gutschein VK</TableCell>
+                            <TableCell className="text-success">+ Gutschein Verkauf</TableCell>
                             <TableCell className="text-right tabular-nums text-success">{formatCurrency(session?.vouchers_sold || 0)}</TableCell>
                           </TableRow>
                           <TableRow>

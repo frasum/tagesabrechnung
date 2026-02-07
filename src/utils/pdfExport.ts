@@ -211,7 +211,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): void => {
 
   const revenueData = [
     ['Kellner Umsatz', formatCurrency(data.totals.kellnerUmsatz)],
-    ['Gutschein VK', formatCurrency(data.session.vouchers_sold || 0)],
+    ['Gutschein Verkauf', formatCurrency(data.session.vouchers_sold || 0)],
     ['Sonstige Einnahmen', formatCurrency(data.session.sonstige_einnahme || 0)],
     ['Hilf Mahl', formatCurrency(data.totals.totalHilfMahl)],
   ];
@@ -440,7 +440,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): void => {
   // Formula breakdown table
   const formulaData = [
     ['+ Kellner Umsatz', formatCurrency(data.totals.kellnerUmsatz)],
-    ['+ Gutschein VK', formatCurrency(data.session.vouchers_sold || 0)],
+    ['+ Gutschein Verkauf', formatCurrency(data.session.vouchers_sold || 0)],
     ['+ Sonstige Einnahmen', formatCurrency(data.session.sonstige_einnahme || 0)],
     ['+ Hilf Mahl', formatCurrency(data.totals.totalHilfMahl)],
     ['= Summe Einnahmen', formatCurrency(totalRevenue)],
