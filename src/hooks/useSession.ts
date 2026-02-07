@@ -86,12 +86,15 @@ export function useCreateWaiterShift() {
   
   return useMutation({
     mutationFn: async (shift: Omit<WaiterShift, 'id' | 'differenz' | 'kitchen_tip' | 'created_at' | 'submitted_at'>) => {
+      // Normalize "none" value to null for second_waiter_name
+      const normalizedShift = {
+        ...shift,
+        second_waiter_name: shift.second_waiter_name === 'none' ? null : shift.second_waiter_name,
+        submitted_at: new Date().toISOString(),
+      };
       const { data, error } = await supabase
         .from('waiter_shifts')
-        .insert({
-          ...shift,
-          submitted_at: new Date().toISOString(),
-        })
+        .insert(normalizedShift)
         .select()
         .single();
       
@@ -128,12 +131,15 @@ export function useUpdateWaiterShift() {
   
   return useMutation({
     mutationFn: async ({ id, sessionId, ...updates }: { id: string; sessionId: string } & Partial<Omit<WaiterShift, 'id' | 'differenz' | 'kitchen_tip' | 'created_at' | 'submitted_at'>>) => {
+      // Normalize "none" value to null for second_waiter_name
+      const normalizedUpdates = {
+        ...updates,
+        second_waiter_name: updates.second_waiter_name === 'none' ? null : updates.second_waiter_name,
+        submitted_at: new Date().toISOString(),
+      };
       const { data, error } = await supabase
         .from('waiter_shifts')
-        .update({
-          ...updates,
-          submitted_at: new Date().toISOString(),
-        })
+        .update(normalizedUpdates)
         .eq('id', id)
         .select()
         .single();
@@ -387,17 +393,35 @@ export function useWaiterTipAverages() {
           return sum + contribution;
         }, 0);
 
-        const sharePerWaiter = sessionPool / sessionShifts.length;
+        // Count all waiter shares (team shifts count as 2)
+        const totalWaiterShares = sessionShifts.reduce((count, shift) => {
+          return count + (shift.second_waiter_name ? 2 : 1);
+        }, 0);
+        const sharePerWaiter = totalWaiterShares > 0 ? sessionPool / totalWaiterShares : 0;
 
-        // Aggregate per waiter
+        // Aggregate per waiter (including second waiters)
         for (const shift of sessionShifts) {
+          // Primary waiter
           const name = shift.waiter_name;
           if (!waiterAverages[name]) {
             waiterAverages[name] = { totalPoolShare: 0, totalSales: 0, shiftsCount: 0 };
           }
           waiterAverages[name].totalPoolShare += sharePerWaiter;
-          waiterAverages[name].totalSales += shift.pos_sales || 0;
+          // For team shifts, split sales 50/50 for average calculation
+          const salesShare = shift.second_waiter_name ? (shift.pos_sales || 0) / 2 : (shift.pos_sales || 0);
+          waiterAverages[name].totalSales += salesShare;
           waiterAverages[name].shiftsCount += 1;
+
+          // Second waiter (if exists)
+          if (shift.second_waiter_name) {
+            const secondName = shift.second_waiter_name;
+            if (!waiterAverages[secondName]) {
+              waiterAverages[secondName] = { totalPoolShare: 0, totalSales: 0, shiftsCount: 0 };
+            }
+            waiterAverages[secondName].totalPoolShare += sharePerWaiter;
+            waiterAverages[secondName].totalSales += salesShare;
+            waiterAverages[secondName].shiftsCount += 1;
+          }
         }
       }
 

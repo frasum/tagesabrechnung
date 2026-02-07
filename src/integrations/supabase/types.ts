@@ -251,6 +251,7 @@ export type Database = {
           kitchen_tip: number | null
           open_invoices: number | null
           pos_sales: number | null
+          second_waiter_name: string | null
           session_id: string
           submitted_at: string | null
           waiter_name: string
@@ -266,6 +267,7 @@ export type Database = {
           kitchen_tip?: number | null
           open_invoices?: number | null
           pos_sales?: number | null
+          second_waiter_name?: string | null
           session_id: string
           submitted_at?: string | null
           waiter_name: string
@@ -281,6 +283,7 @@ export type Database = {
           kitchen_tip?: number | null
           open_invoices?: number | null
           pos_sales?: number | null
+          second_waiter_name?: string | null
           session_id?: string
           submitted_at?: string | null
           waiter_name?: string

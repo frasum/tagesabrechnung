@@ -6,6 +6,7 @@ import { DateSelector } from '@/components/shared/DateSelector';
 import { CurrencyInput } from '@/components/shared/CurrencyInput';
 import { StatCard } from '@/components/shared/StatCard';
 import { StaffSelect } from '@/components/shared/StaffSelect';
+import { SecondWaiterSelect } from '@/components/shared/SecondWaiterSelect';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,6 +26,7 @@ export default function WaiterCashUp() {
   const [newHilfMahl, setNewHilfMahl] = useState(0);
   const [newOpenInvoices, setNewOpenInvoices] = useState(0);
   const [newCashHandedIn, setNewCashHandedIn] = useState(0);
+  const [newSecondWaiterName, setNewSecondWaiterName] = useState('none');
   const [editingShiftId, setEditingShiftId] = useState<string | null>(null);
 
 
@@ -59,6 +61,7 @@ export default function WaiterCashUp() {
   };
   const resetForm = () => {
     setNewWaiterName('');
+    setNewSecondWaiterName('none');
     setNewPosSales(0);
     setNewKassiertBrutto(0);
     setNewCardTotal(0);
@@ -71,6 +74,7 @@ export default function WaiterCashUp() {
   const handleEditWaiter = (shift: WaiterShift) => {
     setEditingShiftId(shift.id);
     setNewWaiterName(shift.waiter_name);
+    setNewSecondWaiterName(shift.second_waiter_name || 'none');
     setNewPosSales(shift.pos_sales || 0);
     setNewKassiertBrutto(shift.kassiert_brutto || 0);
     setNewCardTotal(shift.card_total || 0);
@@ -99,6 +103,7 @@ export default function WaiterCashUp() {
           id: editingShiftId,
           sessionId: session.id,
           waiter_name: newWaiterName.trim(),
+          second_waiter_name: newSecondWaiterName,
           pos_sales: newPosSales,
           kassiert_brutto: newKassiertBrutto,
           card_total: newCardTotal,
@@ -115,6 +120,7 @@ export default function WaiterCashUp() {
         await createWaiterShift.mutateAsync({
           session_id: session.id,
           waiter_name: newWaiterName.trim(),
+          second_waiter_name: newSecondWaiterName,
           pos_sales: newPosSales,
           kassiert_brutto: newKassiertBrutto,
           card_total: newCardTotal,
@@ -165,10 +171,12 @@ export default function WaiterCashUp() {
     return shift.cash_handed_in - expected - shift.kitchen_tip;
   };
 
-  // Calculate pool totals
-  const waiterCount = waiterShifts.length;
+  // Calculate pool totals (team shifts count as 2 shares)
+  const waiterShareCount = waiterShifts.reduce((count, shift) => {
+    return count + (shift.second_waiter_name ? 2 : 1);
+  }, 0);
   const totalPool = waiterShifts.reduce((sum, shift) => sum + calculateContribution(shift), 0);
-  const tipPerWaiter = waiterCount > 0 ? totalPool / waiterCount : 0;
+  const tipPerWaiter = waiterShareCount > 0 ? totalPool / waiterShareCount : 0;
   const totalKitchenTip = waiterShifts.reduce((sum, shift) => sum + shift.kitchen_tip, 0);
   const totalSales = waiterShifts.reduce((sum, s) => sum + s.pos_sales, 0);
   const totalTip = totalPool + totalKitchenTip;
@@ -239,6 +247,16 @@ export default function WaiterCashUp() {
                 <div>
                   <Label>Kellner auswählen</Label>
                   <StaffSelect value={newWaiterName} onValueChange={setNewWaiterName} role="waiter" placeholder="Kellner wählen" />
+                </div>
+
+                <div>
+                  <Label>Zweiter Kellner (optional)</Label>
+                  <SecondWaiterSelect 
+                    value={newSecondWaiterName} 
+                    onValueChange={setNewSecondWaiterName} 
+                    excludeWaiter={newWaiterName}
+                    placeholder="Keiner (Einzelschicht)"
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -344,7 +362,7 @@ export default function WaiterCashUp() {
                     {/* Pool Summary - 4 colored StatCards */}
                     <div className="grid grid-cols-2 gap-3">
                       <StatCard label="Trinkgeld ohne Küche" value={totalPool} icon={<Users className="w-5 h-5" />} variant={totalPool >= 0 ? 'success' : 'error'} />
-                      <StatCard label={`Pro Kellner (${waiterCount})`} value={tipPerWaiter} icon={<User className="w-5 h-5" />} variant={tipPerWaiter >= 0 ? 'success' : 'error'} />
+                      <StatCard label={`Pro Kellner (${waiterShareCount})`} value={tipPerWaiter} icon={<User className="w-5 h-5" />} variant={tipPerWaiter >= 0 ? 'success' : 'error'} />
                       <StatCard label="Küche" value={totalKitchenTip} icon={<Users className="w-5 h-5" />} variant="success" />
                       <StatCard label="Trinkgeld %" value={`${tipPercentage.toFixed(1)} %`} icon={<Percent className="w-5 h-5" />} variant="success" />
                     </div>
@@ -440,7 +458,12 @@ export default function WaiterCashUp() {
                         className={`cursor-pointer transition-colors ${editingShiftId === shift.id ? 'bg-primary/10' : 'hover:bg-muted/50'}`}
                         onClick={() => handleEditWaiter(shift)}
                       >
-                              <TableCell className="font-medium">{shift.waiter_name}</TableCell>
+                              <TableCell className="font-medium">
+                                {shift.waiter_name}
+                                {shift.second_waiter_name && (
+                                  <span className="text-muted-foreground"> + {shift.second_waiter_name}</span>
+                                )}
+                              </TableCell>
                               <TableCell className="text-right tabular-nums">{formatCurrency(shift.pos_sales)}</TableCell>
                               <TableCell className="text-right tabular-nums">{formatCurrency(shift.kassiert_brutto || 0)}</TableCell>
                               <TableCell className="text-right tabular-nums">{formatCurrency(shift.card_total)}</TableCell>
