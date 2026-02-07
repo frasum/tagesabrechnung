@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Login from "./pages/Login";
 import WaiterCashUp from "./pages/WaiterCashUp";
+import WaiterMobile from "./pages/WaiterMobile";
 import ManagerDashboard from "./pages/ManagerDashboard";
 import KitchenTipSplit from "./pages/KitchenTipSplit";
 import DailySummary from "./pages/DailySummary";
@@ -27,6 +28,7 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<ProtectedRoute><WaiterCashUp /></ProtectedRoute>} />
+            <Route path="/waiter" element={<ProtectedRoute><WaiterMobile /></ProtectedRoute>} />
             <Route path="/manager" element={<ProtectedRoute><ManagerDashboard /></ProtectedRoute>} />
             <Route path="/kitchen" element={<ProtectedRoute><KitchenTipSplit /></ProtectedRoute>} />
             <Route path="/summary" element={<ProtectedRoute><DailySummary /></ProtectedRoute>} />
