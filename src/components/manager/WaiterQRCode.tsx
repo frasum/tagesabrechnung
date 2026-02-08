@@ -109,8 +109,14 @@ export function WaiterQRCode() {
           </Select>
         </div>
 
+        {/* Restaurant Name Banner */}
+        <div className="bg-primary text-primary-foreground rounded-lg p-4 text-center">
+          <p className="text-xs uppercase tracking-wider opacity-80 mb-1">QR-Code für</p>
+          <h3 className="text-2xl font-display font-bold">{selectedRestaurant?.name}</h3>
+        </div>
+
         {/* QR Code */}
-        <div className="flex justify-center p-4 bg-white rounded-lg">
+        <div className="flex justify-center p-4 bg-white rounded-lg border-2 border-primary/20">
           <QRCodeSVG
             id="waiter-qr-code"
             value={waiterUrl}
