@@ -1,95 +1,80 @@
 
 
-## Plan: Tagesumsatz-Berechnung korrigieren
+# Plan: "Pro Küche" Zeile hinzufügen
 
-### Problem
-Die StatCard "Tagesumsatz" und die Einnahmen-Übersicht zeigen `kellnerUmsatz` (nur Kellner-pos_sales), aber es fehlt der Takeaway-Umsatz. Der angezeigte Wert (6.684,50 €) ist um genau den Takeaway-Betrag niedriger als der tatsächliche Tagesumsatz (7.168,70 €).
+## Ziel
 
-### Lösung
-Der "Tagesumsatz" sollte der **Vectron Gesamtumsatz** (`formData.pos_total`) sein - also der Wert, der manuell vom Kassensystem eingegeben wird. Dies entspricht der Logik in `useCashBalanceData.ts`.
+Unter "Küche (2%)" eine Unterzeile hinzufügen, die analog zu "→ Pro Kellner (4)" funktioniert:
 
----
-
-## Änderungen in DailySummary.tsx
-
-### 1. StatCard "Tagesumsatz" korrigieren (ca. Zeile 438-441)
-
-**Vorher:**
-```tsx
-<StatCard
-  label="Tagesumsatz"
-  value={kellnerUmsatz}
-  icon={<FileText className="w-5 h-5" />}
-/>
 ```
-
-**Nachher:**
-```tsx
-<StatCard
-  label="Tagesumsatz"
-  value={formData.pos_total}
-  icon={<FileText className="w-5 h-5" />}
-/>
-```
-
-### 2. Einnahmen-Übersicht Tabelle korrigieren (ca. Zeile 752-754)
-
-**Vorher:**
-```tsx
-<TableRow>
-  <TableCell className="py-2">Tagesumsatz</TableCell>
-  <TableCell className="text-right tabular-nums py-2">{formatCurrency(kellnerUmsatz)}</TableCell>
-</TableRow>
-```
-
-**Nachher:**
-```tsx
-<TableRow>
-  <TableCell className="py-2">Tagesumsatz (Vectron)</TableCell>
-  <TableCell className="text-right tabular-nums py-2">{formatCurrency(formData.pos_total)}</TableCell>
-</TableRow>
-```
-
-### 3. Summenberechnung in Einnahmen-Übersicht anpassen (ca. Zeile 768-773)
-
-**Vorher:**
-```tsx
-<TableCell className="text-right tabular-nums font-semibold text-success py-2">
-  {formatCurrency(kellnerUmsatz + formData.vouchers_sold + formData.sonstige_einnahme + totalHilfMahl)}
-</TableCell>
-```
-
-**Nachher:**
-```tsx
-<TableCell className="text-right tabular-nums font-semibold text-success py-2">
-  {formatCurrency(formData.pos_total + formData.vouchers_sold + formData.sonstige_einnahme + totalHilfMahl)}
-</TableCell>
+Trinkgeld
+────────────────────────────────────
+Küche (2%)                   133,69 €
+  → Pro Küche (3)             44,56 €   ← NEU
+Kellner Pool                 452,54 €
+  → Pro Kellner (4)          113,14 €
+────────────────────────────────────
+Gesamt                       586,23 €
 ```
 
 ---
 
-## Zusammenfassung der Änderungen
+## Berechnung
 
-| Stelle | Vorher | Nachher |
-|--------|--------|---------|
-| StatCard "Tagesumsatz" | `kellnerUmsatz` | `formData.pos_total` |
-| Einnahmen-Tabelle "Tagesumsatz" | `kellnerUmsatz` | `formData.pos_total` |
-| Einnahmen-Summe | basiert auf `kellnerUmsatz` | basiert auf `formData.pos_total` |
+### Anzahl Küchenmitarbeiter
+Die Anzahl der **einzigartigen** Küchenmitarbeiter an diesem Abend wird aus den `kitchenShifts` ermittelt:
+
+```typescript
+const uniqueKitchenStaff = new Set(kitchenShifts.map(k => k.staff_name)).size;
+```
+
+### Trinkgeld pro Küchenmitarbeiter
+Das Küchen-Trinkgeld wird **proportional nach Arbeitsstunden** verteilt. Die Durchschnittsberechnung zeigt, was jeder im Schnitt bekommt:
+
+```typescript
+const tipPerKitchen = uniqueKitchenStaff > 0 ? totalKitchenTip / uniqueKitchenStaff : 0;
+```
+
+**Hinweis:** Dies ist eine vereinfachte Durchschnittsdarstellung. Die tatsächliche Verteilung erfolgt stundenbasiert (wer mehr Stunden arbeitet, bekommt proportional mehr). Für die Übersicht wird hier der Durchschnitt angezeigt.
 
 ---
 
-## Dateien
+## Technische Änderungen
 
-| Datei | Änderung |
-|-------|----------|
-| `src/pages/DailySummary.tsx` | 3 Stellen korrigieren |
+### Datei: `src/pages/DailySummary.tsx`
+
+**1. Neue Berechnung hinzufügen** (nach Zeile ~198):
+```typescript
+// Kitchen tip per person (average)
+const uniqueKitchenStaff = new Set(kitchenShifts.map(k => k.staff_name)).size;
+const tipPerKitchen = uniqueKitchenStaff > 0 ? totalKitchenTip / uniqueKitchenStaff : 0;
+```
+
+**2. Neue Tabellenzeile hinzufügen** (nach Zeile 856):
+```tsx
+{uniqueKitchenStaff > 0 && (
+  <TableRow>
+    <TableCell className="py-2 pl-6 text-muted-foreground">
+      → Pro Küche ({uniqueKitchenStaff})
+    </TableCell>
+    <TableCell className="text-right tabular-nums text-success py-2">
+      {formatCurrency(tipPerKitchen)}
+    </TableCell>
+  </TableRow>
+)}
+```
 
 ---
 
 ## Erwartetes Ergebnis
 
-Nach der Korrektur:
-- **Tagesumsatz** zeigt den Vectron Gesamtwert (7.168,70 €)
-- **Einnahmen-Summe** basiert auf dem korrekten Tagesumsatz
-- Die Werte stimmen mit deiner manuellen Abrechnung überein
+| Zeile | Anzeige |
+|-------|---------|
+| Küche (2%) | 133,69 € |
+| → Pro Küche (3) | 44,56 € |
+| Kellner Pool | 452,54 € |
+| → Pro Kellner (4) | 113,14 € |
+| **Gesamt** | **586,23 €** |
+
+Die Zahl in Klammern zeigt die Anzahl der Küchenmitarbeiter an diesem Abend.
 
