@@ -1,9 +1,13 @@
 import { QRCodeSVG } from 'qrcode.react';
 import { Utensils, Smartphone, LogIn, FileText, CheckCircle } from 'lucide-react';
+import { useRestaurant } from '@/hooks/useRestaurant';
 
-const WAITER_URL = 'https://spicery.lovable.app/waiter';
+const BASE_URL = 'https://spicery.lovable.app';
 
 export default function WaiterQRPoster() {
+  const { restaurantSlug, restaurantName } = useRestaurant();
+  const waiterUrl = `${BASE_URL}/${restaurantSlug}/waiter`;
+
   const handlePrint = () => {
     window.print();
   };
@@ -31,6 +35,11 @@ export default function WaiterQRPoster() {
             <h1 className="text-4xl font-bold text-foreground mb-2 print:text-3xl">
               Kellner Self-Service
             </h1>
+            {restaurantName && (
+              <p className="text-2xl font-semibold text-primary mb-2 print:text-xl">
+                {restaurantName}
+              </p>
+            )}
             <p className="text-xl text-muted-foreground print:text-lg">
               Deine Abrechnung schnell & einfach eingeben
             </p>
@@ -40,7 +49,7 @@ export default function WaiterQRPoster() {
           <div className="flex justify-center mb-8 print:mb-6">
             <div className="p-6 bg-white border-4 border-primary/20 rounded-3xl shadow-lg print:shadow-none print:border-2">
               <QRCodeSVG
-                value={WAITER_URL}
+                value={waiterUrl}
                 size={220}
                 level="H"
                 includeMargin
@@ -54,7 +63,7 @@ export default function WaiterQRPoster() {
               📱 QR-Code mit dem Handy scannen
             </p>
             <p className="text-muted-foreground">
-              oder direkt besuchen: <span className="font-mono font-medium text-foreground">{WAITER_URL}</span>
+              oder direkt besuchen: <span className="font-mono font-medium text-foreground">{waiterUrl}</span>
             </p>
           </div>
 

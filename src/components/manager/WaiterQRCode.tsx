@@ -1,20 +1,35 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { QrCode, Download, Copy, Check, ExternalLink, Printer } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { useRestaurants } from '@/hooks/useRestaurant';
 
-const WAITER_URL = 'https://spicery.lovable.app/waiter';
+const BASE_URL = 'https://spicery.lovable.app';
 
 export function WaiterQRCode() {
   const [copied, setCopied] = useState(false);
+  const [selectedSlug, setSelectedSlug] = useState<string>('');
   const { toast } = useToast();
+  const { data: restaurants, isLoading } = useRestaurants();
+
+  // Set default restaurant when data loads
+  useEffect(() => {
+    if (restaurants && restaurants.length > 0 && !selectedSlug) {
+      setSelectedSlug(restaurants[0].slug);
+    }
+  }, [restaurants, selectedSlug]);
+
+  const selectedRestaurant = restaurants?.find(r => r.slug === selectedSlug);
+  const waiterUrl = `${BASE_URL}/${selectedSlug}/waiter`;
 
   const handleCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(WAITER_URL);
+      await navigator.clipboard.writeText(waiterUrl);
       setCopied(true);
       toast({ title: 'Link kopiert!' });
       setTimeout(() => setCopied(false), 2000);
@@ -42,7 +57,7 @@ export function WaiterQRCode() {
       }
       
       const link = document.createElement('a');
-      link.download = 'kellner-self-service-qr.png';
+      link.download = `kellner-self-service-${selectedSlug}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
       
@@ -51,6 +66,19 @@ export function WaiterQRCode() {
 
     img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
   };
+
+  if (isLoading || !selectedSlug) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="animate-pulse space-y-4">
+            <div className="h-4 bg-muted rounded w-1/2" />
+            <div className="h-48 bg-muted rounded" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -64,11 +92,28 @@ export function WaiterQRCode() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Restaurant Selector */}
+        <div className="space-y-2">
+          <Label htmlFor="restaurant-select">Restaurant</Label>
+          <Select value={selectedSlug} onValueChange={setSelectedSlug}>
+            <SelectTrigger id="restaurant-select">
+              <SelectValue placeholder="Restaurant wählen" />
+            </SelectTrigger>
+            <SelectContent>
+              {restaurants?.map((restaurant) => (
+                <SelectItem key={restaurant.id} value={restaurant.slug}>
+                  {restaurant.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         {/* QR Code */}
         <div className="flex justify-center p-4 bg-white rounded-lg">
           <QRCodeSVG
             id="waiter-qr-code"
-            value={WAITER_URL}
+            value={waiterUrl}
             size={180}
             level="H"
             includeMargin
@@ -77,7 +122,7 @@ export function WaiterQRCode() {
 
         {/* URL Display */}
         <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-          <code className="flex-1 text-sm truncate">{WAITER_URL}</code>
+          <code className="flex-1 text-sm truncate">{waiterUrl}</code>
           <Button
             variant="ghost"
             size="icon"
@@ -107,7 +152,7 @@ export function WaiterQRCode() {
             size="sm"
             asChild
           >
-            <a href={WAITER_URL} target="_blank" rel="noopener noreferrer">
+            <a href={waiterUrl} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="w-4 h-4 mr-2" />
               Öffnen
             </a>
@@ -118,7 +163,7 @@ export function WaiterQRCode() {
             asChild
             className="col-span-2"
           >
-            <Link to="/qr-poster" target="_blank">
+            <Link to={`/${selectedSlug}/qr-poster`} target="_blank">
               <Printer className="w-4 h-4 mr-2" />
               Poster drucken
             </Link>
@@ -126,7 +171,7 @@ export function WaiterQRCode() {
         </div>
 
         <p className="text-xs text-muted-foreground text-center">
-          Kellner können diesen QR-Code scannen, um ihre Abrechnung einzugeben
+          Kellner können diesen QR-Code scannen, um ihre Abrechnung für {selectedRestaurant?.name} einzugeben
         </p>
       </CardContent>
     </Card>
