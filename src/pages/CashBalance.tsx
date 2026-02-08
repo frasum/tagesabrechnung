@@ -1,12 +1,16 @@
+import { useState, useMemo } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Wallet } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Wallet, FileDown } from 'lucide-react';
 import { useCashBalanceData } from '@/hooks/useCashBalanceData';
 import { format, parseISO } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { generateCashBalancePDF } from '@/utils/pdfExport';
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('de-DE', {
@@ -22,6 +26,42 @@ const formatDate = (dateStr: string) => {
 
 export default function CashBalance() {
   const { data, isLoading, error } = useCashBalanceData();
+  const [selectedMonth, setSelectedMonth] = useState<string>('');
+
+  // Extract available months from data
+  const availableMonths = useMemo(() => {
+    if (!data) return [];
+    const months = new Set<string>();
+    data.forEach((row) => {
+      const date = parseISO(row.date);
+      months.add(format(date, 'yyyy-MM'));
+    });
+    return Array.from(months).sort().reverse();
+  }, [data]);
+
+  // Auto-select current/latest month when data loads
+  useMemo(() => {
+    if (availableMonths.length > 0 && !selectedMonth) {
+      setSelectedMonth(availableMonths[0]);
+    }
+  }, [availableMonths, selectedMonth]);
+
+  // Filter data by selected month
+  const filteredData = useMemo(() => {
+    if (!data || !selectedMonth) return data;
+    return data.filter((row) => row.date.startsWith(selectedMonth));
+  }, [data, selectedMonth]);
+
+  // Handle PDF export
+  const handleExport = () => {
+    if (!filteredData || filteredData.length === 0 || !selectedMonth) return;
+    const [year, month] = selectedMonth.split('-').map(Number);
+    generateCashBalancePDF({
+      rows: filteredData,
+      month: month - 1,
+      year,
+    });
+  };
 
   return (
     <AppLayout>
@@ -29,6 +69,36 @@ export default function CashBalance() {
         <div className="flex items-center gap-3">
           <Wallet className="h-8 w-8 text-primary" />
           <h1 className="text-2xl font-bold">Bargeldbestand</h1>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">Monat:</span>
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Monat wählen" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableMonths.map((month) => {
+                  const date = parseISO(`${month}-01`);
+                  return (
+                    <SelectItem key={month} value={month}>
+                      {format(date, 'MMMM yyyy', { locale: de })}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button
+            onClick={handleExport}
+            disabled={!filteredData || filteredData.length === 0}
+            variant="outline"
+            className="gap-2"
+          >
+            <FileDown className="h-4 w-4" />
+            PDF Export
+          </Button>
         </div>
 
         <Card>
@@ -72,8 +142,8 @@ export default function CashBalance() {
                         Fehler beim Laden der Daten
                       </TableCell>
                     </TableRow>
-                  ) : data && data.length > 0 ? (
-                    data.map((row) => (
+                  ) : filteredData && filteredData.length > 0 ? (
+                    filteredData.map((row) => (
                       <TableRow key={row.date}>
                         <TableCell className="sticky left-0 bg-background z-10 font-medium">
                           {formatDate(row.date)}
@@ -127,47 +197,47 @@ export default function CashBalance() {
                     </TableRow>
                   )}
                 </TableBody>
-                {data && data.length > 0 && !isLoading && (
+                {filteredData && filteredData.length > 0 && !isLoading && (
                   <TableFooter>
                     <TableRow className="bg-muted/50">
                       <TableCell className="sticky left-0 bg-muted/50 z-10 font-bold">
                         GESAMT
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold">
-                        {formatCurrency(data.reduce((sum, row) => sum + row.kellnerUmsatz, 0))}
+                        {formatCurrency(filteredData.reduce((sum, row) => sum + row.kellnerUmsatz, 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-destructive">
-                        -{formatCurrency(data.reduce((sum, row) => sum + row.kreditkarten, 0))}
+                        -{formatCurrency(filteredData.reduce((sum, row) => sum + row.kreditkarten, 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-destructive">
-                        -{formatCurrency(data.reduce((sum, row) => sum + row.ordersmart, 0))}
+                        -{formatCurrency(filteredData.reduce((sum, row) => sum + row.ordersmart, 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-destructive">
-                        -{formatCurrency(data.reduce((sum, row) => sum + row.wolt, 0))}
+                        -{formatCurrency(filteredData.reduce((sum, row) => sum + row.wolt, 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-destructive">
-                        -{formatCurrency(data.reduce((sum, row) => sum + row.gutscheineEL, 0))}
+                        -{formatCurrency(filteredData.reduce((sum, row) => sum + row.gutscheineEL, 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-destructive">
-                        -{formatCurrency(data.reduce((sum, row) => sum + row.finedine, 0))}
+                        -{formatCurrency(filteredData.reduce((sum, row) => sum + row.finedine, 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-emerald-600 dark:text-emerald-400">
-                        +{formatCurrency(data.reduce((sum, row) => sum + row.gutscheineVK, 0))}
+                        +{formatCurrency(filteredData.reduce((sum, row) => sum + row.gutscheineVK, 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-destructive">
-                        -{formatCurrency(data.reduce((sum, row) => sum + row.einladung, 0))}
+                        -{formatCurrency(filteredData.reduce((sum, row) => sum + row.einladung, 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-destructive">
-                        -{formatCurrency(data.reduce((sum, row) => sum + row.offeneRE, 0))}
+                        -{formatCurrency(filteredData.reduce((sum, row) => sum + row.offeneRE, 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-destructive">
-                        -{formatCurrency(data.reduce((sum, row) => sum + row.vorschuss, 0))}
+                        -{formatCurrency(filteredData.reduce((sum, row) => sum + row.vorschuss, 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-destructive">
-                        -{formatCurrency(data.reduce((sum, row) => sum + row.ausgaben, 0))}
+                        -{formatCurrency(filteredData.reduce((sum, row) => sum + row.ausgaben, 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-emerald-600 dark:text-emerald-400">
-                        {formatCurrency(data.reduce((sum, row) => sum + row.bargeld, 0))}
+                        {formatCurrency(filteredData.reduce((sum, row) => sum + row.bargeld, 0))}
                       </TableCell>
                     </TableRow>
                   </TableFooter>

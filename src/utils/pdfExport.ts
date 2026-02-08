@@ -526,3 +526,179 @@ export const generateDailySummaryPDF = (data: PDFExportData): void => {
   const fileName = `Tagesabrechnung_${format(new Date(data.session.session_date), 'yyyy-MM-dd')}.pdf`;
   doc.save(fileName);
 };
+
+// ============================================
+// Cash Balance Monthly PDF Export
+// ============================================
+
+interface CashBalanceRow {
+  date: string;
+  kellnerUmsatz: number;
+  kreditkarten: number;
+  ordersmart: number;
+  wolt: number;
+  gutscheineEL: number;
+  finedine: number;
+  gutscheineVK: number;
+  einladung: number;
+  offeneRE: number;
+  vorschuss: number;
+  ausgaben: number;
+  bargeld: number;
+}
+
+interface CashBalancePDFData {
+  rows: CashBalanceRow[];
+  month: number; // 0-11
+  year: number;
+}
+
+export const generateCashBalancePDF = (data: CashBalancePDFData): void => {
+  const doc = new jsPDF('landscape');
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const margin = 14;
+  let yPos = 20;
+
+  // Header
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  const monthName = format(new Date(data.year, data.month, 1), 'MMMM yyyy', { locale: de });
+  doc.text(`Bargeldbestand - ${monthName}`, margin, yPos);
+
+  yPos += 8;
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(128);
+  doc.text(`Erstellt am: ${format(new Date(), 'dd.MM.yyyy HH:mm', { locale: de })}`, margin, yPos);
+  doc.setTextColor(0);
+
+  yPos += 10;
+
+  // Calculate totals
+  const totals = {
+    kellnerUmsatz: data.rows.reduce((sum, r) => sum + r.kellnerUmsatz, 0),
+    kreditkarten: data.rows.reduce((sum, r) => sum + r.kreditkarten, 0),
+    ordersmart: data.rows.reduce((sum, r) => sum + r.ordersmart, 0),
+    wolt: data.rows.reduce((sum, r) => sum + r.wolt, 0),
+    gutscheineEL: data.rows.reduce((sum, r) => sum + r.gutscheineEL, 0),
+    finedine: data.rows.reduce((sum, r) => sum + r.finedine, 0),
+    gutscheineVK: data.rows.reduce((sum, r) => sum + r.gutscheineVK, 0),
+    einladung: data.rows.reduce((sum, r) => sum + r.einladung, 0),
+    offeneRE: data.rows.reduce((sum, r) => sum + r.offeneRE, 0),
+    vorschuss: data.rows.reduce((sum, r) => sum + r.vorschuss, 0),
+    ausgaben: data.rows.reduce((sum, r) => sum + r.ausgaben, 0),
+    bargeld: data.rows.reduce((sum, r) => sum + r.bargeld, 0),
+  };
+
+  // Table body data
+  const tableBody = data.rows.map((row) => {
+    const dateFormatted = format(new Date(row.date), 'EEE d.MMM', { locale: de });
+    return [
+      dateFormatted,
+      formatCurrency(row.kellnerUmsatz),
+      '-' + formatCurrency(row.kreditkarten),
+      '-' + formatCurrency(row.ordersmart),
+      '-' + formatCurrency(row.wolt),
+      '-' + formatCurrency(row.gutscheineEL),
+      '-' + formatCurrency(row.finedine),
+      '+' + formatCurrency(row.gutscheineVK),
+      '-' + formatCurrency(row.einladung),
+      '-' + formatCurrency(row.offeneRE),
+      '-' + formatCurrency(row.vorschuss),
+      '-' + formatCurrency(row.ausgaben),
+      formatCurrency(row.bargeld),
+    ];
+  });
+
+  // Add totals row
+  tableBody.push([
+    'GESAMT',
+    formatCurrency(totals.kellnerUmsatz),
+    '-' + formatCurrency(totals.kreditkarten),
+    '-' + formatCurrency(totals.ordersmart),
+    '-' + formatCurrency(totals.wolt),
+    '-' + formatCurrency(totals.gutscheineEL),
+    '-' + formatCurrency(totals.finedine),
+    '+' + formatCurrency(totals.gutscheineVK),
+    '-' + formatCurrency(totals.einladung),
+    '-' + formatCurrency(totals.offeneRE),
+    '-' + formatCurrency(totals.vorschuss),
+    '-' + formatCurrency(totals.ausgaben),
+    formatCurrency(totals.bargeld),
+  ]);
+
+  autoTable(doc, {
+    startY: yPos,
+    margin: { left: margin, right: margin },
+    head: [[
+      'Datum',
+      'Tagesumsatz',
+      'Kreditkarten',
+      'OrderSmart',
+      'Wolt',
+      'Gutsch. EL',
+      'FineDine',
+      'Gutsch. VK',
+      'Einladung',
+      'Offene RE',
+      'Vorschuss',
+      'Ausgaben',
+      'Bargeld',
+    ]],
+    body: tableBody,
+    theme: 'striped',
+    headStyles: { fillColor: [51, 65, 85], fontSize: 8 },
+    bodyStyles: { fontSize: 8 },
+    columnStyles: {
+      0: { fontStyle: 'bold' },
+      1: { halign: 'right' },
+      2: { halign: 'right', textColor: [185, 28, 28] },
+      3: { halign: 'right', textColor: [185, 28, 28] },
+      4: { halign: 'right', textColor: [185, 28, 28] },
+      5: { halign: 'right', textColor: [185, 28, 28] },
+      6: { halign: 'right', textColor: [185, 28, 28] },
+      7: { halign: 'right', textColor: [22, 101, 52] },
+      8: { halign: 'right', textColor: [185, 28, 28] },
+      9: { halign: 'right', textColor: [185, 28, 28] },
+      10: { halign: 'right', textColor: [185, 28, 28] },
+      11: { halign: 'right', textColor: [185, 28, 28] },
+      12: { halign: 'right' },
+    },
+    didParseCell: function(cellHookData) {
+      // Style the totals row
+      if (cellHookData.section === 'body' && cellHookData.row.index === tableBody.length - 1) {
+        cellHookData.cell.styles.fontStyle = 'bold';
+        cellHookData.cell.styles.fillColor = [241, 245, 249];
+      }
+      // Color the Bargeld column based on value
+      if (cellHookData.section === 'body' && cellHookData.column.index === 12) {
+        const rowIndex = cellHookData.row.index;
+        const bargeldValue = rowIndex === tableBody.length - 1 ? totals.bargeld : data.rows[rowIndex]?.bargeld ?? 0;
+        if (bargeldValue >= 0) {
+          cellHookData.cell.styles.textColor = [22, 101, 52];
+        } else {
+          cellHookData.cell.styles.textColor = [185, 28, 28];
+        }
+      }
+    },
+  });
+
+  // Footer with page numbers
+  const pageCount = doc.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(128);
+    doc.text(
+      `Seite ${i} von ${pageCount}`,
+      pageWidth / 2,
+      doc.internal.pageSize.getHeight() - 10,
+      { align: 'center' }
+    );
+  }
+
+  // Save
+  const monthStr = String(data.month + 1).padStart(2, '0');
+  const fileName = `Bargeldbestand_${data.year}-${monthStr}.pdf`;
+  doc.save(fileName);
+};
