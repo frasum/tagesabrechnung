@@ -451,534 +451,467 @@ export default function DailySummary() {
               />
             </div>
 
-            {/* Kassenstand Card - nur anzeigen wenn Kassenstand < 1.000 € */}
-            {showCashBalanceCard && (
-              <Card className="border-warning/30 bg-warning/5 dark:bg-warning/10">
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <Banknote className="w-5 h-5" />
-                    Kassenstand
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {/* Anfangsbestand */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Anfangsbestand</span>
-                    <span className="font-semibold tabular-nums">
-                      {formatCurrency(initialRestaurantBalance)}
-                    </span>
-                  </div>
+            {/* Two Column Layout */}
+            <div className="grid lg:grid-cols-2 gap-6">
+              {/* LEFT COLUMN - Input */}
+              <div className="space-y-6">
+                {/* Notes */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Notizen</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Textarea
+                      placeholder="Notizen für diesen Tag..."
+                      value={formData.notes}
+                      onChange={(e) => updateField('notes', e.target.value)}
+                      rows={4}
+                    />
+                  </CardContent>
+                </Card>
 
-                  {/* Bargeld heute */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Bargeld heute</span>
-                    <span className={`font-semibold tabular-nums ${bargeld >= 0 ? 'text-success' : 'text-warning'}`}>
-                      {formatCurrency(bargeld)}
-                    </span>
-                  </div>
-
-                  {/* Transfer vom Tresor heute */}
-                  {todaysVaultTransfers > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Transfer Tresor</span>
-                      <span className="font-semibold tabular-nums text-primary">
-                        +{formatCurrency(todaysVaultTransfers)}
-                      </span>
+                {/* POS & Terminal */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Settings className="w-5 h-5" />
+                      POS & Terminal
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label>Kellner Abzugebender Betrag</Label>
+                      <div className="h-10 px-3 flex items-center justify-end rounded-md border bg-muted text-right tabular-nums font-medium">
+                        {new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(totalKassiertBrutto)} €
+                      </div>
                     </div>
-                  )}
-
-                  <Separator />
-
-                  {/* Kassenstand Ende des Tages */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Kassenstand</span>
-                    <span className={`text-lg font-bold tabular-nums ${todaysRegisterBalance >= initialRestaurantBalance ? 'text-success' : 'text-destructive'}`}>
-                      {formatCurrency(todaysRegisterBalance)}
-                    </span>
-                  </div>
-
-                  {/* Transfer-Button nur wenn noch unter 1.000 € */}
-                  {todaysRegisterBalance < initialRestaurantBalance && (
-                    <Button onClick={() => setShowTransferDialog(true)} variant="outline" className="w-full gap-2">
-                      <Vault className="w-4 h-4" />
-                      Transfer vom Tresor
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Input Section - 6 Cards Grid */}
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Notes */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Notizen</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Textarea
-                    placeholder="Notizen für diesen Tag..."
-                    value={formData.notes}
-                    onChange={(e) => updateField('notes', e.target.value)}
-                    rows={6}
-                  />
-                </CardContent>
-              </Card>
-
-              {/* POS & Terminal */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Settings className="w-5 h-5" />
-                    POS & Terminal
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label>Kellner Abzugebender Betrag</Label>
-                    <div className="h-10 px-3 flex items-center justify-end rounded-md border bg-muted text-right tabular-nums font-medium">
-                      {new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(totalKassiertBrutto)} €
+                    <div>
+                      <Label>Vectron Gesamtumsatz</Label>
+                      <CurrencyInput
+                        value={formData.pos_total}
+                        onChange={(v) => updateField('pos_total', v)}
+                      />
                     </div>
-                  </div>
-                  <div>
-                    <Label>Vectron Gesamtumsatz</Label>
-                    <CurrencyInput
-                      value={formData.pos_total}
-                      onChange={(v) => updateField('pos_total', v)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Kredit Karten Terminal 1</Label>
-                    <CurrencyInput
-                      value={formData.terminal_1_total}
-                      onChange={(v) => updateField('terminal_1_total', v)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Kredit Karten Terminal 2</Label>
-                    <CurrencyInput
-                      value={formData.terminal_2_total}
-                      onChange={(v) => updateField('terminal_2_total', v)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Kreditkartenumsatz GL</Label>
-                    <CurrencyInput
-                      value={formData.card_total_gl}
-                      onChange={(v) => updateField('card_total_gl', v)}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Take Away */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Truck className="w-5 h-5" />
-                    Take Away
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label>Takeaway GL</Label>
-                    <CurrencyInput
-                      value={formData.takeaway_total}
-                      onChange={(v) => updateField('takeaway_total', v)}
-                    />
-                  </div>
-                  <div>
-                    <Label>OrderSmart</Label>
-                    <CurrencyInput
-                      value={formData.ordersmart_revenue}
-                      onChange={(v) => updateField('ordersmart_revenue', v)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Wolt</Label>
-                    <CurrencyInput
-                      value={formData.wolt_revenue}
-                      onChange={(v) => updateField('wolt_revenue', v)}
-                    />
-                  </div>
-                  <div className="pt-2 border-t">
-                    <Label>Take-Away Gesamt</Label>
-                    <div className="h-10 px-3 flex items-center justify-end rounded-md border bg-muted text-right tabular-nums font-medium">
-                      {new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(totalDeliveryRevenue)} €
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Terminal 1</Label>
+                        <CurrencyInput
+                          value={formData.terminal_1_total}
+                          onChange={(v) => updateField('terminal_1_total', v)}
+                        />
+                      </div>
+                      <div>
+                        <Label>Terminal 2</Label>
+                        <CurrencyInput
+                          value={formData.terminal_2_total}
+                          onChange={(v) => updateField('terminal_2_total', v)}
+                        />
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                    <div>
+                      <Label>Kreditkartenumsatz GL</Label>
+                      <CurrencyInput
+                        value={formData.card_total_gl}
+                        onChange={(v) => updateField('card_total_gl', v)}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
 
-              {/* Vouchers & Deductions */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Receipt className="w-5 h-5" />
-                    Gutscheine & Abzüge
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label>Gutschein Verkauf (verkauft)</Label>
-                    <CurrencyInput
-                      value={formData.vouchers_sold}
-                      onChange={(v) => updateField('vouchers_sold', v)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Gutschein Eingelöst (eingelöst)</Label>
-                    <CurrencyInput
-                      value={formData.vouchers_redeemed}
-                      onChange={(v) => updateField('vouchers_redeemed', v)}
-                    />
-                  </div>
-                  <div>
-                    <Label>FineDine Gutscheine</Label>
-                    <CurrencyInput
-                      value={formData.finedine_vouchers}
-                      onChange={(v) => updateField('finedine_vouchers', v)}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Other Income & Deductions */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Wallet className="w-5 h-5" />
-                    Sonstiges
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label>Vorschuss</Label>
-                    <CurrencyInput
-                      value={formData.vorschuss}
-                      onChange={(v) => updateField('vorschuss', v)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Einladung</Label>
-                    <CurrencyInput
-                      value={formData.einladung}
-                      onChange={(v) => updateField('einladung', v)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Sonstige Einnahmen</Label>
-                    <CurrencyInput
-                      value={formData.sonstige_einnahme}
-                      onChange={(v) => updateField('sonstige_einnahme', v)}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Expenses */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Ausgaben</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Beschreibung"
-                      value={expenseDescription}
-                      onChange={(e) => setExpenseDescription(e.target.value)}
-                      className="flex-1"
-                    />
-                    <CurrencyInput
-                      value={expenseAmount}
-                      onChange={setExpenseAmount}
-                      className="w-28"
-                    />
-                    <Button onClick={handleAddExpense} disabled={!expenseDescription.trim() || expenseAmount <= 0}>
-                      <Plus className="w-4 h-4" />
-                    </Button>
-                  </div>
-
-                  {expenses.length > 0 && (
-                    <div className="space-y-2">
-                      {expenses.map((expense) => (
-                        <div
-                          key={expense.id}
-                          className="flex items-center justify-between p-3 bg-muted rounded-lg"
-                        >
-                          <span className="text-sm">{expense.description}</span>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium tabular-nums">
-                              {formatCurrency(expense.amount)}
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteExpense(expense.id)}
-                            >
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                      <div className="flex justify-between pt-2 border-t">
-                        <span className="font-medium">Summe Ausgaben:</span>
-                        <span className="font-semibold tabular-nums text-destructive">
-                          {formatCurrency(totalExpenses)}
+                {/* Take Away */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Truck className="w-5 h-5" />
+                      Take Away
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label>Takeaway GL</Label>
+                      <CurrencyInput
+                        value={formData.takeaway_total}
+                        onChange={(v) => updateField('takeaway_total', v)}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>OrderSmart</Label>
+                        <CurrencyInput
+                          value={formData.ordersmart_revenue}
+                          onChange={(v) => updateField('ordersmart_revenue', v)}
+                        />
+                      </div>
+                      <div>
+                        <Label>Wolt</Label>
+                        <CurrencyInput
+                          value={formData.wolt_revenue}
+                          onChange={(v) => updateField('wolt_revenue', v)}
+                        />
+                      </div>
+                    </div>
+                    <div className="pt-2 border-t">
+                      <div className="flex justify-between items-center">
+                        <Label>Take-Away Gesamt</Label>
+                        <span className="font-semibold tabular-nums">
+                          {new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(totalDeliveryRevenue)} €
                         </span>
                       </div>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+                  </CardContent>
+                </Card>
 
-            {/* Waiter Submissions Overview */}
-            {waiterShifts.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <ClipboardList className="w-5 h-5" />
-                    Kellner-Abrechnungen
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Eingereicht</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {waiterShifts.map((shift) => {
-                        const submittedAt = formatSubmittedAt((shift as any).submitted_at);
-                        const hasData = (shift.pos_sales || 0) > 0 || (shift.cash_handed_in || 0) > 0;
-                        
-                        return (
-                          <TableRow key={shift.id}>
-                            <TableCell className="font-medium">{shift.waiter_name}</TableCell>
-                            <TableCell>
-                              {hasData ? (
-                                <Badge variant="default" className="gap-1">
-                                  <CheckCircle2 className="w-3 h-3" />
-                                  Komplett
-                                </Badge>
-                              ) : (
-                                <Badge variant="secondary" className="gap-1">
-                                  <Clock className="w-3 h-3" />
-                                  Ausstehend
-                                </Badge>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-right text-sm text-muted-foreground">
-                              {submittedAt || '–'}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            )}
+                {/* Vouchers & Deductions */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Receipt className="w-5 h-5" />
+                      Gutscheine & Abzüge
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label>Gutschein Verkauf</Label>
+                      <CurrencyInput
+                        value={formData.vouchers_sold}
+                        onChange={(v) => updateField('vouchers_sold', v)}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Eingelöst</Label>
+                        <CurrencyInput
+                          value={formData.vouchers_redeemed}
+                          onChange={(v) => updateField('vouchers_redeemed', v)}
+                        />
+                      </div>
+                      <div>
+                        <Label>FineDine</Label>
+                        <CurrencyInput
+                          value={formData.finedine_vouchers}
+                          onChange={(v) => updateField('finedine_vouchers', v)}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-            {/* Detailed Breakdown */}
-            <div className="grid lg:grid-cols-2 gap-6">
-              {/* Revenue Breakdown */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Receipt className="w-5 h-5" />
-                    Einnahmen Übersicht
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableBody>
-                      <TableRow>
-                        <TableCell>Tagesumsatz</TableCell>
-                        <TableCell className="text-right tabular-nums font-medium">{formatCurrency(kellnerUmsatz)}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>Gutschein Verkauf</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(formData.vouchers_sold)}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>Sonstige Einnahmen</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(formData.sonstige_einnahme)}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>Hilf Mahl</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(totalHilfMahl)}</TableCell>
-                      </TableRow>
-                      <TableRow className="border-t-2">
-                        <TableCell className="font-semibold">Summe Einnahmen</TableCell>
-                        <TableCell className="text-right tabular-nums font-semibold text-success">
-                          {formatCurrency(kellnerUmsatz + formData.vouchers_sold + formData.sonstige_einnahme + totalHilfMahl)}
-                        </TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
+                {/* Other Income & Deductions */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Wallet className="w-5 h-5" />
+                      Sonstiges
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Vorschuss</Label>
+                        <CurrencyInput
+                          value={formData.vorschuss}
+                          onChange={(v) => updateField('vorschuss', v)}
+                        />
+                      </div>
+                      <div>
+                        <Label>Einladung</Label>
+                        <CurrencyInput
+                          value={formData.einladung}
+                          onChange={(v) => updateField('einladung', v)}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Sonstige Einnahmen</Label>
+                      <CurrencyInput
+                        value={formData.sonstige_einnahme}
+                        onChange={(v) => updateField('sonstige_einnahme', v)}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
 
-              {/* Deductions Breakdown */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Receipt className="w-5 h-5" />
-                    Abzüge Übersicht
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableBody>
-                      <TableRow>
-                        <TableCell>Kredit Karten Terminal 1</TableCell>
-                         <TableCell className="text-right tabular-nums">{formatCurrency(formData.terminal_1_total)}</TableCell>
-                       </TableRow>
-                       <TableRow>
-                         <TableCell>Kredit Karten Terminal 2</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(formData.terminal_2_total)}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>Gutschein Eingelöst</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(formData.vouchers_redeemed)}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>FineDine Gutscheine</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(formData.finedine_vouchers)}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>Vorschuss</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(formData.vorschuss)}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>Einladung</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(formData.einladung)}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>Offene Rechnungen</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(totalOpenInvoices)}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>Ausgaben</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(totalExpenses)}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>Take Away</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(totalDeliveryRevenue)}</TableCell>
-                      </TableRow>
-                      <TableRow className="border-t-2">
-                        <TableCell className="font-semibold">Summe Abzüge</TableCell>
-                        <TableCell className="text-right tabular-nums font-semibold text-destructive">
-                          {formatCurrency(
-                            formData.terminal_1_total +
-                            formData.terminal_2_total +
-                            formData.vouchers_redeemed +
-                            formData.finedine_vouchers +
-                            formData.vorschuss +
-                            formData.einladung +
-                            totalOpenInvoices +
-                            totalExpenses +
-                            totalDeliveryRevenue
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
+                {/* Expenses */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Ausgaben</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Beschreibung"
+                        value={expenseDescription}
+                        onChange={(e) => setExpenseDescription(e.target.value)}
+                        className="flex-1"
+                      />
+                      <CurrencyInput
+                        value={expenseAmount}
+                        onChange={setExpenseAmount}
+                        className="w-28"
+                      />
+                      <Button onClick={handleAddExpense} disabled={!expenseDescription.trim() || expenseAmount <= 0}>
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
 
-              {/* Delivery Platforms */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Truck className="w-5 h-5" />
-                    Take Away Details
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableBody>
-                      <TableRow>
-                        <TableCell>Takeaway GL</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(formData.takeaway_total)}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>OrderSmart</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(formData.ordersmart_revenue)}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>Wolt</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(formData.wolt_revenue)}</TableCell>
-                      </TableRow>
-                      <TableRow className="border-t-2">
-                        <TableCell className="font-semibold">Gesamt</TableCell>
-                        <TableCell className="text-right tabular-nums font-semibold">{formatCurrency(totalDeliveryRevenue)}</TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
+                    {expenses.length > 0 && (
+                      <div className="space-y-2">
+                        {expenses.map((expense) => (
+                          <div
+                            key={expense.id}
+                            className="flex items-center justify-between p-2 bg-muted rounded-lg"
+                          >
+                            <span className="text-sm">{expense.description}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium tabular-nums text-sm">
+                                {formatCurrency(expense.amount)}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => handleDeleteExpense(expense.id)}
+                              >
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                        <div className="flex justify-between pt-2 border-t">
+                          <span className="font-medium">Summe:</span>
+                          <span className="font-semibold tabular-nums text-destructive">
+                            {formatCurrency(totalExpenses)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
 
-              {/* Tips Overview */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Trinkgeld Übersicht</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableBody>
-                      <TableRow>
-                        <TableCell>Küchen Trinkgeld (2%)</TableCell>
-                        <TableCell className="text-right tabular-nums font-medium text-success">{formatCurrency(totalKitchenTip)}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>Kellner Trinkgeld Pool</TableCell>
-                        <TableCell className="text-right tabular-nums font-medium text-success">{formatCurrency(waiterTipPool)}</TableCell>
-                      </TableRow>
-                      {waiterCount > 0 && (
-                        <TableRow>
-                          <TableCell className="pl-6 text-muted-foreground">→ Pro Kellner ({waiterCount})</TableCell>
-                          <TableCell className="text-right tabular-nums font-medium text-success">{formatCurrency(tipPerWaiter)}</TableCell>
-                        </TableRow>
+              {/* RIGHT COLUMN - Summary & Status */}
+              <div className="space-y-6 lg:sticky lg:top-4 lg:self-start">
+                {/* Kassenstand Card - nur anzeigen wenn Kassenstand < 1.000 € */}
+                {showCashBalanceCard && (
+                  <Card className="border-warning/30 bg-warning/5 dark:bg-warning/10">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <Banknote className="w-5 h-5" />
+                        Kassenstand
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Anfangsbestand</span>
+                        <span className="font-semibold tabular-nums">
+                          {formatCurrency(initialRestaurantBalance)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Bargeld heute</span>
+                        <span className={`font-semibold tabular-nums ${bargeld >= 0 ? 'text-success' : 'text-warning'}`}>
+                          {formatCurrency(bargeld)}
+                        </span>
+                      </div>
+                      {todaysVaultTransfers > 0 && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Transfer Tresor</span>
+                          <span className="font-semibold tabular-nums text-primary">
+                            +{formatCurrency(todaysVaultTransfers)}
+                          </span>
+                        </div>
                       )}
-                      <TableRow className="border-t-2">
-                        <TableCell className="font-semibold">Gesamt Trinkgeld</TableCell>
-                        <TableCell className="text-right tabular-nums font-semibold text-success">{formatCurrency(totalKitchenTip + totalWaiterTip)}</TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
+                      <Separator />
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">Kassenstand</span>
+                        <span className={`text-lg font-bold tabular-nums ${todaysRegisterBalance >= initialRestaurantBalance ? 'text-success' : 'text-destructive'}`}>
+                          {formatCurrency(todaysRegisterBalance)}
+                        </span>
+                      </div>
+                      {todaysRegisterBalance < initialRestaurantBalance && (
+                        <Button onClick={() => setShowTransferDialog(true)} variant="outline" className="w-full gap-2">
+                          <Vault className="w-4 h-4" />
+                          Transfer vom Tresor
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
 
-                  {/* Waiter Pool Distribution */}
-                  {waiterShifts.length > 0 && (
-                    <div className="mt-4 pt-4 border-t">
-                      <p className="text-sm font-medium mb-2">Kellner Pool-Verteilung ({waiterCount} Kellner)</p>
-                      <div className="space-y-1">
+                {/* Revenue Breakdown */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Receipt className="w-5 h-5" />
+                      Einnahmen
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableBody>
+                        <TableRow>
+                          <TableCell className="py-2">Tagesumsatz</TableCell>
+                          <TableCell className="text-right tabular-nums py-2">{formatCurrency(kellnerUmsatz)}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="py-2">Gutschein Verkauf</TableCell>
+                          <TableCell className="text-right tabular-nums py-2">{formatCurrency(formData.vouchers_sold)}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="py-2">Sonstige Einnahmen</TableCell>
+                          <TableCell className="text-right tabular-nums py-2">{formatCurrency(formData.sonstige_einnahme)}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="py-2">Hilf Mahl</TableCell>
+                          <TableCell className="text-right tabular-nums py-2">{formatCurrency(totalHilfMahl)}</TableCell>
+                        </TableRow>
+                        <TableRow className="border-t-2">
+                          <TableCell className="font-semibold py-2">Summe</TableCell>
+                          <TableCell className="text-right tabular-nums font-semibold text-success py-2">
+                            {formatCurrency(kellnerUmsatz + formData.vouchers_sold + formData.sonstige_einnahme + totalHilfMahl)}
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+
+                {/* Deductions Breakdown */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Receipt className="w-5 h-5" />
+                      Abzüge
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableBody>
+                        <TableRow>
+                          <TableCell className="py-2">Terminal 1 + 2</TableCell>
+                          <TableCell className="text-right tabular-nums py-2">{formatCurrency(formData.terminal_1_total + formData.terminal_2_total)}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="py-2">Gutscheine (eingelöst)</TableCell>
+                          <TableCell className="text-right tabular-nums py-2">{formatCurrency(formData.vouchers_redeemed)}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="py-2">FineDine</TableCell>
+                          <TableCell className="text-right tabular-nums py-2">{formatCurrency(formData.finedine_vouchers)}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="py-2">Vorschuss + Einladung</TableCell>
+                          <TableCell className="text-right tabular-nums py-2">{formatCurrency(formData.vorschuss + formData.einladung)}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="py-2">Offene Rechnungen</TableCell>
+                          <TableCell className="text-right tabular-nums py-2">{formatCurrency(totalOpenInvoices)}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="py-2">Ausgaben</TableCell>
+                          <TableCell className="text-right tabular-nums py-2">{formatCurrency(totalExpenses)}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="py-2">Take Away (extern)</TableCell>
+                          <TableCell className="text-right tabular-nums py-2">{formatCurrency(formData.ordersmart_revenue + formData.wolt_revenue)}</TableCell>
+                        </TableRow>
+                        <TableRow className="border-t-2">
+                          <TableCell className="font-semibold py-2">Summe</TableCell>
+                          <TableCell className="text-right tabular-nums font-semibold text-destructive py-2">
+                            {formatCurrency(
+                              formData.terminal_1_total +
+                              formData.terminal_2_total +
+                              formData.vouchers_redeemed +
+                              formData.finedine_vouchers +
+                              formData.vorschuss +
+                              formData.einladung +
+                              totalOpenInvoices +
+                              totalExpenses +
+                              formData.ordersmart_revenue +
+                              formData.wolt_revenue
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+
+                {/* Tips Overview */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg">Trinkgeld</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableBody>
+                        <TableRow>
+                          <TableCell className="py-2">Küche (2%)</TableCell>
+                          <TableCell className="text-right tabular-nums font-medium text-success py-2">{formatCurrency(totalKitchenTip)}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="py-2">Kellner Pool</TableCell>
+                          <TableCell className="text-right tabular-nums font-medium text-success py-2">{formatCurrency(waiterTipPool)}</TableCell>
+                        </TableRow>
+                        {waiterCount > 0 && (
+                          <TableRow>
+                            <TableCell className="py-2 pl-6 text-muted-foreground">→ Pro Kellner ({waiterCount})</TableCell>
+                            <TableCell className="text-right tabular-nums text-success py-2">{formatCurrency(tipPerWaiter)}</TableCell>
+                          </TableRow>
+                        )}
+                        <TableRow className="border-t-2">
+                          <TableCell className="font-semibold py-2">Gesamt</TableCell>
+                          <TableCell className="text-right tabular-nums font-semibold text-success py-2">{formatCurrency(totalKitchenTip + totalWaiterTip)}</TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+
+                {/* Waiter Submissions Overview */}
+                {waiterShifts.length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <ClipboardList className="w-5 h-5" />
+                        Kellner-Status
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
                         {waiterShifts.map((shift) => {
-                          const contribution = (shift.cash_handed_in || 0) - calculateExpected(shift) - (shift.kitchen_tip || 0);
+                          const submittedAt = formatSubmittedAt((shift as any).submitted_at);
+                          const hasData = (shift.pos_sales || 0) > 0 || (shift.cash_handed_in || 0) > 0;
+                          
                           return (
-                            <div key={shift.id} className="flex justify-between text-sm">
-                              <span>{shift.waiter_name}</span>
-                              <div className="flex gap-4">
-                                <span className={`tabular-nums ${contribution >= 0 ? 'text-success' : 'text-destructive'}`}>
-                                  {formatCurrency(contribution)}
-                                </span>
-                                <span className="tabular-nums text-success">
-                                  → {formatCurrency(tipPerWaiter)}
-                                </span>
+                            <div key={shift.id} className="flex items-center justify-between py-1">
+                              <span className="font-medium text-sm">{shift.waiter_name}</span>
+                              <div className="flex items-center gap-2">
+                                {hasData ? (
+                                  <Badge variant="default" className="gap-1 text-xs">
+                                    <CheckCircle2 className="w-3 h-3" />
+                                    OK
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="secondary" className="gap-1 text-xs">
+                                    <Clock className="w-3 h-3" />
+                                    Offen
+                                  </Badge>
+                                )}
+                                {submittedAt && (
+                                  <span className="text-xs text-muted-foreground hidden sm:inline">
+                                    {submittedAt}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           );
                         })}
                       </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
             </div>
           </div>
         )}
