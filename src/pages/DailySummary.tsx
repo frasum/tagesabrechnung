@@ -43,7 +43,8 @@ export default function DailySummary() {
   const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
   // Calculate totals
   const kellnerUmsatz = waiterShifts.reduce((sum, w) => sum + w.pos_sales, 0);
-  const totalCardTotal = waiterShifts.reduce((sum, w) => sum + w.card_total, 0);
+  const totalCardTotal = waiterShifts.reduce((sum, w) => sum + w.card_total, 0) 
+    + (session?.card_total_gl || 0);
   const totalHilfMahl = waiterShifts.reduce((sum, w) => sum + w.hilf_mahl, 0);
   const totalOpenInvoices = waiterShifts.reduce((sum, w) => sum + w.open_invoices, 0);
   const totalKitchenTip = waiterShifts.reduce((sum, w) => sum + w.kitchen_tip, 0);
