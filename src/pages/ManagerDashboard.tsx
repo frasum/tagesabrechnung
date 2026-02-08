@@ -332,19 +332,19 @@ export default function ManagerDashboard() {
         </div>
 
         {/* Warning Cards - Show when there are mismatches */}
-        {session && waiterShifts.length > 0 && (Math.abs(posMismatch) >= 0.01 || Math.abs(cardTerminalMismatch) >= 0.01) && (
+        {session && waiterShifts.length > 0 && (Math.abs(posMismatch - formData.takeaway_total) >= 0.01 || Math.abs(cardTerminalMismatch) >= 0.01) && (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Math.abs(posMismatch) >= 0.01 && (
+            {Math.abs(posMismatch - formData.takeaway_total) >= 0.01 && (
               <Card className="border-destructive/30 bg-destructive/5">
                 <CardContent className="py-4 flex items-center gap-3">
                   <AlertTriangle className="w-5 h-5 text-destructive shrink-0" />
                   <div>
                     <p className="font-medium text-destructive">POS Differenz</p>
                     <p className="text-sm text-muted-foreground">
-                      POS Total ({formatCurrency(formData.pos_total)}) stimmt nicht mit Kellner-Umsätzen ({formatCurrency(kellnerUmsatz)}) überein.
+                      POS Total ({formatCurrency(formData.pos_total)}) stimmt nicht mit Kellner-Umsätzen ({formatCurrency(kellnerUmsatz)}) + Takeaway ({formatCurrency(formData.takeaway_total)}) überein.
                     </p>
                     <p className="text-sm font-semibold text-destructive mt-1">
-                      Differenz: {formatCurrency(posMismatch)}
+                      Differenz: {formatCurrency(posMismatch - formData.takeaway_total)}
                     </p>
                   </div>
                 </CardContent>
