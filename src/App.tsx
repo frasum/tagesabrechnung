@@ -14,6 +14,7 @@ import DailySummary from "./pages/DailySummary";
 import Statistics from "./pages/Statistics";
 import History from "./pages/History";
 import StaffManagement from "./pages/StaffManagement";
+import CashBalance from "./pages/CashBalance";
 import WaiterQRPoster from "./pages/WaiterQRPoster";
 import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/summary" element={<ProtectedRoute><DailySummary /></ProtectedRoute>} />
             <Route path="/statistics" element={<ProtectedRoute><Statistics /></ProtectedRoute>} />
             <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
+            <Route path="/cash-balance" element={<ProtectedRoute><CashBalance /></ProtectedRoute>} />
             <Route path="/staff" element={<ProtectedRoute><StaffManagement /></ProtectedRoute>} />
             <Route path="/qr-poster" element={<WaiterQRPoster />} />
             <Route path="*" element={<NotFound />} />
