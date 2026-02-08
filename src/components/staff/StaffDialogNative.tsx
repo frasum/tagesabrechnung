@@ -69,7 +69,7 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
     }
 
     didInitRef.current = true;
-  }, [open, staff, restaurants]);
+  }, [open, staff, restaurants, currentRole]);
 
   const handlePinChange = (value: string) => {
     setPinCode(value.replace(/\D/g, '').slice(0, 4));
