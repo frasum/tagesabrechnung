@@ -1,86 +1,81 @@
 
-# Plan: Monatlich kumulierter Bargeldbestand
+# Plan: Wechselgeld zum Bargeldbestand hinzufügen
 
-## Was sich ändert
+## Übersicht
 
-**Aktuell:**
-- Zeigt nur Bargeld des ausgewählten Monats
-- Beispiel Februar: Zeigt nur die Summe der Februar-Tage
+Das Wechselgeld ist ein fester Startbetrag, der immer in der Kasse liegt. Dieser wird einmalig eingetragen und zum verbleibenden Bargeldbestand addiert.
 
-**Neu:**
-- Zeigt kumuliertes Bargeld bis zum Ende des ausgewählten Monats
-- Beispiel Februar: Januar-Bargeld + Februar-Bargeld = Gesamtes Bargeld bis Ende Februar
+## Was du bekommst
 
-## Beispiel
-
-| Monat   | Tages-Bargeld | Bankeinzahlung | Kumuliert |
-|---------|---------------|----------------|-----------|
-| Januar  | 8.000 EUR     | -5.000 EUR     | 3.000 EUR |
-| Februar | 6.000 EUR     | -4.000 EUR     | 5.000 EUR |
-| Marz    | 7.000 EUR     | -0 EUR         | 12.000 EUR|
-
-Wenn du Februar auswaehlst, siehst du:
-- Tabelle: Nur Februar-Tage
-- Monats-Gesamt: 6.000 EUR (nur Februar)
-- **Kumulierter Bestand bis Ende Februar: 3.000 + 6.000 - 4.000 = 5.000 EUR**
-
-## UI-Anpassung
-
-In der Zusammenfassungs-Karte oben:
-
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│  Aktueller Bargeldbestand                                               │
+│  Bargeld abzüglich Bankeinzahlungen                                     │
+│                                                                         │
+│  Wechselgeld:            500,00 €  [Bearbeiten]                        │
+│  Bargeld bis Februar:  12.450,00 €                                      │
+│  Bankeinzahlungen:     -8.000,00 €                                      │
+│  ─────────────────────────────────                                      │
+│  Verbleibendes:         4.950,00 €              [+ Einzahlung]          │
+│                                                                         │
+│  Letzte Einzahlung: 05.02.2026 - 3.000,00 €                            │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
-Aktueller Bargeldbestand
-Bargeld abzuglich Bankeinzahlungen
 
-Bargeld gesamt (bis Ende Februar):    14.000,00 EUR   <-- Kumuliert
-Bankeinzahlungen (gesamt):            -9.000,00 EUR   <-- Alle Einzahlungen
-                                      ---------------
-Verbleibendes Bargeld:                 5.000,00 EUR
-```
+**Berechnung:**
+`Verbleibendes Bargeld = Wechselgeld + kumuliertes Bargeld - Bankeinzahlungen`
 
 ## Technische Umsetzung
 
-### Datei: src/pages/CashBalance.tsx
+### 1. Neue Datenbank-Tabelle: `settings`
 
-1. **Neuer kumulierter Wert berechnen**
-   - Summe aller Bargeld-Werte bis einschliesslich des ausgewaehlten Monats
-   - Nicht nur der aktuelle Monat, sondern alle vorherigen Monate einbeziehen
+Anstatt eine eigene Tabelle nur für Wechselgeld zu erstellen, nutzen wir eine allgemeine Einstellungstabelle (die für zukünftige Einstellungen erweiterbar ist):
 
-2. **Bankeinzahlungen ebenfalls kumuliert**
-   - Alle Bankeinzahlungen bis einschliesslich des ausgewaehlten Monats summieren
+| Spalte | Typ | Beschreibung |
+|--------|-----|--------------|
+| id | uuid | Primärschlüssel |
+| key | text | Einstellungs-Schlüssel (z.B. "petty_cash") |
+| value | jsonb | Wert als JSON (z.B. {"amount": 500}) |
+| updated_at | timestamp | Letzte Änderung |
 
-### Aenderungen
+**Vorteil:** Flexibel für weitere Einstellungen in der Zukunft
 
-```typescript
-// Kumuliertes Bargeld bis zum ausgewaehlten Monat berechnen
-const cumulativeCash = useMemo(() => {
-  if (!data || !selectedMonth) return 0;
-  return data
-    .filter((row) => row.date <= `${selectedMonth}-31`) // Bis Ende des Monats
-    .reduce((sum, row) => sum + row.bargeld, 0);
-}, [data, selectedMonth]);
+### 2. Neue Dateien
 
-// Kumulierte Bankeinzahlungen bis zum ausgewaehlten Monat
-const cumulativeDeposits = useMemo(() => {
-  if (!deposits || !selectedMonth) return 0;
-  return deposits
-    .filter((d) => d.deposit_date <= `${selectedMonth}-31`)
-    .reduce((sum, d) => sum + d.amount, 0);
-}, [deposits, selectedMonth]);
+| Datei | Zweck |
+|-------|-------|
+| `src/hooks/useSettings.ts` | Hook zum Lesen/Schreiben von Einstellungen |
+| `src/components/cash-balance/PettyCashSetting.tsx` | Komponente zum Anzeigen/Bearbeiten des Wechselgelds |
+
+### 3. Änderungen an bestehenden Dateien
+
+**`src/pages/CashBalance.tsx`:**
+- Import des Wechselgeld-Hooks
+- Berechnung: `verbleibendesBargeld = wechselgeld + cumulativeCash - cumulativeDeposits`
+
+**`src/components/cash-balance/CashBalanceSummary.tsx`:**
+- Neues Prop `pettyCash` für den Wechselgeldbetrag
+- Zeigt das Wechselgeld als erste Zeile in der Berechnung an
+- Berücksichtigt Wechselgeld im verbleibenden Bargeld
+
+### 4. Ablauf beim Bearbeiten
+
+```text
++------------------+     +-------------------+     +------------------+
+| Nutzer klickt    | --> | Eingabefeld wird  | --> | Speichern in     |
+| "Bearbeiten"     |     | aktiviert         |     | settings         |
++------------------+     +-------------------+     +------------------+
+                                                          |
+                                                          v
++------------------+     +-------------------+     +------------------+
+| Alle Berechnungen| <-- | React Query       | <-- | Daten neu laden  |
+| aktualisiert     |     | invalidiert Cache |     |                  |
++------------------+     +-------------------+     +------------------+
 ```
-
-3. **CashBalanceSummary mit kumulierten Werten**
-   - `totalCash` wird durch `cumulativeCash` ersetzt
-   - `totalDeposits` wird durch `cumulativeDeposits` ersetzt
-
-### Datei: src/components/cash-balance/CashBalanceSummary.tsx
-
-Kleine Anpassung der Beschriftung:
-- "Bargeld gesamt" wird zu "Bargeld bis [Monat]"
-- Zeigt klar, dass es sich um den kumulierten Wert handelt
 
 ## Vorteile
 
-- Du siehst immer, wie viel Bargeld tatsachlich noch da sein sollte
-- Uebertrage von Vormonaten gehen nicht verloren
-- Bankeinzahlungen werden korrekt abgezogen
+- **Einfach:** Nur ein Wert, der einmal eingetragen wird
+- **Flexibel:** Kann jederzeit angepasst werden
+- **Übersichtlich:** Wechselgeld ist klar in der Berechnung sichtbar
+- **Erweiterbar:** Die settings-Tabelle kann für weitere Einstellungen genutzt werden
