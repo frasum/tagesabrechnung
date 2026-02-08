@@ -502,7 +502,7 @@ export default function WaiterCashUp() {
                           <TableHead className="text-right">Offen</TableHead>
                           <TableHead className="text-right">Abgegeben</TableHead>
                           <TableHead className="text-right">Erwartet</TableHead>
-                          <TableHead className="text-right">Küche TG</TableHead>
+                          <TableHead className="text-right">Trinkgeld für Küche</TableHead>
                           <TableHead></TableHead>
                         </TableRow>
                       </TableHeader>
