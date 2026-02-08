@@ -48,7 +48,7 @@ export function useStaff(role?: StaffRole) {
   return useQuery({
     queryKey: ['staff', role],
     queryFn: async () => {
-      // Query staff table with profile join to get OAuth link status
+      // Query staff table (without profile join due to RLS restrictions)
       let query = supabase
         .from('staff')
         .select(`
@@ -60,13 +60,6 @@ export function useStaff(role?: StaffRole) {
               name,
               slug
             )
-          ),
-          profiles!profiles_staff_id_fkey (
-            id,
-            user_id,
-            email,
-            full_name,
-            avatar_url
           )
         `)
         .order('name', { ascending: true });
@@ -75,14 +68,44 @@ export function useStaff(role?: StaffRole) {
         query = query.eq('role', role);
       }
 
-      const { data, error } = await query;
+      const { data: staffData, error } = await query;
       if (error) throw error;
       
-      // Transform profiles array to single linked_profile
-      return (data || []).map((staff: any) => ({
+      // Fetch linked profiles via edge function (bypasses RLS)
+      let linkedProfiles: Record<string, LinkedProfile> = {};
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-link-account?action=get-all-linked`,
+          {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            },
+          }
+        );
+        if (response.ok) {
+          const profiles = await response.json();
+          // Index by staff_id for quick lookup
+          for (const p of profiles) {
+            if (p.staff_id) {
+              linkedProfiles[p.staff_id] = {
+                id: p.id,
+                user_id: p.user_id,
+                email: p.email,
+                full_name: p.full_name,
+                avatar_url: p.avatar_url,
+              };
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch linked profiles:', e);
+      }
+      
+      // Merge linked_profile into staff data
+      return (staffData || []).map((staff: any) => ({
         ...staff,
-        linked_profile: staff.profiles?.[0] || null,
-        profiles: undefined, // Remove the raw profiles array
+        linked_profile: linkedProfiles[staff.id] || null,
       })) as Staff[];
     },
   });

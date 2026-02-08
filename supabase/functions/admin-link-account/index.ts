@@ -19,8 +19,34 @@ Deno.serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    // GET: Return list of unlinked profiles
+    // GET: Return profiles based on query param
     if (req.method === 'GET') {
+      const url = new URL(req.url);
+      const action = url.searchParams.get('action');
+
+      // Return all linked profiles (for useStaff hook)
+      if (action === 'get-all-linked') {
+        const { data, error } = await supabaseAdmin
+          .from('profiles')
+          .select('id, user_id, email, full_name, avatar_url, staff_id')
+          .not('staff_id', 'is', null)
+          .order('email', { ascending: true });
+
+        if (error) {
+          console.error('Error fetching linked profiles:', error);
+          return new Response(
+            JSON.stringify({ error: 'Fehler beim Laden der Profile' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        return new Response(
+          JSON.stringify(data || []),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Default: Return unlinked profiles (for linking UI)
       const { data, error } = await supabaseAdmin
         .from('profiles')
         .select('id, user_id, email, full_name, avatar_url, staff_id')
