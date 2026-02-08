@@ -17,11 +17,14 @@ interface AuthUser {
 interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
+  isLocked: boolean;
   login: (name: string, pinCode: string) => Promise<boolean>;
   logout: () => void;
   linkAccount: (staff: { id: string; name: string; role: string }) => Promise<void>;
   hasPermission: (requiredLevel: PermissionLevel) => boolean;
   refreshPermissions: () => Promise<void>;
+  lockSession: () => void;
+  unlockSession: (pin: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,6 +34,7 @@ const AUTH_STORAGE_KEY = 'spicery_auth_user';
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLocked, setIsLocked] = useState(false);
 
   // Convert Supabase OAuth user to AuthUser with profile data - single API call
   const convertOAuthUser = async (supabaseUser: User): Promise<AuthUser> => {
@@ -316,8 +320,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return checkPermission(user.permissionLevel, requiredLevel);
   };
 
+  // Lock the session (show lock screen)
+  const lockSession = () => {
+    if (user) {
+      setIsLocked(true);
+    }
+  };
+
+  // Unlock session with PIN verification
+  const unlockSession = async (pin: string): Promise<boolean> => {
+    if (!user?.staffId) return false;
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-session-pin`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            staff_id: user.staffId,
+            pin_code: pin,
+          }),
+        }
+      );
+
+      if (!response.ok) return false;
+
+      const result = await response.json();
+      if (result.valid) {
+        setIsLocked(false);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, linkAccount, hasPermission, refreshPermissions }}>
+    <AuthContext.Provider value={{ user, isLoading, isLocked, login, logout, linkAccount, hasPermission, refreshPermissions, lockSession, unlockSession }}>
       {children}
     </AuthContext.Provider>
   );

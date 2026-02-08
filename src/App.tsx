@@ -3,9 +3,11 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { RestaurantProvider } from "@/contexts/RestaurantContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { SessionLockScreen } from "@/components/auth/SessionLockScreen";
+import { useInactivityTimeout } from "@/hooks/useInactivityTimeout";
 import Login from "./pages/Login";
 import WaiterCashUp from "./pages/WaiterCashUp";
 import WaiterMobile from "./pages/WaiterMobile";
@@ -41,6 +43,33 @@ function RestaurantRoutes() {
   );
 }
 
+// Component that handles session locking and inactivity
+function AppContent() {
+  const { isLocked, user } = useAuth();
+  useInactivityTimeout();
+
+  return (
+    <>
+      {isLocked && user && <SessionLockScreen />}
+      <Routes>
+        {/* Global routes (no restaurant context needed) */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/install" element={<Install />} />
+        <Route path="/staff" element={<ProtectedRoute requiredLevel="admin"><StaffManagement /></ProtectedRoute>} />
+        
+        {/* Redirect root to default restaurant */}
+        <Route path="/" element={<Navigate to="/spicery" replace />} />
+        
+        {/* Restaurant-specific routes */}
+        <Route path="/:restaurant/*" element={<RestaurantRoutes />} />
+        
+        {/* 404 */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </>
+  );
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -48,21 +77,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            {/* Global routes (no restaurant context needed) */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/install" element={<Install />} />
-            <Route path="/staff" element={<ProtectedRoute requiredLevel="admin"><StaffManagement /></ProtectedRoute>} />
-            
-            {/* Redirect root to default restaurant */}
-            <Route path="/" element={<Navigate to="/spicery" replace />} />
-            
-            {/* Restaurant-specific routes */}
-            <Route path="/:restaurant/*" element={<RestaurantRoutes />} />
-            
-            {/* 404 */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <AppContent />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

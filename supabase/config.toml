@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.manage-user-role]
 verify_jwt = false
+
+[functions.verify-session-pin]
+verify_jwt = false
