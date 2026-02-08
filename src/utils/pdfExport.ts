@@ -101,7 +101,8 @@ export const generateDailySummaryPDF = (data: PDFExportData): void => {
 
   // Alert for mismatches
   yPos += 10;
-  if (data.totals.posMismatch !== 0 || data.totals.cardTerminalMismatch !== 0) {
+  const adjustedPosMismatch = data.totals.posMismatch - (data.session.takeaway_total || 0);
+  if (Math.abs(adjustedPosMismatch) >= 0.01 || Math.abs(data.totals.cardTerminalMismatch) >= 0.01) {
     doc.setFillColor(254, 226, 226);
     doc.rect(margin, yPos - 4, pageWidth - 2 * margin, 16, 'F');
     doc.setFontSize(10);
@@ -109,10 +110,10 @@ export const generateDailySummaryPDF = (data: PDFExportData): void => {
     doc.setFont('helvetica', 'bold');
     doc.text('ACHTUNG: Differenzen festgestellt!', margin + 4, yPos + 2);
     doc.setFont('helvetica', 'normal');
-    if (data.totals.posMismatch !== 0) {
-      doc.text(`POS Differenz: ${formatCurrency(data.totals.posMismatch)}`, margin + 4, yPos + 8);
+    if (Math.abs(adjustedPosMismatch) >= 0.01) {
+      doc.text(`POS Differenz: ${formatCurrency(adjustedPosMismatch)}`, margin + 4, yPos + 8);
     }
-    if (data.totals.cardTerminalMismatch !== 0) {
+    if (Math.abs(data.totals.cardTerminalMismatch) >= 0.01) {
       doc.text(`Terminal Differenz: ${formatCurrency(data.totals.cardTerminalMismatch)}`, pageWidth / 2, yPos + 8);
     }
     doc.setTextColor(0);
