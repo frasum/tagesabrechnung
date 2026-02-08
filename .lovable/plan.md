@@ -1,85 +1,34 @@
 
-# Plan: Excel-Export für Bargeldbestand
+# Plan: Kumuliertes Bargeld in der GESAMT-Zeile anzeigen
 
-## Übersicht
+## Das Problem
 
-Hinzufügen eines Excel-Exports mit zwei Bereichen auf einem Sheet:
-1. **Tägliche Übersicht** - alle Spalten wie in der Tabelle
-2. **Bankeinzahlungen** - Datum und Betrag
+In der "Täglichen Bargeldübersicht" zeigt die GESAMT-Zeile nur die Summe des ausgewählten Monats (Februar: 5.608€), aber es sollte das **kumulierte Bargeld** inklusive aller vorherigen Monate (z.B. Januar + Februar) angezeigt werden.
 
-Der PDF-Export-Button wird durch ein Dropdown-Menü ersetzt.
+## Die Lösung
 
-## Excel-Struktur
+Die letzte Spalte "Bargeld" in der GESAMT-Zeile soll den kumulierten Wert (`cumulativeCash`) anzeigen statt nur die Monatssumme.
+
+Alternativ: Eine zusätzliche Zeile oder Beschriftung hinzufügen, die den Unterschied deutlich macht:
+- Zeile 1: Monatssumme Februar
+- Zeile 2: Kumuliert bis Februar (optional)
+
+## Änderungen
+
+**Datei: `src/pages/CashBalance.tsx`**
+
+Die GESAMT-Zeile in der Tabelle anpassen (Zeile 359-361):
+
+| Vorher | Nachher |
+|--------|---------|
+| `filteredData.reduce(...)` für Bargeld | `cumulativeCash` (bereits berechnet in Zeile 51-56) |
+
+Die anderen Spalten (Umsatz, Kreditkarten, etc.) bleiben als Monatssummen, da diese nicht kumuliert werden müssen - nur das **Bargeld** ist der entscheidende Wert, der über die Zeit aufläuft.
+
+## Ergebnis
 
 ```text
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ Bargeldbestand - Februar 2026                                               │
-│ Erstellt am: 08.02.2026 14:30                                               │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│ TÄGLICHE ÜBERSICHT                                                          │
-│ Datum   │ Umsatz   │ Kredit  │ OrderSm │ Wolt │ ... │ Ausgaben │ Bargeld   │
-│ Sa 1.2. │ 1.234 €  │ -456 €  │ -100 €  │ -50 €│ ... │ -30 €    │ 598 €     │
-│ So 2.2. │ 2.345 €  │ -567 €  │ -150 €  │ -75 €│ ... │ -45 €    │ 1.508 €   │
-│ ...     │ ...      │ ...     │ ...     │ ...  │ ... │ ...      │ ...       │
-│ GESAMT  │ 12.450 € │ -3.456 €│ -800 €  │ -400 €│...│ -250 €   │ 7.544 €   │
-│                                                                             │
-│ (Leerzeile)                                                                 │
-│                                                                             │
-│ BANKEINZAHLUNGEN                                                            │
-│ Datum      │ Betrag                                                         │
-│ 05.02.2026 │ 3.000 €                                                        │
-│ 01.02.2026 │ 5.000 €                                                        │
-│ Gesamt     │ 8.000 €                                                        │
-└─────────────────────────────────────────────────────────────────────────────┘
+GESAMT | 29.600€ | -20.380€ | ... | -302€ | [Kumuliert: z.B. 8.234€]
 ```
 
-## UI-Änderung
-
-Aktuell:
-```text
-[PDF Export]
-```
-
-Neu:
-```text
-[Export ▼]
-  ├─ PDF Export
-  └─ Excel Export
-```
-
-## Umsetzung
-
-### 1. Neue Abhängigkeit
-
-```
-xlsx (SheetJS)
-```
-
-Leichtgewichtige Bibliothek für Excel-Generierung im Browser.
-
-### 2. Neue Datei erstellen
-
-**`src/utils/excelExport.ts`**
-
-Enthält die Funktion `generateCashBalanceExcel()`:
-- Erstellt Workbook mit einem Sheet
-- Fügt Titel und Erstellungsdatum hinzu
-- Generiert Tägliche Übersicht mit Summenzeile
-- Fügt Bankeinzahlungen mit Gesamtsumme hinzu
-- Formatiert Spaltenbreiten automatisch
-- Löst Download aus
-
-### 3. Änderung an CashBalance.tsx
-
-- Import des neuen DropdownMenu-Komponenten
-- Neue `handleExcelExport`-Funktion
-- Ersetzen des Buttons durch Dropdown mit PDF/Excel Optionen
-
-## Dateiänderungen
-
-| Datei | Änderung |
-|-------|----------|
-| `package.json` | Neue Abhängigkeit `xlsx` |
-| `src/utils/excelExport.ts` | Neue Datei mit Export-Logik |
-| `src/pages/CashBalance.tsx` | Button → Dropdown, Excel-Handler |
+Wobei das Bargeld jetzt die Summe aus Januar + Februar zeigt (nicht nur Februar).
