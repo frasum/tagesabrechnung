@@ -1,83 +1,138 @@
 
-# Fix: App bleibt bei "Laden..." hängen
+
+# Fix: Frank sieht nicht die vollständige Navigation trotz Admin-Berechtigung
 
 ## Problem-Analyse
 
-Die App zeigt dauerhaft "Laden..." an, weil der `AuthContext` nie `setIsLoading(false)` aufruft. 
+Frank ist in der Datenbank als **Admin** konfiguriert, aber die Navigation zeigt nur Menüpunkte für **Staff**-Level.
 
-**Ursache:** Die `initAuth()` Funktion hat fehlendes Error-Handling:
+### Ursache
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│                    FEHLER-FLOW IM AUTHCONTEXT                   │
-├─────────────────────────────────────────────────────────────────┤
-│  1. localStorage hat OAuth-User (isOAuthUser: true)             │
-│  2. getSession() gibt Session zurück                            │
-│  3. convertOAuthUser() wird aufgerufen                          │
-│  4. ❌ convertOAuthUser() hängt oder wirft Fehler               │
-│  5. catch-Block entfernt nur localStorage                       │
-│  6. ❌ setIsLoading(false) wird NICHT aufgerufen                │
-│  7. ➜ App bleibt ewig im Ladezustand                            │
-└─────────────────────────────────────────────────────────────────┘
+1. **OAuth-Fallback setzt falschen permissionLevel**: Bei Timeout oder Fehler beim Abruf der Berechtigungen wird `permissionLevel: 'staff'` gesetzt
+2. **Cached User wird nicht korrekt aktualisiert**: Der localStorage-Wert wird bei erneutem Login nicht zwingend aktualisiert
+3. **linkAccount() aktualisiert permissionLevel nicht**: Die Funktion setzt nur `staffId`, `name`, `role` - aber ignoriert `permissionLevel`
+
+### Datenbank-Status (verifiziert)
 ```
+staff.name = 'Frank'
+staff.id = '8e83c717-8339-4efb-b792-9024f2cf409d'
+user_roles.permission_level = 'admin'
+profiles.user_id = 'd218aca2-aef3-454b-a7c7-ba3d062a10d5' (frasum@gmail.com)
+profiles.staff_id = '8e83c717-8339-4efb-b792-9024f2cf409d'
+```
+
+Die Edge Function `manage-user-role` gibt korrekt `permission_level: 'admin'` zurück, wenn die richtige `staff_id` verwendet wird.
 
 ---
 
 ## Lösung
 
-### 1. Error-Handling in `initAuth()` verbessern
+### 1. linkAccount() muss auch permissionLevel abrufen
 
 **Datei:** `src/contexts/AuthContext.tsx`
 
-Wrappen der gesamten `initAuth()` Funktion in try-catch mit garantiertem `setIsLoading(false)`:
+Wenn ein OAuth-Benutzer mit einem Staff-Account verknüpft wird, muss die Berechtigung ebenfalls abgerufen werden:
 
 ```typescript
-const initAuth = async () => {
-  try {
-    // ... existing logic
-  } catch (error) {
-    console.error('Auth initialization failed:', error);
-  } finally {
-    // GARANTIERT dass Loading endet
-    setIsLoading(false);
+const linkAccount = async (staff: { id: string; name: string; role: string }) => {
+  if (user) {
+    // Fetch permission level for the linked staff
+    let permissionLevel: PermissionLevel = 'staff';
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-user-role?staff_id=${staff.id}`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+        }
+      );
+      if (response.ok) {
+        const roleData = await response.json();
+        permissionLevel = roleData.permission_level || 'staff';
+      }
+    } catch (e) {
+      console.error('Failed to fetch permission level during linking:', e);
+    }
+
+    const updatedUser: AuthUser = {
+      ...user,
+      id: staff.id,
+      name: staff.name,
+      role: staff.role as 'waiter' | 'kitchen',
+      permissionLevel, // Jetzt wird permissionLevel korrekt gesetzt
+      staffId: staff.id,
+      needsLinking: false,
+    };
+    setUser(updatedUser);
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updatedUser));
   }
 };
 ```
 
-### 2. Timeout für `convertOAuthUser()` hinzufügen
+### 2. Fallback-User muss versuchen, permissionLevel aus Cache zu übernehmen
 
-Um zu verhindern, dass die Funktion ewig hängt:
+**Datei:** `src/contexts/AuthContext.tsx`
+
+Im `onAuthStateChange`-Handler beim Fallback:
 
 ```typescript
-const convertOAuthUserWithTimeout = async (user: User, timeoutMs = 5000) => {
-  const timeout = new Promise<AuthUser>((_, reject) => 
-    setTimeout(() => reject(new Error('Timeout')), timeoutMs)
-  );
-  return Promise.race([convertOAuthUser(user), timeout]);
-};
+} catch (error) {
+  console.error('OAuth sign-in processing failed:', error);
+  // Try to get cached permission level
+  const cachedUser = localStorage.getItem(AUTH_STORAGE_KEY);
+  let cachedPermissionLevel: PermissionLevel = 'staff';
+  if (cachedUser) {
+    try {
+      const parsed = JSON.parse(cachedUser);
+      cachedPermissionLevel = parsed.permissionLevel || 'staff';
+    } catch {}
+  }
+  
+  const fallbackUser: AuthUser = {
+    id: session.user.id,
+    name,
+    role: 'waiter',
+    permissionLevel: cachedPermissionLevel, // Behalte cached Level
+    isOAuthUser: true,
+    needsLinking: true,
+  };
+  setUser(fallbackUser);
+  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(fallbackUser));
+}
 ```
 
-### 3. Fallback bei fehlgeschlagener Session-Verarbeitung
+### 3. Button zum manuellen Refresh der Berechtigungen (optional, für Debugging)
 
-Wenn OAuth-User im localStorage ist aber Session-Refresh fehlschlägt, den gespeicherten User nutzen (ohne Session-Validierung):
+Füge eine Möglichkeit hinzu, die Berechtigungen manuell zu aktualisieren, falls der automatische Abruf fehlschlägt:
+
+**Neue Funktion in AuthContext:**
 
 ```typescript
-if (parsed.isOAuthUser) {
+const refreshPermissions = async () => {
+  if (!user?.staffId) return;
+  
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      const authUser = await convertOAuthUser(session.user);
-      setUser(authUser);
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
-      return; // setIsLoading(false) in finally
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-user-role?staff_id=${user.staffId}`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+      }
+    );
+    if (response.ok) {
+      const roleData = await response.json();
+      const updatedUser = { ...user, permissionLevel: roleData.permission_level || 'staff' };
+      setUser(updatedUser);
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updatedUser));
     }
   } catch (e) {
-    console.error('OAuth session refresh failed, using cached user:', e);
+    console.error('Failed to refresh permissions:', e);
   }
-  // Fallback: Use cached user data
-  setUser(parsed);
-  return;
-}
+};
 ```
 
 ---
@@ -86,68 +141,37 @@ if (parsed.isOAuthUser) {
 
 | Datei | Änderung |
 |-------|----------|
-| `src/contexts/AuthContext.tsx` | `try/finally` Block um `initAuth()`, Timeout für `convertOAuthUser`, besseres Fallback-Handling |
+| `src/contexts/AuthContext.tsx` | `linkAccount()` um permissionLevel-Abruf erweitern |
+| `src/contexts/AuthContext.tsx` | Fallback-User soll cached permissionLevel übernehmen |
+| `src/contexts/AuthContext.tsx` | (Optional) `refreshPermissions()` Funktion hinzufügen |
 
 ---
 
-## Vorher/Nachher
+## Test-Plan
 
-**Vorher (problematisch):**
-```typescript
-const initAuth = async () => {
-  if (storedUser) {
-    try {
-      if (parsed.isOAuthUser) {
-        // ❌ Wenn convertOAuthUser fehlschlägt...
-        const authUser = await convertOAuthUser(session.user);
-        setIsLoading(false); // ...wird das nie erreicht
-        return;
-      }
-    } catch {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
-      // ❌ setIsLoading(false) fehlt hier!
-    }
-  }
-  // ... rest
-  setIsLoading(false); // ❌ Wird nur bei Erfolg erreicht
-};
-```
-
-**Nachher (robust):**
-```typescript
-const initAuth = async () => {
-  try {
-    if (storedUser) {
-      const parsed = JSON.parse(storedUser);
-      if (parsed.isOAuthUser) {
-        // Timeout verhindert endloses Hängen
-        const authUser = await Promise.race([
-          convertOAuthUser(session.user),
-          new Promise((_, reject) => setTimeout(() => reject('Timeout'), 5000))
-        ]).catch(() => parsed); // Fallback auf cached User
-        
-        setUser(authUser);
-        return;
-      }
-      setUser(parsed);
-      return;
-    }
-    // ... OAuth session check
-  } catch (error) {
-    console.error('Auth init failed:', error);
-    localStorage.removeItem(AUTH_STORAGE_KEY);
-  } finally {
-    setIsLoading(false); // ✅ IMMER ausgeführt
-  }
-};
-```
+1. **localStorage leeren** (um mit sauberer Session zu starten)
+2. **Mit Google als Frank anmelden**
+3. **Prüfen ob Navigation alle Admin-Menüpunkte zeigt**:
+   - Kellner Abrechnung
+   - Manager Dashboard
+   - Küchen Trinkgeld
+   - Tagesabrechnung
+   - Statistiken
+   - Verlauf
+   - Bargeldbestand
+   - Mitarbeiter (nur für Admin sichtbar)
 
 ---
 
-## Ergebnis
+## Technische Details
 
-Nach der Implementierung:
+### Aktueller fehlerhafter Flow
+```
+OAuth Login → convertOAuthUser() timeout → Fallback mit permissionLevel='staff' → localStorage speichert falschen Wert → Navigation zeigt nur Staff-Menüpunkte
+```
 
-1. Die App wird nie mehr ewig bei "Laden..." hängen bleiben
-2. Auch bei Netzwerkfehlern oder Session-Problemen wird die Login-Seite gezeigt
-3. OAuth-User mit gültiger cached Session können die App weiter nutzen, auch wenn der Server temporär nicht erreichbar ist
+### Korrigierter Flow
+```
+OAuth Login → convertOAuthUser() erfolgt oder Fallback mit cached permissionLevel → Bei Account-Linking wird permissionLevel erneut abgerufen → Navigation zeigt korrekte Menüpunkte
+```
+
