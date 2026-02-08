@@ -186,8 +186,13 @@ export default function DailySummary() {
     (w.kassiert_brutto || 0) + (w.hilf_mahl || 0) - (w.open_invoices || 0) - (w.card_total || 0);
   const waiterTipPool = waiterShifts.reduce((sum, w) => 
     sum + ((w.cash_handed_in || 0) - calculateExpected(w) - (w.kitchen_tip || 0)), 0);
-  const waiterCount = waiterShifts.length;
-  const tipPerWaiter = waiterCount > 0 ? waiterTipPool / waiterCount : 0;
+  
+  // Count shares correctly: team shifts count as 2, non-participating shifts don't count
+  const waiterShareCount = waiterShifts.reduce((count, w) => {
+    if (!w.participates_in_pool) return count;
+    return count + (w.second_waiter_name ? 2 : 1);
+  }, 0);
+  const tipPerWaiter = waiterShareCount > 0 ? waiterTipPool / waiterShareCount : 0;
   
   // Keep totalWaiterTip for backward compatibility in calculations
   const totalWaiterTip = waiterTipPool;
@@ -853,9 +858,9 @@ export default function DailySummary() {
                           <TableCell className="py-2">Kellner Pool</TableCell>
                           <TableCell className="text-right tabular-nums font-medium text-success py-2">{formatCurrency(waiterTipPool)}</TableCell>
                         </TableRow>
-                        {waiterCount > 0 && (
+                        {waiterShareCount > 0 && (
                           <TableRow>
-                            <TableCell className="py-2 pl-6 text-muted-foreground">→ Pro Kellner ({waiterCount})</TableCell>
+                            <TableCell className="py-2 pl-6 text-muted-foreground">→ Pro Kellner ({waiterShareCount})</TableCell>
                             <TableCell className="text-right tabular-nums text-success py-2">{formatCurrency(tipPerWaiter)}</TableCell>
                           </TableRow>
                         )}
