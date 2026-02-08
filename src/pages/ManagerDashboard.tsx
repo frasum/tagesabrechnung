@@ -225,22 +225,20 @@ export default function ManagerDashboard() {
     formData.wolt_revenue +
     formData.takeaway_total;
 
-  // BARGELD calculation (same formula as DailySummary)
+  // BARGELD calculation - uses pos_total (Vectron total) as base
   const bargeldPreview = 
-    kellnerUmsatz +
-    formData.vouchers_sold +
-    formData.sonstige_einnahme -
+    formData.pos_total +
+    formData.vouchers_sold -
     formData.terminal_1_total -
     formData.terminal_2_total -
-    
+    formData.ordersmart_revenue -
+    formData.wolt_revenue -
     formData.vouchers_redeemed -
-    formData.vorschuss -
+    formData.finedine_vouchers -
     formData.einladung -
     totalOpenInvoices -
-    totalExpenses +
-    totalHilfMahl -
-    totalDeliveryRevenue -
-    formData.finedine_vouchers;
+    formData.vorschuss -
+    totalExpenses;
 
   // Cash balance hooks
   const { transfers, balances, createTransfer, isCreating } = useRegisterTransfers(restaurantId);
@@ -258,31 +256,25 @@ export default function ManagerDashboard() {
   const { data: previousWaiterShifts = [] } = useWaiterShifts(previousSession?.id);
   const { data: previousExpenses = [] } = useExpenses(previousSession?.id);
 
-  // Previous day's cash calculation (same formula as DailySummary)
+  // Previous day's cash calculation - uses pos_total (Vectron total) as base
   const previousDayBargeld = useMemo(() => {
     if (!previousSession) return 0;
     
-    const prevKellnerUmsatz = previousWaiterShifts.reduce((sum, w) => sum + (w.pos_sales || 0), 0);
-    const prevHilfMahl = previousWaiterShifts.reduce((sum, w) => sum + (w.hilf_mahl || 0), 0);
     const prevOpenInvoices = previousWaiterShifts.reduce((sum, w) => sum + (w.open_invoices || 0), 0);
     const prevTotalExpenses = previousExpenses.reduce((sum, e) => sum + e.amount, 0);
-    const prevDeliveryRevenue = (previousSession.ordersmart_revenue || 0) + 
-                                 (previousSession.wolt_revenue || 0) + 
-                                 (previousSession.takeaway_total || 0);
 
-    return prevKellnerUmsatz +
-      (previousSession.vouchers_sold || 0) +
-      (previousSession.sonstige_einnahme || 0) -
+    return (previousSession.pos_total || 0) +
+      (previousSession.vouchers_sold || 0) -
       (previousSession.terminal_1_total || 0) -
       (previousSession.terminal_2_total || 0) -
+      (previousSession.ordersmart_revenue || 0) -
+      (previousSession.wolt_revenue || 0) -
       (previousSession.vouchers_redeemed || 0) -
-      (previousSession.vorschuss || 0) -
+      (previousSession.finedine_vouchers || 0) -
       (previousSession.einladung || 0) -
       prevOpenInvoices -
-      prevTotalExpenses +
-      prevHilfMahl -
-      prevDeliveryRevenue -
-      (previousSession.finedine_vouchers || 0);
+      (previousSession.vorschuss || 0) -
+      prevTotalExpenses;
   }, [previousSession, previousWaiterShifts, previousExpenses]);
 
   // Previous day's vault transfers

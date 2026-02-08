@@ -68,24 +68,22 @@ export default function DailySummary() {
       (session.takeaway_total || 0)
     : 0;
 
-  // BARGELD calculation
-  // BARGELD = kellner umsatz + gutschein VK + sonstige einnahme - terminal 1 - terminal 2 
-  // - gutschein EL - vorschuss - einladung - open invoices - expenses + hilf mahl 
-  // - all delivery platforms - finedine
+  // BARGELD calculation - uses pos_total (Vectron total) as base
+  // BARGELD = pos_total + vouchers_sold - terminals - ordersmart - wolt 
+  //           - vouchers_redeemed - finedine - einladung - open_invoices - vorschuss - expenses
   const bargeld = session
-    ? kellnerUmsatz +
-      (session.vouchers_sold || 0) +
-      (session.sonstige_einnahme || 0) -
+    ? (session.pos_total || 0) +
+      (session.vouchers_sold || 0) -
       (session.terminal_1_total || 0) -
       (session.terminal_2_total || 0) -
+      (session.ordersmart_revenue || 0) -
+      (session.wolt_revenue || 0) -
       (session.vouchers_redeemed || 0) -
-      (session.vorschuss || 0) -
+      (session.finedine_vouchers || 0) -
       (session.einladung || 0) -
       totalOpenInvoices -
-      totalExpenses +
-      totalHilfMahl -
-      totalDeliveryRevenue -
-      (session.finedine_vouchers || 0)
+      (session.vorschuss || 0) -
+      totalExpenses
     : 0;
 
   // POS Mismatch: Check if POS total matches sum of waiter POS sales (kept for PDF export)
