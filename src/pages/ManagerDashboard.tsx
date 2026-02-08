@@ -340,9 +340,9 @@ export default function ManagerDashboard() {
         </div>
 
         {/* Warning Cards - Show when there are mismatches */}
-        {session && waiterShifts.length > 0 && (posMismatch !== 0 || cardTerminalMismatch !== 0) && (
+        {session && waiterShifts.length > 0 && (Math.abs(posMismatch) >= 0.01 || Math.abs(cardTerminalMismatch) >= 0.01) && (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {posMismatch !== 0 && (
+            {Math.abs(posMismatch) >= 0.01 && (
               <Card className="border-destructive/30 bg-destructive/5">
                 <CardContent className="py-4 flex items-center gap-3">
                   <AlertTriangle className="w-5 h-5 text-destructive shrink-0" />
@@ -358,7 +358,7 @@ export default function ManagerDashboard() {
                 </CardContent>
               </Card>
             )}
-            {cardTerminalMismatch !== 0 && (
+            {Math.abs(cardTerminalMismatch) >= 0.01 && (
               <Card className="border-destructive/30 bg-destructive/5">
                 <CardContent className="py-4 flex items-center gap-3">
                   <AlertTriangle className="w-5 h-5 text-destructive shrink-0" />
