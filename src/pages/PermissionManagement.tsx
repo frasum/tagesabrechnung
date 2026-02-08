@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { AppLayout } from '@/components/layout/AppLayout';
+import { GlobalLayout } from '@/components/layout/GlobalLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -99,7 +99,7 @@ export default function PermissionManagement() {
   };
 
   return (
-    <AppLayout>
+    <GlobalLayout>
       <div className="space-y-6">
         <div className="flex items-center gap-3">
           <Shield className="h-8 w-8 text-primary" />
@@ -194,6 +194,6 @@ export default function PermissionManagement() {
           </div>
         )}
       </div>
-    </AppLayout>
+    </GlobalLayout>
   );
 }

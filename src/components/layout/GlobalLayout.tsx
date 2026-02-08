@@ -6,7 +6,8 @@ import {
   X,
   Euro,
   LogOut,
-  Home
+  Home,
+  Shield
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -74,6 +75,19 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
               <Users className="w-5 h-5" />
               Mitarbeiter
             </Link>
+            <Link
+              to="/permissions"
+              onClick={() => setMobileMenuOpen(false)}
+              className={cn(
+                "flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors",
+                location.pathname === '/permissions'
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground" 
+                  : "text-sidebar-foreground hover:bg-sidebar-accent"
+              )}
+            >
+              <Shield className="w-5 h-5" />
+              Berechtigungen
+            </Link>
             <button
               onClick={() => { setMobileMenuOpen(false); handleLogout(); }}
               className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors text-destructive hover:bg-sidebar-accent w-full"
@@ -115,6 +129,18 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
           >
             <Users className="w-5 h-5" />
             Mitarbeiter
+          </Link>
+          <Link
+            to="/permissions"
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+              location.pathname === '/permissions'
+                ? "bg-sidebar-primary text-sidebar-primary-foreground" 
+                : "text-sidebar-foreground hover:bg-sidebar-accent"
+            )}
+          >
+            <Shield className="w-5 h-5" />
+            Berechtigungen
           </Link>
         </nav>
 
