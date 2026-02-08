@@ -22,9 +22,6 @@ interface ValidatePinResponse {
   error?: string;
 }
 
-// Common weak PINs to block
-const WEAK_PINS = ["0000", "1111", "2222", "3333", "4444", "5555", "6666", "7777", "8888", "9999", "1234", "4321", "0123", "3210"];
-
 // Rate limiting configuration
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MINUTES = 15;
@@ -144,16 +141,42 @@ serve(async (req: Request) => {
       );
     }
 
-    // Query staff table for user with matching name and PIN
-    const { data, error } = await supabase
+    // Find staff member by name
+    const { data: staffData, error: staffError } = await supabase
       .from("staff")
       .select("id, name, role, is_active")
       .eq("name", name)
-      .eq("pin_code", pin_code)
       .eq("is_active", true)
       .single();
 
-    if (error || !data) {
+    if (staffError || !staffData) {
+      // Log failed attempt
+      await supabase.from("auth_attempts").insert({
+        identifier: name.toLowerCase(),
+        attempted_at: new Date().toISOString(),
+        success: false,
+      });
+
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Ungültiger Name oder PIN-Code",
+        }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Get PIN from protected staff_pins table
+    const { data: pinData, error: pinError } = await supabase
+      .from("staff_pins")
+      .select("pin_code")
+      .eq("staff_id", staffData.id)
+      .single();
+
+    if (pinError || !pinData || pinData.pin_code !== pin_code) {
       // Log failed attempt
       await supabase.from("auth_attempts").insert({
         identifier: name.toLowerCase(),
@@ -184,9 +207,9 @@ serve(async (req: Request) => {
     const response: ValidatePinResponse = {
       success: true,
       user: {
-        id: data.id,
-        name: data.name,
-        role: data.role as "waiter" | "kitchen",
+        id: staffData.id,
+        name: staffData.name,
+        role: staffData.role as "waiter" | "kitchen",
       },
     };
 

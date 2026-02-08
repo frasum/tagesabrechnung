@@ -39,6 +39,7 @@ export function useStaff(role?: StaffRole) {
   return useQuery({
     queryKey: ['staff', role],
     queryFn: async () => {
+      // Query staff table directly (pin_code has been moved to separate protected table)
       let query = supabase
         .from('staff')
         .select(`
@@ -69,6 +70,7 @@ export function useActiveStaff(role?: StaffRole) {
   return useQuery({
     queryKey: ['staff', 'active', role],
     queryFn: async () => {
+      // Query staff table directly (pin_code has been moved to separate protected table)
       let query = supabase
         .from('staff')
         .select(`
@@ -114,6 +116,7 @@ export function useActiveStaffByRestaurant(restaurantId: string | null, role?: S
       const staffIds = staffRestaurants.map(sr => sr.staff_id);
       if (staffIds.length === 0) return [];
       
+      // Query staff table directly (pin_code has been moved to separate protected table)
       let query = supabase
         .from('staff')
         .select(`
@@ -148,9 +151,9 @@ export function useCreateStaff() {
 
   return useMutation({
     mutationFn: async (input: StaffInput) => {
-      const { restaurant_ids, ...staffData } = input;
+      const { restaurant_ids, pin_code, ...staffData } = input;
       
-      // Create the staff member
+      // Create the staff member (without pin_code, which is in separate table)
       const { data: staff, error } = await supabase
         .from('staff')
         .insert(staffData)
@@ -167,6 +170,27 @@ export function useCreateStaff() {
             restaurant_id: rid,
           })));
         if (assignError) throw assignError;
+      }
+      
+      // Save PIN code via secure edge function
+      if (pin_code && pin_code.length === 4) {
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-pin`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            },
+            body: JSON.stringify({
+              staff_id: staff.id,
+              pin_code: pin_code,
+            }),
+          }
+        );
+        if (!response.ok) {
+          console.error('Failed to set PIN code');
+        }
       }
       
       return staff;
@@ -186,8 +210,8 @@ export function useUpdateStaff() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, restaurant_ids, ...staffData }: Partial<StaffInput> & { id: string }) => {
-      // Update the staff member
+    mutationFn: async ({ id, restaurant_ids, pin_code, ...staffData }: Partial<StaffInput> & { id: string }) => {
+      // Update the staff member (without pin_code, which is in separate table)
       const { data, error } = await supabase
         .from('staff')
         .update(staffData)
@@ -214,6 +238,27 @@ export function useUpdateStaff() {
               restaurant_id: rid,
             })));
           if (insertError) throw insertError;
+        }
+      }
+      
+      // Update PIN code via secure edge function if provided
+      if (pin_code && pin_code.length === 4) {
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-pin`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            },
+            body: JSON.stringify({
+              staff_id: id,
+              pin_code: pin_code,
+            }),
+          }
+        );
+        if (!response.ok) {
+          console.error('Failed to update PIN code');
         }
       }
       
