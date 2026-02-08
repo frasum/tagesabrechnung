@@ -8,11 +8,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Wallet, FileDown, Download, X } from 'lucide-react';
 import { useCashBalanceData } from '@/hooks/useCashBalanceData';
+import { useBankDeposits } from '@/hooks/useBankDeposits';
 import { format, parseISO } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { generateCashBalancePDF } from '@/utils/pdfExport';
 import { PdfPreview } from '@/components/shared/PdfPreview';
+import { CashBalanceSummary } from '@/components/cash-balance/CashBalanceSummary';
+import { BankDepositDialog } from '@/components/cash-balance/BankDepositDialog';
+import { BankDepositList } from '@/components/cash-balance/BankDepositList';
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('de-DE', {
@@ -28,9 +32,17 @@ const formatDate = (dateStr: string) => {
 
 export default function CashBalance() {
   const { data, isLoading, error } = useCashBalanceData();
+  const { deposits, totalDeposits, latestDeposit, createDeposit, deleteDeposit, isCreating, isDeleting } = useBankDeposits();
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [previewOpen, setPreviewOpen] = useState(false);
   const [pdfPreview, setPdfPreview] = useState<{ blobUrl: string; fileName: string } | null>(null);
+  const [depositDialogOpen, setDepositDialogOpen] = useState(false);
+
+  // Calculate total cash from all data
+  const totalCash = useMemo(() => {
+    if (!data) return 0;
+    return data.reduce((sum, row) => sum + row.bargeld, 0);
+  }, [data]);
 
   // Extract available months from data
   const availableMonths = useMemo(() => {
@@ -93,6 +105,13 @@ export default function CashBalance() {
     setPreviewOpen(false);
   }, [pdfPreview]);
 
+  // Handle deposit submission
+  const handleDepositSubmit = useCallback((data: { deposit_date: string; amount: number; notes?: string }) => {
+    createDeposit(data, {
+      onSuccess: () => setDepositDialogOpen(false),
+    });
+  }, [createDeposit]);
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -100,6 +119,21 @@ export default function CashBalance() {
           <Wallet className="h-8 w-8 text-primary" />
           <h1 className="text-2xl font-bold">Bargeldbestand</h1>
         </div>
+
+        {/* Cash Balance Summary with Bank Deposits */}
+        <CashBalanceSummary
+          totalCash={totalCash}
+          totalDeposits={totalDeposits}
+          latestDeposit={latestDeposit}
+          onAddDeposit={() => setDepositDialogOpen(true)}
+        />
+
+        {/* Bank Deposits List */}
+        <BankDepositList
+          deposits={deposits}
+          onDelete={deleteDeposit}
+          isDeleting={isDeleting}
+        />
 
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
@@ -302,6 +336,14 @@ export default function CashBalance() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Bank Deposit Dialog */}
+      <BankDepositDialog
+        open={depositDialogOpen}
+        onOpenChange={setDepositDialogOpen}
+        onSubmit={handleDepositSubmit}
+        isSubmitting={isCreating}
+      />
     </AppLayout>
   );
 }
