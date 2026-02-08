@@ -1,169 +1,149 @@
 
-# Fix: Mehrere OAuth-Konten mit einem Mitarbeiter verknüpfen
+# Fix: OAuth-Login zeigt falsche Berechtigungsstufe (Staff statt Admin)
 
 ## Problem-Analyse
 
-Frank hat sich mit **zwei verschiedenen OAuth-Providern** angemeldet:
+Frank hat sein Apple- und Google-Konto mit seinem Staff-Account verknüpft und ist als **Admin** konfiguriert. Trotzdem wird bei OAuth-Login `permissionLevel: 'staff'` gesetzt.
 
-| Provider | E-Mail | Status |
-|----------|--------|--------|
-| Google | frasum@gmail.com | Verknüpft mit Frank |
-| Apple | frank.schumann@me.com | Nicht verknüpft |
+### Ursache (Console-Logs zeigen das Problem)
 
-Die Edge Function `admin-link-account` gibt das Apple-Konto korrekt als unverknüpftes Profil zurück. Das Problem liegt im **UI-Design**:
+```
+⚠️ OAuth fallback user created: {
+  "permissionLevel": "staff",
+  "staffId": undefined
+}
+```
 
-Das aktuelle System erlaubt nur **ein** OAuth-Konto pro Mitarbeiter. Wenn bereits ein Konto verknüpft ist, zeigt die UI nur dieses mit einer "Aufheben"-Option - aber keine Möglichkeit, weitere Konten hinzuzufügen.
+Der `convertOAuthUserWithTimeout` wirft einen Timeout (nach 5 Sekunden), und der Fallback-Code setzt:
+- `permissionLevel: 'staff'` (Standard-Fallback)
+- `staffId: undefined` (weil localStorage leer oder veraltet ist)
+
+### Warum schlägt `convertOAuthUser` fehl?
+
+Die Supabase-Anfrage für das Profil funktioniert (`staff_id` wird korrekt aus der DB geholt), aber der gesamte Prozess braucht manchmal länger als 5 Sekunden, weil:
+1. Profile-Query via RLS
+2. Staff-Daten abrufen
+3. Edge-Function für `permission_level` aufrufen
 
 ---
 
 ## Lösung
 
-Es gibt zwei mögliche Ansätze:
+### 1. Edge Function erweitern: `manage-user-role` mit user_id Parameter
 
-### Option A: Mehrere OAuth-Konten pro Mitarbeiter erlauben (n:1 Beziehung)
+Statt über `staff_id` die Berechtigung abzufragen, sollte die Edge Function auch einen Lookup via `user_id` (OAuth-Supabase-ID) unterstützen:
 
-Die Datenbank unterstützt bereits diese Beziehung (mehrere Profile können auf dieselbe `staff_id` zeigen). Die UI muss angepasst werden, um:
-
-1. **Alle verknüpften Konten** anzuzeigen (nicht nur eines)
-2. **Gleichzeitig unverknüpfte Profile** anzuzeigen, die hinzugefügt werden können
-
-### Option B: Nur ein OAuth-Konto pro Mitarbeiter (aktuelle Logik beibehalten)
-
-Frank muss entscheiden, ob er Google ODER Apple verwenden möchte. Das zweite Konto bleibt unverknüpft.
-
----
-
-## Empfehlung: Option A implementieren
-
-Da Frank sich mit beiden Providern anmelden möchte, sollte das System mehrere OAuth-Konten pro Mitarbeiter unterstützen.
-
-### Änderungen
-
-#### 1. useStaff Hook anpassen
-
-**Datei:** `src/hooks/useStaff.ts`
-
-Die Query für `linked_profile` muss erweitert werden, um **alle** verknüpften Profile eines Mitarbeiters zu laden, nicht nur eines.
+**Datei:** `supabase/functions/manage-user-role/index.ts`
 
 ```typescript
-// Statt: linked_profile: LinkedProfile | null
-// Neu: linked_profiles: LinkedProfile[]
-```
-
-#### 2. StaffDialogNative.tsx UI überarbeiten
-
-**Datei:** `src/components/staff/StaffDialogNative.tsx`
-
-Die Sektion "OAuth-Konto verknüpfen" anpassen:
-
-```text
-┌────────────────────────────────────────────────────────┐
-│ OAuth-Konten verknüpfen                                │
-├────────────────────────────────────────────────────────┤
-│ Verknüpfte Konten:                                     │
-│ ┌────────────────────────────────────────────────────┐ │
-│ │ ✅ frasum@gmail.com (frank schumann)  [Aufheben]   │ │
-│ └────────────────────────────────────────────────────┘ │
-│                                                        │
-│ Weitere Konten verfügbar:                              │
-│ ┌────────────────────────────────────────────────────┐ │
-│ │ ○ frank.schumann@me.com               [Verknüpfen] │ │
-│ └────────────────────────────────────────────────────┘ │
-└────────────────────────────────────────────────────────┘
-```
-
-#### 3. Admin-Link-Account Edge Function aktualisieren
-
-**Datei:** `supabase/functions/admin-link-account/index.ts`
-
-Die Prüfung entfernen, die verhindert, dass mehrere Profile mit derselben `staff_id` verknüpft werden (Zeilen 109-124).
-
----
-
-## Detaillierte Code-Änderungen
-
-### 1. Staff-Typen erweitern
-
-In `useStaff.ts` oder einer Typdatei:
-
-```typescript
-export interface Staff {
-  id: string;
-  name: string;
-  role: StaffRole;
-  is_active: boolean;
-  notes: string | null;
-  staff_restaurants?: { restaurant_id: string }[];
-  // NEU: Array statt einzelnes Objekt
-  linked_profiles?: LinkedProfile[];
-}
-```
-
-### 2. useLinkedProfilesForStaff Hook erstellen
-
-Neuer Hook, der alle verknüpften Profile für einen Mitarbeiter abruft:
-
-```typescript
-export function useLinkedProfilesForStaff(staffId: string | null) {
-  return useQuery({
-    queryKey: ['profiles', 'linked', staffId],
-    enabled: !!staffId,
-    queryFn: async () => {
-      const response = await fetch(
-        `${SUPABASE_URL}/functions/v1/admin-link-account?action=get-linked-for-staff&staff_id=${staffId}`,
-        { headers: { ... } }
-      );
-      return response.json() as Promise<LinkedProfile[]>;
-    },
-  });
-}
-```
-
-### 3. Edge Function erweitern
-
-Neuen Query-Parameter `action=get-linked-for-staff` mit `staff_id` hinzufügen:
-
-```typescript
-if (action === 'get-linked-for-staff') {
+// GET: Lookup by staff_id OR auth_user_id
+if (req.method === 'GET') {
+  const url = new URL(req.url);
   const staffId = url.searchParams.get('staff_id');
-  const { data } = await supabaseAdmin
-    .from('profiles')
-    .select('id, user_id, email, full_name, avatar_url, staff_id')
-    .eq('staff_id', staffId)
-    .order('email', { ascending: true });
+  const authUserId = url.searchParams.get('auth_user_id');
   
-  return new Response(JSON.stringify(data || []));
+  // If auth_user_id is provided, first find the staff_id via profiles
+  let resolvedStaffId = staffId;
+  if (authUserId && !staffId) {
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('staff_id')
+      .eq('user_id', authUserId)
+      .single();
+    resolvedStaffId = profile?.staff_id;
+  }
+  
+  if (!resolvedStaffId) {
+    return new Response(JSON.stringify({ 
+      staff_id: null, 
+      permission_level: 'staff' 
+    }), ...);
+  }
+  
+  // Fetch staff data and permission level in one call
+  const [staffResult, roleResult] = await Promise.all([
+    supabaseAdmin.from('staff').select('id, name, role').eq('id', resolvedStaffId).single(),
+    supabaseAdmin.from('user_roles').select('permission_level').eq('staff_id', resolvedStaffId).single()
+  ]);
+  
+  return new Response(JSON.stringify({
+    staff_id: resolvedStaffId,
+    staff_name: staffResult.data?.name,
+    staff_role: staffResult.data?.role,
+    permission_level: roleResult.data?.permission_level || 'staff'
+  }), ...);
 }
 ```
 
-### 4. UI im Dialog anpassen
+### 2. AuthContext vereinfachen: Ein Edge-Function-Call statt mehrerer DB-Queries
 
-Die OAuth-Sektion in `StaffDialogNative.tsx` umbauen:
+**Datei:** `src/contexts/AuthContext.tsx`
+
+Ersetze den komplexen `convertOAuthUser` Flow durch einen einzelnen Edge-Function-Aufruf:
 
 ```typescript
-{/* Verknüpfte Konten anzeigen */}
-{linkedProfiles.length > 0 && (
-  <div className="space-y-2">
-    <p className="text-sm font-medium">Verknüpfte Konten:</p>
-    {linkedProfiles.map((profile) => (
-      <LinkedAccountCard 
-        key={profile.id} 
-        profile={profile} 
-        onUnlink={() => handleUnlink(profile.id)} 
-      />
-    ))}
-  </div>
-)}
+const convertOAuthUser = async (supabaseUser: User): Promise<AuthUser> => {
+  const name = supabaseUser.user_metadata?.full_name 
+    || supabaseUser.email?.split('@')[0] 
+    || 'Benutzer';
 
-{/* Unverknüpfte Profile zum Hinzufügen */}
-{unlinkedProfiles.length > 0 && (
-  <div className="space-y-2">
-    <p className="text-sm text-muted-foreground">
-      Weitere Konten verfügbar:
-    </p>
-    {/* Radio-Liste mit Verknüpfen-Button */}
-  </div>
-)}
+  // Single API call to get all user data including permission level
+  const response = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-user-role?auth_user_id=${supabaseUser.id}`,
+    {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch user role');
+  }
+
+  const roleData = await response.json();
+
+  return {
+    id: roleData.staff_id || supabaseUser.id,
+    name: roleData.staff_name || name,
+    role: roleData.staff_role || 'waiter',
+    permissionLevel: roleData.permission_level || 'staff',
+    isOAuthUser: true,
+    staffId: roleData.staff_id || undefined,
+    needsLinking: !roleData.staff_id,
+  };
+};
+```
+
+### 3. Timeout erhöhen oder entfernen
+
+Das aktuelle Timeout von 5 Sekunden ist zu kurz. Erhöhe auf 10 Sekunden oder entferne den Timeout komplett und zeige stattdessen einen Loading-State.
+
+### 4. Edge Function `link-account` für Multi-Account anpassen
+
+**Datei:** `supabase/functions/link-account/index.ts`
+
+Die Prüfung auf "bereits verknüpft" muss angepasst werden, um mehrere OAuth-Konten pro Mitarbeiter zu erlauben (Zeile 82-93 entfernen/anpassen):
+
+```typescript
+// Erlaube mehrere OAuth-Konten pro Staff
+// ALTE Logik:
+// if (existingLink && existingLink.user_id !== user.id) { ERROR }
+
+// NEUE Logik: Nur prüfen ob DIESER User bereits mit einem ANDEREN Staff verknüpft ist
+const { data: currentUserProfile } = await supabaseAdmin
+  .from('profiles')
+  .select('staff_id')
+  .eq('user_id', user.id)
+  .single();
+
+if (currentUserProfile?.staff_id && currentUserProfile.staff_id !== staff.id) {
+  return new Response(
+    JSON.stringify({ error: 'Dein Konto ist bereits mit einem anderen Mitarbeiter verknüpft' }),
+    { status: 409, ... }
+  );
+}
 ```
 
 ---
@@ -172,17 +152,29 @@ Die OAuth-Sektion in `StaffDialogNative.tsx` umbauen:
 
 | Datei | Änderung |
 |-------|----------|
-| `src/hooks/useProfiles.ts` | Neuen `useLinkedProfilesForStaff` Hook hinzufügen |
-| `supabase/functions/admin-link-account/index.ts` | `get-linked-for-staff` Endpoint hinzufügen, Mehrfach-Verknüpfung erlauben |
-| `src/components/staff/StaffDialogNative.tsx` | UI erweitern, um mehrere verknüpfte Konten + unverknüpfte Profile gleichzeitig anzuzeigen |
+| `supabase/functions/manage-user-role/index.ts` | `auth_user_id` Parameter hinzufügen, Profile-Lookup integrieren |
+| `supabase/functions/link-account/index.ts` | Multi-OAuth-Konten pro Staff erlauben |
+| `src/contexts/AuthContext.tsx` | `convertOAuthUser` vereinfachen (1 API-Call statt 3 DB-Queries), Timeout erhöhen |
 
 ---
 
 ## Test-Plan
 
-1. Dialog für Frank öffnen
-2. Prüfen ob das verknüpfte Google-Konto angezeigt wird
-3. Prüfen ob das unverknüpfte Apple-Konto als Option zum Verknüpfen erscheint
-4. Apple-Konto verknüpfen
-5. Prüfen ob beide Konten nun als verknüpft angezeigt werden
-6. Testen ob Frank sich sowohl mit Google als auch mit Apple anmelden kann
+1. localStorage leeren
+2. Mit Google als Frank anmelden
+3. Console-Log prüfen: `permissionLevel` sollte "admin" sein
+4. Navigation prüfen: Alle Admin-Menüpunkte sollten sichtbar sein
+5. Ausloggen
+6. Mit Apple als Frank anmelden
+7. Gleiche Prüfungen wie oben
+
+---
+
+## Warum diese Lösung besser ist
+
+| Vorher | Nachher |
+|--------|---------|
+| 3 separate DB/API-Aufrufe (Profile → Staff → Role) | 1 Edge-Function-Aufruf |
+| 5 Sekunden Timeout reicht nicht | Edge Function ist schneller (ca. 1-2s) |
+| Fallback setzt immer `staff` | Fallback nutzt Cache mit korrektem Level |
+| Mehrere OAuth-Konten blockiert | Mehrere OAuth-Konten unterstützt |
