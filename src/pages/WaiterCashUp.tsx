@@ -428,7 +428,13 @@ export default function WaiterCashUp() {
                         {waiterShifts.map(shift => {
                           const contribution = calculateContribution(shift);
                           const shiftTipShare = shift.participates_in_pool ? tipPerWaiter : 0;
-                          const currentTipPercent = shift.pos_sales > 0 ? (shiftTipShare / shift.pos_sales) * 100 : 0;
+                          // Bei Team-Schichten: persönlicher Umsatzanteil = pos_sales / 2
+                          const personalSalesShare = shift.second_waiter_name 
+                            ? (shift.pos_sales || 0) / 2 
+                            : (shift.pos_sales || 0);
+                          const currentTipPercent = personalSalesShare > 0 
+                            ? (shiftTipShare / personalSalesShare) * 100 
+                            : 0;
                           const avgData = waiterTipAverages[shift.waiter_name];
                           return (
                             <TableRow key={shift.id}>
