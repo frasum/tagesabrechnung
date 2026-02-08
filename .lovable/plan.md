@@ -1,177 +1,188 @@
 
-
-# Fix: Frank sieht nicht die vollständige Navigation trotz Admin-Berechtigung
+# Fix: Mehrere OAuth-Konten mit einem Mitarbeiter verknüpfen
 
 ## Problem-Analyse
 
-Frank ist in der Datenbank als **Admin** konfiguriert, aber die Navigation zeigt nur Menüpunkte für **Staff**-Level.
+Frank hat sich mit **zwei verschiedenen OAuth-Providern** angemeldet:
 
-### Ursache
+| Provider | E-Mail | Status |
+|----------|--------|--------|
+| Google | frasum@gmail.com | Verknüpft mit Frank |
+| Apple | frank.schumann@me.com | Nicht verknüpft |
 
-1. **OAuth-Fallback setzt falschen permissionLevel**: Bei Timeout oder Fehler beim Abruf der Berechtigungen wird `permissionLevel: 'staff'` gesetzt
-2. **Cached User wird nicht korrekt aktualisiert**: Der localStorage-Wert wird bei erneutem Login nicht zwingend aktualisiert
-3. **linkAccount() aktualisiert permissionLevel nicht**: Die Funktion setzt nur `staffId`, `name`, `role` - aber ignoriert `permissionLevel`
+Die Edge Function `admin-link-account` gibt das Apple-Konto korrekt als unverknüpftes Profil zurück. Das Problem liegt im **UI-Design**:
 
-### Datenbank-Status (verifiziert)
-```
-staff.name = 'Frank'
-staff.id = '8e83c717-8339-4efb-b792-9024f2cf409d'
-user_roles.permission_level = 'admin'
-profiles.user_id = 'd218aca2-aef3-454b-a7c7-ba3d062a10d5' (frasum@gmail.com)
-profiles.staff_id = '8e83c717-8339-4efb-b792-9024f2cf409d'
-```
-
-Die Edge Function `manage-user-role` gibt korrekt `permission_level: 'admin'` zurück, wenn die richtige `staff_id` verwendet wird.
+Das aktuelle System erlaubt nur **ein** OAuth-Konto pro Mitarbeiter. Wenn bereits ein Konto verknüpft ist, zeigt die UI nur dieses mit einer "Aufheben"-Option - aber keine Möglichkeit, weitere Konten hinzuzufügen.
 
 ---
 
 ## Lösung
 
-### 1. linkAccount() muss auch permissionLevel abrufen
+Es gibt zwei mögliche Ansätze:
 
-**Datei:** `src/contexts/AuthContext.tsx`
+### Option A: Mehrere OAuth-Konten pro Mitarbeiter erlauben (n:1 Beziehung)
 
-Wenn ein OAuth-Benutzer mit einem Staff-Account verknüpft wird, muss die Berechtigung ebenfalls abgerufen werden:
+Die Datenbank unterstützt bereits diese Beziehung (mehrere Profile können auf dieselbe `staff_id` zeigen). Die UI muss angepasst werden, um:
+
+1. **Alle verknüpften Konten** anzuzeigen (nicht nur eines)
+2. **Gleichzeitig unverknüpfte Profile** anzuzeigen, die hinzugefügt werden können
+
+### Option B: Nur ein OAuth-Konto pro Mitarbeiter (aktuelle Logik beibehalten)
+
+Frank muss entscheiden, ob er Google ODER Apple verwenden möchte. Das zweite Konto bleibt unverknüpft.
+
+---
+
+## Empfehlung: Option A implementieren
+
+Da Frank sich mit beiden Providern anmelden möchte, sollte das System mehrere OAuth-Konten pro Mitarbeiter unterstützen.
+
+### Änderungen
+
+#### 1. useStaff Hook anpassen
+
+**Datei:** `src/hooks/useStaff.ts`
+
+Die Query für `linked_profile` muss erweitert werden, um **alle** verknüpften Profile eines Mitarbeiters zu laden, nicht nur eines.
 
 ```typescript
-const linkAccount = async (staff: { id: string; name: string; role: string }) => {
-  if (user) {
-    // Fetch permission level for the linked staff
-    let permissionLevel: PermissionLevel = 'staff';
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-user-role?staff_id=${staff.id}`,
-        {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-        }
-      );
-      if (response.ok) {
-        const roleData = await response.json();
-        permissionLevel = roleData.permission_level || 'staff';
-      }
-    } catch (e) {
-      console.error('Failed to fetch permission level during linking:', e);
-    }
-
-    const updatedUser: AuthUser = {
-      ...user,
-      id: staff.id,
-      name: staff.name,
-      role: staff.role as 'waiter' | 'kitchen',
-      permissionLevel, // Jetzt wird permissionLevel korrekt gesetzt
-      staffId: staff.id,
-      needsLinking: false,
-    };
-    setUser(updatedUser);
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updatedUser));
-  }
-};
+// Statt: linked_profile: LinkedProfile | null
+// Neu: linked_profiles: LinkedProfile[]
 ```
 
-### 2. Fallback-User muss versuchen, permissionLevel aus Cache zu übernehmen
+#### 2. StaffDialogNative.tsx UI überarbeiten
 
-**Datei:** `src/contexts/AuthContext.tsx`
+**Datei:** `src/components/staff/StaffDialogNative.tsx`
 
-Im `onAuthStateChange`-Handler beim Fallback:
+Die Sektion "OAuth-Konto verknüpfen" anpassen:
+
+```text
+┌────────────────────────────────────────────────────────┐
+│ OAuth-Konten verknüpfen                                │
+├────────────────────────────────────────────────────────┤
+│ Verknüpfte Konten:                                     │
+│ ┌────────────────────────────────────────────────────┐ │
+│ │ ✅ frasum@gmail.com (frank schumann)  [Aufheben]   │ │
+│ └────────────────────────────────────────────────────┘ │
+│                                                        │
+│ Weitere Konten verfügbar:                              │
+│ ┌────────────────────────────────────────────────────┐ │
+│ │ ○ frank.schumann@me.com               [Verknüpfen] │ │
+│ └────────────────────────────────────────────────────┘ │
+└────────────────────────────────────────────────────────┘
+```
+
+#### 3. Admin-Link-Account Edge Function aktualisieren
+
+**Datei:** `supabase/functions/admin-link-account/index.ts`
+
+Die Prüfung entfernen, die verhindert, dass mehrere Profile mit derselben `staff_id` verknüpft werden (Zeilen 109-124).
+
+---
+
+## Detaillierte Code-Änderungen
+
+### 1. Staff-Typen erweitern
+
+In `useStaff.ts` oder einer Typdatei:
 
 ```typescript
-} catch (error) {
-  console.error('OAuth sign-in processing failed:', error);
-  // Try to get cached permission level
-  const cachedUser = localStorage.getItem(AUTH_STORAGE_KEY);
-  let cachedPermissionLevel: PermissionLevel = 'staff';
-  if (cachedUser) {
-    try {
-      const parsed = JSON.parse(cachedUser);
-      cachedPermissionLevel = parsed.permissionLevel || 'staff';
-    } catch {}
-  }
-  
-  const fallbackUser: AuthUser = {
-    id: session.user.id,
-    name,
-    role: 'waiter',
-    permissionLevel: cachedPermissionLevel, // Behalte cached Level
-    isOAuthUser: true,
-    needsLinking: true,
-  };
-  setUser(fallbackUser);
-  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(fallbackUser));
+export interface Staff {
+  id: string;
+  name: string;
+  role: StaffRole;
+  is_active: boolean;
+  notes: string | null;
+  staff_restaurants?: { restaurant_id: string }[];
+  // NEU: Array statt einzelnes Objekt
+  linked_profiles?: LinkedProfile[];
 }
 ```
 
-### 3. Button zum manuellen Refresh der Berechtigungen (optional, für Debugging)
+### 2. useLinkedProfilesForStaff Hook erstellen
 
-Füge eine Möglichkeit hinzu, die Berechtigungen manuell zu aktualisieren, falls der automatische Abruf fehlschlägt:
-
-**Neue Funktion in AuthContext:**
+Neuer Hook, der alle verknüpften Profile für einen Mitarbeiter abruft:
 
 ```typescript
-const refreshPermissions = async () => {
-  if (!user?.staffId) return;
+export function useLinkedProfilesForStaff(staffId: string | null) {
+  return useQuery({
+    queryKey: ['profiles', 'linked', staffId],
+    enabled: !!staffId,
+    queryFn: async () => {
+      const response = await fetch(
+        `${SUPABASE_URL}/functions/v1/admin-link-account?action=get-linked-for-staff&staff_id=${staffId}`,
+        { headers: { ... } }
+      );
+      return response.json() as Promise<LinkedProfile[]>;
+    },
+  });
+}
+```
+
+### 3. Edge Function erweitern
+
+Neuen Query-Parameter `action=get-linked-for-staff` mit `staff_id` hinzufügen:
+
+```typescript
+if (action === 'get-linked-for-staff') {
+  const staffId = url.searchParams.get('staff_id');
+  const { data } = await supabaseAdmin
+    .from('profiles')
+    .select('id, user_id, email, full_name, avatar_url, staff_id')
+    .eq('staff_id', staffId)
+    .order('email', { ascending: true });
   
-  try {
-    const response = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-user-role?staff_id=${user.staffId}`,
-      {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-      }
-    );
-    if (response.ok) {
-      const roleData = await response.json();
-      const updatedUser = { ...user, permissionLevel: roleData.permission_level || 'staff' };
-      setUser(updatedUser);
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updatedUser));
-    }
-  } catch (e) {
-    console.error('Failed to refresh permissions:', e);
-  }
-};
+  return new Response(JSON.stringify(data || []));
+}
+```
+
+### 4. UI im Dialog anpassen
+
+Die OAuth-Sektion in `StaffDialogNative.tsx` umbauen:
+
+```typescript
+{/* Verknüpfte Konten anzeigen */}
+{linkedProfiles.length > 0 && (
+  <div className="space-y-2">
+    <p className="text-sm font-medium">Verknüpfte Konten:</p>
+    {linkedProfiles.map((profile) => (
+      <LinkedAccountCard 
+        key={profile.id} 
+        profile={profile} 
+        onUnlink={() => handleUnlink(profile.id)} 
+      />
+    ))}
+  </div>
+)}
+
+{/* Unverknüpfte Profile zum Hinzufügen */}
+{unlinkedProfiles.length > 0 && (
+  <div className="space-y-2">
+    <p className="text-sm text-muted-foreground">
+      Weitere Konten verfügbar:
+    </p>
+    {/* Radio-Liste mit Verknüpfen-Button */}
+  </div>
+)}
 ```
 
 ---
 
-## Änderungen im Detail
+## Zusammenfassung der Dateiänderungen
 
 | Datei | Änderung |
 |-------|----------|
-| `src/contexts/AuthContext.tsx` | `linkAccount()` um permissionLevel-Abruf erweitern |
-| `src/contexts/AuthContext.tsx` | Fallback-User soll cached permissionLevel übernehmen |
-| `src/contexts/AuthContext.tsx` | (Optional) `refreshPermissions()` Funktion hinzufügen |
+| `src/hooks/useProfiles.ts` | Neuen `useLinkedProfilesForStaff` Hook hinzufügen |
+| `supabase/functions/admin-link-account/index.ts` | `get-linked-for-staff` Endpoint hinzufügen, Mehrfach-Verknüpfung erlauben |
+| `src/components/staff/StaffDialogNative.tsx` | UI erweitern, um mehrere verknüpfte Konten + unverknüpfte Profile gleichzeitig anzuzeigen |
 
 ---
 
 ## Test-Plan
 
-1. **localStorage leeren** (um mit sauberer Session zu starten)
-2. **Mit Google als Frank anmelden**
-3. **Prüfen ob Navigation alle Admin-Menüpunkte zeigt**:
-   - Kellner Abrechnung
-   - Manager Dashboard
-   - Küchen Trinkgeld
-   - Tagesabrechnung
-   - Statistiken
-   - Verlauf
-   - Bargeldbestand
-   - Mitarbeiter (nur für Admin sichtbar)
-
----
-
-## Technische Details
-
-### Aktueller fehlerhafter Flow
-```
-OAuth Login → convertOAuthUser() timeout → Fallback mit permissionLevel='staff' → localStorage speichert falschen Wert → Navigation zeigt nur Staff-Menüpunkte
-```
-
-### Korrigierter Flow
-```
-OAuth Login → convertOAuthUser() erfolgt oder Fallback mit cached permissionLevel → Bei Account-Linking wird permissionLevel erneut abgerufen → Navigation zeigt korrekte Menüpunkte
-```
-
+1. Dialog für Frank öffnen
+2. Prüfen ob das verknüpfte Google-Konto angezeigt wird
+3. Prüfen ob das unverknüpfte Apple-Konto als Option zum Verknüpfen erscheint
+4. Apple-Konto verknüpfen
+5. Prüfen ob beide Konten nun als verknüpft angezeigt werden
+6. Testen ob Frank sich sowohl mit Google als auch mit Apple anmelden kann
