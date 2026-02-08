@@ -11,3 +11,9 @@ verify_jwt = false
 
 [functions.verify-session-pin]
 verify_jwt = false
+
+[functions.create-login-confirmation]
+verify_jwt = false
+
+[functions.verify-login-confirmation]
+verify_jwt = false

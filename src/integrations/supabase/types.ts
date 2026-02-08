@@ -214,6 +214,44 @@ export type Database = {
           },
         ]
       }
+      login_confirmations: {
+        Row: {
+          confirmed_at: string | null
+          confirmed_ip: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          staff_id: string
+          token: string
+        }
+        Insert: {
+          confirmed_at?: string | null
+          confirmed_ip?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          staff_id: string
+          token?: string
+        }
+        Update: {
+          confirmed_at?: string | null
+          confirmed_ip?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          staff_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "login_confirmations_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
