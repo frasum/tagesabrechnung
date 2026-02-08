@@ -136,7 +136,7 @@ serve(async (req: Request) => {
           error: `Zu viele Fehlversuche. Bitte warten Sie ${LOCKOUT_MINUTES} Minuten.`,
         }),
         {
-          status: 429,
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
@@ -164,7 +164,7 @@ serve(async (req: Request) => {
           error: "Ungültiger Name oder PIN-Code",
         }),
         {
-          status: 401,
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
@@ -191,7 +191,7 @@ serve(async (req: Request) => {
           error: "Ungültiger Name oder PIN-Code",
         }),
         {
-          status: 401,
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
