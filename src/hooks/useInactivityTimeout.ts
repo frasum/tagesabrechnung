@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
-const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+const INACTIVITY_TIMEOUT_MS = 10 * 1000; // 10 seconds for testing
 
 export function useInactivityTimeout() {
   const { user, isLocked, lockSession } = useAuth();
