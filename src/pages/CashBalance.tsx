@@ -357,7 +357,7 @@ export default function CashBalance() {
                         -{formatCurrency(filteredData.reduce((sum, row) => sum + row.ausgaben, 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-emerald-600 dark:text-emerald-400">
-                        {formatCurrency(filteredData.reduce((sum, row) => sum + row.bargeld, 0))}
+                        {formatCurrency(cumulativeCash)}
                       </TableCell>
                     </TableRow>
                   </TableFooter>
