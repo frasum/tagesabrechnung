@@ -1,68 +1,100 @@
 
-# Plan: PDF-Vorschau Fix
+# Plan: Druckfunktion mit Canvas-basiertem Ansatz
 
 ## Problem
-Die PDF-Vorschau zeigt einen leeren weissen Bereich an, obwohl der Dialog und die Buttons korrekt funktionieren. Das PDF wird generiert, aber nicht im iframe angezeigt.
+Die aktuelle iframe-basierte Druckmethode zeigt ein leeres Blatt, weil:
+1. Das PDF im versteckten iframe nicht vollständig geladen wird bevor `print()` aufgerufen wird
+2. Blob-URLs in iframes haben Cross-Origin-Einschränkungen beim Drucken
+3. Der Browser-PDF-Viewer im iframe wird nicht richtig initialisiert
 
-## Ursache
-Das Problem liegt daran, dass der Blob fuer die PDF ohne expliziten MIME-Type erstellt wird und einige Browser/Umgebungen Schwierigkeiten haben, PDFs direkt in iframes anzuzeigen.
+## Lösung: Canvas-zu-Bild Druckansatz
 
-## Loesung
+Da wir das PDF bereits mit pdf.js auf Canvas-Elemente rendern, können wir diese Canvas-Bilder direkt zum Drucken verwenden. Diese Methode ist zuverlässiger und umgeht alle Browser-Einschränkungen.
 
-### 1. Blob mit korrektem MIME-Type erstellen
-In `src/utils/pdfExport.ts` muss der Blob explizit als `application/pdf` erstellt werden:
+### Ablauf
 
-```typescript
-// Aktuell:
-const blob = doc.output('blob');
-
-// Korrigiert:
-const pdfBlob = doc.output('blob');
-const blob = new Blob([pdfBlob], { type: 'application/pdf' });
+```text
++-------------------+     +------------------+     +-------------------+
+| Canvas-Seiten     | --> | Neues Fenster    | --> | Browser Print     |
+| (bereits gerendert)|     | mit <img> Tags   |     | Dialog            |
++-------------------+     +------------------+     +-------------------+
 ```
 
-### 2. Fallback mit object-Tag
-Da einige Browser PDFs in iframes nicht richtig rendern, wird ein `<object>`-Tag als Fallback verwendet, der bessere PDF-Unterstuetzung bietet:
+## Änderungen
+
+### Datei: src/components/shared/PdfPreview.tsx
+
+1. **Refs für alle Canvas-Elemente sammeln**
+   - Ein Array von Canvas-Refs erstellen um auf alle gerenderten Seiten zugreifen zu können
+
+2. **Neue handlePrint Funktion**
+   - Alle Canvas-Elemente zu Data-URLs konvertieren
+   - Ein neues Fenster mit HTML-Inhalt erstellen
+   - Jede Seite als `<img>` Tag mit Print-optimiertem CSS einbetten
+   - Nach dem Laden `print()` aufrufen
+
+### Technische Umsetzung
 
 ```typescript
-// In CashBalance.tsx:
-<object
-  data={pdfPreview.blobUrl}
-  type="application/pdf"
-  className="w-full h-full rounded-md border"
->
-  <p>PDF konnte nicht angezeigt werden.</p>
-</object>
+// Canvas-Refs sammeln
+const canvasRefs = useRef<Map<number, HTMLCanvasElement>>(new Map());
+
+// Druckfunktion
+const handlePrint = () => {
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) return;
+
+  // HTML mit allen Seiten als Bilder erstellen
+  const images = Array.from(canvasRefs.current.entries())
+    .sort(([a], [b]) => a - b)
+    .map(([_, canvas]) => canvas.toDataURL('image/png'));
+
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>${fileName || 'PDF Druck'}</title>
+        <style>
+          @media print {
+            body { margin: 0; }
+            img { 
+              width: 100%; 
+              page-break-after: always; 
+            }
+            img:last-child { page-break-after: avoid; }
+          }
+        </style>
+      </head>
+      <body>
+        ${images.map(src => `<img src="${src}" />`).join('')}
+      </body>
+    </html>
+  `);
+  
+  printWindow.document.close();
+  printWindow.onload = () => printWindow.print();
+};
 ```
 
-### 3. Alternative: embed-Tag
-Falls `object` nicht funktioniert, kann auch `<embed>` verwendet werden:
+3. **PdfPage Komponente anpassen**
+   - Canvas-Ref an übergeordnete Komponente melden via Callback
+
+## Vorteile dieser Lösung
+
+- Kein Popup-Blocker Problem (synchroner window.open Aufruf)
+- Keine Blob-URL/iframe Probleme
+- Die Seiten werden garantiert korrekt angezeigt, da sie bereits gerendert sind
+- Funktioniert in allen Browsern konsistent
+- Print-CSS sorgt für korrekte Seitenumbrüche
+
+## Alternative: jsPDF autoPrint
+
+Falls der Canvas-Ansatz nicht gewünscht ist, könnte man auch jsPDF's eingebaute `autoPrint()` Methode nutzen:
 
 ```typescript
-<embed
-  src={pdfPreview.blobUrl}
-  type="application/pdf"
-  className="w-full h-full rounded-md border"
-/>
+// In pdfExport.ts
+doc.autoPrint();
+const blobUrl = URL.createObjectURL(doc.output('blob'));
+// Dann iframe öffnen - PDF startet automatisch Druckdialog
 ```
 
-## Aenderungen
-
-### Datei 1: src/utils/pdfExport.ts
-- Blob mit explizitem `application/pdf` MIME-Type erstellen
-- Zeile 706: `doc.output('blob')` durch Blob-Erstellung mit MIME-Type ersetzen
-
-### Datei 2: src/pages/CashBalance.tsx
-- iframe durch object-Tag ersetzen fuer bessere PDF-Kompatibilitaet
-- Optional: Fallback-Nachricht wenn PDF nicht angezeigt werden kann
-
-## Technische Details
-
-### Warum object statt iframe?
-- `<object>` ist speziell fuer eingebettete Inhalte wie PDFs konzipiert
-- Bietet bessere Browser-Kompatibilitaet fuer PDF-Anzeige
-- Ermoeglicht Fallback-Content wenn das PDF nicht geladen werden kann
-- Wird von allen modernen Browsern unterstuetzt
-
-### MIME-Type Wichtigkeit
-Der Browser muss wissen, dass es sich um ein PDF handelt, um den integrierten PDF-Viewer zu verwenden. Ohne expliziten MIME-Type kann der Browser den Inhalt als generischen Blob behandeln und nicht richtig darstellen.
+Dies ist jedoch weniger zuverlässig als der Canvas-Ansatz.
