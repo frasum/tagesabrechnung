@@ -77,10 +77,11 @@ export function AppLayout({ children }: AppLayoutProps) {
       // Admin sees all
       if (isAdmin) return true;
       
+      // Manager ALWAYS sees Kellner Abrechnung (path: '') for error corrections
+      if (isManager && item.path === '') return true;
+      
       // Manager with custom permissions - check if path is allowed
       if (isManager && hasCustomPermissions) {
-        // Staff-level items always visible
-        if (item.minLevel === 'staff') return true;
         return managerPaths.includes(item.path);
       }
       
