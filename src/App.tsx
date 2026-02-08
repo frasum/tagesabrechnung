@@ -21,6 +21,7 @@ import CashBalance from "./pages/CashBalance";
 import WaiterQRPoster from "./pages/WaiterQRPoster";
 import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
+import { ConfirmLoginPage } from "./pages/ConfirmLoginPage";
 
 const queryClient = new QueryClient();
 
@@ -55,6 +56,7 @@ function AppContent() {
         {/* Global routes (no restaurant context needed) */}
         <Route path="/login" element={<Login />} />
         <Route path="/install" element={<Install />} />
+        <Route path="/confirm-login/:token" element={<ConfirmLoginPage />} />
         <Route path="/staff" element={<ProtectedRoute requiredLevel="admin"><StaffManagement /></ProtectedRoute>} />
         
         {/* Redirect root to default restaurant */}
