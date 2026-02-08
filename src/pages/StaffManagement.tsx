@@ -32,6 +32,30 @@ export default function StaffManagement() {
     return matchesRole && matchesSearch;
   });
 
+  // Group and sort staff
+  const groupedStaff = (() => {
+    const filtered = filteredStaff;
+    
+    if (filter === 'all') {
+      // Group by role and sort each group alphabetically
+      const waiters = filtered
+        .filter(s => s.role === 'waiter')
+        .sort((a, b) => a.name.localeCompare(b.name));
+      
+      const kitchen = filtered
+        .filter(s => s.role === 'kitchen')
+        .sort((a, b) => a.name.localeCompare(b.name));
+      
+      return { waiters, kitchen };
+    } else {
+      // Just sort alphabetically by role
+      const sorted = filtered.sort((a, b) => a.name.localeCompare(b.name));
+      return filter === 'waiter' 
+        ? { waiters: sorted, kitchen: [] }
+        : { waiters: [], kitchen: sorted };
+    }
+  })();
+
   const waiterCount = allStaff.filter(s => s.role === 'waiter').length;
   const kitchenCount = allStaff.filter(s => s.role === 'kitchen').length;
 
@@ -145,15 +169,46 @@ export default function StaffManagement() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredStaff.map(staff => (
-              <StaffCard
-                key={staff.id}
-                staff={staff}
-                onEdit={handleEdit}
-                onDelete={setDeleteStaff}
-              />
-            ))}
+          <div className="space-y-6">
+            {/* Kellner Section */}
+            {groupedStaff.waiters.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+                  <UtensilsCrossed className="w-5 h-5 text-primary" />
+                  Kellner ({groupedStaff.waiters.length})
+                </h2>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {groupedStaff.waiters.map(staff => (
+                    <StaffCard
+                      key={staff.id}
+                      staff={staff}
+                      onEdit={handleEdit}
+                      onDelete={setDeleteStaff}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Küche Section */}
+            {groupedStaff.kitchen.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+                  <ChefHat className="w-5 h-5 text-primary" />
+                  Küche ({groupedStaff.kitchen.length})
+                </h2>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {groupedStaff.kitchen.map(staff => (
+                    <StaffCard
+                      key={staff.id}
+                      staff={staff}
+                      onEdit={handleEdit}
+                      onDelete={setDeleteStaff}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
