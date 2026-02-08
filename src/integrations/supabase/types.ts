@@ -361,7 +361,6 @@ export type Database = {
           is_active: boolean | null
           name: string
           notes: string | null
-          pin_code: string | null
           role: Database["public"]["Enums"]["staff_role"]
           updated_at: string
         }
@@ -372,7 +371,6 @@ export type Database = {
           is_active?: boolean | null
           name: string
           notes?: string | null
-          pin_code?: string | null
           role: Database["public"]["Enums"]["staff_role"]
           updated_at?: string
         }
@@ -383,11 +381,42 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           notes?: string | null
-          pin_code?: string | null
           role?: Database["public"]["Enums"]["staff_role"]
           updated_at?: string
         }
         Relationships: []
+      }
+      staff_pins: {
+        Row: {
+          created_at: string
+          id: string
+          pin_code: string
+          staff_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          pin_code: string
+          staff_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          pin_code?: string
+          staff_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_pins_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: true
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       staff_restaurants: {
         Row: {
