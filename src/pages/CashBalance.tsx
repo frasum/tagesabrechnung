@@ -6,7 +6,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Wallet, FileDown, Download, X } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Wallet, FileDown, Download, X, ChevronDown, FileSpreadsheet } from 'lucide-react';
 import { useCashBalanceData } from '@/hooks/useCashBalanceData';
 import { useBankDeposits } from '@/hooks/useBankDeposits';
 import { usePettyCash } from '@/hooks/useSettings';
@@ -14,6 +20,7 @@ import { format, parseISO } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { generateCashBalancePDF } from '@/utils/pdfExport';
+import { generateCashBalanceExcel } from '@/utils/excelExport';
 import { PdfPreview } from '@/components/shared/PdfPreview';
 import { CashBalanceSummary } from '@/components/cash-balance/CashBalanceSummary';
 import { BankDepositDialog } from '@/components/cash-balance/BankDepositDialog';
@@ -126,6 +133,18 @@ export default function CashBalance() {
     setPreviewOpen(false);
   }, [pdfPreview]);
 
+  // Handle Excel export
+  const handleExcelExport = useCallback(() => {
+    if (!filteredData || filteredData.length === 0 || !selectedMonth) return;
+    const [year, month] = selectedMonth.split('-').map(Number);
+    generateCashBalanceExcel({
+      rows: filteredData,
+      deposits: deposits,
+      month: month - 1,
+      year,
+    });
+  }, [filteredData, selectedMonth, deposits]);
+
   // Handle deposit submission
   const handleDepositSubmit = useCallback((data: { deposit_date: string; amount: number; notes?: string }) => {
     createDeposit(data, {
@@ -177,15 +196,29 @@ export default function CashBalance() {
               </SelectContent>
             </Select>
           </div>
-          <Button
-            onClick={handlePreview}
-            disabled={!filteredData || filteredData.length === 0}
-            variant="outline"
-            className="gap-2"
-          >
-            <FileDown className="h-4 w-4" />
-            PDF Export
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                disabled={!filteredData || filteredData.length === 0}
+                variant="outline"
+                className="gap-2"
+              >
+                <FileDown className="h-4 w-4" />
+                Export
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handlePreview} className="gap-2 cursor-pointer">
+                <FileDown className="h-4 w-4" />
+                PDF Export
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExcelExport} className="gap-2 cursor-pointer">
+                <FileSpreadsheet className="h-4 w-4" />
+                Excel Export
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         <Card>
