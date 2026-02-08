@@ -109,14 +109,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Helper function with timeout to prevent hanging
+  const convertOAuthUserWithTimeout = async (supabaseUser: User, timeoutMs = 5000): Promise<AuthUser> => {
+    const timeout = new Promise<AuthUser>((_, reject) => 
+      setTimeout(() => reject(new Error('Timeout')), timeoutMs)
+    );
+    return Promise.race([convertOAuthUser(supabaseUser), timeout]);
+  };
+
   useEffect(() => {
     // Set up Supabase auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_IN' && session?.user) {
-          const authUser = await convertOAuthUser(session.user);
-          setUser(authUser);
-          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
+          try {
+            const authUser = await convertOAuthUserWithTimeout(session.user);
+            setUser(authUser);
+            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
+          } catch (error) {
+            console.error('OAuth sign-in processing failed:', error);
+            // Create basic user as fallback
+            const name = session.user.user_metadata?.full_name 
+              || session.user.user_metadata?.name 
+              || session.user.email?.split('@')[0] 
+              || 'Benutzer';
+            const fallbackUser: AuthUser = {
+              id: session.user.id,
+              name,
+              role: 'waiter',
+              permissionLevel: 'staff',
+              isOAuthUser: true,
+              needsLinking: true,
+            };
+            setUser(fallbackUser);
+            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(fallbackUser));
+          }
           setIsLoading(false);
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
@@ -128,39 +155,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Then check for existing session
     const initAuth = async () => {
-      // First check localStorage for PIN-based auth
-      const storedUser = localStorage.getItem(AUTH_STORAGE_KEY);
-      if (storedUser) {
-        try {
+      try {
+        // First check localStorage for PIN-based auth
+        const storedUser = localStorage.getItem(AUTH_STORAGE_KEY);
+        if (storedUser) {
           const parsed = JSON.parse(storedUser);
-          // For OAuth users, refresh the profile data
+          
+          // For OAuth users, try to refresh the profile data
           if (parsed.isOAuthUser) {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session?.user) {
-              const authUser = await convertOAuthUser(session.user);
-              setUser(authUser);
-              localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
-              setIsLoading(false);
-              return;
+            try {
+              const { data: { session } } = await supabase.auth.getSession();
+              if (session?.user) {
+                const authUser = await convertOAuthUserWithTimeout(session.user);
+                setUser(authUser);
+                localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
+                return;
+              }
+            } catch (e) {
+              console.error('OAuth session refresh failed, using cached user:', e);
             }
+            // Fallback: Use cached user data if session refresh fails
+            setUser(parsed);
+            return;
           }
+          
+          // PIN-based user
           setUser(parsed);
-          setIsLoading(false);
           return;
-        } catch {
-          localStorage.removeItem(AUTH_STORAGE_KEY);
         }
-      }
 
-      // Then check Supabase session for OAuth
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const authUser = await convertOAuthUser(session.user);
-        setUser(authUser);
-        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
+        // Then check Supabase session for OAuth (no localStorage data)
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          try {
+            const authUser = await convertOAuthUserWithTimeout(session.user);
+            setUser(authUser);
+            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
+          } catch (e) {
+            console.error('OAuth user conversion failed:', e);
+            // Don't set user - will show login page
+          }
+        }
+      } catch (error) {
+        console.error('Auth initialization failed:', error);
+        localStorage.removeItem(AUTH_STORAGE_KEY);
+      } finally {
+        // GUARANTEED to end loading state
+        setIsLoading(false);
       }
-      
-      setIsLoading(false);
     };
 
     initAuth();
