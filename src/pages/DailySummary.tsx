@@ -436,7 +436,7 @@ export default function DailySummary() {
               />
               <StatCard
                 label="Tagesumsatz"
-                value={kellnerUmsatz}
+                value={formData.pos_total}
                 icon={<FileText className="w-5 h-5" />}
               />
               <StatCard
@@ -750,8 +750,8 @@ export default function DailySummary() {
                     <Table>
                       <TableBody>
                         <TableRow>
-                          <TableCell className="py-2">Tagesumsatz</TableCell>
-                          <TableCell className="text-right tabular-nums py-2">{formatCurrency(kellnerUmsatz)}</TableCell>
+                          <TableCell className="py-2">Tagesumsatz (Vectron)</TableCell>
+                          <TableCell className="text-right tabular-nums py-2">{formatCurrency(formData.pos_total)}</TableCell>
                         </TableRow>
                         <TableRow>
                           <TableCell className="py-2">Gutschein Verkauf</TableCell>
@@ -768,7 +768,7 @@ export default function DailySummary() {
                         <TableRow className="border-t-2">
                           <TableCell className="font-semibold py-2">Summe</TableCell>
                           <TableCell className="text-right tabular-nums font-semibold text-success py-2">
-                            {formatCurrency(kellnerUmsatz + formData.vouchers_sold + formData.sonstige_einnahme + totalHilfMahl)}
+                            {formatCurrency(formData.pos_total + formData.vouchers_sold + formData.sonstige_einnahme + totalHilfMahl)}
                           </TableCell>
                         </TableRow>
                       </TableBody>
