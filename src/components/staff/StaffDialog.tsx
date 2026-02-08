@@ -3,10 +3,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Staff, StaffInput, StaffRole } from '@/hooks/useStaff';
+import { useRestaurants } from '@/hooks/useRestaurant';
 
 interface StaffDialogProps {
   open: boolean;
@@ -21,6 +22,9 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
   const [role, setRole] = useState<StaffRole>('waiter');
   const [isActive, setIsActive] = useState(true);
   const [pinCode, setPinCode] = useState('');
+  const [selectedRestaurants, setSelectedRestaurants] = useState<string[]>([]);
+
+  const { data: restaurants = [] } = useRestaurants();
 
   useEffect(() => {
     if (staff) {
@@ -28,18 +32,31 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       setRole(staff.role);
       setIsActive(staff.is_active ?? true);
       setPinCode(''); // Don't show existing PIN
+      // Get restaurant IDs from the staff_restaurants relation
+      const restaurantIds = staff.staff_restaurants?.map(sr => sr.restaurant_id) ?? [];
+      setSelectedRestaurants(restaurantIds);
     } else {
       setName('');
       setRole('waiter');
       setIsActive(true);
       setPinCode('');
+      // Default to all restaurants for new staff
+      setSelectedRestaurants(restaurants.map(r => r.id));
     }
-  }, [staff, open]);
+  }, [staff, open, restaurants]);
 
   const handlePinChange = (value: string) => {
     // Only allow digits and max 4 characters
     const sanitized = value.replace(/\D/g, '').slice(0, 4);
     setPinCode(sanitized);
+  };
+
+  const handleRestaurantToggle = (restaurantId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedRestaurants(prev => [...prev, restaurantId]);
+    } else {
+      setSelectedRestaurants(prev => prev.filter(id => id !== restaurantId));
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -51,6 +68,7 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       role,
       is_active: isActive,
       pin_code: pinCode.length === 4 ? pinCode : undefined,
+      restaurant_ids: selectedRestaurants,
     });
   };
 
@@ -88,6 +106,35 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
             </Select>
           </div>
 
+          {/* Restaurant Assignment */}
+          <div className="space-y-3">
+            <Label>Restaurants *</Label>
+            <div className="space-y-2">
+              {restaurants.map((restaurant) => (
+                <div key={restaurant.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`restaurant-${restaurant.id}`}
+                    checked={selectedRestaurants.includes(restaurant.id)}
+                    onCheckedChange={(checked) => 
+                      handleRestaurantToggle(restaurant.id, checked as boolean)
+                    }
+                  />
+                  <Label
+                    htmlFor={`restaurant-${restaurant.id}`}
+                    className="text-sm font-normal cursor-pointer"
+                  >
+                    {restaurant.name}
+                  </Label>
+                </div>
+              ))}
+            </div>
+            {selectedRestaurants.length === 0 && (
+              <p className="text-xs text-destructive">
+                Mindestens ein Restaurant muss ausgewählt werden
+              </p>
+            )}
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="pinCode">Login-Code (4 Ziffern)</Label>
             <Input
@@ -119,7 +166,10 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Abbrechen
             </Button>
-            <Button type="submit" disabled={isLoading || !name.trim()}>
+            <Button 
+              type="submit" 
+              disabled={isLoading || !name.trim() || selectedRestaurants.length === 0}
+            >
               {isLoading ? 'Speichern...' : 'Speichern'}
             </Button>
           </DialogFooter>
