@@ -26,33 +26,55 @@ serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
     );
 
-    // GET: Fetch permission level for a staff member
+// GET: Fetch permission level for a staff member (by staff_id or auth_user_id)
     if (req.method === "GET") {
       const url = new URL(req.url);
       const staffId = url.searchParams.get("staff_id");
+      const authUserId = url.searchParams.get("auth_user_id");
 
-      if (!staffId) {
+      // Resolve staff_id from auth_user_id if provided
+      let resolvedStaffId = staffId;
+      if (authUserId && !staffId) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("staff_id")
+          .eq("user_id", authUserId)
+          .single();
+        resolvedStaffId = profile?.staff_id || null;
+      }
+
+      // If no staff_id could be resolved, return default staff level
+      if (!resolvedStaffId) {
         return new Response(
-          JSON.stringify({ error: "Missing staff_id parameter" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ 
+            staff_id: null,
+            staff_name: null,
+            staff_role: null,
+            permission_level: "staff" 
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("permission_level")
-        .eq("staff_id", staffId)
-        .single();
+      // Fetch staff data and permission level in parallel
+      const [staffResult, roleResult] = await Promise.all([
+        supabase.from("staff").select("id, name, role").eq("id", resolvedStaffId).single(),
+        supabase.from("user_roles").select("permission_level").eq("staff_id", resolvedStaffId).single()
+      ]);
 
-      if (error && error.code !== "PGRST116") {
-        // PGRST116 = no rows returned (use default)
-        throw error;
+      if (staffResult.error && staffResult.error.code !== "PGRST116") {
+        console.error("Error fetching staff:", staffResult.error);
+      }
+      if (roleResult.error && roleResult.error.code !== "PGRST116") {
+        console.error("Error fetching role:", roleResult.error);
       }
 
       return new Response(
         JSON.stringify({ 
-          staff_id: staffId,
-          permission_level: data?.permission_level || "staff" 
+          staff_id: resolvedStaffId,
+          staff_name: staffResult.data?.name || null,
+          staff_role: staffResult.data?.role || null,
+          permission_level: roleResult.data?.permission_level || "staff" 
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );

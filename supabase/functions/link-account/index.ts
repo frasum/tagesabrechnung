@@ -78,16 +78,17 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if staff is already linked to another account
-    const { data: existingLink } = await supabaseAdmin
+    // Check if THIS user is already linked to a DIFFERENT staff member
+    // (Allow multiple OAuth accounts to be linked to the same staff)
+    const { data: currentUserProfile } = await supabaseAdmin
       .from('profiles')
-      .select('id, user_id')
-      .eq('staff_id', staff.id)
+      .select('staff_id')
+      .eq('user_id', user.id)
       .single();
 
-    if (existingLink && existingLink.user_id !== user.id) {
+    if (currentUserProfile?.staff_id && currentUserProfile.staff_id !== staff.id) {
       return new Response(
-        JSON.stringify({ error: 'Dieses Mitarbeiterkonto ist bereits mit einem anderen Account verknüpft' }),
+        JSON.stringify({ error: 'Dein Konto ist bereits mit einem anderen Mitarbeiter verknüpft' }),
         { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

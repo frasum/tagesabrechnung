@@ -32,76 +32,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Convert Supabase OAuth user to AuthUser with profile data
+  // Convert Supabase OAuth user to AuthUser with profile data - single API call
   const convertOAuthUser = async (supabaseUser: User): Promise<AuthUser> => {
-    const name = supabaseUser.user_metadata?.full_name 
+    const fallbackName = supabaseUser.user_metadata?.full_name 
       || supabaseUser.user_metadata?.name 
       || supabaseUser.email?.split('@')[0] 
       || 'Benutzer';
     
     try {
-      // Check if user has linked staff account
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('staff_id')
-        .eq('user_id', supabaseUser.id)
-        .single();
+      // Single API call to get all user data including permission level
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-user-role?auth_user_id=${supabaseUser.id}`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+        }
+      );
 
-      if (profileError) {
-        console.log('Profile lookup (expected for new OAuth users):', profileError.message);
+      if (!response.ok) {
+        throw new Error('Failed to fetch user role');
       }
 
-      let staffData = null;
-      let permissionLevel: PermissionLevel = 'staff';
-      
-      if (profile?.staff_id) {
-        const { data: staff, error: staffError } = await supabase
-          .from('staff')
-          .select('id, name, role')
-          .eq('id', profile.staff_id)
-          .single();
-        
-        if (staffError) {
-          console.error('Failed to fetch staff data:', staffError);
-        } else {
-          staffData = staff;
-        }
-        
-        // Fetch permission level via edge function
-        try {
-          const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-user-role?staff_id=${profile.staff_id}`,
-            {
-              method: 'GET',
-              headers: {
-                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-              },
-            }
-          );
-          if (response.ok) {
-            const roleData = await response.json();
-            permissionLevel = roleData.permission_level || 'staff';
-          }
-        } catch (e) {
-          console.error('Failed to fetch permission level:', e);
-        }
-      }
+      const roleData = await response.json();
 
       return {
-        id: staffData?.id || supabaseUser.id,
-        name: staffData?.name || name,
-        role: (staffData?.role as 'waiter' | 'kitchen') || 'waiter',
-        permissionLevel,
+        id: roleData.staff_id || supabaseUser.id,
+        name: roleData.staff_name || fallbackName,
+        role: (roleData.staff_role as 'waiter' | 'kitchen') || 'waiter',
+        permissionLevel: roleData.permission_level || 'staff',
         isOAuthUser: true,
-        staffId: staffData?.id,
-        needsLinking: !staffData,
+        staffId: roleData.staff_id || undefined,
+        needsLinking: !roleData.staff_id,
       };
     } catch (error) {
       console.error('Error in convertOAuthUser:', error);
       // Return basic user even if lookup fails
       return {
         id: supabaseUser.id,
-        name,
+        name: fallbackName,
         role: 'waiter',
         permissionLevel: 'staff',
         isOAuthUser: true,
@@ -110,8 +80,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Helper function with timeout to prevent hanging
-  const convertOAuthUserWithTimeout = async (supabaseUser: User, timeoutMs = 5000): Promise<AuthUser> => {
+  // Helper function with timeout to prevent hanging (increased to 10s)
+  const convertOAuthUserWithTimeout = async (supabaseUser: User, timeoutMs = 10000): Promise<AuthUser> => {
     const timeout = new Promise<AuthUser>((_, reject) => 
       setTimeout(() => reject(new Error('Timeout')), timeoutMs)
     );
