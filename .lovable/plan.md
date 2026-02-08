@@ -1,133 +1,191 @@
 
-## Globales Datum über Navigation hinweg beibehalten
+## Kumulierter Kassenstand mit Ausgleichs-Anzeige
 
 ### Übersicht
-Wenn du ein Datum auswählst und dann zu anderen Seiten navigierst (z.B. von Kellner Abrechnung zu Dashboard zu Tagesabrechnung), soll das ausgewählte Datum beibehalten werden, anstatt auf das heutige Datum zurückzuspringen.
+Du möchtest in der Tagesabrechnung sehen können:
+1. **Bargeld des Tages** (wie bisher)
+2. **Kumulierter Kassenstand** (wenn gestern -200€ war und heute +300€, zeigt es +100€)
+3. **Ausgleich vom Vortag** (wenn das Bargeld von heute ein vorheriges Minus ausgleicht)
 
-### Problem
-Aktuell verwendet jede Seite ihren eigenen lokalen `useState` für das Datum:
+### Beispiel-Szenario
 
-| Seite | Aktueller Code |
-|-------|----------------|
-| WaiterCashUp | `useState(getBusinessDate())` |
-| ManagerDashboard | `useState(getBusinessDate())` |
-| KitchenTipSplit | `useState(new Date())` |
-| DailySummary | `useState(new Date())` |
-| RegisterBalance | `useState(getBusinessDate())` |
-| CashBalance | `useState(new Date())` |
-| History | `useState(new Date())` |
-
-Beim Seitenwechsel wird der lokale State verloren und das Datum zurückgesetzt.
-
-### Lösung
-Ein **DateContext** erstellen, der das ausgewählte Datum global speichert und in allen betroffenen Seiten verwendet wird.
-
-### Neue Datei
-
-**`src/contexts/DateContext.tsx`**
-```typescript
-import { createContext, useContext, useState, ReactNode } from 'react';
-import { getBusinessDate } from '@/utils/businessDate';
-
-interface DateContextValue {
-  selectedDate: Date;
-  setSelectedDate: (date: Date) => void;
-}
-
-const DateContext = createContext<DateContextValue | undefined>(undefined);
-
-export function DateProvider({ children }: { children: ReactNode }) {
-  const [selectedDate, setSelectedDate] = useState(getBusinessDate());
-  
-  return (
-    <DateContext.Provider value={{ selectedDate, setSelectedDate }}>
-      {children}
-    </DateContext.Provider>
-  );
-}
-
-export function useSelectedDate() {
-  const context = useContext(DateContext);
-  if (!context) {
-    throw new Error('useSelectedDate must be used within a DateProvider');
-  }
-  return context;
-}
+```text
+Tag 1 (Montag):    Bargeld = -200 €  →  Kasse: -200 € (Defizit)
+Tag 2 (Dienstag):  Bargeld = +350 €  →  Kasse: +150 € (Ausgleich!)
+                                         ↳ "Ausgleich vom Vortag: 200 €"
+                                         ↳ "Neues Guthaben: 150 €"
 ```
+
+### Neue Kachel in der Tagesabrechnung
+
+```text
+┌─────────────────────────────────────────────────────────────────────┐
+│  💵 KASSENSTAND                                                     │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│     Bargeld heute:                    +350,00 €  ✓                  │
+│                                                                     │
+│     ─────────────────────────────────────────────                   │
+│                                                                     │
+│  ✅ Defizit vom Vortag ausgeglichen:   200,00 €                     │
+│     Verbleibendes Guthaben:           +150,00 €                     │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+Oder wenn das Minus noch nicht ausgeglichen ist:
+
+```text
+┌─────────────────────────────────────────────────────────────────────┐
+│  💵 KASSENSTAND                                            ⚠️       │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│     Bargeld heute:                    +100,00 €                     │
+│                                                                     │
+│     ─────────────────────────────────────────────                   │
+│                                                                     │
+│  ⚠️ Defizit aus Vortagen:             -200,00 €                     │
+│     Nach Ausgleich heute:             -100,00 €                     │
+│                                                                     │
+│            [ 💰 Transfer vom Tresor ]                               │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Berechnung des kumulierten Kassenstands
+
+```text
+Kumulierter Kassenstand (bis zum ausgewählten Datum) =
+    Startbestand Restaurant-Kasse (Wechselgeld / 2)
+  + Summe aller Bargeld-Tage bis zum gewählten Datum
+  + Summe aller Transfers vom Tresor bis zum gewählten Datum
+  − Summe aller Transfers zum Tresor bis zum gewählten Datum
+```
+
+### Anzeige-Logik
+
+| Situation | Anzeige |
+|-----------|---------|
+| Heute positiv, Vortag war negativ, jetzt ausgeglichen | ✅ "Defizit ausgeglichen" + Guthaben |
+| Heute positiv, kein Defizit vorhanden | Nur "Bargeld heute" (normal) |
+| Heute negativ, Defizit besteht | ⚠️ "Kumuliertes Defizit" + Transfer-Button |
+| Heute positiv, aber Defizit noch nicht komplett ausgeglichen | ⚠️ "Teilweise ausgeglichen" + verbleibendes Defizit |
 
 ### Zu ändernde Dateien
 
 | Datei | Änderung |
 |-------|----------|
-| `src/contexts/DateContext.tsx` | **NEU** - Globaler Date-Context |
-| `src/App.tsx` | DateProvider einbinden |
-| `src/pages/WaiterCashUp.tsx` | Lokalen State durch `useSelectedDate()` ersetzen |
-| `src/pages/ManagerDashboard.tsx` | Lokalen State durch `useSelectedDate()` ersetzen |
-| `src/pages/KitchenTipSplit.tsx` | Lokalen State durch `useSelectedDate()` ersetzen |
-| `src/pages/DailySummary.tsx` | Lokalen State durch `useSelectedDate()` ersetzen |
-| `src/pages/RegisterBalance.tsx` | Lokalen State durch `useSelectedDate()` ersetzen |
-| `src/pages/CashBalance.tsx` | Lokalen State durch `useSelectedDate()` ersetzen |
-| `src/pages/History.tsx` | Lokalen State durch `useSelectedDate()` ersetzen |
+| `src/pages/DailySummary.tsx` | Neue "Kassenstand"-Kachel mit Ausgleichs-Logik hinzufügen |
+| `src/pages/ManagerDashboard.tsx` | Bargeld-Kachel mit Transfer-Button hinzufügen |
+| `src/components/register/TransferDialog.tsx` | Optional: Vorgeschlagener Betrag für Defizit-Ausgleich |
 
-### Änderung in jeder Seite
+### Implementierung in DailySummary.tsx
 
-**Vorher:**
+**Neue Imports:**
 ```typescript
-const [selectedDate, setSelectedDate] = useState(getBusinessDate());
+import { Banknote, Vault, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { useRegisterTransfers } from '@/hooks/useRegisterTransfers';
+import { useCashBalanceData } from '@/hooks/useCashBalanceData';
+import { TransferDialog } from '@/components/register/TransferDialog';
 ```
 
-**Nachher:**
+**Kumulierten Kassenstand berechnen:**
 ```typescript
-import { useSelectedDate } from '@/contexts/DateContext';
+const { data: cashBalanceData = [] } = useCashBalanceData(restaurantId);
+const { transfers, balances, createTransfer, isCreating } = useRegisterTransfers(restaurantId);
+const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
 
-// In der Komponente:
-const { selectedDate, setSelectedDate } = useSelectedDate();
+// Kumuliertes Bargeld bis zum VORHERIGEN Tag
+const previousDayCumulativeCash = useMemo(() => {
+  return cashBalanceData
+    .filter(row => row.date < selectedDateStr)
+    .reduce((sum, row) => sum + row.bargeld, 0);
+}, [cashBalanceData, selectedDateStr]);
+
+// Transfers bis zum gewählten Datum
+const transfersUntilDate = useMemo(() => {
+  const toRestaurant = transfers
+    .filter(t => t.direction === 'to_restaurant' && t.transfer_date <= selectedDateStr)
+    .reduce((sum, t) => sum + t.amount, 0);
+  const toSafe = transfers
+    .filter(t => t.direction === 'to_safe' && t.transfer_date <= selectedDateStr)
+    .reduce((sum, t) => sum + t.amount, 0);
+  return toRestaurant - toSafe;
+}, [transfers, selectedDateStr]);
+
+// Kassenstand vor heute (inkl. Wechselgeld)
+const registerBalanceBeforeToday = balances.initialRestaurant + previousDayCumulativeCash + transfersUntilDate;
+
+// Kassenstand nach heute
+const registerBalanceAfterToday = registerBalanceBeforeToday + bargeld;
+
+// War vorher ein Defizit?
+const hadDeficitBefore = registerBalanceBeforeToday < 0;
+
+// Wurde das Defizit ausgeglichen?
+const deficitWasCleared = hadDeficitBefore && registerBalanceAfterToday >= 0;
+
+// Wie viel wurde ausgeglichen?
+const amountCleared = deficitWasCleared ? Math.abs(registerBalanceBeforeToday) : 0;
 ```
 
-### Ablauf nach der Änderung
+**Neue Kachel im Grid (nach den StatCards):**
+```jsx
+<Card className={registerBalanceAfterToday < 0 ? "border-amber-500 bg-amber-50/50 dark:bg-amber-950/20" : ""}>
+  <CardHeader className="pb-2">
+    <CardTitle className="flex items-center gap-2 text-lg">
+      <Banknote className="w-5 h-5" />
+      Kassenstand
+    </CardTitle>
+  </CardHeader>
+  <CardContent className="space-y-3">
+    {/* Bargeld heute */}
+    <div className="flex justify-between items-center">
+      <span className="text-sm text-muted-foreground">Bargeld heute</span>
+      <span className={`font-semibold tabular-nums ${bargeld >= 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+        {formatCurrency(bargeld)}
+      </span>
+    </div>
 
-```text
-┌──────────────────────────────────────────────────────────────┐
-│  Benutzer wählt: 5. Februar 2026                             │
-└──────────────────────────────────────────────────────────────┘
-                            ↓
-┌──────────────────────────────────────────────────────────────┐
-│  DateContext speichert: 5. Februar 2026                      │
-└──────────────────────────────────────────────────────────────┘
-                            ↓
-┌────────────────┐  ┌────────────────┐  ┌────────────────┐
-│ Kellner        │  │ Dashboard      │  │ Küchen TG      │
-│ Abrechnung     │  │                │  │                │
-│ ────────────── │  │ ────────────── │  │ ────────────── │
-│ 5. Feb 2026 ✓  │  │ 5. Feb 2026 ✓  │  │ 5. Feb 2026 ✓  │
-└────────────────┘  └────────────────┘  └────────────────┘
-         ↓                  ↓                   ↓
-         └──────────────────┴───────────────────┘
-                            ↓
-              Alle Seiten zeigen das gleiche Datum!
+    {/* Ausgleich anzeigen */}
+    {deficitWasCleared && (
+      <div className="flex items-center gap-2 p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-md">
+        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+        <span className="text-sm">Defizit ausgeglichen: {formatCurrency(amountCleared)}</span>
+      </div>
+    )}
+
+    {/* Kumulierter Stand */}
+    <Separator />
+    <div className="flex justify-between items-center">
+      <span className="text-sm font-medium">Kassenstand nach heute</span>
+      <span className={`text-lg font-bold tabular-nums ${registerBalanceAfterToday >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+        {formatCurrency(registerBalanceAfterToday)}
+      </span>
+    </div>
+
+    {/* Transfer-Button bei Defizit */}
+    {registerBalanceAfterToday < 0 && (
+      <Button onClick={() => setShowTransferDialog(true)} variant="outline" className="w-full gap-2">
+        <Vault className="w-4 h-4" />
+        Transfer vom Tresor
+      </Button>
+    )}
+  </CardContent>
+</Card>
 ```
 
-### Provider-Hierarchie in App.tsx
+### Zusammenfassung
 
-```typescript
-<QueryClientProvider>
-  <AuthProvider>
-    <RestaurantProvider>
-      <DateProvider>         ← NEU
-        <TooltipProvider>
-          <Toaster />
-          <Routes>
-            ...
-          </Routes>
-        </TooltipProvider>
-      </DateProvider>        ← NEU
-    </RestaurantProvider>
-  </AuthProvider>
-</QueryClientProvider>
-```
+| Element | Funktion |
+|---------|----------|
+| Bargeld heute | Das berechnete Bargeld des gewählten Tages |
+| Defizit ausgeglichen | Zeigt an, wenn das Minus vom Vortag durch heutige Einnahmen gedeckt wurde |
+| Kassenstand nach heute | Kumulierter Stand inkl. aller Vortage und Transfers |
+| Transfer-Button | Ermöglicht Geld aus dem Tresor zu holen, wenn Defizit besteht |
 
 ### Vorteile
-- **Einheitliches Datum**: Alle datumsbezogenen Seiten zeigen das gleiche Datum
-- **Keine Verwirrung**: Du kontrollierst einen Tag und das Datum bleibt beim Navigieren erhalten
-- **Einfache Implementierung**: Nur Provider hinzufügen und lokalen State ersetzen
-- **"Heute"-Button funktioniert weiterhin**: Setzt das globale Datum zurück auf heute
+- **Volle Transparenz**: Du siehst auf einen Blick, ob das Minus ausgeglichen wurde
+- **Kumulierte Berechnung**: Das Defizit summiert sich automatisch über Tage
+- **Einfache Lösung**: Transfer vom Tresor direkt aus der Tagesabrechnung möglich
+- **Konsistent**: Gleiche Logik in Tagesabrechnung und Manager-Dashboard
