@@ -19,8 +19,9 @@ interface AuthContextType {
   isLoading: boolean;
   login: (name: string, pinCode: string) => Promise<boolean>;
   logout: () => void;
-  linkAccount: (staff: { id: string; name: string; role: string }) => void;
+  linkAccount: (staff: { id: string; name: string; role: string }) => Promise<void>;
   hasPermission: (requiredLevel: PermissionLevel) => boolean;
+  refreshPermissions: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -126,24 +127,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const authUser = await convertOAuthUserWithTimeout(session.user);
             setUser(authUser);
             localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
-          } catch (error) {
-            console.error('OAuth sign-in processing failed:', error);
-            // Create basic user as fallback
-            const name = session.user.user_metadata?.full_name 
-              || session.user.user_metadata?.name 
-              || session.user.email?.split('@')[0] 
-              || 'Benutzer';
-            const fallbackUser: AuthUser = {
-              id: session.user.id,
-              name,
-              role: 'waiter',
-              permissionLevel: 'staff',
-              isOAuthUser: true,
-              needsLinking: true,
-            };
-            setUser(fallbackUser);
-            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(fallbackUser));
+        } catch (error) {
+          console.error('OAuth sign-in processing failed:', error);
+          // Try to get cached permission level
+          const cachedUser = localStorage.getItem(AUTH_STORAGE_KEY);
+          let cachedPermissionLevel: PermissionLevel = 'staff';
+          let cachedStaffId: string | undefined;
+          let cachedNeedsLinking = true;
+          if (cachedUser) {
+            try {
+              const parsed = JSON.parse(cachedUser);
+              cachedPermissionLevel = parsed.permissionLevel || 'staff';
+              cachedStaffId = parsed.staffId;
+              cachedNeedsLinking = parsed.needsLinking ?? !parsed.staffId;
+            } catch {}
           }
+          
+          const name = session.user.user_metadata?.full_name 
+            || session.user.user_metadata?.name 
+            || session.user.email?.split('@')[0] 
+            || 'Benutzer';
+          const fallbackUser: AuthUser = {
+            id: cachedStaffId || session.user.id,
+            name,
+            role: 'waiter',
+            permissionLevel: cachedPermissionLevel,
+            isOAuthUser: true,
+            staffId: cachedStaffId,
+            needsLinking: cachedNeedsLinking,
+          };
+          setUser(fallbackUser);
+          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(fallbackUser));
+        }
           setIsLoading(false);
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
@@ -261,18 +276,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(AUTH_STORAGE_KEY);
   };
 
-  const linkAccount = (staff: { id: string; name: string; role: string }) => {
+  const linkAccount = async (staff: { id: string; name: string; role: string }) => {
     if (user) {
+      // Fetch permission level for the linked staff
+      let permissionLevel: PermissionLevel = 'staff';
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-user-role?staff_id=${staff.id}`,
+          {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            },
+          }
+        );
+        if (response.ok) {
+          const roleData = await response.json();
+          permissionLevel = roleData.permission_level || 'staff';
+        }
+      } catch (e) {
+        console.error('Failed to fetch permission level during linking:', e);
+      }
+
       const updatedUser: AuthUser = {
         ...user,
         id: staff.id,
         name: staff.name,
         role: staff.role as 'waiter' | 'kitchen',
+        permissionLevel,
         staffId: staff.id,
         needsLinking: false,
       };
       setUser(updatedUser);
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updatedUser));
+    }
+  };
+
+  // Manually refresh permissions from the server
+  const refreshPermissions = async () => {
+    if (!user?.staffId) return;
+    
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-user-role?staff_id=${user.staffId}`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+        }
+      );
+      if (response.ok) {
+        const roleData = await response.json();
+        const updatedUser = { ...user, permissionLevel: roleData.permission_level || 'staff' };
+        setUser(updatedUser as AuthUser);
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updatedUser));
+      }
+    } catch (e) {
+      console.error('Failed to refresh permissions:', e);
     }
   };
 
@@ -283,7 +344,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, linkAccount, hasPermission }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout, linkAccount, hasPermission, refreshPermissions }}>
       {children}
     </AuthContext.Provider>
   );
