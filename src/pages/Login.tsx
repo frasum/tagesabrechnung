@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChefHat, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,10 +14,17 @@ export default function Login() {
   const [name, setName] = useState('');
   const [pinCode, setPinCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { user, login } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const isMobile = useIsMobile();
+
+  // Redirect if already logged in (including OAuth users)
+  useEffect(() => {
+    if (user) {
+      navigate(isMobile ? '/spicery/waiter' : '/spicery', { replace: true });
+    }
+  }, [user, isMobile, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
