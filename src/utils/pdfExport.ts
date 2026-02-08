@@ -48,6 +48,7 @@ interface PDFExportData {
   waiterShifts: WaiterShift[];
   kitchenShifts: KitchenShift[];
   expenses: Expense[];
+  restaurantName?: string;
   totals: {
     kellnerUmsatz: number;
     totalCardTotal: number;
@@ -77,6 +78,10 @@ export const generateDailySummaryPDF = (data: PDFExportData): void => {
   doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
   doc.text('Tagesabrechnung', margin, yPos);
+  if (data.restaurantName) {
+    doc.setFontSize(12);
+    doc.text(data.restaurantName, pageWidth - margin - 4, yPos, { align: 'right' });
+  }
   
   yPos += 8;
   doc.setFontSize(12);

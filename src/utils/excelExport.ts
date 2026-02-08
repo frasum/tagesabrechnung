@@ -9,6 +9,7 @@ interface ExcelExportParams {
   deposits: BankDeposit[];
   month: number;
   year: number;
+  restaurantName?: string;
 }
 
 const formatCurrency = (value: number): string => {
@@ -28,7 +29,7 @@ const formatDateFull = (dateStr: string): string => {
   return format(date, 'dd.MM.yyyy', { locale: de });
 };
 
-export function generateCashBalanceExcel({ rows, deposits, month, year }: ExcelExportParams): void {
+export function generateCashBalanceExcel({ rows, deposits, month, year, restaurantName }: ExcelExportParams): void {
   const monthDate = new Date(year, month);
   const monthName = format(monthDate, 'MMMM yyyy', { locale: de });
   const createdAt = format(new Date(), 'dd.MM.yyyy HH:mm', { locale: de });
@@ -42,7 +43,7 @@ export function generateCashBalanceExcel({ rows, deposits, month, year }: ExcelE
   const wsData: (string | number)[][] = [];
 
   // Title and creation date
-  wsData.push([`Bargeldbestand - ${monthName}`]);
+  wsData.push([`Bargeldbestand - ${monthName}${restaurantName ? ` (${restaurantName})` : ''}`]);
   wsData.push([`Erstellt am: ${createdAt}`]);
   wsData.push([]); // Empty row
 
@@ -173,7 +174,7 @@ export function generateCashBalanceExcel({ rows, deposits, month, year }: ExcelE
   XLSX.utils.book_append_sheet(wb, ws, 'Bargeldbestand');
 
   // Generate filename
-  const fileName = `Bargeldbestand_${format(monthDate, 'yyyy-MM', { locale: de })}.xlsx`;
+  const fileName = `Bargeldbestand_${format(monthDate, 'yyyy-MM', { locale: de })}${restaurantName ? `_${restaurantName}` : ''}.xlsx`;
 
   // Trigger download
   XLSX.writeFile(wb, fileName);

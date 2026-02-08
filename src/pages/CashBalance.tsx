@@ -144,6 +144,7 @@ export default function CashBalance() {
       deposits: deposits,
       month: month - 1,
       year,
+      restaurantName,
     });
   }, [filteredData, selectedMonth, deposits, restaurantName]);
 

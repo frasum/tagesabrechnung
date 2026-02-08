@@ -119,6 +119,7 @@ export default function DailySummary() {
         description: e.description,
         amount: e.amount,
       })),
+      restaurantName,
       totals: {
         kellnerUmsatz,
         totalCardTotal,
