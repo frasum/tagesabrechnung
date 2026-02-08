@@ -72,11 +72,13 @@ export function useCashBalanceData(restaurantId: string | null) {
         const totalExpenses = sessionExpenses.reduce((sum, e) => sum + e.amount, 0);
 
         // BARGELD = Einnahmen - Abzüge
-        // Einnahmen: Tagesumsatz (POS) + Gutschein-Verkauf
+        // Einnahmen: Tagesumsatz (POS) + Gutschein-Verkauf + Sonstige Einnahmen
         // Abzüge: Kreditkarten, OrderSmart, Wolt, Gutscheine EL, FineDine, Einladung, Offene RE, Vorschuss, Ausgaben
+        const sonstigeEinnahme = session.sonstige_einnahme || 0;
         const bargeld =
           tagesumsatz +
-          gutscheineVK -
+          gutscheineVK +
+          sonstigeEinnahme -
           kreditkarten -
           ordersmart -
           wolt -
