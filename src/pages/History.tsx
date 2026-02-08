@@ -218,8 +218,8 @@ export default function History() {
                       <TableRow>
                         <TableHead>Datum</TableHead>
                         <TableHead className="text-right">POS Total</TableHead>
-                        <TableHead className="text-right">KK Terminal 1</TableHead>
-                        <TableHead className="text-right">KK Terminal 2</TableHead>
+                         <TableHead className="text-right">Kredit Karten Terminal 1</TableHead>
+                         <TableHead className="text-right">Kredit Karten Terminal 2</TableHead>
                         <TableHead className="text-center">Status</TableHead>
                         <TableHead></TableHead>
                       </TableRow>

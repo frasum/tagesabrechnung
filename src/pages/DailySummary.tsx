@@ -365,11 +365,11 @@ export default function DailySummary() {
                   <Table>
                     <TableBody>
                       <TableRow>
-                        <TableCell>KK Terminal 1</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(session.terminal_1_total || 0)}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>KK Terminal 2</TableCell>
+                        <TableCell>Kredit Karten Terminal 1</TableCell>
+                         <TableCell className="text-right tabular-nums">{formatCurrency(session.terminal_1_total || 0)}</TableCell>
+                       </TableRow>
+                       <TableRow>
+                         <TableCell>Kredit Karten Terminal 2</TableCell>
                         <TableCell className="text-right tabular-nums">{formatCurrency(session.terminal_2_total || 0)}</TableCell>
                       </TableRow>
                       <TableRow>
