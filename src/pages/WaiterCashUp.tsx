@@ -317,7 +317,7 @@ export default function WaiterCashUp() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Kartenzahlung (KK)</Label>
+                    <Label>Kartenzahlung (Kredit Karten)</Label>
                     <CurrencyInput value={newCardTotal} onChange={setNewCardTotal} />
                   </div>
                   <div>
@@ -491,7 +491,7 @@ export default function WaiterCashUp() {
                           <TableHead>Name</TableHead>
                           <TableHead className="text-right">Umsatz</TableHead>
                           <TableHead className="text-right">Kassiert</TableHead>
-                          <TableHead className="text-right">KK</TableHead>
+                          <TableHead className="text-right">Kredit Karten</TableHead>
                           <TableHead className="text-right">Hilf Mahl</TableHead>
                           <TableHead className="text-right">Offen</TableHead>
                           <TableHead className="text-right">Abgegeben</TableHead>

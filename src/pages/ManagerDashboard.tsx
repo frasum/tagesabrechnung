@@ -481,14 +481,14 @@ export default function ManagerDashboard() {
                     />
                   </div>
                   <div>
-                    <Label>KK Terminal 1</Label>
+                    <Label>Kredit Karten Terminal 1</Label>
                     <CurrencyInput
                       value={formData.terminal_1_total}
                       onChange={(v) => updateField('terminal_1_total', v)}
                     />
                   </div>
                   <div>
-                    <Label>KK Terminal 2</Label>
+                    <Label>Kredit Karten Terminal 2</Label>
                     <CurrencyInput
                       value={formData.terminal_2_total}
                       onChange={(v) => updateField('terminal_2_total', v)}
