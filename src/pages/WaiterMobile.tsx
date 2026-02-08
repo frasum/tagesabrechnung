@@ -14,7 +14,8 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRestaurant } from '@/hooks/useRestaurant';
-import { useSession, useCreateSession, useWaiterShifts, useCreateWaiterShift, useUpdateWaiterShift, useWaiterTipAverages } from '@/hooks/useSession';
+import { useSession, useCreateSession, useWaiterShifts, useCreateWaiterShift, useWaiterTipAverages } from '@/hooks/useSession';
+import { useUpdateWaiterShiftWithAudit } from '@/hooks/useWaiterShiftAudit';
 import { useWaiterRanking } from '@/hooks/useWaiterRanking';
 
 export default function WaiterMobile() {
@@ -39,7 +40,7 @@ export default function WaiterMobile() {
   const createSession = useCreateSession();
   const { data: waiterShifts = [], isLoading: shiftsLoading } = useWaiterShifts(session?.id);
   const createWaiterShift = useCreateWaiterShift();
-  const updateWaiterShift = useUpdateWaiterShift();
+  const updateWaiterShift = useUpdateWaiterShiftWithAudit();
   const { data: tipAverages = {}, isLoading: averagesLoading } = useWaiterTipAverages(restaurantId);
   const { data: rankings = [], isLoading: rankingsLoading } = useWaiterRanking();
 
@@ -118,6 +119,7 @@ export default function WaiterMobile() {
         await updateWaiterShift.mutateAsync({
           id: myShift.id,
           sessionId,
+          restaurantId: restaurantId!,
           ...formData,
         });
         toast({ title: 'Gespeichert', description: 'Deine Abrechnung wurde aktualisiert.' });

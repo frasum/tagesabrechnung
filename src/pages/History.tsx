@@ -23,6 +23,7 @@ import {
 import { useSessionHistory, useDeleteAllSessions } from '@/hooks/useSession';
 import { useRestaurant } from '@/hooks/useRestaurant';
 import { useToast } from '@/hooks/use-toast';
+import { AuditLogList } from '@/components/audit/AuditLogList';
 
 export default function History() {
   const navigate = useNavigate();
@@ -267,6 +268,9 @@ export default function History() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Audit Log Section */}
+        <AuditLogList />
       </div>
     </AppLayout>
   );

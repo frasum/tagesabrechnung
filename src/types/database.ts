@@ -95,6 +95,19 @@ export interface Setting {
   updated_at: string;
 }
 
+export interface AuditLog {
+  id: string;
+  created_at: string;
+  table_name: string;
+  record_id: string;
+  action: 'create' | 'update' | 'delete';
+  changed_by_id: string | null;
+  changed_by_name: string;
+  old_values: Record<string, unknown> | null;
+  new_values: Record<string, unknown> | null;
+  restaurant_id: string;
+}
+
 // Calculated summary types
 export interface DailySummary {
   kellnerUmsatz: number;

@@ -14,7 +14,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { useSession, useCreateSession, useWaiterShifts, useCreateWaiterShift, useDeleteWaiterShift, useUpdateWaiterShift, useWaiterTipAverages } from '@/hooks/useSession';
+import { useSession, useCreateSession, useWaiterShifts, useCreateWaiterShift, useDeleteWaiterShift, useWaiterTipAverages } from '@/hooks/useSession';
+import { useUpdateWaiterShiftWithAudit } from '@/hooks/useWaiterShiftAudit';
 import { useRestaurant } from '@/hooks/useRestaurant';
 import type { WaiterShift } from '@/types/database';
 
@@ -47,7 +48,7 @@ export default function WaiterCashUp() {
   } = useWaiterShifts(session?.id);
   const createWaiterShift = useCreateWaiterShift();
   const deleteWaiterShift = useDeleteWaiterShift();
-  const updateWaiterShift = useUpdateWaiterShift();
+  const updateWaiterShift = useUpdateWaiterShiftWithAudit();
   const { data: waiterTipAverages = {} } = useWaiterTipAverages(restaurantId);
 
   const handleCreateSession = async () => {
@@ -122,6 +123,7 @@ export default function WaiterCashUp() {
         await updateWaiterShift.mutateAsync({
           id: editingShiftId,
           sessionId: session.id,
+          restaurantId: restaurantId!,
           waiter_name: newWaiterName.trim(),
           second_waiter_name: newSecondWaiterName,
           participates_in_pool: newParticipatesInPool,
