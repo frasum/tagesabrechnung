@@ -12,6 +12,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { useRestaurant } from '@/hooks/useRestaurant';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   useSession,
   useCreateSession,
@@ -24,6 +25,7 @@ export default function DailySummary() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const { toast } = useToast();
   const { restaurantId, restaurantName } = useRestaurant();
+  const { user } = useAuth();
 
   // Data hooks
   const { data: session, isLoading: sessionLoading } = useSession(selectedDate, restaurantId);
@@ -120,6 +122,7 @@ export default function DailySummary() {
         amount: e.amount,
       })),
       restaurantName,
+      exportedBy: user?.name,
       totals: {
         kellnerUmsatz,
         totalCardTotal,
