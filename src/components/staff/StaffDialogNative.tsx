@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import type { Staff, StaffInput, StaffRole } from '@/hooks/useStaff';
 import { useRestaurants } from '@/hooks/useRestaurant';
-import { useUnlinkedProfiles, useAdminLinkAccount } from '@/hooks/useProfiles';
+import { useUnlinkedProfiles, useLinkedProfilesForStaff, useAdminLinkAccount } from '@/hooks/useProfiles';
 import { useUserRole, useUpdateUserRole } from '@/hooks/useUserRole';
 import type { PermissionLevel } from '@/types/permissions';
 import { PERMISSION_LEVEL_INFO } from '@/types/permissions';
@@ -34,6 +34,7 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
 
   const { data: restaurants = [] } = useRestaurants();
   const { data: unlinkedProfiles = [], isLoading: profilesLoading } = useUnlinkedProfiles();
+  const { data: linkedProfiles = [], isLoading: linkedProfilesLoading } = useLinkedProfilesForStaff(staff?.id ?? null);
   const linkMutation = useAdminLinkAccount();
   const { data: currentRole } = useUserRole(staff?.id);
   const updateRoleMutation = useUpdateUserRole();
@@ -113,16 +114,16 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
     setSelectedProfileId(null);
   };
 
-  const handleUnlink = () => {
-    if (!staff?.linked_profile) return;
+  const handleUnlink = (profileId: string) => {
+    if (!staff) return;
     linkMutation.mutate({
       staff_id: staff.id,
-      profile_id: staff.linked_profile.id,
+      profile_id: profileId,
       action: 'unlink',
     });
   };
 
-  const linkedProfile = staff?.linked_profile;
+  const isLoadingProfiles = profilesLoading || linkedProfilesLoading;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -281,60 +282,71 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
               <div className="space-y-3">
                 <Label className="text-base font-semibold flex items-center gap-2">
                   <Smartphone className="w-4 h-4 text-primary" />
-                  OAuth-Konto verknüpfen
+                  OAuth-Konten verknüpfen
                 </Label>
 
-                {linkedProfile ? (
-                  <div className="p-3 rounded-lg border-2 border-green-200 bg-green-50">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                          <Link2 className="w-4 h-4 text-green-600" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-green-800">
-                            Verknüpft mit:
-                          </p>
-                          <p className="text-sm text-green-700">
-                            {linkedProfile.email}
-                            {linkedProfile.full_name && ` (${linkedProfile.full_name})`}
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={handleUnlink}
-                        disabled={linkMutation.isPending}
-                        className="text-destructive border-destructive hover:bg-destructive/10"
-                      >
-                        {linkMutation.isPending ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <>
-                            <Unlink className="w-4 h-4 mr-1" />
-                            Aufheben
-                          </>
-                        )}
-                      </Button>
-                    </div>
+                {isLoadingProfiles ? (
+                  <div className="flex items-center gap-2 text-muted-foreground p-3">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Lade Profile...
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    {profilesLoading ? (
-                      <div className="flex items-center gap-2 text-muted-foreground p-3">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Lade Profile...
+                  <div className="space-y-4">
+                    {/* Currently linked accounts */}
+                    {linkedProfiles.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-muted-foreground">Verknüpfte Konten:</p>
+                        {linkedProfiles.map((profile) => (
+                          <div
+                            key={profile.id}
+                            className="p-3 rounded-lg border-2 border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                                  <Link2 className="w-4 h-4 text-green-600 dark:text-green-400" />
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                                    {profile.email}
+                                  </p>
+                                  {profile.full_name && (
+                                    <p className="text-xs text-green-700 dark:text-green-300">
+                                      {profile.full_name}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleUnlink(profile.id)}
+                                disabled={linkMutation.isPending}
+                                className="text-destructive border-destructive hover:bg-destructive/10"
+                              >
+                                {linkMutation.isPending ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <>
+                                    <Unlink className="w-4 h-4 mr-1" />
+                                    Aufheben
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ) : unlinkedProfiles.length === 0 ? (
-                      <p className="text-sm text-muted-foreground p-3 bg-muted rounded-lg">
-                        Keine nicht verknüpften OAuth-Benutzer verfügbar.
-                      </p>
-                    ) : (
-                      <>
+                    )}
+
+                    {/* Available unlinked profiles */}
+                    {unlinkedProfiles.length > 0 && (
+                      <div className="space-y-2">
                         <p className="text-sm text-muted-foreground">
-                          Wähle einen OAuth-Benutzer zum Verknüpfen:
+                          {linkedProfiles.length > 0
+                            ? 'Weitere Konten verfügbar:'
+                            : 'Wähle einen OAuth-Benutzer zum Verknüpfen:'}
                         </p>
                         <div className="max-h-40 overflow-y-auto space-y-1 border rounded-lg p-2">
                           {unlinkedProfiles.map((profile) => (
@@ -384,7 +396,14 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
                           )}
                           Verknüpfen
                         </Button>
-                      </>
+                      </div>
+                    )}
+
+                    {/* No profiles available */}
+                    {linkedProfiles.length === 0 && unlinkedProfiles.length === 0 && (
+                      <p className="text-sm text-muted-foreground p-3 bg-muted rounded-lg">
+                        Keine OAuth-Benutzer verfügbar.
+                      </p>
                     )}
                   </div>
                 )}

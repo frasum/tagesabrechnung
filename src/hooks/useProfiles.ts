@@ -42,6 +42,36 @@ export function useUnlinkedProfiles() {
 }
 
 /**
+ * Fetch OAuth profiles that are linked to a specific staff member.
+ * Used to show all OAuth accounts for a staff member in the dialog.
+ */
+export function useLinkedProfilesForStaff(staffId: string | null) {
+  return useQuery({
+    queryKey: ['profiles', 'linked', staffId],
+    enabled: !!staffId,
+    queryFn: async () => {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-link-account?action=get-linked-for-staff&staff_id=${staffId}`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Unbekannter Fehler' }));
+        throw new Error(error.error || 'Fehler beim Laden der verknüpften Profile');
+      }
+
+      return response.json() as Promise<LinkedProfile[]>;
+    },
+  });
+}
+
+/**
  * Link or unlink an OAuth profile to a staff member via Edge Function.
  * This bypasses RLS since profiles can only be updated by their own users.
  */

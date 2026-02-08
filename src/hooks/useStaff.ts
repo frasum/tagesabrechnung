@@ -31,6 +31,9 @@ export interface Staff {
   created_at: string;
   updated_at: string;
   staff_restaurants?: StaffRestaurant[];
+  /** All linked OAuth profiles for this staff member */
+  linked_profiles?: LinkedProfile[];
+  /** @deprecated Use linked_profiles instead - kept for backward compatibility */
   linked_profile?: LinkedProfile | null;
 }
 
@@ -72,7 +75,8 @@ export function useStaff(role?: StaffRole) {
       if (error) throw error;
       
       // Fetch linked profiles via edge function (bypasses RLS)
-      let linkedProfiles: Record<string, LinkedProfile> = {};
+      // This returns ALL linked profiles indexed by staff_id
+      let linkedProfilesMap: Record<string, LinkedProfile[]> = {};
       try {
         const response = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-link-account?action=get-all-linked`,
@@ -85,16 +89,19 @@ export function useStaff(role?: StaffRole) {
         );
         if (response.ok) {
           const profiles = await response.json();
-          // Index by staff_id for quick lookup
+          // Group by staff_id for quick lookup
           for (const p of profiles) {
             if (p.staff_id) {
-              linkedProfiles[p.staff_id] = {
+              if (!linkedProfilesMap[p.staff_id]) {
+                linkedProfilesMap[p.staff_id] = [];
+              }
+              linkedProfilesMap[p.staff_id].push({
                 id: p.id,
                 user_id: p.user_id,
                 email: p.email,
                 full_name: p.full_name,
                 avatar_url: p.avatar_url,
-              };
+              });
             }
           }
         }
@@ -102,11 +109,16 @@ export function useStaff(role?: StaffRole) {
         console.error('Failed to fetch linked profiles:', e);
       }
       
-      // Merge linked_profile into staff data
-      return (staffData || []).map((staff: any) => ({
-        ...staff,
-        linked_profile: linkedProfiles[staff.id] || null,
-      })) as Staff[];
+      // Merge linked_profiles into staff data
+      return (staffData || []).map((staff: any) => {
+        const profiles = linkedProfilesMap[staff.id] || [];
+        return {
+          ...staff,
+          linked_profiles: profiles,
+          // Backward compatibility: linked_profile is the first one or null
+          linked_profile: profiles.length > 0 ? profiles[0] : null,
+        };
+      }) as Staff[];
     },
   });
 }

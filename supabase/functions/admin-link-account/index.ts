@@ -46,6 +46,36 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Return linked profiles for a specific staff member
+      if (action === 'get-linked-for-staff') {
+        const staffId = url.searchParams.get('staff_id');
+        if (!staffId) {
+          return new Response(
+            JSON.stringify({ error: 'staff_id ist erforderlich' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const { data, error } = await supabaseAdmin
+          .from('profiles')
+          .select('id, user_id, email, full_name, avatar_url, staff_id')
+          .eq('staff_id', staffId)
+          .order('email', { ascending: true });
+
+        if (error) {
+          console.error('Error fetching profiles for staff:', error);
+          return new Response(
+            JSON.stringify({ error: 'Fehler beim Laden der Profile' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        return new Response(
+          JSON.stringify(data || []),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       // Default: Return unlinked profiles (for linking UI)
       const { data, error } = await supabaseAdmin
         .from('profiles')
@@ -106,22 +136,8 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Check if this staff already has a linked profile
-      const { data: existingLink } = await supabaseAdmin
-        .from('profiles')
-        .select('id, email')
-        .eq('staff_id', staff_id)
-        .neq('id', profile_id)
-        .maybeSingle();
-
-      if (existingLink) {
-        return new Response(
-          JSON.stringify({ 
-            error: `Mitarbeiter ist bereits mit ${existingLink.email} verknüpft` 
-          }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+      // NOTE: Multiple OAuth accounts per staff member are now allowed
+      // The previous restriction has been removed to support Google + Apple logins
     }
 
     // Update the profile with the new staff_id (or null to unlink)
