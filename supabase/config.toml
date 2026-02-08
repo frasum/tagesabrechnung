@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.verify-login-confirmation]
 verify_jwt = false
+
+[functions.manage-nav-permissions]
+verify_jwt = false

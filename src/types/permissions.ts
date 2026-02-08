@@ -16,7 +16,18 @@ export const NAV_PERMISSIONS: Record<string, PermissionConfig> = {
   'history': { label: 'Verlauf', description: 'Vergangene Abrechnungen', minLevel: 'manager' },
   'cash-balance': { label: 'Bargeldbestand', description: 'Bargeld verwalten', minLevel: 'manager' },
   'staff': { label: 'Mitarbeiter', description: 'Mitarbeiter verwalten', minLevel: 'admin' },
+  'permissions': { label: 'Berechtigungen', description: 'Navigationszugriff verwalten', minLevel: 'admin' },
 };
+
+// Manager-configurable navigation items (excludes staff-only and admin-only)
+export const MANAGER_NAV_ITEMS = [
+  { path: 'manager', label: 'Manager Dashboard' },
+  { path: 'kitchen', label: 'Küchen Trinkgeld' },
+  { path: 'summary', label: 'Tagesabrechnung' },
+  { path: 'statistics', label: 'Statistiken' },
+  { path: 'history', label: 'Verlauf' },
+  { path: 'cash-balance', label: 'Bargeldbestand' },
+];
 
 // Permission level hierarchy (higher index = more permissions)
 const PERMISSION_HIERARCHY: PermissionLevel[] = ['staff', 'manager', 'admin'];

@@ -22,6 +22,7 @@ import WaiterQRPoster from "./pages/WaiterQRPoster";
 import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
 import { ConfirmLoginPage } from "./pages/ConfirmLoginPage";
+import PermissionManagement from "./pages/PermissionManagement";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +59,7 @@ function AppContent() {
         <Route path="/install" element={<Install />} />
         <Route path="/confirm-login/:token" element={<ConfirmLoginPage />} />
         <Route path="/staff" element={<ProtectedRoute requiredLevel="admin"><StaffManagement /></ProtectedRoute>} />
+        <Route path="/permissions" element={<ProtectedRoute requiredLevel="admin"><PermissionManagement /></ProtectedRoute>} />
         
         {/* Redirect root to default restaurant */}
         <Route path="/" element={<Navigate to="/spicery" replace />} />

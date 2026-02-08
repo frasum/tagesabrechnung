@@ -14,12 +14,14 @@ import {
   LogOut,
   Wallet,
   ChevronDown,
-  LucideIcon
+  LucideIcon,
+  Shield
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRestaurant, useRestaurants } from '@/hooks/useRestaurant';
+import { useManagerNavPermissions } from '@/hooks/useManagerNavPermissions';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -58,13 +60,39 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { restaurantName, restaurantSlug } = useRestaurant();
   const { data: restaurants = [] } = useRestaurants();
   
-  // Get user's permission level and filter nav items
+  // Get user's permission level
   const userLevel = user?.permissionLevel || 'staff';
-  const navItems = useMemo(() => 
-    allNavItems.filter(item => hasPermission(userLevel, item.minLevel)),
-    [userLevel]
+  const isAdmin = hasPermission(userLevel, 'admin');
+  const isManager = userLevel === 'manager';
+  
+  // Fetch manager-specific nav permissions (only for managers)
+  const { data: managerPaths = [] } = useManagerNavPermissions(
+    isManager ? user?.staffId : undefined
   );
-  const canAccessStaff = hasPermission(userLevel, 'admin');
+  const hasCustomPermissions = isManager && managerPaths.length > 0;
+  
+  // Filter nav items based on permission level and manager-specific permissions
+  const navItems = useMemo(() => {
+    return allNavItems.filter(item => {
+      // Admin sees all
+      if (isAdmin) return true;
+      
+      // Manager with custom permissions - check if path is allowed
+      if (isManager && hasCustomPermissions) {
+        // Staff-level items always visible
+        if (item.minLevel === 'staff') return true;
+        return managerPaths.includes(item.path);
+      }
+      
+      // Manager without custom permissions - sees all non-admin items
+      if (isManager) {
+        return item.minLevel !== 'admin';
+      }
+      
+      // Staff - only staff level items
+      return item.minLevel === 'staff';
+    });
+  }, [userLevel, isAdmin, isManager, hasCustomPermissions, managerPaths]);
 
   const handleLogout = () => {
     logout();
@@ -148,20 +176,35 @@ export function AppLayout({ children }: AppLayoutProps) {
                 </Link>
               );
             })}
-            {canAccessStaff && (
-              <Link
-                to="/staff"
-                onClick={() => setMobileMenuOpen(false)}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors",
-                  location.pathname === '/staff'
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground" 
-                    : "text-sidebar-foreground hover:bg-sidebar-accent"
-                )}
-              >
-                <UserCog className="w-5 h-5" />
-                Mitarbeiter
-              </Link>
+            {isAdmin && (
+              <>
+                <Link
+                  to="/staff"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors",
+                    location.pathname === '/staff'
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground" 
+                      : "text-sidebar-foreground hover:bg-sidebar-accent"
+                  )}
+                >
+                  <UserCog className="w-5 h-5" />
+                  Mitarbeiter
+                </Link>
+                <Link
+                  to="/permissions"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors",
+                    location.pathname === '/permissions'
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground" 
+                      : "text-sidebar-foreground hover:bg-sidebar-accent"
+                  )}
+                >
+                  <Shield className="w-5 h-5" />
+                  Berechtigungen
+                </Link>
+              </>
             )}
             <button
               onClick={() => { setMobileMenuOpen(false); handleLogout(); }}
@@ -220,19 +263,33 @@ export function AppLayout({ children }: AppLayoutProps) {
               </Link>
             );
           })}
-          {canAccessStaff && (
-            <Link
-              to="/staff"
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                location.pathname === '/staff'
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground" 
-                  : "text-sidebar-foreground hover:bg-sidebar-accent"
-              )}
-            >
-              <UserCog className="w-5 h-5" />
-              Mitarbeiter
-            </Link>
+          {isAdmin && (
+            <>
+              <Link
+                to="/staff"
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                  location.pathname === '/staff'
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground" 
+                    : "text-sidebar-foreground hover:bg-sidebar-accent"
+                )}
+              >
+                <UserCog className="w-5 h-5" />
+                Mitarbeiter
+              </Link>
+              <Link
+                to="/permissions"
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                  location.pathname === '/permissions'
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground" 
+                    : "text-sidebar-foreground hover:bg-sidebar-accent"
+                )}
+              >
+                <Shield className="w-5 h-5" />
+                Berechtigungen
+              </Link>
+            </>
           )}
         </nav>
 

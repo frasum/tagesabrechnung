@@ -252,6 +252,38 @@ export type Database = {
           },
         ]
       }
+      manager_nav_permissions: {
+        Row: {
+          created_at: string
+          id: string
+          nav_path: string
+          staff_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nav_path: string
+          staff_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nav_path?: string
+          staff_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manager_nav_permissions_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
