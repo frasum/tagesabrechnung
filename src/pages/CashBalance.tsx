@@ -38,11 +38,28 @@ export default function CashBalance() {
   const [pdfPreview, setPdfPreview] = useState<{ blobUrl: string; fileName: string } | null>(null);
   const [depositDialogOpen, setDepositDialogOpen] = useState(false);
 
-  // Calculate total cash from all data
-  const totalCash = useMemo(() => {
-    if (!data) return 0;
-    return data.reduce((sum, row) => sum + row.bargeld, 0);
-  }, [data]);
+  // Calculate cumulative cash up to selected month
+  const cumulativeCash = useMemo(() => {
+    if (!data || !selectedMonth) return 0;
+    return data
+      .filter((row) => row.date <= `${selectedMonth}-31`)
+      .reduce((sum, row) => sum + row.bargeld, 0);
+  }, [data, selectedMonth]);
+
+  // Calculate cumulative deposits up to selected month
+  const cumulativeDeposits = useMemo(() => {
+    if (!deposits || !selectedMonth) return 0;
+    return deposits
+      .filter((d) => d.deposit_date <= `${selectedMonth}-31`)
+      .reduce((sum, d) => sum + d.amount, 0);
+  }, [deposits, selectedMonth]);
+
+  // Get month label for display
+  const selectedMonthLabel = useMemo(() => {
+    if (!selectedMonth) return '';
+    const date = parseISO(`${selectedMonth}-01`);
+    return format(date, 'MMMM yyyy', { locale: de });
+  }, [selectedMonth]);
 
   // Extract available months from data
   const availableMonths = useMemo(() => {
@@ -122,9 +139,10 @@ export default function CashBalance() {
 
         {/* Cash Balance Summary with Bank Deposits */}
         <CashBalanceSummary
-          totalCash={totalCash}
-          totalDeposits={totalDeposits}
+          totalCash={cumulativeCash}
+          totalDeposits={cumulativeDeposits}
           latestDeposit={latestDeposit}
+          monthLabel={selectedMonthLabel}
           onAddDeposit={() => setDepositDialogOpen(true)}
         />
 

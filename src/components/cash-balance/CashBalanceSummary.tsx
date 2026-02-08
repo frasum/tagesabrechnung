@@ -16,6 +16,7 @@ interface CashBalanceSummaryProps {
   totalCash: number;
   totalDeposits: number;
   latestDeposit: { deposit_date: string; amount: number } | null;
+  monthLabel?: string;
   onAddDeposit: () => void;
 }
 
@@ -23,6 +24,7 @@ export function CashBalanceSummary({
   totalCash,
   totalDeposits,
   latestDeposit,
+  monthLabel,
   onAddDeposit,
 }: CashBalanceSummaryProps) {
   const remainingCash = totalCash - totalDeposits;
@@ -43,7 +45,9 @@ export function CashBalanceSummary({
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Bargeld gesamt</p>
+                  <p className="text-sm text-muted-foreground">
+                    {monthLabel ? `Bargeld bis ${monthLabel}` : 'Bargeld gesamt'}
+                  </p>
                   <p className="text-xl font-semibold tabular-nums text-foreground">
                     {formatCurrency(totalCash)}
                   </p>
