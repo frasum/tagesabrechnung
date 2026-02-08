@@ -73,11 +73,19 @@ export default function Login() {
     const pathMatch = window.location.pathname.match(/^\/([^/]+)/);
     if (pathMatch && pathMatch[1] !== 'login') {
       localStorage.setItem('oauth_redirect_restaurant', pathMatch[1]);
+    } else {
+      // Fallback: spicery als Standard-Restaurant speichern
+      localStorage.setItem('oauth_redirect_restaurant', 'spicery');
     }
     
     setIsLoading(true);
+    
+    // Redirect URI mit dem aktuellen Pfad, damit der User zurück zur Login-Seite kommt
+    // und dann korrekt weitergeleitet wird
+    const redirectUri = `${window.location.origin}/login`;
+    
     const result = await lovable.auth.signInWithOAuth('google', {
-      redirect_uri: window.location.origin,
+      redirect_uri: redirectUri,
     });
 
     if (result.error) {
@@ -95,11 +103,19 @@ export default function Login() {
     const pathMatch = window.location.pathname.match(/^\/([^/]+)/);
     if (pathMatch && pathMatch[1] !== 'login') {
       localStorage.setItem('oauth_redirect_restaurant', pathMatch[1]);
+    } else {
+      // Fallback: spicery als Standard-Restaurant speichern
+      localStorage.setItem('oauth_redirect_restaurant', 'spicery');
     }
     
     setIsLoading(true);
+    
+    // Redirect URI mit dem aktuellen Pfad, damit der User zurück zur Login-Seite kommt
+    // und dann korrekt weitergeleitet wird
+    const redirectUri = `${window.location.origin}/login`;
+    
     const result = await lovable.auth.signInWithOAuth('apple', {
-      redirect_uri: window.location.origin,
+      redirect_uri: redirectUri,
     });
 
     if (result.error) {
