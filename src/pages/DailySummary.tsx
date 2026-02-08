@@ -1,16 +1,21 @@
-import { useState, useMemo } from 'react';
-import { format } from 'date-fns';
+import { useState, useEffect, useMemo } from 'react';
+import { format, isToday, isYesterday } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { useSelectedDate } from '@/contexts/DateContext';
-import { Plus, FileText, Euro, CreditCard, Truck, Receipt, Download, Banknote, Vault } from 'lucide-react';
+import { Plus, FileText, Euro, CreditCard, Truck, Receipt, Download, Banknote, Vault, Trash2, Settings, Wallet, ClipboardList, Clock, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { generateDailySummaryPDF } from '@/utils/pdfExport';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { DateSelector } from '@/components/shared/DateSelector';
 import { StatCard } from '@/components/shared/StatCard';
+import { CurrencyInput } from '@/components/shared/CurrencyInput';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useRestaurant } from '@/hooks/useRestaurant';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,9 +24,12 @@ import { TransferDialog } from '@/components/register/TransferDialog';
 import {
   useSession,
   useCreateSession,
+  useUpdateSession,
   useWaiterShifts,
   useKitchenShifts,
   useExpenses,
+  useCreateExpense,
+  useDeleteExpense,
 } from '@/hooks/useSession';
 
 export default function DailySummary() {
@@ -31,29 +39,153 @@ export default function DailySummary() {
   const { user } = useAuth();
   const [showTransferDialog, setShowTransferDialog] = useState(false);
 
+  // Form state for editable fields
+  const [formData, setFormData] = useState({
+    spicery_counter: 0,
+    pos_total: 0,
+    terminal_1_total: 0,
+    terminal_2_total: 0,
+    ordersmart_revenue: 0,
+    wolt_revenue: 0,
+    vouchers_sold: 0,
+    vouchers_redeemed: 0,
+    finedine_vouchers: 0,
+    vorschuss: 0,
+    einladung: 0,
+    sonstige_einnahme: 0,
+    notes: '',
+    takeaway_total: 0,
+    spicery_transactions: 0,
+    card_total_gl: 0,
+  });
+
+  // Expense form
+  const [expenseDescription, setExpenseDescription] = useState('');
+  const [expenseAmount, setExpenseAmount] = useState(0);
+
   // Data hooks
   const { data: session, isLoading: sessionLoading } = useSession(selectedDate, restaurantId);
   const createSession = useCreateSession();
+  const updateSession = useUpdateSession();
   const { data: waiterShifts = [] } = useWaiterShifts(session?.id);
   const { data: kitchenShifts = [] } = useKitchenShifts(session?.id);
   const { data: expenses = [] } = useExpenses(session?.id);
+  const createExpense = useCreateExpense();
+  const deleteExpense = useDeleteExpense();
   
   // Cash balance hooks
   const { transfers, balances, createTransfer, isCreating } = useRegisterTransfers(restaurantId);
   const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+
+  // Sync form data with session
+  useEffect(() => {
+    if (session) {
+      setFormData({
+        spicery_counter: session.spicery_counter || 0,
+        pos_total: session.pos_total || 0,
+        terminal_1_total: session.terminal_1_total || 0,
+        terminal_2_total: session.terminal_2_total || 0,
+        ordersmart_revenue: session.ordersmart_revenue || 0,
+        wolt_revenue: session.wolt_revenue || 0,
+        vouchers_sold: session.vouchers_sold || 0,
+        vouchers_redeemed: session.vouchers_redeemed || 0,
+        finedine_vouchers: session.finedine_vouchers || 0,
+        vorschuss: session.vorschuss || 0,
+        einladung: session.einladung || 0,
+        sonstige_einnahme: session.sonstige_einnahme || 0,
+        notes: session.notes || '',
+        takeaway_total: session.takeaway_total || 0,
+        spicery_transactions: session.spicery_transactions || 0,
+        card_total_gl: session.card_total_gl || 0,
+      });
+    } else {
+      setFormData({
+        spicery_counter: 0,
+        pos_total: 0,
+        terminal_1_total: 0,
+        terminal_2_total: 0,
+        ordersmart_revenue: 0,
+        wolt_revenue: 0,
+        vouchers_sold: 0,
+        vouchers_redeemed: 0,
+        finedine_vouchers: 0,
+        vorschuss: 0,
+        einladung: 0,
+        sonstige_einnahme: 0,
+        notes: '',
+        takeaway_total: 0,
+        spicery_transactions: 0,
+        card_total_gl: 0,
+      });
+    }
+  }, [session]);
+
+  const updateField = async (field: keyof typeof formData, value: number | string) => {
+    // Use functional update to get the latest state and avoid race conditions
+    let updatedFormData: typeof formData | null = null;
+    
+    setFormData((prev) => {
+      updatedFormData = { ...prev, [field]: value };
+      return updatedFormData;
+    });
+    
+    // Auto-save to database with the correctly updated data
+    if (session?.id && updatedFormData) {
+      try {
+        await updateSession.mutateAsync({
+          id: session.id,
+          ...updatedFormData,
+        });
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+      }
+    }
+  };
+
+  const handleAddExpense = async () => {
+    if (!session?.id || !expenseDescription.trim() || expenseAmount <= 0) return;
+
+    try {
+      await createExpense.mutateAsync({
+        session_id: session.id,
+        description: expenseDescription.trim(),
+        amount: expenseAmount,
+      });
+      setExpenseDescription('');
+      setExpenseAmount(0);
+      toast({ title: 'Ausgabe hinzugefügt' });
+    } catch (error) {
+      toast({ title: 'Fehler', variant: 'destructive' });
+    }
+  };
+
+  const handleDeleteExpense = async (id: string) => {
+    if (!session?.id) return;
+    try {
+      await deleteExpense.mutateAsync({ id, sessionId: session.id });
+      toast({ title: 'Ausgabe gelöscht' });
+    } catch (error) {
+      toast({ title: 'Fehler', variant: 'destructive' });
+    }
+  };
+
   // Calculate totals
-  const kellnerUmsatz = waiterShifts.reduce((sum, w) => sum + w.pos_sales, 0);
-  const totalCardTotal = waiterShifts.reduce((sum, w) => sum + w.card_total, 0) 
-    + (session?.card_total_gl || 0);
-  const totalHilfMahl = waiterShifts.reduce((sum, w) => sum + w.hilf_mahl, 0);
-  const totalOpenInvoices = waiterShifts.reduce((sum, w) => sum + w.open_invoices, 0);
-  const totalKitchenTip = waiterShifts.reduce((sum, w) => sum + w.kitchen_tip, 0);
+  const kellnerUmsatz = waiterShifts.reduce((sum, w) => sum + (w.pos_sales || 0), 0);
+  const totalCardTotal = waiterShifts.reduce((sum, w) => sum + (w.card_total || 0), 0) 
+    + formData.card_total_gl;
+  const totalHilfMahl = waiterShifts.reduce((sum, w) => sum + (w.hilf_mahl || 0), 0);
+  const totalOpenInvoices = waiterShifts.reduce((sum, w) => sum + (w.open_invoices || 0), 0);
+  const totalKitchenTip = waiterShifts.reduce((sum, w) => sum + (w.kitchen_tip || 0), 0);
+  const totalKassiertBrutto = waiterShifts.reduce((sum, w) => sum + (w.kassiert_brutto || 0), 0)
+    + formData.ordersmart_revenue
+    + formData.wolt_revenue
+    + formData.takeaway_total;
   
   // Waiter tip pool calculation
   const calculateExpected = (w: typeof waiterShifts[0]) => 
-    (w.kassiert_brutto || 0) + w.hilf_mahl - w.open_invoices - w.card_total;
+    (w.kassiert_brutto || 0) + (w.hilf_mahl || 0) - (w.open_invoices || 0) - (w.card_total || 0);
   const waiterTipPool = waiterShifts.reduce((sum, w) => 
-    sum + (w.cash_handed_in - calculateExpected(w) - w.kitchen_tip), 0);
+    sum + ((w.cash_handed_in || 0) - calculateExpected(w) - (w.kitchen_tip || 0)), 0);
   const waiterCount = waiterShifts.length;
   const tipPerWaiter = waiterCount > 0 ? waiterTipPool / waiterCount : 0;
   
@@ -62,37 +194,32 @@ export default function DailySummary() {
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
 
   // Delivery revenue
-  const totalDeliveryRevenue = session
-    ? (session.ordersmart_revenue || 0) +
-      (session.wolt_revenue || 0) +
-      (session.takeaway_total || 0)
-    : 0;
+  const totalDeliveryRevenue = 
+    formData.ordersmart_revenue +
+    formData.wolt_revenue +
+    formData.takeaway_total;
+
+  // Mismatch calculations for warnings
+  const posMismatch = formData.pos_total - kellnerUmsatz;
+  const terminalTotal = formData.terminal_1_total + formData.terminal_2_total;
+  const waiterCardTotal = waiterShifts.reduce((sum, w) => sum + (w.card_total || 0), 0);
+  const cardTerminalMismatch = terminalTotal - totalCardTotal;
 
   // BARGELD calculation - uses pos_total (Vectron total) as base
-  // BARGELD = pos_total + vouchers_sold + sonstige_einnahme - terminals - ordersmart - wolt 
-  //           - vouchers_redeemed - finedine - einladung - open_invoices - vorschuss - expenses
-  const bargeld = session
-    ? (session.pos_total || 0) +
-      (session.vouchers_sold || 0) +
-      (session.sonstige_einnahme || 0) -
-      (session.terminal_1_total || 0) -
-      (session.terminal_2_total || 0) -
-      (session.ordersmart_revenue || 0) -
-      (session.wolt_revenue || 0) -
-      (session.vouchers_redeemed || 0) -
-      (session.finedine_vouchers || 0) -
-      (session.einladung || 0) -
-      totalOpenInvoices -
-      (session.vorschuss || 0) -
-      totalExpenses
-    : 0;
-
-  // POS Mismatch: Check if POS total matches sum of waiter POS sales (kept for PDF export)
-  const posMismatch = session ? (session.pos_total || 0) - kellnerUmsatz : 0;
-
-  // Card Terminal Mismatch: Check if terminals match waiter card totals (kept for PDF export)
-  const terminalTotal = session ? (session.terminal_1_total || 0) + (session.terminal_2_total || 0) : 0;
-  const cardTerminalMismatch = terminalTotal - totalCardTotal;
+  const bargeld = 
+    formData.pos_total +
+    formData.vouchers_sold +
+    formData.sonstige_einnahme -
+    formData.terminal_1_total -
+    formData.terminal_2_total -
+    formData.ordersmart_revenue -
+    formData.wolt_revenue -
+    formData.vouchers_redeemed -
+    formData.finedine_vouchers -
+    formData.einladung -
+    totalOpenInvoices -
+    formData.vorschuss -
+    totalExpenses;
 
   // Simplified daily cash balance calculation
   const initialRestaurantBalance = balances.initialRestaurant; // 1.000 €
@@ -105,6 +232,21 @@ export default function DailySummary() {
 
   const todaysRegisterBalance = initialRestaurantBalance + bargeld + todaysVaultTransfers;
   const showCashBalanceCard = todaysRegisterBalance < initialRestaurantBalance; // nur zeigen wenn < 1.000 €
+
+  // Format submission timestamp
+  const formatSubmittedAt = (timestamp: string | null) => {
+    if (!timestamp) return null;
+    const date = new Date(timestamp);
+    const timeStr = format(date, 'HH:mm', { locale: de });
+    
+    if (isToday(date)) {
+      return `Heute, ${timeStr} Uhr`;
+    } else if (isYesterday(date)) {
+      return `Gestern, ${timeStr} Uhr`;
+    } else {
+      return `${format(date, 'dd.MM.yyyy', { locale: de })}, ${timeStr} Uhr`;
+    }
+  };
 
   const handleTransferSubmit = (data: {
     transfer_date: string;
@@ -132,7 +274,22 @@ export default function DailySummary() {
     if (!session) return;
     
     generateDailySummaryPDF({
-      session,
+      session: {
+        ...session,
+        pos_total: formData.pos_total,
+        terminal_1_total: formData.terminal_1_total,
+        terminal_2_total: formData.terminal_2_total,
+        vouchers_sold: formData.vouchers_sold,
+        vouchers_redeemed: formData.vouchers_redeemed,
+        finedine_vouchers: formData.finedine_vouchers,
+        vorschuss: formData.vorschuss,
+        einladung: formData.einladung,
+        sonstige_einnahme: formData.sonstige_einnahme,
+        ordersmart_revenue: formData.ordersmart_revenue,
+        wolt_revenue: formData.wolt_revenue,
+        takeaway_total: formData.takeaway_total,
+        card_total_gl: formData.card_total_gl,
+      },
       waiterShifts: waiterShifts.map(w => ({
         waiter_name: w.waiter_name,
         pos_sales: w.pos_sales || 0,
@@ -231,6 +388,44 @@ export default function DailySummary() {
         {/* Session Content */}
         {session && (
           <div className="space-y-6">
+            {/* Warning Cards - Show when there are mismatches */}
+            {waiterShifts.length > 0 && (Math.abs(posMismatch - formData.takeaway_total) >= 0.01 || Math.abs(cardTerminalMismatch) >= 0.01) && (
+              <div className="grid sm:grid-cols-2 gap-4">
+                {Math.abs(posMismatch - formData.takeaway_total) >= 0.01 && (
+                  <Card className="border-destructive/30 bg-destructive/5">
+                    <CardContent className="py-4 flex items-center gap-3">
+                      <AlertTriangle className="w-5 h-5 text-destructive shrink-0" />
+                      <div>
+                        <p className="font-medium text-destructive">POS Differenz</p>
+                        <p className="text-sm text-muted-foreground">
+                          POS Total ({formatCurrency(formData.pos_total)}) stimmt nicht mit Kellner-Umsätzen ({formatCurrency(kellnerUmsatz)}) + Takeaway ({formatCurrency(formData.takeaway_total)}) überein.
+                        </p>
+                        <p className="text-sm font-semibold text-destructive mt-1">
+                          Differenz: {formatCurrency(posMismatch - formData.takeaway_total)}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+                {Math.abs(cardTerminalMismatch) >= 0.01 && (
+                  <Card className="border-destructive/30 bg-destructive/5">
+                    <CardContent className="py-4 flex items-center gap-3">
+                      <AlertTriangle className="w-5 h-5 text-destructive shrink-0" />
+                      <div>
+                        <p className="font-medium text-destructive">Terminal Differenz</p>
+                        <p className="text-sm text-muted-foreground">
+                          Terminals ({formatCurrency(terminalTotal)}) stimmen nicht mit Kartenzahlungen ({formatCurrency(waiterCardTotal)} Kellner + {formatCurrency(formData.card_total_gl)} GL = {formatCurrency(totalCardTotal)}) überein.
+                        </p>
+                        <p className="text-sm font-semibold text-destructive mt-1">
+                          Differenz: {formatCurrency(cardTerminalMismatch)}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
+
             {/* Main Stats */}
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard
@@ -258,7 +453,7 @@ export default function DailySummary() {
 
             {/* Kassenstand Card - nur anzeigen wenn Kassenstand < 1.000 € */}
             {showCashBalanceCard && (
-              <Card className="border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20">
+              <Card className="border-warning/30 bg-warning/5 dark:bg-warning/10">
                 <CardHeader className="pb-2">
                   <CardTitle className="flex items-center gap-2 text-lg">
                     <Banknote className="w-5 h-5" />
@@ -277,7 +472,7 @@ export default function DailySummary() {
                   {/* Bargeld heute */}
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Bargeld heute</span>
-                    <span className={`font-semibold tabular-nums ${bargeld >= 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                    <span className={`font-semibold tabular-nums ${bargeld >= 0 ? 'text-success' : 'text-warning'}`}>
                       {formatCurrency(bargeld)}
                     </span>
                   </div>
@@ -286,7 +481,7 @@ export default function DailySummary() {
                   {todaysVaultTransfers > 0 && (
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Transfer Tresor</span>
-                      <span className="font-semibold tabular-nums text-blue-600">
+                      <span className="font-semibold tabular-nums text-primary">
                         +{formatCurrency(todaysVaultTransfers)}
                       </span>
                     </div>
@@ -297,7 +492,7 @@ export default function DailySummary() {
                   {/* Kassenstand Ende des Tages */}
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium">Kassenstand</span>
-                    <span className={`text-lg font-bold tabular-nums ${todaysRegisterBalance >= initialRestaurantBalance ? 'text-emerald-600' : 'text-destructive'}`}>
+                    <span className={`text-lg font-bold tabular-nums ${todaysRegisterBalance >= initialRestaurantBalance ? 'text-success' : 'text-destructive'}`}>
                       {formatCurrency(todaysRegisterBalance)}
                     </span>
                   </div>
@@ -309,6 +504,282 @@ export default function DailySummary() {
                       Transfer vom Tresor
                     </Button>
                   )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Input Section - 6 Cards Grid */}
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Notes */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Notizen</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Textarea
+                    placeholder="Notizen für diesen Tag..."
+                    value={formData.notes}
+                    onChange={(e) => updateField('notes', e.target.value)}
+                    rows={6}
+                  />
+                </CardContent>
+              </Card>
+
+              {/* POS & Terminal */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Settings className="w-5 h-5" />
+                    POS & Terminal
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>Kellner Abzugebender Betrag</Label>
+                    <div className="h-10 px-3 flex items-center justify-end rounded-md border bg-muted text-right tabular-nums font-medium">
+                      {new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(totalKassiertBrutto)} €
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Vectron Gesamtumsatz</Label>
+                    <CurrencyInput
+                      value={formData.pos_total}
+                      onChange={(v) => updateField('pos_total', v)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Kredit Karten Terminal 1</Label>
+                    <CurrencyInput
+                      value={formData.terminal_1_total}
+                      onChange={(v) => updateField('terminal_1_total', v)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Kredit Karten Terminal 2</Label>
+                    <CurrencyInput
+                      value={formData.terminal_2_total}
+                      onChange={(v) => updateField('terminal_2_total', v)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Kreditkartenumsatz GL</Label>
+                    <CurrencyInput
+                      value={formData.card_total_gl}
+                      onChange={(v) => updateField('card_total_gl', v)}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Take Away */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Truck className="w-5 h-5" />
+                    Take Away
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>Takeaway GL</Label>
+                    <CurrencyInput
+                      value={formData.takeaway_total}
+                      onChange={(v) => updateField('takeaway_total', v)}
+                    />
+                  </div>
+                  <div>
+                    <Label>OrderSmart</Label>
+                    <CurrencyInput
+                      value={formData.ordersmart_revenue}
+                      onChange={(v) => updateField('ordersmart_revenue', v)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Wolt</Label>
+                    <CurrencyInput
+                      value={formData.wolt_revenue}
+                      onChange={(v) => updateField('wolt_revenue', v)}
+                    />
+                  </div>
+                  <div className="pt-2 border-t">
+                    <Label>Take-Away Gesamt</Label>
+                    <div className="h-10 px-3 flex items-center justify-end rounded-md border bg-muted text-right tabular-nums font-medium">
+                      {new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(totalDeliveryRevenue)} €
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Vouchers & Deductions */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Receipt className="w-5 h-5" />
+                    Gutscheine & Abzüge
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>Gutschein Verkauf (verkauft)</Label>
+                    <CurrencyInput
+                      value={formData.vouchers_sold}
+                      onChange={(v) => updateField('vouchers_sold', v)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Gutschein Eingelöst (eingelöst)</Label>
+                    <CurrencyInput
+                      value={formData.vouchers_redeemed}
+                      onChange={(v) => updateField('vouchers_redeemed', v)}
+                    />
+                  </div>
+                  <div>
+                    <Label>FineDine Gutscheine</Label>
+                    <CurrencyInput
+                      value={formData.finedine_vouchers}
+                      onChange={(v) => updateField('finedine_vouchers', v)}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Other Income & Deductions */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Wallet className="w-5 h-5" />
+                    Sonstiges
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>Vorschuss</Label>
+                    <CurrencyInput
+                      value={formData.vorschuss}
+                      onChange={(v) => updateField('vorschuss', v)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Einladung</Label>
+                    <CurrencyInput
+                      value={formData.einladung}
+                      onChange={(v) => updateField('einladung', v)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Sonstige Einnahmen</Label>
+                    <CurrencyInput
+                      value={formData.sonstige_einnahme}
+                      onChange={(v) => updateField('sonstige_einnahme', v)}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Expenses */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Ausgaben</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Beschreibung"
+                      value={expenseDescription}
+                      onChange={(e) => setExpenseDescription(e.target.value)}
+                      className="flex-1"
+                    />
+                    <CurrencyInput
+                      value={expenseAmount}
+                      onChange={setExpenseAmount}
+                      className="w-28"
+                    />
+                    <Button onClick={handleAddExpense} disabled={!expenseDescription.trim() || expenseAmount <= 0}>
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+
+                  {expenses.length > 0 && (
+                    <div className="space-y-2">
+                      {expenses.map((expense) => (
+                        <div
+                          key={expense.id}
+                          className="flex items-center justify-between p-3 bg-muted rounded-lg"
+                        >
+                          <span className="text-sm">{expense.description}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium tabular-nums">
+                              {formatCurrency(expense.amount)}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteExpense(expense.id)}
+                            >
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                      <div className="flex justify-between pt-2 border-t">
+                        <span className="font-medium">Summe Ausgaben:</span>
+                        <span className="font-semibold tabular-nums text-destructive">
+                          {formatCurrency(totalExpenses)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Waiter Submissions Overview */}
+            {waiterShifts.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ClipboardList className="w-5 h-5" />
+                    Kellner-Abrechnungen
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Eingereicht</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {waiterShifts.map((shift) => {
+                        const submittedAt = formatSubmittedAt((shift as any).submitted_at);
+                        const hasData = (shift.pos_sales || 0) > 0 || (shift.cash_handed_in || 0) > 0;
+                        
+                        return (
+                          <TableRow key={shift.id}>
+                            <TableCell className="font-medium">{shift.waiter_name}</TableCell>
+                            <TableCell>
+                              {hasData ? (
+                                <Badge variant="default" className="gap-1">
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  Komplett
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  Ausstehend
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right text-sm text-muted-foreground">
+                              {submittedAt || '–'}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
                 </CardContent>
               </Card>
             )}
@@ -332,11 +803,11 @@ export default function DailySummary() {
                       </TableRow>
                       <TableRow>
                         <TableCell>Gutschein Verkauf</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(session.vouchers_sold || 0)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatCurrency(formData.vouchers_sold)}</TableCell>
                       </TableRow>
                       <TableRow>
                         <TableCell>Sonstige Einnahmen</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(session.sonstige_einnahme || 0)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatCurrency(formData.sonstige_einnahme)}</TableCell>
                       </TableRow>
                       <TableRow>
                         <TableCell>Hilf Mahl</TableCell>
@@ -345,7 +816,7 @@ export default function DailySummary() {
                       <TableRow className="border-t-2">
                         <TableCell className="font-semibold">Summe Einnahmen</TableCell>
                         <TableCell className="text-right tabular-nums font-semibold text-success">
-                          {formatCurrency(kellnerUmsatz + (session.vouchers_sold || 0) + (session.sonstige_einnahme || 0) + totalHilfMahl)}
+                          {formatCurrency(kellnerUmsatz + formData.vouchers_sold + formData.sonstige_einnahme + totalHilfMahl)}
                         </TableCell>
                       </TableRow>
                     </TableBody>
@@ -366,27 +837,27 @@ export default function DailySummary() {
                     <TableBody>
                       <TableRow>
                         <TableCell>Kredit Karten Terminal 1</TableCell>
-                         <TableCell className="text-right tabular-nums">{formatCurrency(session.terminal_1_total || 0)}</TableCell>
+                         <TableCell className="text-right tabular-nums">{formatCurrency(formData.terminal_1_total)}</TableCell>
                        </TableRow>
                        <TableRow>
                          <TableCell>Kredit Karten Terminal 2</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(session.terminal_2_total || 0)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatCurrency(formData.terminal_2_total)}</TableCell>
                       </TableRow>
                       <TableRow>
                         <TableCell>Gutschein Eingelöst</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(session.vouchers_redeemed || 0)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatCurrency(formData.vouchers_redeemed)}</TableCell>
                       </TableRow>
                       <TableRow>
                         <TableCell>FineDine Gutscheine</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(session.finedine_vouchers || 0)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatCurrency(formData.finedine_vouchers)}</TableCell>
                       </TableRow>
                       <TableRow>
                         <TableCell>Vorschuss</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(session.vorschuss || 0)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatCurrency(formData.vorschuss)}</TableCell>
                       </TableRow>
                       <TableRow>
                         <TableCell>Einladung</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(session.einladung || 0)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatCurrency(formData.einladung)}</TableCell>
                       </TableRow>
                       <TableRow>
                         <TableCell>Offene Rechnungen</TableCell>
@@ -404,12 +875,12 @@ export default function DailySummary() {
                         <TableCell className="font-semibold">Summe Abzüge</TableCell>
                         <TableCell className="text-right tabular-nums font-semibold text-destructive">
                           {formatCurrency(
-                            (session.terminal_1_total || 0) +
-                            (session.terminal_2_total || 0) +
-                            (session.vouchers_redeemed || 0) +
-                            (session.finedine_vouchers || 0) +
-                            (session.vorschuss || 0) +
-                            (session.einladung || 0) +
+                            formData.terminal_1_total +
+                            formData.terminal_2_total +
+                            formData.vouchers_redeemed +
+                            formData.finedine_vouchers +
+                            formData.vorschuss +
+                            formData.einladung +
                             totalOpenInvoices +
                             totalExpenses +
                             totalDeliveryRevenue
@@ -434,15 +905,15 @@ export default function DailySummary() {
                     <TableBody>
                       <TableRow>
                         <TableCell>Takeaway GL</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(session.takeaway_total || 0)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatCurrency(formData.takeaway_total)}</TableCell>
                       </TableRow>
                       <TableRow>
                         <TableCell>OrderSmart</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(session.ordersmart_revenue || 0)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatCurrency(formData.ordersmart_revenue)}</TableCell>
                       </TableRow>
                       <TableRow>
                         <TableCell>Wolt</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(session.wolt_revenue || 0)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatCurrency(formData.wolt_revenue)}</TableCell>
                       </TableRow>
                       <TableRow className="border-t-2">
                         <TableCell className="font-semibold">Gesamt</TableCell>
@@ -488,7 +959,7 @@ export default function DailySummary() {
                       <p className="text-sm font-medium mb-2">Kellner Pool-Verteilung ({waiterCount} Kellner)</p>
                       <div className="space-y-1">
                         {waiterShifts.map((shift) => {
-                          const contribution = shift.cash_handed_in - calculateExpected(shift) - shift.kitchen_tip;
+                          const contribution = (shift.cash_handed_in || 0) - calculateExpected(shift) - (shift.kitchen_tip || 0);
                           return (
                             <div key={shift.id} className="flex justify-between text-sm">
                               <span>{shift.waiter_name}</span>

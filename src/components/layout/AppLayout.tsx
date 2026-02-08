@@ -45,9 +45,8 @@ interface NavItem {
 
 const allNavItems: NavItem[] = [
   { path: '', label: 'Kellner Abrechnung', icon: Users, minLevel: 'staff' },
-  { path: 'manager', label: 'Manager Dashboard', icon: Settings, minLevel: 'manager' },
-  { path: 'kitchen', label: 'Küchen Trinkgeld', icon: ChefHat, minLevel: 'manager' },
   { path: 'summary', label: 'Tagesabrechnung', icon: FileText, minLevel: 'manager' },
+  { path: 'kitchen', label: 'Küchen Trinkgeld', icon: ChefHat, minLevel: 'manager' },
   { path: 'register-balance', label: 'Wechselgeldbestand', icon: ArrowUpDown, minLevel: 'manager' },
   { path: 'statistics', label: 'Statistiken', icon: BarChart3, minLevel: 'manager' },
   { path: 'history', label: 'Verlauf', icon: History, minLevel: 'manager' },
@@ -74,7 +73,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const hasCustomPermissions = isManager && managerPaths.length > 0;
   
   // Paths that managers ALWAYS see (core functionality)
-  const alwaysVisibleForManager = ['', 'manager', 'kitchen', 'summary', 'register-balance'];
+  const alwaysVisibleForManager = ['', 'summary', 'kitchen', 'register-balance'];
   
   // Filter nav items based on permission level and manager-specific permissions
   const navItems = useMemo(() => {

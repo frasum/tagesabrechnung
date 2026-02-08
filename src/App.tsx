@@ -14,7 +14,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import Login from "./pages/Login";
 import WaiterCashUp from "./pages/WaiterCashUp";
 import WaiterMobile from "./pages/WaiterMobile";
-import ManagerDashboard from "./pages/ManagerDashboard";
+// ManagerDashboard removed - functionality moved to DailySummary
 import KitchenTipSplit from "./pages/KitchenTipSplit";
 import DailySummary from "./pages/DailySummary";
 import Statistics from "./pages/Statistics";
@@ -39,9 +39,8 @@ function RestaurantRoutes() {
         <Routes>
           <Route index element={<ProtectedRoute><WaiterCashUp /></ProtectedRoute>} />
           <Route path="waiter" element={<ProtectedRoute><WaiterMobile /></ProtectedRoute>} />
-          <Route path="manager" element={<ProtectedRoute requiredLevel="manager"><ManagerDashboard /></ProtectedRoute>} />
-          <Route path="kitchen" element={<ProtectedRoute requiredLevel="manager"><KitchenTipSplit /></ProtectedRoute>} />
           <Route path="summary" element={<ProtectedRoute requiredLevel="manager"><DailySummary /></ProtectedRoute>} />
+          <Route path="kitchen" element={<ProtectedRoute requiredLevel="manager"><KitchenTipSplit /></ProtectedRoute>} />
           <Route path="statistics" element={<ProtectedRoute requiredLevel="manager"><Statistics /></ProtectedRoute>} />
           <Route path="history" element={<ProtectedRoute requiredLevel="manager"><History /></ProtectedRoute>} />
           <Route path="cash-balance" element={<ProtectedRoute requiredLevel="manager"><CashBalance /></ProtectedRoute>} />
