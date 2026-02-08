@@ -208,7 +208,10 @@ export default function ManagerDashboard() {
   const totalHilfMahl = waiterShifts.reduce((sum, w) => sum + (w.hilf_mahl || 0), 0);
   const totalOpenInvoices = waiterShifts.reduce((sum, w) => sum + (w.open_invoices || 0), 0);
   const totalCardTotal = waiterShifts.reduce((sum, w) => sum + (w.card_total || 0), 0) + formData.card_total_gl;
-  const totalKassiertBrutto = waiterShifts.reduce((sum, w) => sum + (w.kassiert_brutto || 0), 0);
+  const totalKassiertBrutto = waiterShifts.reduce((sum, w) => sum + (w.kassiert_brutto || 0), 0)
+    + formData.ordersmart_revenue
+    + formData.wolt_revenue
+    + formData.takeaway_total;
 
   // Mismatch calculations for warnings
   const posMismatch = formData.pos_total - kellnerUmsatz;
