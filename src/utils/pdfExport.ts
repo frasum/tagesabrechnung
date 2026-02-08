@@ -49,6 +49,7 @@ interface PDFExportData {
   kitchenShifts: KitchenShift[];
   expenses: Expense[];
   restaurantName?: string;
+  exportedBy?: string;
   totals: {
     kellnerUmsatz: number;
     totalCardTotal: number;
@@ -92,7 +93,10 @@ export const generateDailySummaryPDF = (data: PDFExportData): void => {
   yPos += 4;
   doc.setFontSize(8);
   doc.setTextColor(128);
-  doc.text(`Erstellt am: ${format(new Date(), "dd.MM.yyyy HH:mm", { locale: de })}`, margin, yPos);
+  const exportInfo = data.exportedBy 
+    ? `Erstellt am: ${format(new Date(), "dd.MM.yyyy HH:mm", { locale: de })} von ${data.exportedBy}`
+    : `Erstellt am: ${format(new Date(), "dd.MM.yyyy HH:mm", { locale: de })}`;
+  doc.text(exportInfo, margin, yPos);
   doc.setTextColor(0);
 
   // Alert for mismatches
