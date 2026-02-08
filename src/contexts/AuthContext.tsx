@@ -92,6 +92,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return Promise.race([convertOAuthUser(supabaseUser), timeout]);
   };
 
+  // Create a usable OAuth user even if role lookup / network is flaky
+  const createOAuthFallbackUser = (supabaseUser: User): AuthUser => {
+    const cachedUser = localStorage.getItem(AUTH_STORAGE_KEY);
+    let cachedPermissionLevel: PermissionLevel = 'staff';
+    let cachedStaffId: string | undefined;
+    let cachedNeedsLinking = true;
+
+    if (cachedUser) {
+      try {
+        const parsed = JSON.parse(cachedUser);
+        cachedPermissionLevel = parsed.permissionLevel || 'staff';
+        cachedStaffId = parsed.staffId;
+        cachedNeedsLinking = parsed.needsLinking ?? !parsed.staffId;
+      } catch {
+        // ignore cache parse issues
+      }
+    }
+
+    const name = supabaseUser.user_metadata?.full_name
+      || supabaseUser.user_metadata?.name
+      || supabaseUser.email?.split('@')[0]
+      || 'Benutzer';
+
+    const fallbackUser: AuthUser = {
+      id: cachedStaffId || supabaseUser.id,
+      name,
+      role: 'waiter',
+      permissionLevel: cachedPermissionLevel,
+      isOAuthUser: true,
+      staffId: cachedStaffId,
+      needsLinking: cachedNeedsLinking,
+    };
+
+    return fallbackUser;
+  };
+
   useEffect(() => {
     let isMounted = true;
 
@@ -100,7 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async (event, session) => {
         if (!isMounted) return;
 
-        if (event === 'SIGNED_IN' && session?.user) {
+        if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') && session?.user) {
           try {
             const authUser = await convertOAuthUserWithTimeout(session.user);
             if (isMounted) {
@@ -113,33 +149,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.error('OAuth sign-in processing failed:', error);
             if (!isMounted) return;
 
-            // Try to get cached permission level
-            const cachedUser = localStorage.getItem(AUTH_STORAGE_KEY);
-            let cachedPermissionLevel: PermissionLevel = 'staff';
-            let cachedStaffId: string | undefined;
-            let cachedNeedsLinking = true;
-            if (cachedUser) {
-              try {
-                const parsed = JSON.parse(cachedUser);
-                cachedPermissionLevel = parsed.permissionLevel || 'staff';
-                cachedStaffId = parsed.staffId;
-                cachedNeedsLinking = parsed.needsLinking ?? !parsed.staffId;
-              } catch {}
-            }
-
-            const name = session.user.user_metadata?.full_name
-              || session.user.user_metadata?.name
-              || session.user.email?.split('@')[0]
-              || 'Benutzer';
-            const fallbackUser: AuthUser = {
-              id: cachedStaffId || session.user.id,
-              name,
-              role: 'waiter',
-              permissionLevel: cachedPermissionLevel,
-              isOAuthUser: true,
-              staffId: cachedStaffId,
-              needsLinking: cachedNeedsLinking,
-            };
+            // Try to get cached permission level / staff mapping and continue (avoid redirect back to /login)
+            const fallbackUser = createOAuthFallbackUser(session.user);
             console.log('⚠️ OAuth fallback user created:', { id: fallbackUser.id, name: fallbackUser.name, permissionLevel: fallbackUser.permissionLevel, staffId: fallbackUser.staffId });
             setUser(fallbackUser);
             localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(fallbackUser));
@@ -207,8 +218,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
           } catch (e) {
             console.error('OAuth user conversion failed:', e);
-            // Set loading false so login page shows
+            // IMPORTANT: do not fall back to /login just because role lookup timed out
             if (isMounted) {
+              const fallbackUser = createOAuthFallbackUser(session.user);
+              setUser(fallbackUser);
+              localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(fallbackUser));
               setIsLoading(false);
             }
           }
