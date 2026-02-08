@@ -360,36 +360,36 @@ export default function ManagerDashboard() {
         {session && (
           <div className="space-y-6">
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Bargeld - moved to right with lg:col-start-3 */}
-              {currentRegisterBalance < 0 && (
-                <Card className="border-amber-500 bg-amber-50/50 dark:bg-amber-950/20 lg:col-start-3 md:col-span-2 lg:col-span-1">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Banknote className="w-5 h-5" />
-                      Bargeld
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Heute Vorschau</span>
-                      <span className={`font-semibold tabular-nums ${bargeldPreview >= 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
-                        {formatCurrency(bargeldPreview)}
-                      </span>
-                    </div>
-                    <Separator />
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">Kassenstand nach heute</span>
-                      <span className={`text-lg font-bold tabular-nums ${currentRegisterBalance >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
-                        {formatCurrency(currentRegisterBalance)}
-                      </span>
-                    </div>
+              {/* Bargeld - right column */}
+              <Card className={currentRegisterBalance < 0 ? "border-amber-500 bg-amber-50/50 dark:bg-amber-950/20" : ""}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Banknote className="w-5 h-5" />
+                    Bargeld
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Heute Vorschau</span>
+                    <span className={`font-semibold tabular-nums ${bargeldPreview >= 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                      {formatCurrency(bargeldPreview)}
+                    </span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Kassenstand nach heute</span>
+                    <span className={`text-lg font-bold tabular-nums ${currentRegisterBalance >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                      {formatCurrency(currentRegisterBalance)}
+                    </span>
+                  </div>
+                  {currentRegisterBalance < 0 && (
                     <Button onClick={() => setShowTransferDialog(true)} variant="outline" className="w-full gap-2">
                       <Vault className="w-4 h-4" />
                       Transfer vom Tresor
                     </Button>
-                  </CardContent>
-                </Card>
-              )}
+                  )}
+                </CardContent>
+              </Card>
 
               {/* POS & Terminal */}
               <Card>
