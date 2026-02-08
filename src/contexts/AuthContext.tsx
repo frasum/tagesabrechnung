@@ -125,9 +125,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (event === 'SIGNED_IN' && session?.user) {
           try {
             const authUser = await convertOAuthUserWithTimeout(session.user);
+            console.log('✅ OAuth user logged in:', { id: authUser.id, name: authUser.name, permissionLevel: authUser.permissionLevel, staffId: authUser.staffId });
             setUser(authUser);
             localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
-        } catch (error) {
+          } catch (error) {
           console.error('OAuth sign-in processing failed:', error);
           // Try to get cached permission level
           const cachedUser = localStorage.getItem(AUTH_STORAGE_KEY);
@@ -156,6 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             staffId: cachedStaffId,
             needsLinking: cachedNeedsLinking,
           };
+          console.log('⚠️ OAuth fallback user created:', { id: fallbackUser.id, name: fallbackUser.name, permissionLevel: fallbackUser.permissionLevel, staffId: fallbackUser.staffId });
           setUser(fallbackUser);
           localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(fallbackUser));
         }
@@ -307,6 +309,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         staffId: staff.id,
         needsLinking: false,
       };
+      console.log('🔗 Account linked:', { id: updatedUser.id, name: updatedUser.name, permissionLevel: updatedUser.permissionLevel, staffId: updatedUser.staffId });
       setUser(updatedUser);
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updatedUser));
     }
