@@ -548,18 +548,6 @@ export default function ManagerDashboard() {
                       </Button>
                     </>
                   )}
-                  
-                  {currentRegisterBalance >= 0 && (
-                    <>
-                      <Separator />
-                      <div>
-                        <Label className="text-muted-foreground">Kassenstand (kumuliert)</Label>
-                        <div className="text-xl font-semibold tabular-nums text-emerald-600">
-                          {formatCurrency(currentRegisterBalance)}
-                        </div>
-                      </div>
-                    </>
-                  )}
                 </CardContent>
               </Card>
 
