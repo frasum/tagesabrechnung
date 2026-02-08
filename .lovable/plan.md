@@ -1,81 +1,85 @@
 
-# Plan: Wechselgeld zum Bargeldbestand hinzufügen
+# Plan: Excel-Export für Bargeldbestand
 
 ## Übersicht
 
-Das Wechselgeld ist ein fester Startbetrag, der immer in der Kasse liegt. Dieser wird einmalig eingetragen und zum verbleibenden Bargeldbestand addiert.
+Hinzufügen eines Excel-Exports mit zwei Bereichen auf einem Sheet:
+1. **Tägliche Übersicht** - alle Spalten wie in der Tabelle
+2. **Bankeinzahlungen** - Datum und Betrag
 
-## Was du bekommst
+Der PDF-Export-Button wird durch ein Dropdown-Menü ersetzt.
 
-```text
-┌─────────────────────────────────────────────────────────────────────────┐
-│  Aktueller Bargeldbestand                                               │
-│  Bargeld abzüglich Bankeinzahlungen                                     │
-│                                                                         │
-│  Wechselgeld:            500,00 €  [Bearbeiten]                        │
-│  Bargeld bis Februar:  12.450,00 €                                      │
-│  Bankeinzahlungen:     -8.000,00 €                                      │
-│  ─────────────────────────────────                                      │
-│  Verbleibendes:         4.950,00 €              [+ Einzahlung]          │
-│                                                                         │
-│  Letzte Einzahlung: 05.02.2026 - 3.000,00 €                            │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-**Berechnung:**
-`Verbleibendes Bargeld = Wechselgeld + kumuliertes Bargeld - Bankeinzahlungen`
-
-## Technische Umsetzung
-
-### 1. Neue Datenbank-Tabelle: `settings`
-
-Anstatt eine eigene Tabelle nur für Wechselgeld zu erstellen, nutzen wir eine allgemeine Einstellungstabelle (die für zukünftige Einstellungen erweiterbar ist):
-
-| Spalte | Typ | Beschreibung |
-|--------|-----|--------------|
-| id | uuid | Primärschlüssel |
-| key | text | Einstellungs-Schlüssel (z.B. "petty_cash") |
-| value | jsonb | Wert als JSON (z.B. {"amount": 500}) |
-| updated_at | timestamp | Letzte Änderung |
-
-**Vorteil:** Flexibel für weitere Einstellungen in der Zukunft
-
-### 2. Neue Dateien
-
-| Datei | Zweck |
-|-------|-------|
-| `src/hooks/useSettings.ts` | Hook zum Lesen/Schreiben von Einstellungen |
-| `src/components/cash-balance/PettyCashSetting.tsx` | Komponente zum Anzeigen/Bearbeiten des Wechselgelds |
-
-### 3. Änderungen an bestehenden Dateien
-
-**`src/pages/CashBalance.tsx`:**
-- Import des Wechselgeld-Hooks
-- Berechnung: `verbleibendesBargeld = wechselgeld + cumulativeCash - cumulativeDeposits`
-
-**`src/components/cash-balance/CashBalanceSummary.tsx`:**
-- Neues Prop `pettyCash` für den Wechselgeldbetrag
-- Zeigt das Wechselgeld als erste Zeile in der Berechnung an
-- Berücksichtigt Wechselgeld im verbleibenden Bargeld
-
-### 4. Ablauf beim Bearbeiten
+## Excel-Struktur
 
 ```text
-+------------------+     +-------------------+     +------------------+
-| Nutzer klickt    | --> | Eingabefeld wird  | --> | Speichern in     |
-| "Bearbeiten"     |     | aktiviert         |     | settings         |
-+------------------+     +-------------------+     +------------------+
-                                                          |
-                                                          v
-+------------------+     +-------------------+     +------------------+
-| Alle Berechnungen| <-- | React Query       | <-- | Daten neu laden  |
-| aktualisiert     |     | invalidiert Cache |     |                  |
-+------------------+     +-------------------+     +------------------+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Bargeldbestand - Februar 2026                                               │
+│ Erstellt am: 08.02.2026 14:30                                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│ TÄGLICHE ÜBERSICHT                                                          │
+│ Datum   │ Umsatz   │ Kredit  │ OrderSm │ Wolt │ ... │ Ausgaben │ Bargeld   │
+│ Sa 1.2. │ 1.234 €  │ -456 €  │ -100 €  │ -50 €│ ... │ -30 €    │ 598 €     │
+│ So 2.2. │ 2.345 €  │ -567 €  │ -150 €  │ -75 €│ ... │ -45 €    │ 1.508 €   │
+│ ...     │ ...      │ ...     │ ...     │ ...  │ ... │ ...      │ ...       │
+│ GESAMT  │ 12.450 € │ -3.456 €│ -800 €  │ -400 €│...│ -250 €   │ 7.544 €   │
+│                                                                             │
+│ (Leerzeile)                                                                 │
+│                                                                             │
+│ BANKEINZAHLUNGEN                                                            │
+│ Datum      │ Betrag                                                         │
+│ 05.02.2026 │ 3.000 €                                                        │
+│ 01.02.2026 │ 5.000 €                                                        │
+│ Gesamt     │ 8.000 €                                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Vorteile
+## UI-Änderung
 
-- **Einfach:** Nur ein Wert, der einmal eingetragen wird
-- **Flexibel:** Kann jederzeit angepasst werden
-- **Übersichtlich:** Wechselgeld ist klar in der Berechnung sichtbar
-- **Erweiterbar:** Die settings-Tabelle kann für weitere Einstellungen genutzt werden
+Aktuell:
+```text
+[PDF Export]
+```
+
+Neu:
+```text
+[Export ▼]
+  ├─ PDF Export
+  └─ Excel Export
+```
+
+## Umsetzung
+
+### 1. Neue Abhängigkeit
+
+```
+xlsx (SheetJS)
+```
+
+Leichtgewichtige Bibliothek für Excel-Generierung im Browser.
+
+### 2. Neue Datei erstellen
+
+**`src/utils/excelExport.ts`**
+
+Enthält die Funktion `generateCashBalanceExcel()`:
+- Erstellt Workbook mit einem Sheet
+- Fügt Titel und Erstellungsdatum hinzu
+- Generiert Tägliche Übersicht mit Summenzeile
+- Fügt Bankeinzahlungen mit Gesamtsumme hinzu
+- Formatiert Spaltenbreiten automatisch
+- Löst Download aus
+
+### 3. Änderung an CashBalance.tsx
+
+- Import des neuen DropdownMenu-Komponenten
+- Neue `handleExcelExport`-Funktion
+- Ersetzen des Buttons durch Dropdown mit PDF/Excel Optionen
+
+## Dateiänderungen
+
+| Datei | Änderung |
+|-------|----------|
+| `package.json` | Neue Abhängigkeit `xlsx` |
+| `src/utils/excelExport.ts` | Neue Datei mit Export-Logik |
+| `src/pages/CashBalance.tsx` | Button → Dropdown, Excel-Handler |
