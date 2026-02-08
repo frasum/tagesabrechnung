@@ -38,22 +38,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (name: string, pinCode: string): Promise<boolean> => {
     try {
-      const { data, error } = await supabase
-        .from('staff')
-        .select('id, name, role')
-        .eq('name', name.trim())
-        .eq('pin_code', pinCode)
-        .eq('is_active', true)
-        .maybeSingle();
+      // Call the backend validate-pin function for secure server-side validation
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/validate-pin`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            name: name.trim(),
+            pin_code: pinCode,
+          }),
+        }
+      );
 
-      if (error || !data) {
+      if (!response.ok) {
+        return false;
+      }
+
+      const result = await response.json();
+
+      if (!result.success || !result.user) {
         return false;
       }
 
       const authUser: AuthUser = {
-        id: data.id,
-        name: data.name,
-        role: data.role as 'waiter' | 'kitchen',
+        id: result.user.id,
+        name: result.user.name,
+        role: result.user.role,
       };
 
       setUser(authUser);

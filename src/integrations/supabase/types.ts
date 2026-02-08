@@ -468,7 +468,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      validate_staff_pin: {
+        Args: { p_name: string; p_pin: string }
+        Returns: {
+          id: string
+          is_active: boolean
+          name: string
+          role: string
+        }[]
+      }
     }
     Enums: {
       staff_role: "waiter" | "kitchen"
