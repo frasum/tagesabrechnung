@@ -37,7 +37,7 @@ export function CashBalanceSummary({
             </div>
             <div className="space-y-4">
               <div>
-                <h2 className="text-lg font-semibold text-foreground">Aktueller Kassenbestand</h2>
+                <h2 className="text-lg font-semibold text-foreground">Aktueller Bargeldbestand</h2>
                 <p className="text-sm text-muted-foreground">Bargeld abzüglich Bankeinzahlungen</p>
               </div>
 
