@@ -29,7 +29,7 @@ export function useCashBalanceData() {
 
       if (sessionsError) throw sessionsError;
 
-      // 2. Alle waiter_shifts laden
+      // 2. Alle waiter_shifts laden (für offene Rechnungen)
       const { data: waiterShifts, error: shiftsError } = await supabase
         .from('waiter_shifts')
         .select('*');
@@ -43,16 +43,13 @@ export function useCashBalanceData() {
 
       if (expensesError) throw expensesError;
 
-      // 4. Pro Session aggregieren und BARGELD berechnen
+      // 4. Pro Session direkt die DB-Werte verwenden
       return (sessions || []).map((session) => {
         const shifts = (waiterShifts || []).filter((s) => s.session_id === session.id);
         const sessionExpenses = (expenses || []).filter((e) => e.session_id === session.id);
 
-        // Berechnungen
-        const kellnerUmsatz = shifts.reduce((sum, w) => sum + (w.pos_sales || 0), 0);
-        const totalOpenInvoices = shifts.reduce((sum, w) => sum + (w.open_invoices || 0), 0);
-        const totalExpenses = sessionExpenses.reduce((sum, e) => sum + e.amount, 0);
-
+        // Direkt aus der Session-Tabelle
+        const tagesumsatz = session.pos_total || 0;
         const kreditkarten = (session.terminal_1_total || 0) + (session.terminal_2_total || 0);
         const ordersmart = session.ordersmart_revenue || 0;
         const wolt = session.wolt_revenue || 0;
@@ -62,11 +59,15 @@ export function useCashBalanceData() {
         const einladung = session.einladung || 0;
         const vorschuss = session.vorschuss || 0;
 
+        // Aggregierte Werte
+        const totalOpenInvoices = shifts.reduce((sum, w) => sum + (w.open_invoices || 0), 0);
+        const totalExpenses = sessionExpenses.reduce((sum, e) => sum + e.amount, 0);
+
         // BARGELD = Einnahmen - Abzüge
-        // Einnahmen: Kellner-Umsatz + Gutschein-Verkauf
+        // Einnahmen: Tagesumsatz (POS) + Gutschein-Verkauf
         // Abzüge: Kreditkarten, OrderSmart, Wolt, Gutscheine EL, FineDine, Einladung, Offene RE, Vorschuss, Ausgaben
         const bargeld =
-          kellnerUmsatz +
+          tagesumsatz +
           gutscheineVK -
           kreditkarten -
           ordersmart -
@@ -80,7 +81,7 @@ export function useCashBalanceData() {
 
         return {
           date: session.session_date,
-          kellnerUmsatz,
+          kellnerUmsatz: tagesumsatz,
           kreditkarten,
           ordersmart,
           wolt,
