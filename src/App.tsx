@@ -24,6 +24,7 @@ import CashBalance from "./pages/CashBalance";
 import WaiterQRPoster from "./pages/WaiterQRPoster";
 import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
+import OAuthCallback from "./pages/OAuthCallback";
 import { ConfirmLoginPage } from "./pages/ConfirmLoginPage";
 import PermissionManagement from "./pages/PermissionManagement";
 import RegisterBalance from "./pages/RegisterBalance";
@@ -87,6 +88,7 @@ function AppContent() {
       <Routes>
         {/* Global routes (no restaurant context needed) */}
         <Route path="/login" element={<Login />} />
+        <Route path="/auth/callback" element={<OAuthCallback />} />
         <Route path="/install" element={<Install />} />
         <Route path="/confirm-login/:token" element={<ConfirmLoginPage />} />
         <Route path="/staff" element={<ProtectedRoute requiredLevel="admin"><StaffManagement /></ProtectedRoute>} />

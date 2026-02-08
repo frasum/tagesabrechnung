@@ -79,8 +79,8 @@ export default function Login() {
     setIsLoading(true);
     try {
       const result = await lovable.auth.signInWithOAuth(provider, {
-        // Wichtig: origin-only ist am kompatibelsten für Provider-Redirects.
-        redirect_uri: window.location.origin,
+        // Wichtig: Callback-Route nutzen, damit die Session aufgebaut wird, bevor die App umleitet.
+        redirect_uri: `${window.location.origin}/auth/callback`,
       });
 
       // Wenn redirected=true, übernimmt der Browser die Navigation.
