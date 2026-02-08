@@ -38,53 +38,75 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       || supabaseUser.email?.split('@')[0] 
       || 'Benutzer';
     
-    // Check if user has linked staff account
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('staff_id')
-      .eq('user_id', supabaseUser.id)
-      .single();
-
-    let staffData = null;
-    let permissionLevel: PermissionLevel = 'staff';
-    
-    if (profile?.staff_id) {
-      const { data: staff } = await supabase
-        .from('staff')
-        .select('id, name, role')
-        .eq('id', profile.staff_id)
+    try {
+      // Check if user has linked staff account
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('staff_id')
+        .eq('user_id', supabaseUser.id)
         .single();
-      staffData = staff;
-      
-      // Fetch permission level via edge function
-      try {
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-user-role?staff_id=${profile.staff_id}`,
-          {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-            },
-          }
-        );
-        if (response.ok) {
-          const roleData = await response.json();
-          permissionLevel = roleData.permission_level || 'staff';
-        }
-      } catch (e) {
-        console.error('Failed to fetch permission level:', e);
-      }
-    }
 
-    return {
-      id: staffData?.id || supabaseUser.id,
-      name: staffData?.name || name,
-      role: (staffData?.role as 'waiter' | 'kitchen') || 'waiter',
-      permissionLevel,
-      isOAuthUser: true,
-      staffId: staffData?.id,
-      needsLinking: !staffData,
-    };
+      if (profileError) {
+        console.log('Profile lookup (expected for new OAuth users):', profileError.message);
+      }
+
+      let staffData = null;
+      let permissionLevel: PermissionLevel = 'staff';
+      
+      if (profile?.staff_id) {
+        const { data: staff, error: staffError } = await supabase
+          .from('staff')
+          .select('id, name, role')
+          .eq('id', profile.staff_id)
+          .single();
+        
+        if (staffError) {
+          console.error('Failed to fetch staff data:', staffError);
+        } else {
+          staffData = staff;
+        }
+        
+        // Fetch permission level via edge function
+        try {
+          const response = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-user-role?staff_id=${profile.staff_id}`,
+            {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+              },
+            }
+          );
+          if (response.ok) {
+            const roleData = await response.json();
+            permissionLevel = roleData.permission_level || 'staff';
+          }
+        } catch (e) {
+          console.error('Failed to fetch permission level:', e);
+        }
+      }
+
+      return {
+        id: staffData?.id || supabaseUser.id,
+        name: staffData?.name || name,
+        role: (staffData?.role as 'waiter' | 'kitchen') || 'waiter',
+        permissionLevel,
+        isOAuthUser: true,
+        staffId: staffData?.id,
+        needsLinking: !staffData,
+      };
+    } catch (error) {
+      console.error('Error in convertOAuthUser:', error);
+      // Return basic user even if lookup fails
+      return {
+        id: supabaseUser.id,
+        name,
+        role: 'waiter',
+        permissionLevel: 'staff',
+        isOAuthUser: true,
+        needsLinking: true,
+      };
+    }
   };
 
   useEffect(() => {
