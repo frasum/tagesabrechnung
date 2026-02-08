@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as pdfjs from "pdfjs-dist";
 import workerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { Minus, Plus, Printer } from "lucide-react";
@@ -21,6 +21,7 @@ export function PdfPreview({ blobUrl, className, fileName }: PdfPreviewProps) {
   const [scale, setScale] = useState(1.1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const canvasRefs = useRef<Map<number, HTMLCanvasElement>>(new Map());
 
   useEffect(() => {
     let cancelled = false;
@@ -54,27 +55,63 @@ export function PdfPreview({ blobUrl, className, fileName }: PdfPreviewProps) {
     };
   }, [blobUrl]);
 
-  const pages = useMemo(() => Array.from({ length: numPages }, (_, i) => i + 1), [numPages]);
+  const registerCanvas = useCallback((pageNumber: number, canvas: HTMLCanvasElement | null) => {
+    if (canvas) {
+      canvasRefs.current.set(pageNumber, canvas);
+    } else {
+      canvasRefs.current.delete(pageNumber);
+    }
+  }, []);
 
   const handlePrint = () => {
-    // Verwende iframe statt window.open um Popup-Blocker zu umgehen
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = 'none';
-    iframe.src = blobUrl;
-    document.body.appendChild(iframe);
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      console.error('Popup-Fenster wurde blockiert');
+      return;
+    }
+
+    // Alle Canvas-Elemente zu Data-URLs konvertieren
+    const images = Array.from(canvasRefs.current.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([_, canvas]) => canvas.toDataURL('image/png'));
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${fileName || 'PDF Druck'}</title>
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { background: white; }
+            img { 
+              display: block;
+              width: 100%; 
+              height: auto;
+            }
+            @media print {
+              img { 
+                page-break-after: always; 
+              }
+              img:last-child { 
+                page-break-after: avoid; 
+              }
+            }
+          </style>
+        </head>
+        <body>
+          ${images.map(src => `<img src="${src}" />`).join('')}
+        </body>
+      </html>
+    `);
     
-    iframe.onload = () => {
-      setTimeout(() => {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-      }, 100);
+    printWindow.document.close();
+    printWindow.onload = () => {
+      printWindow.focus();
+      printWindow.print();
     };
   };
+
+  const pages = useMemo(() => Array.from({ length: numPages }, (_, i) => i + 1), [numPages]);
 
   if (loading) {
     return (
@@ -143,7 +180,13 @@ export function PdfPreview({ blobUrl, className, fileName }: PdfPreviewProps) {
       <div className="flex-1 overflow-auto rounded-md border bg-background">
         <div className="mx-auto w-fit space-y-4 p-4">
           {pages.map((pageNumber) => (
-            <PdfPage key={pageNumber} pdf={doc} pageNumber={pageNumber} scale={scale} />
+            <PdfPage 
+              key={pageNumber} 
+              pdf={doc} 
+              pageNumber={pageNumber} 
+              scale={scale} 
+              onCanvasReady={registerCanvas}
+            />
           ))}
         </div>
       </div>
@@ -155,9 +198,10 @@ type PdfPageProps = {
   pdf: pdfjs.PDFDocumentProxy;
   pageNumber: number;
   scale: number;
+  onCanvasReady: (pageNumber: number, canvas: HTMLCanvasElement | null) => void;
 };
 
-function PdfPage({ pdf, pageNumber, scale }: PdfPageProps) {
+function PdfPage({ pdf, pageNumber, scale, onCanvasReady }: PdfPageProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [rendering, setRendering] = useState(true);
 
@@ -182,6 +226,11 @@ function PdfPage({ pdf, pageNumber, scale }: PdfPageProps) {
 
         const renderTask = page.render({ canvas, canvasContext: ctx, viewport });
         await renderTask.promise;
+        
+        // Canvas an übergeordnete Komponente melden
+        if (!cancelled) {
+          onCanvasReady(pageNumber, canvas);
+        }
       } finally {
         if (!cancelled) setRendering(false);
       }
@@ -189,8 +238,9 @@ function PdfPage({ pdf, pageNumber, scale }: PdfPageProps) {
 
     return () => {
       cancelled = true;
+      onCanvasReady(pageNumber, null);
     };
-  }, [pdf, pageNumber, scale]);
+  }, [pdf, pageNumber, scale, onCanvasReady]);
 
   return (
     <div className="space-y-2">
