@@ -11,7 +11,8 @@ import {
   X,
   Euro,
   BarChart3,
-  LogOut
+  LogOut,
+  Wallet
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,7 @@ const navItems = [
   { href: '/summary', label: 'Tagesabrechnung', icon: FileText },
   { href: '/statistics', label: 'Statistiken', icon: BarChart3 },
   { href: '/history', label: 'Verlauf', icon: History },
+  { href: '/cash-balance', label: 'Bargeldbestand', icon: Wallet },
   { href: '/staff', label: 'Mitarbeiter', icon: UserCog },
 ];
 
