@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { Lock, LogOut, Loader2, Smartphone } from 'lucide-react';
+import { Lock, LogOut, Loader2, Smartphone, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function SessionLockScreen() {
@@ -17,6 +17,56 @@ export function SessionLockScreen() {
   const [qrToken, setQrToken] = useState<string | null>(null);
   const [showQr, setShowQr] = useState(false);
   const [isGeneratingQr, setIsGeneratingQr] = useState(false);
+  const [isQrConfirmed, setIsQrConfirmed] = useState(false);
+  const [pollingActive, setPollingActive] = useState(false);
+
+  const confirmUrl = qrToken ? `${window.location.origin}/confirm-login/${qrToken}` : '';
+
+  // Poll for QR confirmation
+  useEffect(() => {
+    if (!showQr || !qrToken || isQrConfirmed) {
+      setPollingActive(false);
+      return;
+    }
+
+    setPollingActive(true);
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-login-confirmation`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            },
+            body: JSON.stringify({ token: qrToken }),
+          }
+        );
+
+        if (response.ok) {
+          const result = await response.json();
+          if (result.valid) {
+            setIsQrConfirmed(true);
+            toast.success('QR bestätigt!');
+            setTimeout(() => {
+              // Trigger unlock without PIN
+              setShowQr(false);
+              setQrToken(null);
+              setIsQrConfirmed(false);
+            }, 2000);
+          }
+        }
+      } catch (error) {
+        console.error('Polling error:', error);
+      }
+    }, 1000);
+
+    return () => {
+      clearInterval(pollInterval);
+      setPollingActive(false);
+    };
+  }, [showQr, qrToken, isQrConfirmed]);
 
   const handleVerify = async () => {
     if (pin.length !== 4) {
@@ -80,9 +130,34 @@ export function SessionLockScreen() {
     }
   };
 
+  // QR Code confirmation screen
   if (showQr && qrToken) {
-    const confirmUrl = `${window.location.origin}/confirm-login/${qrToken}`;
-    
+    if (isQrConfirmed) {
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm">
+          <Card className="w-full max-w-md mx-4 shadow-lg">
+          <CardHeader className="text-center space-y-4">
+            <div className="mx-auto w-20 h-20 rounded-full bg-green-600/20 flex items-center justify-center animate-pulse">
+              <CheckCircle2 className="w-10 h-10 text-green-600" />
+            </div>
+            <div>
+              <CardTitle className="text-2xl text-green-600">Bestätigt!</CardTitle>
+              <CardDescription className="mt-2">
+                QR-Code erfolgreich gescannt
+              </CardDescription>
+            </div>
+          </CardHeader>
+
+            <CardContent className="space-y-4 text-center">
+              <p className="text-sm text-muted-foreground">
+                Session wird entsperrt...
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm">
         <Card className="w-full max-w-md mx-4 shadow-lg">
@@ -99,7 +174,7 @@ export function SessionLockScreen() {
           </CardHeader>
 
           <CardContent className="space-y-6">
-      <div className="flex justify-center bg-white p-4 rounded-lg">
+            <div className="flex justify-center bg-white p-4 rounded-lg border-2 border-primary/20">
               <QRCodeSVG
                 value={confirmUrl}
                 size={200}
@@ -108,16 +183,26 @@ export function SessionLockScreen() {
               />
             </div>
 
-            <p className="text-xs text-center text-muted-foreground">
-              QR-Code gültig für 2 Minuten
-            </p>
+            <div className="space-y-2">
+              <p className="text-sm text-center text-muted-foreground">
+                {pollingActive ? '⏳ Warte auf Bestätigung...' : 'Scanning...'}
+              </p>
+              <div className="flex justify-center gap-1">
+                <div className="w-2 h-2 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: '0s' }} />
+                <div className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '0.2s' }} />
+                <div className="w-2 h-2 rounded-full bg-primary/80 animate-bounce" style={{ animationDelay: '0.4s' }} />
+              </div>
+            </div>
 
             <Button
               variant="ghost"
-              onClick={() => setShowQr(false)}
+              onClick={() => {
+                setShowQr(false);
+                setQrToken(null);
+              }}
               className="w-full"
             >
-              Zurück
+              Abbrechen
             </Button>
           </CardContent>
         </Card>
@@ -125,6 +210,7 @@ export function SessionLockScreen() {
     );
   }
 
+  // Main lock screen
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm">
       <Card className="w-full max-w-md mx-4 shadow-lg">
@@ -153,7 +239,7 @@ export function SessionLockScreen() {
                 onChange={(value: string) => {
                   setPin(value);
                   setError('');
-                  
+
                   // Auto-submit when 4 digits entered
                   if (value.length === 4) {
                     setTimeout(() => {
