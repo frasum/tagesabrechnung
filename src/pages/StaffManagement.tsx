@@ -28,7 +28,6 @@ export default function StaffManagement() {
   const filteredStaff = allStaff.filter(s => {
     const matchesRole = filter === 'all' || s.role === filter;
     const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          s.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           s.notes?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesRole && matchesSearch;
   });

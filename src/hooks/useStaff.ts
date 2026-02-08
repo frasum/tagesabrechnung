@@ -17,7 +17,6 @@ export interface Staff {
   id: string;
   name: string;
   role: StaffRole;
-  phone: string | null;
   hourly_rate: number | null;
   notes: string | null;
   is_active: boolean | null;
@@ -29,7 +28,6 @@ export interface Staff {
 export interface StaffInput {
   name: string;
   role: StaffRole;
-  phone?: string;
   hourly_rate?: number;
   notes?: string;
   is_active?: boolean;
