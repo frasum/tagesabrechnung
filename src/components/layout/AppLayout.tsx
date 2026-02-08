@@ -71,14 +71,17 @@ export function AppLayout({ children }: AppLayoutProps) {
   );
   const hasCustomPermissions = isManager && managerPaths.length > 0;
   
+  // Paths that managers ALWAYS see (core functionality)
+  const alwaysVisibleForManager = ['', 'manager', 'kitchen', 'summary'];
+  
   // Filter nav items based on permission level and manager-specific permissions
   const navItems = useMemo(() => {
     return allNavItems.filter(item => {
       // Admin sees all
       if (isAdmin) return true;
       
-      // Manager ALWAYS sees Kellner Abrechnung (path: '') for error corrections
-      if (isManager && item.path === '') return true;
+      // Manager ALWAYS sees core navigation items
+      if (isManager && alwaysVisibleForManager.includes(item.path)) return true;
       
       // Manager with custom permissions - check if path is allowed
       if (isManager && hasCustomPermissions) {
@@ -93,7 +96,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       // Staff - only staff level items
       return item.minLevel === 'staff';
     });
-  }, [userLevel, isAdmin, isManager, hasCustomPermissions, managerPaths]);
+  }, [userLevel, isAdmin, isManager, hasCustomPermissions, managerPaths, alwaysVisibleForManager]);
 
   const handleLogout = () => {
     logout();
