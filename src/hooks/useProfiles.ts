@@ -19,14 +19,24 @@ export function useUnlinkedProfiles() {
   return useQuery({
     queryKey: ['profiles', 'unlinked'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, user_id, email, full_name, avatar_url, staff_id')
-        .is('staff_id', null)
-        .order('email', { ascending: true });
+      // Use Edge Function with service role to bypass RLS
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-link-account`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
 
-      if (error) throw error;
-      return data as LinkedProfile[];
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Unbekannter Fehler' }));
+        throw new Error(error.error || 'Fehler beim Laden der Profile');
+      }
+
+      return response.json() as Promise<LinkedProfile[]>;
     },
   });
 }

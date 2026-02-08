@@ -19,7 +19,29 @@ Deno.serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    // Parse request body
+    // GET: Return list of unlinked profiles
+    if (req.method === 'GET') {
+      const { data, error } = await supabaseAdmin
+        .from('profiles')
+        .select('id, user_id, email, full_name, avatar_url, staff_id')
+        .is('staff_id', null)
+        .order('email', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching profiles:', error);
+        return new Response(
+          JSON.stringify({ error: 'Fehler beim Laden der Profile' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify(data || []),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // POST: Link/unlink profile
     const { staff_id, profile_id } = await req.json();
 
     if (!profile_id) {
