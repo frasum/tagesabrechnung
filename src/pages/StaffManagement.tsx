@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { StaffCard } from '@/components/staff/StaffCard';
-import { StaffDialog } from '@/components/staff/StaffDialog';
+import { StaffDialog } from '@/components/staff/StaffDialogSafe';
 import { WaiterQRCode } from '@/components/manager/WaiterQRCode';
 import { useStaff, useCreateStaff, useUpdateStaff, useDeleteStaff, Staff, StaffInput, StaffRole } from '@/hooks/useStaff';
 
