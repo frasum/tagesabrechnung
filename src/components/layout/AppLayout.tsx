@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Users, 
@@ -13,7 +13,8 @@ import {
   BarChart3,
   LogOut,
   Wallet,
-  ChevronDown
+  ChevronDown,
+  LucideIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -25,19 +26,28 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import type { PermissionLevel } from '@/types/permissions';
+import { hasPermission } from '@/types/permissions';
 
 interface AppLayoutProps {
   children: ReactNode;
 }
 
-const navItems = [
-  { path: '', label: 'Kellner Abrechnung', icon: Users },
-  { path: 'manager', label: 'Manager Dashboard', icon: Settings },
-  { path: 'kitchen', label: 'Küchen Trinkgeld', icon: ChefHat },
-  { path: 'summary', label: 'Tagesabrechnung', icon: FileText },
-  { path: 'statistics', label: 'Statistiken', icon: BarChart3 },
-  { path: 'history', label: 'Verlauf', icon: History },
-  { path: 'cash-balance', label: 'Bargeldbestand', icon: Wallet },
+interface NavItem {
+  path: string;
+  label: string;
+  icon: LucideIcon;
+  minLevel: PermissionLevel;
+}
+
+const allNavItems: NavItem[] = [
+  { path: '', label: 'Kellner Abrechnung', icon: Users, minLevel: 'staff' },
+  { path: 'manager', label: 'Manager Dashboard', icon: Settings, minLevel: 'manager' },
+  { path: 'kitchen', label: 'Küchen Trinkgeld', icon: ChefHat, minLevel: 'manager' },
+  { path: 'summary', label: 'Tagesabrechnung', icon: FileText, minLevel: 'manager' },
+  { path: 'statistics', label: 'Statistiken', icon: BarChart3, minLevel: 'manager' },
+  { path: 'history', label: 'Verlauf', icon: History, minLevel: 'manager' },
+  { path: 'cash-balance', label: 'Bargeldbestand', icon: Wallet, minLevel: 'manager' },
 ];
 
 export function AppLayout({ children }: AppLayoutProps) {
@@ -47,6 +57,14 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { user, logout } = useAuth();
   const { restaurantName, restaurantSlug } = useRestaurant();
   const { data: restaurants = [] } = useRestaurants();
+  
+  // Get user's permission level and filter nav items
+  const userLevel = user?.permissionLevel || 'staff';
+  const navItems = useMemo(() => 
+    allNavItems.filter(item => hasPermission(userLevel, item.minLevel)),
+    [userLevel]
+  );
+  const canAccessStaff = hasPermission(userLevel, 'admin');
 
   const handleLogout = () => {
     logout();
@@ -130,19 +148,21 @@ export function AppLayout({ children }: AppLayoutProps) {
                 </Link>
               );
             })}
-            <Link
-              to="/staff"
-              onClick={() => setMobileMenuOpen(false)}
-              className={cn(
-                "flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors",
-                location.pathname === '/staff'
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground" 
-                  : "text-sidebar-foreground hover:bg-sidebar-accent"
-              )}
-            >
-              <UserCog className="w-5 h-5" />
-              Mitarbeiter
-            </Link>
+            {canAccessStaff && (
+              <Link
+                to="/staff"
+                onClick={() => setMobileMenuOpen(false)}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors",
+                  location.pathname === '/staff'
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground" 
+                    : "text-sidebar-foreground hover:bg-sidebar-accent"
+                )}
+              >
+                <UserCog className="w-5 h-5" />
+                Mitarbeiter
+              </Link>
+            )}
             <button
               onClick={() => { setMobileMenuOpen(false); handleLogout(); }}
               className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors text-destructive hover:bg-sidebar-accent w-full"
@@ -200,18 +220,20 @@ export function AppLayout({ children }: AppLayoutProps) {
               </Link>
             );
           })}
-          <Link
-            to="/staff"
-            className={cn(
-              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-              location.pathname === '/staff'
-                ? "bg-sidebar-primary text-sidebar-primary-foreground" 
-                : "text-sidebar-foreground hover:bg-sidebar-accent"
-            )}
-          >
-            <UserCog className="w-5 h-5" />
-            Mitarbeiter
-          </Link>
+          {canAccessStaff && (
+            <Link
+              to="/staff"
+              className={cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                location.pathname === '/staff'
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground" 
+                  : "text-sidebar-foreground hover:bg-sidebar-accent"
+              )}
+            >
+              <UserCog className="w-5 h-5" />
+              Mitarbeiter
+            </Link>
+          )}
         </nav>
 
         <div className="px-4 py-4 border-t border-sidebar-border space-y-3">

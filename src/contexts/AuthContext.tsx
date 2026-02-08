@@ -1,11 +1,14 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
+import type { PermissionLevel } from '@/types/permissions';
+import { hasPermission as checkPermission } from '@/types/permissions';
 
 interface AuthUser {
   id: string;
   name: string;
   role: 'waiter' | 'kitchen';
+  permissionLevel: PermissionLevel;
   isOAuthUser?: boolean;
   staffId?: string;
   needsLinking?: boolean;
@@ -17,6 +20,7 @@ interface AuthContextType {
   login: (name: string, pinCode: string) => Promise<boolean>;
   logout: () => void;
   linkAccount: (staff: { id: string; name: string; role: string }) => void;
+  hasPermission: (requiredLevel: PermissionLevel) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -42,6 +46,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .single();
 
     let staffData = null;
+    let permissionLevel: PermissionLevel = 'staff';
+    
     if (profile?.staff_id) {
       const { data: staff } = await supabase
         .from('staff')
@@ -49,12 +55,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('id', profile.staff_id)
         .single();
       staffData = staff;
+      
+      // Fetch permission level via edge function
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-user-role?staff_id=${profile.staff_id}`,
+          {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            },
+          }
+        );
+        if (response.ok) {
+          const roleData = await response.json();
+          permissionLevel = roleData.permission_level || 'staff';
+        }
+      } catch (e) {
+        console.error('Failed to fetch permission level:', e);
+      }
     }
 
     return {
       id: staffData?.id || supabaseUser.id,
       name: staffData?.name || name,
       role: (staffData?.role as 'waiter' | 'kitchen') || 'waiter',
+      permissionLevel,
       isOAuthUser: true,
       staffId: staffData?.id,
       needsLinking: !staffData,
@@ -153,6 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         id: result.user.id,
         name: result.user.name,
         role: result.user.role,
+        permissionLevel: result.permission_level || 'staff',
       };
 
       setUser(authUser);
@@ -185,8 +212,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Check if user has required permission level
+  const hasPermission = (requiredLevel: PermissionLevel): boolean => {
+    if (!user) return false;
+    return checkPermission(user.permissionLevel, requiredLevel);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, linkAccount }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout, linkAccount, hasPermission }}>
       {children}
     </AuthContext.Provider>
   );

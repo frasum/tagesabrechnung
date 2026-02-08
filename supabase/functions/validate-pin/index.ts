@@ -19,6 +19,7 @@ interface ValidatePinResponse {
     name: string;
     role: "waiter" | "kitchen";
   };
+  permission_level?: "staff" | "manager" | "admin";
   error?: string;
 }
 
@@ -203,7 +204,16 @@ serve(async (req: Request) => {
       success: true,
     });
 
-    // Success - return user info (without PIN)
+    // Fetch permission level from user_roles table
+    const { data: roleData } = await supabase
+      .from("user_roles")
+      .select("permission_level")
+      .eq("staff_id", staffData.id)
+      .single();
+
+    const permissionLevel = roleData?.permission_level || "staff";
+
+    // Success - return user info (without PIN) including permission level
     const response: ValidatePinResponse = {
       success: true,
       user: {
@@ -211,6 +221,7 @@ serve(async (req: Request) => {
         name: staffData.name,
         role: staffData.role as "waiter" | "kitchen",
       },
+      permission_level: permissionLevel,
     };
 
     return new Response(JSON.stringify(response), {

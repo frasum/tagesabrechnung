@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, FormEvent } from 'react';
-import { Store, Link2, Unlink, Smartphone, Loader2 } from 'lucide-react';
+import { Store, Link2, Unlink, Smartphone, Loader2, Shield } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,9 @@ import { Separator } from '@/components/ui/separator';
 import type { Staff, StaffInput, StaffRole } from '@/hooks/useStaff';
 import { useRestaurants } from '@/hooks/useRestaurant';
 import { useUnlinkedProfiles, useAdminLinkAccount } from '@/hooks/useProfiles';
-
+import { useUserRole, useUpdateUserRole } from '@/hooks/useUserRole';
+import type { PermissionLevel } from '@/types/permissions';
+import { PERMISSION_LEVEL_INFO } from '@/types/permissions';
 interface StaffDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -28,10 +30,13 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
   const [pinCode, setPinCode] = useState('');
   const [selectedRestaurants, setSelectedRestaurants] = useState<string[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+  const [permissionLevel, setPermissionLevel] = useState<PermissionLevel>('staff');
 
   const { data: restaurants = [] } = useRestaurants();
   const { data: unlinkedProfiles = [], isLoading: profilesLoading } = useUnlinkedProfiles();
   const linkMutation = useAdminLinkAccount();
+  const { data: currentRole } = useUserRole(staff?.id);
+  const updateRoleMutation = useUpdateUserRole();
 
   const didInitRef = useRef(false);
 
@@ -53,13 +58,14 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       setIsActive(staff.is_active ?? true);
       setPinCode('');
       setSelectedRestaurants(staff.staff_restaurants?.map((sr) => sr.restaurant_id) ?? []);
+      setPermissionLevel(currentRole || 'staff');
     } else {
       setName('');
       setRole('waiter');
       setIsActive(true);
       setPinCode('');
-      // Default to all restaurants for new staff
       setSelectedRestaurants(restaurants.map((r) => r.id));
+      setPermissionLevel('staff');
     }
 
     didInitRef.current = true;
@@ -75,10 +81,11 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
     );
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
+    // Save staff data
     onSave({
       name: name.trim(),
       role,
@@ -86,6 +93,14 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       pin_code: pinCode.length === 4 ? pinCode : undefined,
       restaurant_ids: selectedRestaurants,
     });
+
+    // Update permission level for existing staff
+    if (staff && permissionLevel !== currentRole) {
+      updateRoleMutation.mutate({
+        staffId: staff.id,
+        permissionLevel,
+      });
+    }
   };
 
   const handleLink = () => {
@@ -210,6 +225,54 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
             <Label htmlFor="staff-active">Aktiv</Label>
             <Switch id="staff-active" checked={isActive} onCheckedChange={setIsActive} />
           </div>
+
+          {/* Permission Level Section - only for existing staff */}
+          {staff && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <Label className="text-base font-semibold flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-primary" />
+                  Berechtigungsstufe
+                </Label>
+                <div className="space-y-2">
+                  {(Object.keys(PERMISSION_LEVEL_INFO) as PermissionLevel[]).map((level) => {
+                    const info = PERMISSION_LEVEL_INFO[level];
+                    const isSelected = permissionLevel === level;
+                    return (
+                      <label
+                        key={level}
+                        className={`
+                          flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer
+                          transition-all duration-200
+                          ${isSelected
+                            ? 'border-primary bg-primary/10'
+                            : 'border-muted hover:border-muted-foreground/30 hover:bg-muted/50'
+                          }
+                        `}
+                      >
+                        <input
+                          type="radio"
+                          name="permission-level"
+                          checked={isSelected}
+                          onChange={() => setPermissionLevel(level)}
+                          className="mt-0.5 h-4 w-4 text-primary focus:ring-primary"
+                        />
+                        <div className="flex-1">
+                          <p className={`font-medium ${isSelected ? 'text-primary' : 'text-foreground'}`}>
+                            {info.label}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {info.description}
+                          </p>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
 
           {/* OAuth Linking Section - only for existing staff */}
           {staff && (

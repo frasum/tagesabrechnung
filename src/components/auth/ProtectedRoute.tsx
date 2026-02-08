@@ -1,12 +1,14 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import type { PermissionLevel } from '@/types/permissions';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  requiredLevel?: PermissionLevel;
 }
 
-export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user, isLoading } = useAuth();
+export function ProtectedRoute({ children, requiredLevel }: ProtectedRouteProps) {
+  const { user, isLoading, hasPermission } = useAuth();
 
   if (isLoading) {
     return (
@@ -18,6 +20,12 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Check permission level if required
+  if (requiredLevel && !hasPermission(requiredLevel)) {
+    // Redirect to home page (waiter billing) if insufficient permissions
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;

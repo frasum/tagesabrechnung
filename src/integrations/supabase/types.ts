@@ -505,6 +505,38 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          permission_level: Database["public"]["Enums"]["app_permission_level"]
+          staff_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          permission_level?: Database["public"]["Enums"]["app_permission_level"]
+          staff_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          permission_level?: Database["public"]["Enums"]["app_permission_level"]
+          staff_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: true
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       waiter_shifts: {
         Row: {
           card_total: number | null
@@ -572,9 +604,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_staff_permission: {
+        Args: { p_staff_id: string }
+        Returns: Database["public"]["Enums"]["app_permission_level"]
+      }
     }
     Enums: {
+      app_permission_level: "staff" | "manager" | "admin"
       staff_role: "waiter" | "kitchen"
     }
     CompositeTypes: {
@@ -703,6 +739,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_permission_level: ["staff", "manager", "admin"],
       staff_role: ["waiter", "kitchen"],
     },
   },

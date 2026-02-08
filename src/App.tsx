@@ -29,12 +29,12 @@ function RestaurantRoutes() {
       <Routes>
         <Route index element={<ProtectedRoute><WaiterCashUp /></ProtectedRoute>} />
         <Route path="waiter" element={<ProtectedRoute><WaiterMobile /></ProtectedRoute>} />
-        <Route path="manager" element={<ProtectedRoute><ManagerDashboard /></ProtectedRoute>} />
-        <Route path="kitchen" element={<ProtectedRoute><KitchenTipSplit /></ProtectedRoute>} />
-        <Route path="summary" element={<ProtectedRoute><DailySummary /></ProtectedRoute>} />
-        <Route path="statistics" element={<ProtectedRoute><Statistics /></ProtectedRoute>} />
-        <Route path="history" element={<ProtectedRoute><History /></ProtectedRoute>} />
-        <Route path="cash-balance" element={<ProtectedRoute><CashBalance /></ProtectedRoute>} />
+        <Route path="manager" element={<ProtectedRoute requiredLevel="manager"><ManagerDashboard /></ProtectedRoute>} />
+        <Route path="kitchen" element={<ProtectedRoute requiredLevel="manager"><KitchenTipSplit /></ProtectedRoute>} />
+        <Route path="summary" element={<ProtectedRoute requiredLevel="manager"><DailySummary /></ProtectedRoute>} />
+        <Route path="statistics" element={<ProtectedRoute requiredLevel="manager"><Statistics /></ProtectedRoute>} />
+        <Route path="history" element={<ProtectedRoute requiredLevel="manager"><History /></ProtectedRoute>} />
+        <Route path="cash-balance" element={<ProtectedRoute requiredLevel="manager"><CashBalance /></ProtectedRoute>} />
         <Route path="qr-poster" element={<WaiterQRPoster />} />
       </Routes>
     </RestaurantProvider>
@@ -52,7 +52,7 @@ const App = () => (
             {/* Global routes (no restaurant context needed) */}
             <Route path="/login" element={<Login />} />
             <Route path="/install" element={<Install />} />
-            <Route path="/staff" element={<ProtectedRoute><StaffManagement /></ProtectedRoute>} />
+            <Route path="/staff" element={<ProtectedRoute requiredLevel="admin"><StaffManagement /></ProtectedRoute>} />
             
             {/* Redirect root to default restaurant */}
             <Route path="/" element={<Navigate to="/spicery" replace />} />

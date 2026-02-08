@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.admin-link-account]
 verify_jwt = false
+
+[functions.manage-user-role]
+verify_jwt = false
