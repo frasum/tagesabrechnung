@@ -93,53 +93,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    let isMounted = true;
+
     // Set up Supabase auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (!isMounted) return;
+
         if (event === 'SIGNED_IN' && session?.user) {
           try {
             const authUser = await convertOAuthUserWithTimeout(session.user);
-            console.log('✅ OAuth user logged in:', { id: authUser.id, name: authUser.name, permissionLevel: authUser.permissionLevel, staffId: authUser.staffId });
-            setUser(authUser);
-            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
+            if (isMounted) {
+              console.log('✅ OAuth user logged in:', { id: authUser.id, name: authUser.name, permissionLevel: authUser.permissionLevel, staffId: authUser.staffId });
+              setUser(authUser);
+              localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
+              setIsLoading(false);
+            }
           } catch (error) {
-          console.error('OAuth sign-in processing failed:', error);
-          // Try to get cached permission level
-          const cachedUser = localStorage.getItem(AUTH_STORAGE_KEY);
-          let cachedPermissionLevel: PermissionLevel = 'staff';
-          let cachedStaffId: string | undefined;
-          let cachedNeedsLinking = true;
-          if (cachedUser) {
-            try {
-              const parsed = JSON.parse(cachedUser);
-              cachedPermissionLevel = parsed.permissionLevel || 'staff';
-              cachedStaffId = parsed.staffId;
-              cachedNeedsLinking = parsed.needsLinking ?? !parsed.staffId;
-            } catch {}
+            console.error('OAuth sign-in processing failed:', error);
+            if (!isMounted) return;
+
+            // Try to get cached permission level
+            const cachedUser = localStorage.getItem(AUTH_STORAGE_KEY);
+            let cachedPermissionLevel: PermissionLevel = 'staff';
+            let cachedStaffId: string | undefined;
+            let cachedNeedsLinking = true;
+            if (cachedUser) {
+              try {
+                const parsed = JSON.parse(cachedUser);
+                cachedPermissionLevel = parsed.permissionLevel || 'staff';
+                cachedStaffId = parsed.staffId;
+                cachedNeedsLinking = parsed.needsLinking ?? !parsed.staffId;
+              } catch {}
+            }
+
+            const name = session.user.user_metadata?.full_name
+              || session.user.user_metadata?.name
+              || session.user.email?.split('@')[0]
+              || 'Benutzer';
+            const fallbackUser: AuthUser = {
+              id: cachedStaffId || session.user.id,
+              name,
+              role: 'waiter',
+              permissionLevel: cachedPermissionLevel,
+              isOAuthUser: true,
+              staffId: cachedStaffId,
+              needsLinking: cachedNeedsLinking,
+            };
+            console.log('⚠️ OAuth fallback user created:', { id: fallbackUser.id, name: fallbackUser.name, permissionLevel: fallbackUser.permissionLevel, staffId: fallbackUser.staffId });
+            setUser(fallbackUser);
+            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(fallbackUser));
+            setIsLoading(false);
           }
-          
-          const name = session.user.user_metadata?.full_name 
-            || session.user.user_metadata?.name 
-            || session.user.email?.split('@')[0] 
-            || 'Benutzer';
-          const fallbackUser: AuthUser = {
-            id: cachedStaffId || session.user.id,
-            name,
-            role: 'waiter',
-            permissionLevel: cachedPermissionLevel,
-            isOAuthUser: true,
-            staffId: cachedStaffId,
-            needsLinking: cachedNeedsLinking,
-          };
-          console.log('⚠️ OAuth fallback user created:', { id: fallbackUser.id, name: fallbackUser.name, permissionLevel: fallbackUser.permissionLevel, staffId: fallbackUser.staffId });
-          setUser(fallbackUser);
-          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(fallbackUser));
-        }
-          setIsLoading(false);
         } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-          localStorage.removeItem(AUTH_STORAGE_KEY);
-          setIsLoading(false);
+          if (isMounted) {
+            setUser(null);
+            localStorage.removeItem(AUTH_STORAGE_KEY);
+            setIsLoading(false);
+          }
         }
       }
     );
@@ -151,27 +162,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const storedUser = localStorage.getItem(AUTH_STORAGE_KEY);
         if (storedUser) {
           const parsed = JSON.parse(storedUser);
-          
+
           // For OAuth users, try to refresh the profile data
           if (parsed.isOAuthUser) {
             try {
               const { data: { session } } = await supabase.auth.getSession();
               if (session?.user) {
                 const authUser = await convertOAuthUserWithTimeout(session.user);
-                setUser(authUser);
-                localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
+                if (isMounted) {
+                  setUser(authUser);
+                  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
+                  setIsLoading(false);
+                }
                 return;
               }
             } catch (e) {
               console.error('OAuth session refresh failed, using cached user:', e);
             }
             // Fallback: Use cached user data if session refresh fails
-            setUser(parsed);
+            if (isMounted) {
+              setUser(parsed);
+              setIsLoading(false);
+            }
             return;
           }
-          
+
           // PIN-based user
-          setUser(parsed);
+          if (isMounted) {
+            setUser(parsed);
+            setIsLoading(false);
+          }
           return;
         }
 
@@ -180,25 +200,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (session?.user) {
           try {
             const authUser = await convertOAuthUserWithTimeout(session.user);
-            setUser(authUser);
-            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
+            if (isMounted) {
+              setUser(authUser);
+              localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
+              setIsLoading(false);
+            }
           } catch (e) {
             console.error('OAuth user conversion failed:', e);
-            // Don't set user - will show login page
+            // Set loading false so login page shows
+            if (isMounted) {
+              setIsLoading(false);
+            }
+          }
+        } else {
+          // No session found - show login
+          if (isMounted) {
+            setIsLoading(false);
           }
         }
       } catch (error) {
         console.error('Auth initialization failed:', error);
         localStorage.removeItem(AUTH_STORAGE_KEY);
-      } finally {
-        // GUARANTEED to end loading state
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
     initAuth();
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
     };
   }, []);
