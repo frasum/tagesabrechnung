@@ -244,51 +244,21 @@ export default function ManagerDashboard() {
   const { transfers, balances, createTransfer, isCreating } = useRegisterTransfers(restaurantId);
   const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
 
-  // Previous day calculation
-  const previousDayStr = useMemo(() => {
-    const prevDate = new Date(selectedDate);
-    prevDate.setDate(prevDate.getDate() - 1);
-    return format(prevDate, 'yyyy-MM-dd');
-  }, [selectedDate]);
+  // Today's date string for filtering transfers
+  const todayStr = format(selectedDate, 'yyyy-MM-dd');
 
-  // Load previous day's session and data
-  const { data: previousSession } = useSession(new Date(previousDayStr), restaurantId);
-  const { data: previousWaiterShifts = [] } = useWaiterShifts(previousSession?.id);
-  const { data: previousExpenses = [] } = useExpenses(previousSession?.id);
-
-  // Previous day's cash calculation - uses pos_total (Vectron total) as base
-  const previousDayBargeld = useMemo(() => {
-    if (!previousSession) return 0;
-    
-    const prevOpenInvoices = previousWaiterShifts.reduce((sum, w) => sum + (w.open_invoices || 0), 0);
-    const prevTotalExpenses = previousExpenses.reduce((sum, e) => sum + e.amount, 0);
-
-    return (previousSession.pos_total || 0) +
-      (previousSession.vouchers_sold || 0) -
-      (previousSession.terminal_1_total || 0) -
-      (previousSession.terminal_2_total || 0) -
-      (previousSession.ordersmart_revenue || 0) -
-      (previousSession.wolt_revenue || 0) -
-      (previousSession.vouchers_redeemed || 0) -
-      (previousSession.finedine_vouchers || 0) -
-      (previousSession.einladung || 0) -
-      prevOpenInvoices -
-      (previousSession.vorschuss || 0) -
-      prevTotalExpenses;
-  }, [previousSession, previousWaiterShifts, previousExpenses]);
-
-  // Previous day's vault transfers
-  const previousDayVaultTransfers = useMemo(() => {
+  // Today's vault transfers (cash brought from safe to restaurant register)
+  const todayVaultTransfers = useMemo(() => {
     return transfers
-      .filter(t => t.direction === 'to_restaurant' && t.transfer_date === previousDayStr)
+      .filter(t => t.direction === 'to_restaurant' && t.transfer_date === todayStr)
       .reduce((sum, t) => sum + t.amount, 0);
-  }, [transfers, previousDayStr]);
+  }, [transfers, todayStr]);
 
-  // Previous day's register balance (= today's starting balance)
-  const previousDayRegisterBalance = balances.initialRestaurant + previousDayBargeld + previousDayVaultTransfers;
-
-  // Projected balance after today
-  const projectedRegisterBalance = previousDayRegisterBalance + bargeldPreview;
+  // Register balance calculation:
+  // Each day starts fresh with the initial float (1.000 €)
+  // Any excess cash from the previous day is deposited/removed
+  // So we only add today's cash result + any vault transfers made today
+  const projectedRegisterBalance = balances.initialRestaurant + bargeldPreview + todayVaultTransfers;
 
   // Show card only when projected balance falls below initial (1.000 €)
   const showCashBalanceCard = projectedRegisterBalance < balances.initialRestaurant;
@@ -413,13 +383,23 @@ export default function ManagerDashboard() {
                      </CardTitle>
                    </CardHeader>
                    <CardContent className="space-y-3">
-                     {/* Previous day register balance (= today's starting balance) */}
+                     {/* Starting float (Wechselgeld) */}
                      <div className="flex justify-between items-center">
-                       <span className="text-sm text-muted-foreground">Kassenbestand Vortag</span>
+                       <span className="text-sm text-muted-foreground">Wechselgeld (Anfang)</span>
                        <span className="font-semibold tabular-nums">
-                         {formatCurrency(previousDayRegisterBalance)}
+                         {formatCurrency(balances.initialRestaurant)}
                        </span>
                      </div>
+
+                     {/* Today's vault transfers if any */}
+                     {todayVaultTransfers > 0 && (
+                       <div className="flex justify-between items-center">
+                         <span className="text-sm text-muted-foreground">+ Tresor-Transfer heute</span>
+                         <span className="font-semibold tabular-nums text-emerald-600">
+                           +{formatCurrency(todayVaultTransfers)}
+                         </span>
+                       </div>
+                     )}
 
                      {/* Today's cash preview */}
                      <div className="flex justify-between items-center">
@@ -668,13 +648,23 @@ export default function ManagerDashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Previous day register balance */}
+                  {/* Starting float (Wechselgeld) */}
                   <div>
-                    <Label className="text-muted-foreground">Kassenbestand Vortag</Label>
+                    <Label className="text-muted-foreground">Wechselgeld (Anfang)</Label>
                     <div className="text-lg font-semibold tabular-nums">
-                      {formatCurrency(previousDayRegisterBalance)}
+                      {formatCurrency(balances.initialRestaurant)}
                     </div>
                   </div>
+                  
+                  {/* Today's vault transfers if any */}
+                  {todayVaultTransfers > 0 && (
+                    <div>
+                      <Label className="text-muted-foreground">+ Tresor-Transfer heute</Label>
+                      <div className="text-lg font-semibold tabular-nums text-emerald-600">
+                        +{formatCurrency(todayVaultTransfers)}
+                      </div>
+                    </div>
+                  )}
                   
                   {/* Today's cash */}
                   <div>
