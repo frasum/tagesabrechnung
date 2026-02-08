@@ -513,63 +513,45 @@ export default function ManagerDashboard() {
               </CardContent>
               </Card>
 
-              {/* Expenses */}
-              <Card>
+              {/* Bargeld Card */}
+              <Card className={currentRegisterBalance < 0 ? "border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20" : ""}>
                 <CardHeader>
-                  <CardTitle>Ausgaben</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Banknote className="w-5 h-5" />
+                    Bargeld
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Beschreibung"
-                      value={expenseDescription}
-                      onChange={(e) => setExpenseDescription(e.target.value)}
-                      className="flex-1"
-                    />
-                    <CurrencyInput
-                      value={expenseAmount}
-                      onChange={setExpenseAmount}
-                      className="w-28"
-                    />
-                    <Button onClick={handleAddExpense} disabled={!expenseDescription.trim() || expenseAmount <= 0}>
-                      <Plus className="w-4 h-4" />
-                    </Button>
-                  </div>
-
-                  {expenses.length > 0 && (
-                    <div className="space-y-2">
-                      {expenses.map((expense) => (
-                        <div
-                          key={expense.id}
-                          className="flex items-center justify-between p-3 bg-muted rounded-lg"
-                        >
-                          <span className="text-sm">{expense.description}</span>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium tabular-nums">
-                              {formatCurrency(expense.amount)}
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteExpense(expense.id)}
-                            >
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                      <div className="flex justify-between pt-2 border-t">
-                        <span className="font-medium">Summe Ausgaben:</span>
-                        <span className="font-semibold tabular-nums text-destructive">
-                          {formatCurrency(totalExpenses)}
-                        </span>
-                      </div>
+                  <div>
+                    <Label>Bargeld des Tages</Label>
+                    <div className={`text-2xl font-bold tabular-nums ${bargeldPreview >= 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                      {formatCurrency(bargeldPreview)}
                     </div>
+                  </div>
+                  
+                  {currentRegisterBalance < 0 && (
+                    <>
+                      <Separator />
+                      <div>
+                        <Label className="text-muted-foreground">Kumuliertes Defizit</Label>
+                        <div className="text-xl font-semibold tabular-nums text-destructive">
+                          {formatCurrency(currentRegisterBalance)}
+                        </div>
+                      </div>
+                      <Button 
+                        onClick={() => setShowTransferDialog(true)}
+                        variant="outline"
+                        className="w-full gap-2"
+                      >
+                        <Vault className="w-4 h-4" />
+                        Transfer vom Tresor
+                      </Button>
+                    </>
                   )}
                 </CardContent>
               </Card>
 
-              {/* Bargeld Card */}
+              {/* Expenses */}
               <Card>
                 <CardHeader>
                   <CardTitle>Ausgaben</CardTitle>
