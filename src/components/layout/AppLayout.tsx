@@ -45,8 +45,8 @@ interface NavItem {
 
 const allNavItems: NavItem[] = [
   { path: '', label: 'Kellner Abrechnung', icon: Users, minLevel: 'staff' },
-  { path: 'summary', label: 'Tagesabrechnung', icon: FileText, minLevel: 'manager' },
   { path: 'kitchen', label: 'Küchen Trinkgeld', icon: ChefHat, minLevel: 'manager' },
+  { path: 'summary', label: 'Tagesabrechnung', icon: FileText, minLevel: 'manager' },
   { path: 'register-balance', label: 'Wechselgeldbestand', icon: ArrowUpDown, minLevel: 'manager' },
   { path: 'statistics', label: 'Statistiken', icon: BarChart3, minLevel: 'manager' },
   { path: 'history', label: 'Verlauf', icon: History, minLevel: 'manager' },
