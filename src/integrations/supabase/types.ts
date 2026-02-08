@@ -53,6 +53,30 @@ export type Database = {
         }
         Relationships: []
       }
+      auth_attempts: {
+        Row: {
+          attempted_at: string
+          id: string
+          identifier: string
+          ip_address: string | null
+          success: boolean
+        }
+        Insert: {
+          attempted_at?: string
+          id?: string
+          identifier: string
+          ip_address?: string | null
+          success?: boolean
+        }
+        Update: {
+          attempted_at?: string
+          id?: string
+          identifier?: string
+          ip_address?: string | null
+          success?: boolean
+        }
+        Relationships: []
+      }
       bank_deposits: {
         Row: {
           amount: number
@@ -468,15 +492,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      validate_staff_pin: {
-        Args: { p_name: string; p_pin: string }
-        Returns: {
-          id: string
-          is_active: boolean
-          name: string
-          role: string
-        }[]
-      }
+      [_ in never]: never
     }
     Enums: {
       staff_role: "waiter" | "kitchen"

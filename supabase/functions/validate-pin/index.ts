@@ -22,6 +22,13 @@ interface ValidatePinResponse {
   error?: string;
 }
 
+// Common weak PINs to block
+const WEAK_PINS = ["0000", "1111", "2222", "3333", "4444", "5555", "6666", "7777", "8888", "9999", "1234", "4321", "0123", "3210"];
+
+// Rate limiting configuration
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_MINUTES = 15;
+
 serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -108,6 +115,35 @@ serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
     );
 
+    // Check rate limiting - count recent failed attempts for this identifier
+    const lockoutTime = new Date(Date.now() - LOCKOUT_MINUTES * 60 * 1000).toISOString();
+    const { count: recentAttempts } = await supabase
+      .from("auth_attempts")
+      .select("*", { count: "exact", head: true })
+      .eq("identifier", name.toLowerCase())
+      .eq("success", false)
+      .gte("attempted_at", lockoutTime);
+
+    if (recentAttempts !== null && recentAttempts >= MAX_ATTEMPTS) {
+      // Log the blocked attempt
+      await supabase.from("auth_attempts").insert({
+        identifier: name.toLowerCase(),
+        attempted_at: new Date().toISOString(),
+        success: false,
+      });
+
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Zu viele Fehlversuche. Bitte warten Sie ${LOCKOUT_MINUTES} Minuten.`,
+        }),
+        {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     // Query staff table for user with matching name and PIN
     const { data, error } = await supabase
       .from("staff")
@@ -118,10 +154,17 @@ serve(async (req: Request) => {
       .single();
 
     if (error || !data) {
+      // Log failed attempt
+      await supabase.from("auth_attempts").insert({
+        identifier: name.toLowerCase(),
+        attempted_at: new Date().toISOString(),
+        success: false,
+      });
+
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Invalid name or PIN code",
+          error: "Ungültiger Name oder PIN-Code",
         }),
         {
           status: 401,
@@ -129,6 +172,13 @@ serve(async (req: Request) => {
         }
       );
     }
+
+    // Log successful attempt
+    await supabase.from("auth_attempts").insert({
+      identifier: name.toLowerCase(),
+      attempted_at: new Date().toISOString(),
+      success: true,
+    });
 
     // Success - return user info (without PIN)
     const response: ValidatePinResponse = {
