@@ -56,20 +56,24 @@ export function PdfPreview({ blobUrl, className, fileName }: PdfPreviewProps) {
 
   const pages = useMemo(() => Array.from({ length: numPages }, (_, i) => i + 1), [numPages]);
 
-  const handlePrint = async () => {
-    try {
-      const res = await fetch(blobUrl);
-      const blob = await res.blob();
-      const blobUrl2 = URL.createObjectURL(blob);
-      const printWindow = window.open(blobUrl2, "_blank");
-      if (printWindow) {
-        printWindow.addEventListener("load", () => {
-          setTimeout(() => printWindow.print(), 250);
-        });
-      }
-    } catch (e) {
-      console.error("Fehler beim Öffnen des Druckdialogs:", e);
-    }
+  const handlePrint = () => {
+    // Verwende iframe statt window.open um Popup-Blocker zu umgehen
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    iframe.src = blobUrl;
+    document.body.appendChild(iframe);
+    
+    iframe.onload = () => {
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      }, 100);
+    };
   };
 
   if (loading) {
