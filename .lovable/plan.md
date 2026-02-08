@@ -1,99 +1,85 @@
 
-## Formelkorrektur: Takeaway Gesamt zu „Kellner Abzugebender Betrag" addieren
+## Korrektur der Trinkgeld-Prozentberechnungen
 
-### Zusammenfassung
-Das Feld **„Kellner Abzugebender Betrag"** (schreibgeschützt, im POS & Terminal-Bereich) zeigt aktuell nur die Summe der `kassiert_brutto`-Werte aller Kellner-Schichten. Dieser Wert soll um den **Takeaway-Gesamtumsatz** erweitert werden:
+### Zusammenfassung des Problems
+Die **TG %** (Trinkgeld-Prozent) Berechnung in der Kellner-Abrechnungstabelle stimmt nicht, besonders bei Team-Schichten (zwei Kellner auf einer Kasse).
 
+### Aktueller Fehler
+
+Im Screenshot sehen wir:
+- Erste Zeile: **113,14 € × 2** (Team-Schicht) zeigt **5.3%** TG und **10.6%** Ø TG
+- Zweite Zeile: **113,14 €** (Einzelschicht) zeigt **5.2%** TG und **5.2%** Ø TG
+
+**Problem:** Bei der Team-Schicht wird `TG %` mit nur einem Anteil (113,14 €) durch den gesamten Schicht-Umsatz berechnet - das ergibt einen niedrigeren Prozentsatz als korrekt wäre.
+
+### Korrekte Berechnung
+
+| Schicht-Typ | Aktuell | Korrekt |
+|-------------|---------|---------|
+| **Einzelschicht** | `tipPerWaiter / pos_sales` | ✓ Richtig |
+| **Team-Schicht** | `tipPerWaiter / pos_sales` ❌ | `tipPerWaiter / (pos_sales / 2)` ✓ |
+
+Bei einer Team-Schicht sollte der **persönliche Anteil** mit dem **persönlichen Umsatzanteil** verglichen werden (50/50 Aufteilung).
+
+### Beispiel
+
+Angenommen eine Team-Schicht mit:
+- `pos_sales` = 4.280 € (gesamte Schicht)
+- `tipPerWaiter` = 113,14 € (pro Person)
+
+**Aktuell (falsch):**
 ```
-Kellner Abzugebender Betrag = Summe(kassiert_brutto) + Takeaway Gesamt
+TG % = 113,14 € / 4.280 € = 2.6%
 ```
 
-Wobei **Takeaway Gesamt** = Takeaway GL + OrderSmart + Wolt
+**Korrekt:**
+```
+TG % = 113,14 € / (4.280 € / 2) = 113,14 € / 2.140 € = 5.3%
+```
 
-### Begründung
-Bei Takeaway-Bestellungen (ob Karte oder Bar) wird der Umsatz zwar an der Kasse erfasst, aber nicht direkt einem Kellner zugeordnet. Damit der Manager beim Abgleich einen vollständigen Überblick hat, wie viel insgesamt abgerechnet wurde, muss dieser Betrag zum abzugebenden Betrag hinzugerechnet werden.
-
-### Auswirkung
-
-| Vorher | Nachher |
-|--------|---------|
-| Kellner Abzugebender Betrag = `1.000 €` (nur Kellner) | Kellner Abzugebender Betrag = `1.000 € + 482 € = 1.482 €` |
+---
 
 ### Betroffene Datei
 
-| Datei | Änderung |
-|-------|----------|
-| `src/pages/ManagerDashboard.tsx` | Zeile 211 und 470: `totalKassiertBrutto` um `totalDeliveryRevenue` erweitern |
+| Datei | Zeile | Änderung |
+|-------|-------|----------|
+| `src/pages/WaiterCashUp.tsx` | 431 | Bei Team-Schichten den Umsatz durch 2 teilen |
 
 ---
 
 ### Technische Umsetzung
 
-**Aktuell (Zeile 211):**
+**Aktuell (Zeile 431):**
 ```typescript
-const totalKassiertBrutto = waiterShifts.reduce((sum, w) => sum + (w.kassiert_brutto || 0), 0);
+const currentTipPercent = shift.pos_sales > 0 
+  ? (shiftTipShare / shift.pos_sales) * 100 
+  : 0;
 ```
 
 **Neu:**
 ```typescript
-const totalKassiertBrutto = waiterShifts.reduce((sum, w) => sum + (w.kassiert_brutto || 0), 0)
-  + formData.ordersmart_revenue
-  + formData.wolt_revenue
-  + formData.takeaway_total;
+// Bei Team-Schichten: persönlicher Umsatzanteil = pos_sales / 2
+const personalSalesShare = shift.second_waiter_name 
+  ? (shift.pos_sales || 0) / 2 
+  : (shift.pos_sales || 0);
+const currentTipPercent = personalSalesShare > 0 
+  ? (shiftTipShare / personalSalesShare) * 100 
+  : 0;
 ```
-
-Alternativ kann die bestehende `totalDeliveryRevenue`-Variable verwendet werden:
-
-```typescript
-const totalDeliveryRevenue = 
-  formData.ordersmart_revenue +
-  formData.wolt_revenue +
-  formData.takeaway_total;
-
-const totalKassiertBrutto = waiterShifts.reduce((sum, w) => sum + (w.kassiert_brutto || 0), 0)
-  + totalDeliveryRevenue;
-```
-
-Da `totalDeliveryRevenue` erst nach `totalKassiertBrutto` definiert wird (Zeile 220), muss entweder:
-1. Die Definition von `totalDeliveryRevenue` nach oben verschoben werden, oder
-2. Die Takeaway-Werte direkt in `totalKassiertBrutto` addiert werden
-
-**Gewählter Ansatz:** Die Takeaway-Werte direkt in `totalKassiertBrutto` addieren, um die bestehende Code-Struktur minimal zu verändern.
 
 ---
 
-### UI-Änderung
+### Auswirkung
 
-Das Feld bleibt optisch identisch (schreibgeschützt, grauer Hintergrund). Lediglich der angezeigte Wert ändert sich:
+| Vorher | Nachher |
+|--------|---------|
+| Team-Schicht zeigt **halben** TG % | Team-Schicht zeigt **korrekten** TG % |
+| TG % ≠ Ø TG % bei Team-Schichten | TG % und Ø TG % sind konsistent |
 
-| Label | Vorher | Nachher |
-|-------|--------|---------|
-| Kellner Abzugebender Betrag | Nur Kellner-Summe | Kellner-Summe + Takeaway Gesamt |
-
-Optional könnte das Label angepasst werden zu „Abzugebender Betrag" oder ein Tooltip hinzugefügt werden, der die Zusammensetzung erklärt.
-
----
-
-### Was bleibt unverändert
-
-- Die BARGELD-Berechnung (bleibt wie bisher)
-- Die POS-Differenz-Warnung (vergleicht weiterhin `pos_total` mit `kellnerUmsatz`, nicht mit `totalKassiertBrutto`)
-- Die Terminal-Differenz-Warnung
-- Die Statistiken und Export-Dateien
+Die Durchschnittsberechnung (`Ø TG %`) in `useWaiterTipAverages` ist bereits korrekt implementiert (teilt den Umsatz bei Team-Schichten durch 2). Mit dieser Korrektur wird die aktuelle `TG %` Anzeige mit der Durchschnittsberechnung konsistent.
 
 ---
 
-### Zusammenfassung der Code-Änderung
+### Zusammenfassung
 
-Nur **eine Zeile** in `src/pages/ManagerDashboard.tsx` wird geändert (Zeile 211):
-
-```typescript
-// VORHER:
-const totalKassiertBrutto = waiterShifts.reduce((sum, w) => sum + (w.kassiert_brutto || 0), 0);
-
-// NACHHER:
-const totalKassiertBrutto = waiterShifts.reduce((sum, w) => sum + (w.kassiert_brutto || 0), 0)
-  + formData.ordersmart_revenue
-  + formData.wolt_revenue
-  + formData.takeaway_total;
-```
+Eine einzige Codeänderung in `src/pages/WaiterCashUp.tsx` (Zeile 431), die bei Team-Schichten den persönlichen Umsatzanteil (pos_sales / 2) für die Prozentberechnung verwendet.
