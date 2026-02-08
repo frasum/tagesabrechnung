@@ -1,4 +1,4 @@
-import { User, Phone, Euro, Pencil, Trash2, ChefHat, UtensilsCrossed } from 'lucide-react';
+import { Pencil, Trash2, ChefHat, UtensilsCrossed, Store } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,11 @@ interface StaffCardProps {
 export function StaffCard({ staff, onEdit, onDelete }: StaffCardProps) {
   const RoleIcon = staff.role === 'kitchen' ? ChefHat : UtensilsCrossed;
   const roleLabel = staff.role === 'kitchen' ? 'Küche' : 'Kellner';
+  
+  // Get restaurant names from the relation
+  const restaurantNames = staff.staff_restaurants
+    ?.map(sr => sr.restaurants?.name)
+    .filter(Boolean) ?? [];
 
   return (
     <Card className={`transition-all ${!staff.is_active ? 'opacity-60' : ''}`}>
@@ -34,30 +39,29 @@ export function StaffCard({ staff, onEdit, onDelete }: StaffCardProps) {
                 )}
               </div>
               
-              <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
+              <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground flex-wrap">
                 <Badge variant="outline" className="font-normal">
                   <RoleIcon className="w-3 h-3 mr-1" />
                   {roleLabel}
                 </Badge>
-                
-                {staff.hourly_rate && staff.hourly_rate > 0 && (
-                  <span className="flex items-center gap-1">
-                    <Euro className="w-3 h-3" />
-                    {staff.hourly_rate.toFixed(2)}/h
-                  </span>
-                )}
-                
-                {staff.phone && (
-                  <span className="flex items-center gap-1">
-                    <Phone className="w-3 h-3" />
-                    {staff.phone}
-                  </span>
-                )}
               </div>
               
-              {staff.notes && (
-                <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-                  {staff.notes}
+              {/* Restaurant badges */}
+              {restaurantNames.length > 0 && (
+                <div className="flex items-center gap-1 mt-2 flex-wrap">
+                  <Store className="w-3 h-3 text-muted-foreground shrink-0" />
+                  {restaurantNames.map((name, idx) => (
+                    <Badge key={idx} variant="secondary" className="text-xs font-normal">
+                      {name}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              
+              {restaurantNames.length === 0 && (
+                <p className="text-xs text-destructive mt-2 flex items-center gap-1">
+                  <Store className="w-3 h-3" />
+                  Kein Restaurant zugewiesen
                 </p>
               )}
             </div>
