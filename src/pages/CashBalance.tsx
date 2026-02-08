@@ -1,6 +1,6 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Wallet } from 'lucide-react';
 import { useCashBalanceData } from '@/hooks/useCashBalanceData';
@@ -127,6 +127,51 @@ export default function CashBalance() {
                     </TableRow>
                   )}
                 </TableBody>
+                {data && data.length > 0 && !isLoading && (
+                  <TableFooter>
+                    <TableRow className="bg-muted/50">
+                      <TableCell className="sticky left-0 bg-muted/50 z-10 font-bold">
+                        GESAMT
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums font-bold">
+                        {formatCurrency(data.reduce((sum, row) => sum + row.kellnerUmsatz, 0))}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums font-bold text-destructive">
+                        -{formatCurrency(data.reduce((sum, row) => sum + row.kreditkarten, 0))}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums font-bold text-destructive">
+                        -{formatCurrency(data.reduce((sum, row) => sum + row.ordersmart, 0))}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums font-bold text-destructive">
+                        -{formatCurrency(data.reduce((sum, row) => sum + row.wolt, 0))}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums font-bold text-destructive">
+                        -{formatCurrency(data.reduce((sum, row) => sum + row.gutscheineEL, 0))}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums font-bold text-destructive">
+                        -{formatCurrency(data.reduce((sum, row) => sum + row.finedine, 0))}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums font-bold text-emerald-600 dark:text-emerald-400">
+                        +{formatCurrency(data.reduce((sum, row) => sum + row.gutscheineVK, 0))}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums font-bold text-destructive">
+                        -{formatCurrency(data.reduce((sum, row) => sum + row.einladung, 0))}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums font-bold text-destructive">
+                        -{formatCurrency(data.reduce((sum, row) => sum + row.offeneRE, 0))}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums font-bold text-destructive">
+                        -{formatCurrency(data.reduce((sum, row) => sum + row.vorschuss, 0))}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums font-bold text-destructive">
+                        -{formatCurrency(data.reduce((sum, row) => sum + row.ausgaben, 0))}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums font-bold text-emerald-600 dark:text-emerald-400">
+                        {formatCurrency(data.reduce((sum, row) => sum + row.bargeld, 0))}
+                      </TableCell>
+                    </TableRow>
+                  </TableFooter>
+                )}
               </Table>
             </div>
           </CardContent>
