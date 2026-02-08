@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Users, Plus, ChefHat, UtensilsCrossed, Search } from 'lucide-react';
-import { AppLayout } from '@/components/layout/AppLayout';
+import { GlobalLayout } from '@/components/layout/GlobalLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -67,16 +67,16 @@ export default function StaffManagement() {
 
   if (isLoading) {
     return (
-      <AppLayout>
+      <GlobalLayout>
         <div className="flex items-center justify-center h-64">
           <div className="animate-pulse text-muted-foreground">Mitarbeiter werden geladen...</div>
         </div>
-      </AppLayout>
+      </GlobalLayout>
     );
   }
 
   return (
-    <AppLayout>
+    <GlobalLayout>
       <div className="space-y-6 animate-fade-in">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -188,6 +188,6 @@ export default function StaffManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </AppLayout>
+    </GlobalLayout>
   );
 }
