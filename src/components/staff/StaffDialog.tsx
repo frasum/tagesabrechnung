@@ -24,27 +24,41 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
   const [isActive, setIsActive] = useState(true);
   const [pinCode, setPinCode] = useState('');
   const [selectedRestaurants, setSelectedRestaurants] = useState<string[]>([]);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   const { data: restaurants = [] } = useRestaurants();
 
+  // Reset form when dialog opens/closes or staff changes
   useEffect(() => {
+    if (!open) {
+      setHasInitialized(false);
+      return;
+    }
+    
     if (staff) {
       setName(staff.name);
       setRole(staff.role);
       setIsActive(staff.is_active ?? true);
-      setPinCode(''); // Don't show existing PIN
-      // Get restaurant IDs from the staff_restaurants relation
+      setPinCode('');
       const restaurantIds = staff.staff_restaurants?.map(sr => sr.restaurant_id) ?? [];
       setSelectedRestaurants(restaurantIds);
+      setHasInitialized(true);
     } else {
       setName('');
       setRole('waiter');
       setIsActive(true);
       setPinCode('');
-      // Default to all restaurants for new staff
+      setSelectedRestaurants([]);
+      setHasInitialized(true);
+    }
+  }, [staff, open]);
+
+  // Set default restaurants for new staff once restaurants are loaded
+  useEffect(() => {
+    if (open && hasInitialized && !staff && selectedRestaurants.length === 0 && restaurants.length > 0) {
       setSelectedRestaurants(restaurants.map(r => r.id));
     }
-  }, [staff, open, restaurants]);
+  }, [open, hasInitialized, staff, restaurants.length, selectedRestaurants.length]);
 
   const handlePinChange = (value: string) => {
     // Only allow digits and max 4 characters
