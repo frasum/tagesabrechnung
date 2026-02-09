@@ -146,6 +146,7 @@ export default function WaiterMobile() {
 
   const isSaving = createSession.isPending || createWaiterShift.isPending || updateWaiterShift.isPending;
   const isLoading = sessionLoading || shiftsLoading;
+  const isSubmitted = !!(myShift && (myShift as any).submitted_at);
 
   // Transform rankings for TipRanking component
   const rankingItems: RankingItem[] = rankings.map(r => ({
@@ -202,6 +203,14 @@ export default function WaiterMobile() {
               </div>
             ) : (
               <>
+                {isSubmitted && (
+                  <Alert className="border-warning/50 bg-warning/10">
+                    <Check className="h-4 w-4 text-warning" />
+                    <AlertDescription className="text-warning-foreground">
+                      Deine Abrechnung wurde bereits eingereicht und kann nicht mehr geändert werden. Wende dich an einen Manager.
+                    </AlertDescription>
+                  </Alert>
+                )}
                 <div>
                   <Label className="text-xs text-muted-foreground">Zweiter Kellner (optional)</Label>
                   <SecondWaiterSelect
@@ -209,6 +218,7 @@ export default function WaiterMobile() {
                     onValueChange={setSecondWaiterName}
                     excludeWaiter={staffName}
                     restaurantId={restaurantId}
+                    disabled={isSubmitted}
                   />
                 </div>
                 <Separator />
@@ -218,6 +228,7 @@ export default function WaiterMobile() {
                     <CurrencyInput
                       value={formData.pos_sales}
                       onChange={(v) => updateField('pos_sales', v)}
+                      disabled={isSubmitted}
                     />
                   </div>
                   <div>
@@ -225,6 +236,7 @@ export default function WaiterMobile() {
                     <CurrencyInput
                       value={formData.kassiert_brutto}
                       onChange={(v) => updateField('kassiert_brutto', v)}
+                      disabled={isSubmitted}
                     />
                   </div>
                   <div>
@@ -232,6 +244,7 @@ export default function WaiterMobile() {
                     <CurrencyInput
                       value={formData.card_total}
                       onChange={(v) => updateField('card_total', v)}
+                      disabled={isSubmitted}
                     />
                   </div>
                   <div>
@@ -239,6 +252,7 @@ export default function WaiterMobile() {
                     <CurrencyInput
                       value={formData.hilf_mahl}
                       onChange={(v) => updateField('hilf_mahl', v)}
+                      disabled={isSubmitted}
                     />
                   </div>
                   <div>
@@ -246,6 +260,7 @@ export default function WaiterMobile() {
                     <CurrencyInput
                       value={formData.open_invoices}
                       onChange={(v) => updateField('open_invoices', v)}
+                      disabled={isSubmitted}
                     />
                   </div>
                   <div>
@@ -253,6 +268,7 @@ export default function WaiterMobile() {
                     <CurrencyInput
                       value={formData.cash_handed_in}
                       onChange={(v) => updateField('cash_handed_in', v)}
+                      disabled={isSubmitted}
                     />
                   </div>
                 </div>
@@ -275,6 +291,7 @@ export default function WaiterMobile() {
                   </div>
                 </div>
 
+                {!isSubmitted && (
                 <Button 
                   onClick={handleSave} 
                   disabled={isSaving || !restaurantId}
@@ -288,6 +305,7 @@ export default function WaiterMobile() {
                   )}
                   Abrechnung speichern
                 </Button>
+                )}
               </>
             )}
           </CardContent>
