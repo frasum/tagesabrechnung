@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { useSelectedDate } from '@/contexts/DateContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { isSessionLocked } from '@/utils/businessDate';
+import { SessionLockedBanner } from '@/components/shared/SessionLockedBanner';
 import { Pencil, Percent, Plus, Trash2, User, Users, X } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { DateSelector } from '@/components/shared/DateSelector';
@@ -23,6 +26,8 @@ export default function WaiterCashUp() {
   const { selectedDate, setSelectedDate } = useSelectedDate();
   const { toast } = useToast();
   const { restaurantId } = useRestaurant();
+  const { user } = useAuth();
+  const locked = isSessionLocked(selectedDate, user?.permissionLevel || 'staff');
 
   // Form state for new waiter
   const [newWaiterName, setNewWaiterName] = useState('');
@@ -250,8 +255,11 @@ export default function WaiterCashUp() {
         {/* Session Content */}
         {session && <div className="space-y-6">
 
+            {locked && <SessionLockedBanner />}
+
             <div className="grid lg:grid-cols-2 gap-6">
             {/* Add/Edit Waiter Form */}
+            {!locked && (
             <Card className={editingShiftId ? 'ring-2 ring-primary' : ''}>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -386,6 +394,7 @@ export default function WaiterCashUp() {
                 </div>
               </CardContent>
             </Card>
+            )}
 
             {/* Trinkgeld Pool */}
             <Card>
@@ -529,6 +538,7 @@ export default function WaiterCashUp() {
                               <TableCell className="text-right tabular-nums">{formatCurrency(expected)}</TableCell>
                               <TableCell className="text-right tabular-nums text-success">{formatCurrency(shift.kitchen_tip)}</TableCell>
                               <TableCell>
+                                {!locked && (
                                 <div className="flex gap-1">
                                   <Button
                                     variant="ghost"
@@ -545,6 +555,7 @@ export default function WaiterCashUp() {
                                     <Trash2 className="w-4 h-4 text-destructive" />
                                   </Button>
                                 </div>
+                                )}
                               </TableCell>
                             </TableRow>
                           );

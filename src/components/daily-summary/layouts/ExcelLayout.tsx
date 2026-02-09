@@ -57,6 +57,7 @@ interface ExcelLayoutProps {
   tipPerKitchen: number;
   bargeld: number;
   totalAdvances: number;
+  locked?: boolean;
 }
 
 export function ExcelLayout({
@@ -81,6 +82,7 @@ export function ExcelLayout({
   tipPerKitchen,
   bargeld,
   totalAdvances,
+  locked,
 }: ExcelLayoutProps) {
   const fmt = (value: number) =>
     new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
@@ -109,7 +111,7 @@ export function ExcelLayout({
             </div>
             <table className="w-full text-sm">
               <tbody>
-                <ExcelInputRow label="Vectron Gesamtumsatz" value={formData.pos_total} onChange={(v) => onFieldChange('pos_total', v)} />
+                <ExcelInputRow label="Vectron Gesamtumsatz" value={formData.pos_total} onChange={(v) => onFieldChange('pos_total', v)} disabled={locked} />
               </tbody>
             </table>
 
@@ -119,9 +121,9 @@ export function ExcelLayout({
             </div>
             <table className="w-full text-sm">
               <tbody>
-                <ExcelInputRow label="Terminal 1" value={formData.terminal_1_total} onChange={(v) => onFieldChange('terminal_1_total', v)} />
-                <ExcelInputRow label="Terminal 2" value={formData.terminal_2_total} onChange={(v) => onFieldChange('terminal_2_total', v)} />
-                <ExcelInputRow label="KK Umsatz GL" value={formData.card_total_gl} onChange={(v) => onFieldChange('card_total_gl', v)} />
+                <ExcelInputRow label="Terminal 1" value={formData.terminal_1_total} onChange={(v) => onFieldChange('terminal_1_total', v)} disabled={locked} />
+                <ExcelInputRow label="Terminal 2" value={formData.terminal_2_total} onChange={(v) => onFieldChange('terminal_2_total', v)} disabled={locked} />
+                <ExcelInputRow label="KK Umsatz GL" value={formData.card_total_gl} onChange={(v) => onFieldChange('card_total_gl', v)} disabled={locked} />
                 
               </tbody>
             </table>
@@ -132,9 +134,9 @@ export function ExcelLayout({
             </div>
             <table className="w-full text-sm">
               <tbody>
-                <ExcelInputRow label="Takeaway GL" value={formData.takeaway_total} onChange={(v) => onFieldChange('takeaway_total', v)} />
-                <ExcelInputRow label="OrderSmart" value={formData.ordersmart_revenue} onChange={(v) => onFieldChange('ordersmart_revenue', v)} />
-                <ExcelInputRow label="Wolt" value={formData.wolt_revenue} onChange={(v) => onFieldChange('wolt_revenue', v)} />
+                <ExcelInputRow label="Takeaway GL" value={formData.takeaway_total} onChange={(v) => onFieldChange('takeaway_total', v)} disabled={locked} />
+                <ExcelInputRow label="OrderSmart" value={formData.ordersmart_revenue} onChange={(v) => onFieldChange('ordersmart_revenue', v)} disabled={locked} />
+                <ExcelInputRow label="Wolt" value={formData.wolt_revenue} onChange={(v) => onFieldChange('wolt_revenue', v)} disabled={locked} />
                 
               </tbody>
             </table>
@@ -145,13 +147,13 @@ export function ExcelLayout({
             </div>
             <table className="w-full text-sm">
               <tbody>
-                <ExcelInputRow label="Gutschein Verkauf" value={formData.vouchers_sold} onChange={(v) => onFieldChange('vouchers_sold', v)} />
-                <ExcelInputRow label="Gutschein Eingelöst" value={formData.vouchers_redeemed} onChange={(v) => onFieldChange('vouchers_redeemed', v)} />
-                <ExcelInputRow label="FineDine" value={formData.finedine_vouchers} onChange={(v) => onFieldChange('finedine_vouchers', v)} />
+                <ExcelInputRow label="Gutschein Verkauf" value={formData.vouchers_sold} onChange={(v) => onFieldChange('vouchers_sold', v)} disabled={locked} />
+                <ExcelInputRow label="Gutschein Eingelöst" value={formData.vouchers_redeemed} onChange={(v) => onFieldChange('vouchers_redeemed', v)} disabled={locked} />
+                <ExcelInputRow label="FineDine" value={formData.finedine_vouchers} onChange={(v) => onFieldChange('finedine_vouchers', v)} disabled={locked} />
                 {totalOpenInvoices !== 0 && <ExcelReadonlyRow label="Offene Rechnungen" value={totalOpenInvoices} />}
                 {totalAdvances !== 0 && <ExcelReadonlyRow label="Vorschuss" value={totalAdvances} />}
-                <ExcelInputRow label="Einladung" value={formData.einladung} onChange={(v) => onFieldChange('einladung', v)} />
-                <ExcelInputRow label="Sonstige Einnahmen" value={formData.sonstige_einnahme} onChange={(v) => onFieldChange('sonstige_einnahme', v)} />
+                <ExcelInputRow label="Einladung" value={formData.einladung} onChange={(v) => onFieldChange('einladung', v)} disabled={locked} />
+                <ExcelInputRow label="Sonstige Einnahmen" value={formData.sonstige_einnahme} onChange={(v) => onFieldChange('sonstige_einnahme', v)} disabled={locked} />
                 {totalExpenses !== 0 && <ExcelReadonlyRow label="Ausgaben" value={-totalExpenses} />}
               </tbody>
             </table>
@@ -189,6 +191,7 @@ export function ExcelLayout({
                 onChange={(e) => onFieldChange('notes', e.target.value)}
                 rows={3}
                 className="border-0 bg-transparent p-0 focus-visible:ring-0 resize-none"
+                disabled={locked}
               />
             </div>
           </div>
@@ -206,12 +209,12 @@ export function ExcelLayout({
 
 // Helper components for compact Excel-style rows
 
-function ExcelInputRow({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+function ExcelInputRow({ label, value, onChange, disabled }: { label: string; value: number; onChange: (v: number) => void; disabled?: boolean }) {
   return (
     <tr className="border-b last:border-b-0 hover:bg-muted/20 transition-colors">
       <td className="px-3 py-1.5 font-medium text-foreground">{label}</td>
       <td className="px-3 py-1.5 w-36">
-        <CurrencyInput value={value} onChange={onChange} className="h-7 text-sm border-primary/20 bg-primary/5" />
+        <CurrencyInput value={value} onChange={onChange} className="h-7 text-sm border-primary/20 bg-primary/5" disabled={disabled} />
       </td>
     </tr>
   );

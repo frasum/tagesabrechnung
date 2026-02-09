@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { useSelectedDate } from '@/contexts/DateContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { isSessionLocked } from '@/utils/businessDate';
+import { SessionLockedBanner } from '@/components/shared/SessionLockedBanner';
 import { Plus, Trash2, ChefHat, Clock } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { DateSelector } from '@/components/shared/DateSelector';
@@ -27,6 +30,8 @@ export default function KitchenTipSplit() {
   const { selectedDate, setSelectedDate } = useSelectedDate();
   const { toast } = useToast();
   const { restaurantId } = useRestaurant();
+  const { user } = useAuth();
+  const locked = isSessionLocked(selectedDate, user?.permissionLevel || 'staff');
 
   // Form state
   const [staffName, setStaffName] = useState('');
@@ -143,6 +148,8 @@ export default function KitchenTipSplit() {
         {/* Session Content */}
         {session && (
           <div className="space-y-6">
+            {locked && <SessionLockedBanner />}
+
             {/* Summary Stats */}
             <div className="grid sm:grid-cols-3 gap-4">
               <StatCard
@@ -164,6 +171,7 @@ export default function KitchenTipSplit() {
 
             <div className="grid lg:grid-cols-3 gap-6">
               {/* Add Kitchen Staff Form */}
+              {!locked && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -215,6 +223,7 @@ export default function KitchenTipSplit() {
                   </Button>
                 </CardContent>
               </Card>
+              )}
 
               {/* Kitchen Staff Table */}
               <Card className="lg:col-span-2">
@@ -260,6 +269,7 @@ export default function KitchenTipSplit() {
                                   {formatCurrency(tipAmount)}
                                 </TableCell>
                                 <TableCell>
+                                  {!locked && (
                                   <Button
                                     variant="ghost"
                                     size="icon"
@@ -267,6 +277,7 @@ export default function KitchenTipSplit() {
                                   >
                                     <Trash2 className="w-4 h-4 text-destructive" />
                                   </Button>
+                                  )}
                                 </TableCell>
                               </TableRow>
                             );

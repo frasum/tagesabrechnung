@@ -32,3 +32,21 @@ export function isBusinessToday(date: Date): boolean {
   const todayStr = businessToday.toISOString().split('T')[0];
   return dateStr === todayStr;
 }
+
+/**
+ * Prüft ob eine Session gesperrt ist (älter als 3 Tage und kein Admin).
+ * Admins können immer bearbeiten.
+ */
+export function isSessionLocked(sessionDate: Date, permissionLevel: 'staff' | 'manager' | 'admin'): boolean {
+  if (permissionLevel === 'admin') return false;
+  
+  const today = getBusinessDate();
+  const todayStr = today.toISOString().split('T')[0];
+  const sessionStr = sessionDate.toISOString().split('T')[0];
+  
+  const todayMs = new Date(todayStr).getTime();
+  const sessionMs = new Date(sessionStr).getTime();
+  const diffDays = (todayMs - sessionMs) / (1000 * 60 * 60 * 24);
+  
+  return diffDays > 3;
+}

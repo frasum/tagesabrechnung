@@ -4,6 +4,8 @@ import { de } from 'date-fns/locale';
 import { useSelectedDate } from '@/contexts/DateContext';
 import { Plus, FileText, Euro, CreditCard, Truck, Receipt, Download, Banknote, Vault, Trash2, Settings, Wallet, ClipboardList, Clock, CheckCircle2, AlertTriangle, FileDown, X } from 'lucide-react';
 import { generateDailySummaryPDF } from '@/utils/pdfExport';
+import { isSessionLocked } from '@/utils/businessDate';
+import { SessionLockedBanner } from '@/components/shared/SessionLockedBanner';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { DateSelector } from '@/components/shared/DateSelector';
 import { StatCard } from '@/components/shared/StatCard';
@@ -42,6 +44,7 @@ export default function DailySummary() {
   const { toast } = useToast();
   const { restaurantId, restaurantName } = useRestaurant();
   const { user } = useAuth();
+  const locked = isSessionLocked(selectedDate, user?.permissionLevel || 'staff');
   const [showTransferDialog, setShowTransferDialog] = useState(false);
 
   // Form state for editable fields
@@ -501,6 +504,7 @@ export default function DailySummary() {
           value={formData.notes}
           onChange={(e) => updateField('notes', e.target.value)}
           rows={4}
+          disabled={locked}
         />
       </CardContent>
     </Card>
@@ -526,6 +530,7 @@ export default function DailySummary() {
           <CurrencyInput
             value={formData.pos_total}
             onChange={(v) => updateField('pos_total', v)}
+            disabled={locked}
           />
         </div>
         <div className="grid grid-cols-2 gap-4">
@@ -534,6 +539,7 @@ export default function DailySummary() {
             <CurrencyInput
               value={formData.terminal_1_total}
               onChange={(v) => updateField('terminal_1_total', v)}
+              disabled={locked}
             />
           </div>
           <div>
@@ -541,6 +547,7 @@ export default function DailySummary() {
             <CurrencyInput
               value={formData.terminal_2_total}
               onChange={(v) => updateField('terminal_2_total', v)}
+              disabled={locked}
             />
           </div>
         </div>
@@ -549,6 +556,7 @@ export default function DailySummary() {
           <CurrencyInput
             value={formData.card_total_gl}
             onChange={(v) => updateField('card_total_gl', v)}
+            disabled={locked}
           />
         </div>
       </CardContent>
@@ -569,6 +577,7 @@ export default function DailySummary() {
           <CurrencyInput
             value={formData.takeaway_total}
             onChange={(v) => updateField('takeaway_total', v)}
+            disabled={locked}
           />
         </div>
         <div className="grid grid-cols-2 gap-4">
@@ -577,6 +586,7 @@ export default function DailySummary() {
             <CurrencyInput
               value={formData.ordersmart_revenue}
               onChange={(v) => updateField('ordersmart_revenue', v)}
+              disabled={locked}
             />
           </div>
           <div>
@@ -584,6 +594,7 @@ export default function DailySummary() {
             <CurrencyInput
               value={formData.wolt_revenue}
               onChange={(v) => updateField('wolt_revenue', v)}
+              disabled={locked}
             />
           </div>
         </div>
@@ -613,6 +624,7 @@ export default function DailySummary() {
           <CurrencyInput
             value={formData.vouchers_sold}
             onChange={(v) => updateField('vouchers_sold', v)}
+            disabled={locked}
           />
         </div>
         <div className="grid grid-cols-2 gap-4">
@@ -621,6 +633,7 @@ export default function DailySummary() {
             <CurrencyInput
               value={formData.vouchers_redeemed}
               onChange={(v) => updateField('vouchers_redeemed', v)}
+              disabled={locked}
             />
           </div>
           <div>
@@ -628,6 +641,7 @@ export default function DailySummary() {
             <CurrencyInput
               value={formData.finedine_vouchers}
               onChange={(v) => updateField('finedine_vouchers', v)}
+              disabled={locked}
             />
           </div>
         </div>
@@ -649,6 +663,7 @@ export default function DailySummary() {
           <CurrencyInput
             value={formData.einladung}
             onChange={(v) => updateField('einladung', v)}
+            disabled={locked}
           />
         </div>
         <div>
@@ -656,6 +671,7 @@ export default function DailySummary() {
           <CurrencyInput
             value={formData.sonstige_einnahme}
             onChange={(v) => updateField('sonstige_einnahme', v)}
+            disabled={locked}
           />
         </div>
       </CardContent>
@@ -668,6 +684,7 @@ export default function DailySummary() {
         <CardTitle>Ausgaben</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {!locked && (
         <div className="flex gap-2">
           <Input
             placeholder="Beschreibung"
@@ -684,6 +701,7 @@ export default function DailySummary() {
             <Plus className="w-4 h-4" />
           </Button>
         </div>
+        )}
 
         {expenses.length > 0 && (
           <div className="space-y-2">
@@ -693,19 +711,21 @@ export default function DailySummary() {
                 className="flex items-center justify-between p-2 bg-muted rounded-lg"
               >
                 <span className="text-sm">{expense.description}</span>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium tabular-nums text-sm">
-                    {formatCurrency(expense.amount)}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => handleDeleteExpense(expense.id)}
-                  >
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
-                </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium tabular-nums text-sm">
+                      {formatCurrency(expense.amount)}
+                    </span>
+                    {!locked && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => handleDeleteExpense(expense.id)}
+                    >
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                    )}
+                  </div>
               </div>
             ))}
             <div className="flex justify-between pt-2 border-t">
@@ -726,6 +746,7 @@ export default function DailySummary() {
         <CardTitle>Vorschuss</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {!locked && (
         <div className="flex gap-2">
           <div className="flex-1">
             <StaffSelect
@@ -745,6 +766,7 @@ export default function DailySummary() {
             <Plus className="w-4 h-4" />
           </Button>
         </div>
+        )}
 
         {advances.length > 0 && (
           <div className="space-y-2">
@@ -754,19 +776,21 @@ export default function DailySummary() {
                 className="flex items-center justify-between p-2 bg-muted rounded-lg"
               >
                 <span className="text-sm">{advance.staff_name}</span>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium tabular-nums text-sm">
-                    {formatCurrency(advance.amount)}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => handleDeleteAdvance(advance.id)}
-                  >
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
-                </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium tabular-nums text-sm">
+                      {formatCurrency(advance.amount)}
+                    </span>
+                    {!locked && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => handleDeleteAdvance(advance.id)}
+                    >
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                    )}
+                  </div>
               </div>
             ))}
             <div className="flex justify-between pt-2 border-t">
@@ -1058,6 +1082,7 @@ export default function DailySummary() {
       tipPerKitchen={tipPerKitchen}
       bargeld={bargeld}
       totalAdvances={totalAdvances}
+      locked={locked}
     />
   );
 
@@ -1112,7 +1137,12 @@ export default function DailySummary() {
         )}
 
         {/* Session Content */}
-        {session && renderExcelLayout()}
+        {session && (
+          <>
+            {locked && <SessionLockedBanner />}
+            {renderExcelLayout()}
+          </>
+        )}
       </div>
 
       {/* Transfer Dialog */}
