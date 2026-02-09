@@ -109,7 +109,7 @@ export function ExcelLayout({
                 <ExcelInputRow label="Vectron Gesamtumsatz" value={formData.pos_total} onChange={(v) => onFieldChange('pos_total', v)} />
                 <ExcelReadonlyRow label="Kellner Umsatz" value={kellnerUmsatz} />
                 <ExcelReadonlyRow label="Kellner Abzugeben" value={totalKassiertBrutto} />
-                <ExcelReadonlyRow label="Differenz" value={formData.pos_total - kellnerUmsatz} highlight={Math.abs(formData.pos_total - kellnerUmsatz - formData.takeaway_total) >= 0.01 ? 'warning' : undefined} />
+                <ExcelReadonlyRow label="Differenz" value={formData.pos_total - kellnerUmsatz - formData.takeaway_total} highlight={Math.abs(formData.pos_total - kellnerUmsatz - formData.takeaway_total) >= 0.01 ? 'warning' : undefined} />
               </tbody>
             </table>
 
