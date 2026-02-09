@@ -206,18 +206,10 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
     y = (doc as any).lastAutoTable.finalY + 4;
   }
 
-  // ========== FOOTER ==========
+  // ========== Ensure single page only ==========
   const pageCount = doc.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    doc.setFontSize(7);
-    doc.setTextColor(128);
-    doc.text(
-      `Seite ${i} von ${pageCount}`,
-      pageWidth / 2,
-      doc.internal.pageSize.getHeight() - 8,
-      { align: 'center' }
-    );
+  while (doc.getNumberOfPages() > 1) {
+    doc.deletePage(2);
   }
 
   const fileName = `Tagesabrechnung_${format(new Date(data.session.session_date), 'yyyy-MM-dd')}.pdf`;
