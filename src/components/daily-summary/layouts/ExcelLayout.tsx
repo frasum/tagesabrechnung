@@ -122,7 +122,7 @@ export function ExcelLayout({
                 <ExcelInputRow label="Terminal 1" value={formData.terminal_1_total} onChange={(v) => onFieldChange('terminal_1_total', v)} />
                 <ExcelInputRow label="Terminal 2" value={formData.terminal_2_total} onChange={(v) => onFieldChange('terminal_2_total', v)} />
                 <ExcelInputRow label="KK Umsatz GL" value={formData.card_total_gl} onChange={(v) => onFieldChange('card_total_gl', v)} />
-                <ExcelReadonlyRow label="KK Gesamt" value={totalCardTotal} bold />
+                
               </tbody>
             </table>
 
@@ -135,7 +135,7 @@ export function ExcelLayout({
                 <ExcelInputRow label="Takeaway GL" value={formData.takeaway_total} onChange={(v) => onFieldChange('takeaway_total', v)} />
                 <ExcelInputRow label="OrderSmart" value={formData.ordersmart_revenue} onChange={(v) => onFieldChange('ordersmart_revenue', v)} />
                 <ExcelInputRow label="Wolt" value={formData.wolt_revenue} onChange={(v) => onFieldChange('wolt_revenue', v)} />
-                <ExcelReadonlyRow label="Take-Away Gesamt" value={totalDeliveryRevenue} bold />
+                
               </tbody>
             </table>
 
