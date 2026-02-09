@@ -46,11 +46,17 @@ interface Expense {
   amount: number;
 }
 
+interface AdvanceEntry {
+  staff_name: string;
+  amount: number;
+}
+
 interface PDFExportData {
   session: Session;
   waiterShifts: WaiterShift[];
   kitchenShifts: KitchenShift[];
   expenses: Expense[];
+  advances?: AdvanceEntry[];
   restaurantName?: string;
   exportedBy?: string;
   totals: {
@@ -193,6 +199,30 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
       tableWidth: tableWidth,
       didParseCell: (cell) => {
         if (cell.section === 'body' && cell.row.index === data.expenses.length) {
+          cell.cell.styles.fontStyle = 'bold';
+        }
+      },
+    });
+    y = (doc as any).lastAutoTable.finalY + 4;
+  }
+
+  // ========== VORSCHUSS (if any) ==========
+  if (data.advances && data.advances.length > 0) {
+    autoTable(doc, {
+      startY: y,
+      margin: { left: tableMarginLeft, right: tableMarginLeft },
+      head: [['Vorschuss', 'Betrag']],
+      body: [
+        ...data.advances.map(a => [a.staff_name, formatCurrency(a.amount)]),
+        ['Summe', formatCurrency(data.totals.totalAdvances ?? 0)],
+      ],
+      theme: 'plain',
+      headStyles: { fillColor: [241, 245, 249] as [number, number, number], fontSize: 8, fontStyle: 'bold' as const, textColor: [51, 65, 85] as [number, number, number] },
+      bodyStyles: { fontSize: 8 },
+      columnStyles: { 1: { halign: 'right' as const } },
+      tableWidth: tableWidth,
+      didParseCell: (cell) => {
+        if (cell.section === 'body' && cell.row.index === data.advances!.length) {
           cell.cell.styles.fontStyle = 'bold';
         }
       },

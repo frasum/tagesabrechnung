@@ -385,6 +385,10 @@ export default function DailySummary() {
         description: e.description,
         amount: e.amount,
       })),
+      advances: advances.map(a => ({
+        staff_name: a.staff_name,
+        amount: a.amount,
+      })),
       restaurantName,
       exportedBy: user?.name,
       totals: {
