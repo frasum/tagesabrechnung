@@ -207,10 +207,10 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
     }, 0);
     const tipPerShare = poolParticipants > 0 ? data.totals.totalWaiterTip / poolParticipants : 0;
 
-    const waiterRows = data.waiterShifts.map(shift => {
-      const posSales = shift.pos_sales || 0;
-      const shares = shift.second_waiter_name ? 2 : 1;
-      const waiterPoolShare = shift.participates_in_pool ? tipPerShare * shares : 0;
+    const waiterRows = data.waiterShifts.flatMap(shift => {
+      const isTeam = !!shift.second_waiter_name;
+      const posSales = (shift.pos_sales || 0) / (isTeam ? 2 : 1);
+      const waiterPoolShare = shift.participates_in_pool ? tipPerShare : 0;
       const tipPercent = posSales > 0 && shift.participates_in_pool
         ? (waiterPoolShare / posSales) * 100
         : null;
@@ -219,23 +219,27 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
         ? format(new Date(shift.submitted_at), 'HH:mm', { locale: de })
         : '---';
 
-      return [
-        shift.waiter_name,
-        formatCurrency(posSales),
-        submittedTime,
-        tipPercent !== null ? tipPercent.toFixed(1).replace('.', ',') + '%' : '---',
-      ];
+      const tipStr = tipPercent !== null ? tipPercent.toFixed(1).replace('.', ',') + '%' : '---';
+      const tipEuro = shift.participates_in_pool ? formatCurrency(waiterPoolShare) : '---';
+
+      const row = [shift.waiter_name, formatCurrency(posSales), submittedTime, tipEuro, tipStr];
+
+      if (isTeam) {
+        const row2 = [shift.second_waiter_name, formatCurrency(posSales), submittedTime, tipEuro, tipStr];
+        return [row, row2];
+      }
+      return [row];
     });
 
     autoTable(doc, {
       startY: y,
       margin: { left: tableMarginLeft, right: tableMarginLeft },
-      head: [['Kellner', 'Umsatz', 'Abgabe', 'TG %']],
+      head: [['Kellner', 'Umsatz', 'Abgabe', 'TG', 'TG %']],
       body: waiterRows,
       theme: 'plain',
       headStyles: { fillColor: [241, 245, 249] as [number, number, number], fontSize: 8, fontStyle: 'bold' as const, textColor: [51, 65, 85] as [number, number, number] },
       bodyStyles: { fontSize: 8 },
-      columnStyles: { 1: { halign: 'right' as const }, 2: { halign: 'center' as const }, 3: { halign: 'right' as const } },
+      columnStyles: { 1: { halign: 'right' as const }, 2: { halign: 'center' as const }, 3: { halign: 'right' as const }, 4: { halign: 'right' as const } },
       tableWidth: tableWidth,
     });
     y = (doc as any).lastAutoTable.finalY + 4;
