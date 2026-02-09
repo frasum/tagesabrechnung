@@ -8,6 +8,7 @@ interface StaffSelectProps {
   role: StaffRole;
   placeholder?: string;
   disabled?: boolean;
+  excludeNames?: string[];
 }
 
 export function StaffSelect({ 
@@ -15,9 +16,13 @@ export function StaffSelect({
   onValueChange, 
   role, 
   placeholder = 'Mitarbeiter wählen',
-  disabled = false 
+  disabled = false,
+  excludeNames = [],
 }: StaffSelectProps) {
   const { data: staffList = [], isLoading } = useActiveStaff(role);
+  const filteredStaff = excludeNames.length > 0
+    ? staffList.filter((s) => !excludeNames.includes(s.name))
+    : staffList;
   
   const Icon = role === 'kitchen' ? ChefHat : User;
 
@@ -30,14 +35,14 @@ export function StaffSelect({
         </div>
       </SelectTrigger>
       <SelectContent>
-        {staffList.length === 0 ? (
+        {filteredStaff.length === 0 ? (
           <div className="px-2 py-4 text-sm text-muted-foreground text-center">
             Keine aktiven {role === 'kitchen' ? 'Küchenmitarbeiter' : 'Kellner'} vorhanden.
             <br />
             <span className="text-xs">Bitte in der Mitarbeiterverwaltung hinzufügen.</span>
           </div>
         ) : (
-          staffList.map((staff) => (
+          filteredStaff.map((staff) => (
             <SelectItem key={staff.id} value={staff.name}>
               <div className="flex items-center gap-2">
                 <Icon className="w-4 h-4" />

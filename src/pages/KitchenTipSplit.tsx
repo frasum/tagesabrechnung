@@ -179,6 +179,7 @@ export default function KitchenTipSplit() {
                       onValueChange={setStaffName}
                       role="kitchen"
                       placeholder="Mitarbeiter wählen"
+                      excludeNames={kitchenShifts.map((s) => s.staff_name)}
                     />
                   </div>
 
