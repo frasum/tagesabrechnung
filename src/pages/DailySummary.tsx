@@ -900,14 +900,28 @@ export default function DailySummary() {
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
-          {waiterShifts.map((shift) => {
+          {waiterShifts.flatMap((shift) => {
             const submittedAt = formatSubmittedAt((shift as any).submitted_at);
             const hasData = (shift.pos_sales || 0) > 0 || (shift.cash_handed_in || 0) > 0;
-            
-            return (
-              <div key={shift.id} className="flex items-center justify-between py-1">
-                <span className="font-medium text-sm">{shift.waiter_name}</span>
+            const isTeam = !!shift.second_waiter_name;
+            const posSales = (shift.pos_sales || 0) / (isTeam ? 2 : 1);
+            const poolShare = shift.participates_in_pool ? tipPerWaiter : 0;
+            const tipPct = posSales > 0 && shift.participates_in_pool
+              ? ((poolShare / posSales) * 100).toFixed(1).replace('.', ',') + '%'
+              : null;
+
+            const renderRow = (name: string, key: string) => (
+              <div key={key} className="flex items-center justify-between py-1">
+                <span className="font-medium text-sm">{name}</span>
                 <div className="flex items-center gap-2">
+                  <span className="text-xs tabular-nums text-muted-foreground hidden sm:inline">
+                    {formatCurrency(posSales)}
+                  </span>
+                  {tipPct && (
+                    <span className="text-xs tabular-nums text-success hidden sm:inline">
+                      {formatCurrency(poolShare)} ({tipPct})
+                    </span>
+                  )}
                   {hasData ? (
                     <Badge variant="default" className="gap-1 text-xs">
                       <CheckCircle2 className="w-3 h-3" />
@@ -927,6 +941,14 @@ export default function DailySummary() {
                 </div>
               </div>
             );
+
+            if (isTeam) {
+              return [
+                renderRow(shift.waiter_name, shift.id + '-1'),
+                renderRow(shift.second_waiter_name!, shift.id + '-2'),
+              ];
+            }
+            return [renderRow(shift.waiter_name, shift.id)];
           })}
         </div>
       </CardContent>
