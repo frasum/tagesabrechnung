@@ -86,7 +86,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
     y += 12;
   }
 
-  const dateStr = format(new Date(data.session.session_date), "EEEE, d. MMMM yyyy", { locale: de });
+  const dateStr = format(new Date(data.session.session_date), "EEEE, d. MMMM", { locale: de });
   doc.setFontSize(24);
   doc.setFont('helvetica', 'bold');
   doc.text(dateStr, pageWidth / 2, y, { align: 'center' });
