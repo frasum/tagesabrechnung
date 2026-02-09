@@ -170,15 +170,6 @@ export function ExcelLayout({
               </table>
             </div>
 
-            {/* Kitchen tip */}
-            <table className="w-full text-sm">
-              <tbody>
-                <ExcelReadonlyRow label="2% Trinkgeld Küche" value={totalKitchenTip} />
-                {uniqueKitchenStaff > 0 && (
-                  <ExcelReadonlyRow label={`→ Pro Küche (${uniqueKitchenStaff} MA)`} value={tipPerKitchen} muted />
-                )}
-              </tbody>
-            </table>
           </div>
 
           {cashBalanceCard}
