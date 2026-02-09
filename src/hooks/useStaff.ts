@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-export type StaffRole = 'waiter' | 'kitchen';
+export type StaffRole = 'waiter' | 'kitchen' | 'both';
 
 export interface StaffRestaurant {
   restaurant_id: string;
@@ -68,7 +68,7 @@ export function useStaff(role?: StaffRole) {
         .order('name', { ascending: true });
 
       if (role) {
-        query = query.eq('role', role);
+        query = query.in('role', role === 'waiter' || role === 'kitchen' ? [role, 'both'] : [role]);
       }
 
       const { data: staffData, error } = await query;
@@ -145,7 +145,7 @@ export function useActiveStaff(role?: StaffRole) {
         .order('name', { ascending: true });
 
       if (role) {
-        query = query.eq('role', role);
+        query = query.in('role', role === 'waiter' || role === 'kitchen' ? [role, 'both'] : [role]);
       }
 
       const { data, error } = await query;
@@ -192,7 +192,7 @@ export function useActiveStaffByRestaurant(restaurantId: string | null, role?: S
         .order('name', { ascending: true });
 
       if (role) {
-        query = query.eq('role', role);
+        query = query.in('role', role === 'waiter' || role === 'kitchen' ? [role, 'both'] : [role]);
       }
 
       const { data, error } = await query;

@@ -156,6 +156,7 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
             >
               <option value="waiter">Kellner</option>
               <option value="kitchen">Küche</option>
+              <option value="both">Kellner & Küche</option>
             </select>
           </div>
 
