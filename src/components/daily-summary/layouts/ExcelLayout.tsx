@@ -135,7 +135,7 @@ export function ExcelLayout({
             <table className="w-full text-sm">
               <tbody>
                 <ExcelInputRow label="Takeaway Abschlag" value={formData.takeaway_total} onChange={(v) => onFieldChange('takeaway_total', v)} disabled={locked} />
-                <ExcelInputRow label="OrderSmart" value={formData.ordersmart_revenue} onChange={(v) => onFieldChange('ordersmart_revenue', v)} disabled={locked} />
+                <ExcelInputRow label="Order Smart" value={formData.ordersmart_revenue} onChange={(v) => onFieldChange('ordersmart_revenue', v)} disabled={locked} />
                 <ExcelInputRow label="Wolt" value={formData.wolt_revenue} onChange={(v) => onFieldChange('wolt_revenue', v)} disabled={locked} />
                 
               </tbody>
