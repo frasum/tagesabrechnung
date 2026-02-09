@@ -278,13 +278,18 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
     });
     y = (doc as any).lastAutoTable.finalY + 4;
 
-    // Gesamt-Trinkgeld-Prozentsatz (Kellner + Küche)
+    // Trinkgeld-Aufschlüsselung
     const totalTipAll = data.totals.totalWaiterTip + data.totals.totalKitchenTip;
     const totalTipPercent = data.totals.kellnerUmsatz > 0
       ? (totalTipAll / data.totals.kellnerUmsatz) * 100
       : 0;
-    y += 4;
+    y += 6;
     doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Kellner-Pool: ${formatCurrency(data.totals.totalWaiterTip)}`, tableMarginLeft + 2, y);
+    y += 4;
+    doc.text(`Küchen-Pool: ${formatCurrency(data.totals.totalKitchenTip)}`, tableMarginLeft + 2, y);
+    y += 5;
     doc.setFont('helvetica', 'bold');
     doc.text(
       `Ø Trinkgeld: ${formatCurrency(totalTipAll)} von ${formatCurrency(data.totals.kellnerUmsatz)} Umsatz = ${totalTipPercent.toFixed(1).replace('.', ',')}%`,
