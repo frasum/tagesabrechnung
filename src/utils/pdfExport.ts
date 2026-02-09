@@ -84,8 +84,8 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
   }
 
   const dateStr = format(new Date(data.session.session_date), "EEEE, d. MMMM yyyy", { locale: de });
-  doc.setFontSize(18);
-  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(24);
+  doc.setFont('helvetica', 'bold');
   doc.text(dateStr, pageWidth / 2, y, { align: 'center' });
 
   y += 6;
@@ -123,6 +123,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
   const bargeldOhneHilf = bargeldMitHilf - totalHilfMahl;
 
   const tableWidth = (pageWidth - 2 * margin) * 0.55;
+  const tableMarginLeft = (pageWidth - tableWidth) / 2;
 
   const summaryRows: any[][] = [
     ['Umsatz', formatCurrency(data.session.pos_total || 0)],
@@ -143,13 +144,13 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
   // Bargeld rows with highlight
   const bargeldRowIndex = summaryRows.length;
   summaryRows.push([
-    { content: 'Bargeld mit HilfMahl', styles: { fontStyle: 'bold', fillColor: [220, 252, 231] as [number, number, number] } },
-    { content: formatCurrency(bargeldMitHilf), styles: { fontStyle: 'bold', fillColor: [220, 252, 231] as [number, number, number], halign: 'right' } },
+    { content: 'Bargeld mit HilfMahl', styles: { fontStyle: 'bold', fontSize: 11, fillColor: [255, 255, 255] as [number, number, number], lineWidth: 0.5, lineColor: [0, 0, 0] as [number, number, number] } },
+    { content: formatCurrency(bargeldMitHilf), styles: { fontStyle: 'bold', fontSize: 11, fillColor: [255, 255, 255] as [number, number, number], halign: 'right', lineWidth: 0.5, lineColor: [0, 0, 0] as [number, number, number] } },
   ]);
 
   autoTable(doc, {
     startY: y,
-    margin: { left: margin, right: pageWidth - margin - tableWidth },
+    margin: { left: tableMarginLeft, right: tableMarginLeft },
     body: summaryRows,
     theme: 'plain',
     bodyStyles: { fontSize: 9, cellPadding: { top: 1.5, bottom: 1.5, left: 2, right: 2 } },
@@ -165,8 +166,8 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
   y = tableEndY + 6;
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.text('ohne hilfmahl', margin + 2, y);
-  doc.text(formatCurrency(bargeldOhneHilf2), margin + tableWidth - 2, y, { align: 'right' });
+  doc.text('ohne hilfmahl', tableMarginLeft + 2, y);
+  doc.text(formatCurrency(bargeldOhneHilf2), tableMarginLeft + tableWidth - 2, y, { align: 'right' });
 
   y += 8;
 
@@ -174,7 +175,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
   if (data.expenses.length > 0) {
     autoTable(doc, {
       startY: y,
-      margin: { left: margin, right: pageWidth - margin - tableWidth },
+      margin: { left: tableMarginLeft, right: tableMarginLeft },
       head: [['Ausgaben', 'Betrag']],
       body: [
         ...data.expenses.map(e => [e.description, formatCurrency(e.amount)]),
