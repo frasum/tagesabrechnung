@@ -1,0 +1,1 @@
+ALTER TABLE public.register_transfers ADD COLUMN created_by_name text;

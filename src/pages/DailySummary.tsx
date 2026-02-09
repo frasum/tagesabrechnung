@@ -306,6 +306,7 @@ export default function DailySummary() {
     amount: number;
     direction: 'to_restaurant' | 'to_safe';
     reason: string | null;
+    created_by_name: string | null;
     restaurant_id: string;
   }) => {
     createTransfer(data);
