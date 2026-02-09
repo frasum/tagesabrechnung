@@ -1,24 +1,38 @@
 
-# Mitarbeiter-Dropdowns nach Restaurant filtern
 
-## Ziel
-Die Personalauswahl (StaffSelect, SecondWaiterSelect) soll nur Mitarbeiter anzeigen, die dem aktuellen Restaurant zugeordnet sind -- nicht alle Mitarbeiter global.
+# Navigation nur nach Laden der Berechtigungen anzeigen
 
-## Technische Umsetzung
+## Problem
+Wenn Gerard (Manager) eingeloggt ist, werden waehrend des Ladens seiner individuellen Navigationsberechtigungen kurzzeitig ALLE Manager-Navigationselemente angezeigt. Der Grund: Solange die `managerPaths`-Abfrage noch laeuft, ist `managerPaths = []` und `hasCustomPermissions = false`. Dadurch greift die Fallback-Logik "Manager ohne individuelle Berechtigungen sieht alles" -- und alle Menue-Eintraege werden sichtbar.
 
-### 1. `StaffSelect` erweitern (`src/components/shared/StaffSelect.tsx`)
-- Neue optionale Prop `restaurantId?: string | null` hinzufuegen
-- Wenn `restaurantId` gesetzt ist, wird `useActiveStaffByRestaurant(restaurantId, role)` statt `useActiveStaff(role)` verwendet
-- Wenn kein `restaurantId` uebergeben wird, bleibt das Verhalten unveraendert (Rueckwaertskompatibilitaet)
+Wenn die Daten dann geladen sind, verschwinden die nicht erlaubten Eintraege. Aber bei langsamer Verbindung oder Cache-Miss bleibt die falsche Anzeige laenger sichtbar.
 
-### 2. `SecondWaiterSelect` erweitern (`src/components/shared/SecondWaiterSelect.tsx`)
-- Gleiche Logik: optionale `restaurantId` Prop, die an `useActiveStaffByRestaurant` weitergeleitet wird
+## Loesung
+Den Ladezustand (`isLoading`) der `useManagerNavPermissions`-Query beruecksichtigen. Solange die Berechtigungen noch geladen werden, soll die Navigation nur die absoluten Kern-Elemente anzeigen (alwaysVisible) -- nicht alles.
 
-### 3. Aufrufer anpassen
-Die drei Seiten, die StaffSelect/SecondWaiterSelect verwenden, muessen die `restaurantId` aus dem `RestaurantContext` durchreichen:
+## Technische Aenderung
 
-- **`DailySummary.tsx`** (Vorschuss-Dropdown) -- `restaurantId` aus `useRestaurant()` uebergeben
-- **`WaiterCashUp.tsx`** (Kellner- und Zweitkellner-Auswahl) -- `restaurantId` uebergeben
-- **`KitchenTipSplit.tsx`** (Kuechenmitarbeiter-Auswahl) -- `restaurantId` uebergeben
+### Datei: `src/components/layout/AppLayout.tsx`
 
-Der bestehende Hook `useActiveStaffByRestaurant` in `useStaff.ts` ist bereits vorhanden und muss nicht angepasst werden.
+1. Den `isLoading`-Status aus dem `useManagerNavPermissions`-Hook extrahieren:
+```tsx
+const { data: managerPaths = [], isLoading: isLoadingPermissions } = useManagerNavPermissions(
+  isManager ? user?.staffId : undefined
+);
+```
+
+2. In der Filter-Logik den Ladezustand beruecksichtigen -- wenn noch geladen wird, nur alwaysVisible-Pfade zeigen:
+```tsx
+// Manager without custom permissions loaded yet - show only core items
+if (isManager && isLoadingPermissions) {
+  return alwaysVisibleForManager.includes(item.path);
+}
+
+// Manager without custom permissions (fully loaded, none configured)
+if (isManager) {
+  return item.minLevel !== 'admin';
+}
+```
+
+Damit wird verhindert, dass waehrend des Ladens alle Navigationspunkte kurz aufblitzen.
+
