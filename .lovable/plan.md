@@ -1,25 +1,30 @@
 
 
-# Excel-Layout aufräumen
+# Differenz-Berechnung korrigieren
 
-## Was wird geändert
+## Problem
 
-In der Datei `src/components/daily-summary/layouts/ExcelLayout.tsx`:
+Die Zeile "Differenz" zeigt aktuell `pos_total - kellnerUmsatz` an (= 7168,70 - 6684,50 = 484,20). Der Takeaway-Umsatz (484,20) wird zwar bei der **Warnung** abgezogen, aber nicht beim **angezeigten Wert**.
 
-1. **Entfernen**: Die "KELLNER"-Tabelle (Zeilen 194-248) - die horizontale Kellner-Übersicht mit Abzugeben, Kredit Karten, etc.
-2. **Entfernen**: Der "TRINKGELD POOL"-Block (Zeilen 250-283) - Küchen-TG, Kellner-TG Pool, TG Gesamt
-3. **Umordnen**: Die "Ausgaben" werden von der linken Spalte (unterhalb der Haupttabelle) nach rechts verschoben - unter die "Notizen"
+## Loesung
 
-## Neue Struktur der rechten Spalte
+In `src/components/daily-summary/layouts/ExcelLayout.tsx` (Zeile 112):
 
-Vorher: Kellner-Tabelle, Trinkgeld Pool, Notizen
-Nachher: Notizen, Ausgaben
+**Vorher:**
+```
+value={formData.pos_total - kellnerUmsatz}
+```
 
-## Technische Details
+**Nachher:**
+```
+value={formData.pos_total - kellnerUmsatz - formData.takeaway_total}
+```
 
-| Datei | Aktion |
-|-------|--------|
-| `src/components/daily-summary/layouts/ExcelLayout.tsx` | Kellner-Tabelle und Trinkgeld Pool entfernen, Ausgaben unter Notizen verschieben |
+Damit zeigt die Differenz 0,00 an, wenn POS-Umsatz = Kellner-Umsatz + Takeaway.
 
-Die Kellner- und Trinkgeld-Daten sind weiterhin über andere Navigationsseiten einsehbar und gehen nicht verloren.
+## Dateiaenderung
+
+| Datei | Aenderung |
+|-------|-----------|
+| `src/components/daily-summary/layouts/ExcelLayout.tsx` | Zeile 112: Takeaway vom Differenz-Wert abziehen |
 
