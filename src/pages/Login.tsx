@@ -22,13 +22,9 @@ export default function Login() {
   // Redirect if already logged in (including OAuth users)
   useEffect(() => {
     if (user) {
-      // Prüfen ob ein gespeicherter Restaurant-Slug existiert (von OAuth-Redirect)
-      const savedRestaurant = localStorage.getItem('oauth_redirect_restaurant');
-      localStorage.removeItem('oauth_redirect_restaurant');
-      const restaurant = savedRestaurant || 'spicery';
-      navigate(isMobile ? `/${restaurant}/waiter` : `/${restaurant}`, { replace: true });
+      navigate('/select-restaurant', { replace: true });
     }
-  }, [user, isMobile, navigate]);
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,10 +47,7 @@ export default function Login() {
         title: 'Willkommen!',
         description: `Anmeldung erfolgreich als ${name}.`,
       });
-      // Navigate with restaurant prefix (from URL or default)
-      const pathMatch = window.location.pathname.match(/^\/([^/]+)/);
-      const restaurant = pathMatch && pathMatch[1] !== 'login' ? pathMatch[1] : 'spicery';
-      navigate(isMobile ? `/${restaurant}/waiter` : `/${restaurant}`, { replace: true });
+      navigate('/select-restaurant', { replace: true });
     } else {
       toast({
         title: 'Anmeldung fehlgeschlagen',

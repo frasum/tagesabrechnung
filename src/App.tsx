@@ -10,7 +10,7 @@ import { DateProvider } from "@/contexts/DateContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { SessionLockScreen } from "@/components/auth/SessionLockScreen";
 import { useInactivityTimeout } from "@/hooks/useInactivityTimeout";
-import { useIsMobile } from "@/hooks/use-mobile";
+
 import Login from "./pages/Login";
 import WaiterCashUp from "./pages/WaiterCashUp";
 import WaiterMobile from "./pages/WaiterMobile";
@@ -28,6 +28,7 @@ import OAuthCallback from "./pages/OAuthCallback";
 import { ConfirmLoginPage } from "./pages/ConfirmLoginPage";
 import PermissionManagement from "./pages/PermissionManagement";
 import RegisterBalance from "./pages/RegisterBalance";
+import RestaurantSelect from "./pages/RestaurantSelect";
 
 const queryClient = new QueryClient();
 
@@ -57,12 +58,10 @@ function AppContent() {
   const { isLocked, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const isMobile = useIsMobile();
 
   useInactivityTimeout();
 
-  // OAuth Redirect: Nach erfolgreichem Login werden wir oft auf "/" zurückgeführt.
-  // Dann leiten wir global (nicht nur in Login.tsx) in den gespeicherten Restaurant-Kontext weiter.
+  // OAuth Redirect: Nach erfolgreichem Login auf /select-restaurant weiterleiten
   useEffect(() => {
     if (!user) return;
 
@@ -73,13 +72,13 @@ function AppContent() {
 
     // Wenn der User bereits im Restaurant-Kontext ist, nicht erneut umleiten.
     if (location.pathname.startsWith(`/${savedRestaurant}/`)
-      || location.pathname === `/${savedRestaurant}`) {
+      || location.pathname === `/${savedRestaurant}`
+      || location.pathname === '/select-restaurant') {
       return;
     }
 
-    const restaurant = savedRestaurant || 'spicery';
-    navigate(isMobile ? `/${restaurant}/waiter` : `/${restaurant}`, { replace: true });
-  }, [user, navigate, isMobile, location.pathname]);
+    navigate('/select-restaurant', { replace: true });
+  }, [user, navigate, location.pathname]);
 
   return (
     <>
@@ -88,13 +87,14 @@ function AppContent() {
         {/* Global routes (no restaurant context needed) */}
         <Route path="/login" element={<Login />} />
         <Route path="/auth/callback" element={<OAuthCallback />} />
+        <Route path="/select-restaurant" element={<ProtectedRoute><RestaurantSelect /></ProtectedRoute>} />
         <Route path="/install" element={<Install />} />
         <Route path="/confirm-login/:token" element={<ConfirmLoginPage />} />
         <Route path="/staff" element={<ProtectedRoute requiredLevel="admin"><StaffManagement /></ProtectedRoute>} />
         <Route path="/permissions" element={<ProtectedRoute requiredLevel="admin"><PermissionManagement /></ProtectedRoute>} />
 
-        {/* Redirect root to default restaurant */}
-        <Route path="/" element={<Navigate to="/spicery" replace />} />
+        {/* Redirect root to restaurant selection */}
+        <Route path="/" element={<Navigate to="/select-restaurant" replace />} />
 
         {/* Restaurant-specific routes */}
         <Route path="/:restaurant/*" element={<RestaurantRoutes />} />

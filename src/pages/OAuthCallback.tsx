@@ -1,16 +1,13 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useIsMobile } from "@/hooks/use-mobile";
+
 
 export default function OAuthCallback() {
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
 
   useEffect(() => {
     let cancelled = false;
-
-    const restaurant = localStorage.getItem("oauth_redirect_restaurant") || "spicery";
 
     const start = Date.now();
     const timeoutMs = 12_000;
@@ -25,7 +22,7 @@ export default function OAuthCallback() {
 
         if (session?.user) {
           localStorage.removeItem("oauth_redirect_restaurant");
-          navigate(isMobile ? `/${restaurant}/waiter` : `/${restaurant}`, { replace: true });
+          navigate("/select-restaurant", { replace: true });
           return;
         }
 
@@ -45,7 +42,7 @@ export default function OAuthCallback() {
     return () => {
       cancelled = true;
     };
-  }, [navigate, isMobile]);
+  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
