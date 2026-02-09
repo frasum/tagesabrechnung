@@ -2,11 +2,11 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Utensils, Smartphone, LogIn, FileText, CheckCircle } from 'lucide-react';
 import { useRestaurant } from '@/hooks/useRestaurant';
 
-const BASE_URL = 'https://spicery.lovable.app';
+const PRODUCTION_URL = 'https://tagesabrechnung.lovable.app';
 
 export default function WaiterQRPoster() {
   const { restaurantSlug, restaurantName } = useRestaurant();
-  const waiterUrl = `${BASE_URL}/${restaurantSlug}/waiter`;
+  const waiterUrl = `${PRODUCTION_URL}/${restaurantSlug}/waiter`;
 
   const handlePrint = () => {
     window.print();
