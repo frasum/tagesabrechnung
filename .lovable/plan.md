@@ -1,22 +1,35 @@
 
+# Gesamt-Trinkgeld-Prozentsatz auf Seite 2 anzeigen
 
-# Kellner-Tabelle auf Seite 2 fuer beidseitigen Druck
-
-## Ziel
-Da der Drucker beidseitig drucken kann, soll die Kellner-Tabelle immer auf Seite 2 beginnen. Seite 1 enthaelt die Zusammenfassung, Ausgaben und Vorschuesse. So ergibt sich ein sauberes Vorder-/Rueckseiten-Layout.
-
-## Technische Aenderung
+## Aenderung
 
 ### Datei: `src/utils/pdfExport.ts`
 
-1. **Seiten-Loeschung entfernen** (Zeilen 280-284) -- der `while`-Loop, der alle Seiten nach Seite 1 loescht, wird entfernt.
+Nach der Kellner-Tabelle (Zeile 279) wird eine Zusammenfassungszeile eingefuegt, die das Gesamttrinkgeld im Verhaeltnis zum Gesamtumsatz zeigt:
 
-2. **Seitenumbruch vor Kellner-Tabelle erzwingen** -- Direkt vor dem Kellner-Block (`if (data.waiterShifts.length > 0)`) wird ein `doc.addPage()` eingefuegt, damit die Kellner-Tabelle immer auf Seite 2 startet. Die `y`-Position wird auf den Seitenanfang zurueckgesetzt.
+- **Gesamt-TG**: `data.totals.totalWaiterTip` (bereits verfuegbar)
+- **Gesamt-Umsatz**: `data.totals.kellnerUmsatz` (bereits verfuegbar)
+- **Prozentsatz**: `(totalWaiterTip / kellnerUmsatz) * 100`
 
-3. **Seitenzahlen im Footer** -- Analog zum Cash-Balance-PDF wird am Ende eine Schleife ueber alle Seiten eingefuegt, die "Seite X von Y" unten zentriert ausgibt.
+Die Darstellung erfolgt als kurze Textzeile unterhalb der Tabelle, z.B.:
 
-### Seitenaufteilung
+```
+Ø Trinkgeld: 120,00 € von 3.500,00 € Umsatz = 3,4%
+```
 
-- **Seite 1 (Vorderseite):** Header, Warnungen, Zusammenfassungstabelle, Bargeld, Ausgaben, Vorschuesse
-- **Seite 2 (Rueckseite):** Kellner-Tabelle (Name, Umsatz, Abgabezeit, TG Euro, TG %)
+Technisch wird nach `y = (doc as any).lastAutoTable.finalY + 4` (Zeile 279) folgender Code eingefuegt:
 
+```typescript
+const totalTipPercent = data.totals.kellnerUmsatz > 0
+  ? (data.totals.totalWaiterTip / data.totals.kellnerUmsatz) * 100
+  : 0;
+y += 4;
+doc.setFontSize(9);
+doc.setFont('helvetica', 'bold');
+doc.text(
+  `Ø Trinkgeld: ${formatCurrency(data.totals.totalWaiterTip)} von ${formatCurrency(data.totals.kellnerUmsatz)} Umsatz = ${totalTipPercent.toFixed(1).replace('.', ',')}%`,
+  tableMarginLeft + 2, y
+);
+```
+
+Keine weiteren Dateien muessen geaendert werden, da alle benoetigten Werte bereits in `data.totals` vorhanden sind.
