@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useRestaurants } from '@/hooks/useRestaurant';
 
-const BASE_URL = 'https://spicery.lovable.app';
+const BASE_URL = 'https://tagesabrechnung.lovable.app';
 
 export function WaiterQRCode() {
   const [copied, setCopied] = useState(false);
