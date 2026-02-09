@@ -75,31 +75,29 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
   const margin = 14;
   let y = 20;
 
-  // ========== HEADER ==========
-  doc.setFontSize(16);
-  doc.setFont('helvetica', 'bold');
-  doc.text('TAGESABRECHNUNG', margin, y);
-
-  const dateStr = format(new Date(data.session.session_date), "EEEE, d. MMMM yyyy", { locale: de });
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text(dateStr, margin, y + 6);
-
+  // ========== HEADER - centered, large ==========
   if (data.restaurantName) {
-    doc.setFontSize(12);
+    doc.setFontSize(28);
     doc.setFont('helvetica', 'bold');
-    doc.text(data.restaurantName, pageWidth - margin, y, { align: 'right' });
+    doc.text(data.restaurantName, pageWidth / 2, y, { align: 'center' });
+    y += 12;
   }
 
+  const dateStr = format(new Date(data.session.session_date), "EEEE, d. MMMM yyyy", { locale: de });
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'normal');
+  doc.text(dateStr, pageWidth / 2, y, { align: 'center' });
+
+  y += 6;
   doc.setFontSize(7);
   doc.setTextColor(128);
   const exportInfo = data.exportedBy
     ? `Erstellt: ${format(new Date(), "dd.MM.yyyy HH:mm", { locale: de })} von ${data.exportedBy}`
     : `Erstellt: ${format(new Date(), "dd.MM.yyyy HH:mm", { locale: de })}`;
-  doc.text(exportInfo, pageWidth - margin, y + 6, { align: 'right' });
+  doc.text(exportInfo, pageWidth / 2, y, { align: 'center' });
   doc.setTextColor(0);
 
-  y += 14;
+  y += 8;
 
   // ========== WARNINGS ==========
   const adjustedPosMismatch = data.totals.posMismatch - (data.session.takeaway_total || 0);
