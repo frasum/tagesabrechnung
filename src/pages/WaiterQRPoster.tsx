@@ -1,10 +1,13 @@
 import { QRCodeSVG } from 'qrcode.react';
-import { Utensils, Smartphone, LogIn, FileText, CheckCircle } from 'lucide-react';
+import { Utensils, Smartphone, LogIn, FileText, CheckCircle, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useRestaurant } from '@/hooks/useRestaurant';
+import { Button } from '@/components/ui/button';
 
 const PRODUCTION_URL = 'https://tagesabrechnung.lovable.app';
 
 export default function WaiterQRPoster() {
+  const navigate = useNavigate();
   const { restaurantSlug, restaurantName } = useRestaurant();
   const waiterUrl = `${PRODUCTION_URL}/${restaurantSlug}/waiter`;
 
@@ -14,7 +17,16 @@ export default function WaiterQRPoster() {
 
   return (
     <>
-      {/* Print Button - Hidden when printing */}
+      {/* Navigation & Print Buttons - Hidden when printing */}
+      <div className="fixed top-4 left-4 z-50 print:hidden">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => navigate(`/${restaurantSlug}`)}
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </Button>
+      </div>
       <div className="fixed top-4 right-4 z-50 print:hidden">
         <button
           onClick={handlePrint}
