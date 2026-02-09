@@ -222,6 +222,11 @@ export const generateDailySummaryPDF = (data: PDFExportData): void => {
 
   const fileName = `Tagesabrechnung_${format(new Date(data.session.session_date), 'yyyy-MM-dd')}.pdf`;
   doc.save(fileName);
+
+  // Also open in new tab for printing
+  const pdfBlob = doc.output('blob');
+  const blobUrl = URL.createObjectURL(new Blob([pdfBlob], { type: 'application/pdf' }));
+  window.open(blobUrl, '_blank');
 };
 
 // ============================================
