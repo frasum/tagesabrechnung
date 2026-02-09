@@ -21,8 +21,7 @@ import { useRestaurant } from '@/hooks/useRestaurant';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRegisterTransfers } from '@/hooks/useRegisterTransfers';
 import { TransferDialog } from '@/components/register/TransferDialog';
-import { LayoutSwitcher, type LayoutMode } from '@/components/daily-summary/LayoutSwitcher';
-import { HorizontalLayout, SectionsLayout, ColumnsLayout, TableLayout, ExcelLayout } from '@/components/daily-summary/layouts';
+import { ExcelLayout } from '@/components/daily-summary/layouts/ExcelLayout';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { PdfPreview } from '@/components/shared/PdfPreview';
 import {
@@ -38,30 +37,12 @@ import {
 import { useAdvances, useCreateAdvance, useDeleteAdvance } from '@/hooks/useAdvances';
 import { StaffSelect } from '@/components/shared/StaffSelect';
 
-const LAYOUT_STORAGE_KEY = 'daily-summary-layout';
-
 export default function DailySummary() {
   const { selectedDate, setSelectedDate } = useSelectedDate();
   const { toast } = useToast();
   const { restaurantId, restaurantName } = useRestaurant();
   const { user } = useAuth();
   const [showTransferDialog, setShowTransferDialog] = useState(false);
-  
-  // Layout mode with localStorage persistence
-  const [layoutMode, setLayoutMode] = useState<LayoutMode>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(LAYOUT_STORAGE_KEY);
-      if (saved && ['horizontal', 'sections', 'columns', 'table', 'excel'].includes(saved)) {
-        return saved as LayoutMode;
-      }
-    }
-    return 'columns';
-  });
-
-  const handleLayoutChange = (mode: LayoutMode) => {
-    setLayoutMode(mode);
-    localStorage.setItem(LAYOUT_STORAGE_KEY, mode);
-  };
 
   // Form state for editable fields
   const [formData, setFormData] = useState({
@@ -1052,68 +1033,31 @@ export default function DailySummary() {
     </Card>
   ) : null;
 
-  const layoutProps = {
-    statCards: statCardsComponent,
-    warnings: warningsComponent,
-    notes: notesComponent,
-    posTerminal: posTerminalComponent,
-    revenueCard: revenueCardComponent,
-    deductionsCard: deductionsCardComponent,
-    takeaway: takeawayComponent,
-    vouchers: vouchersComponent,
-    tipsCard: tipsCardComponent,
-    waiterStatus: waiterStatusComponent,
-    other: otherComponent,
-    expenses: expensesComponent,
-    advances: advancesComponent,
-    cashBalanceCard: cashBalanceCardComponent,
-  };
-
-  const renderLayout = () => {
-    switch (layoutMode) {
-      case 'horizontal':
-        return <HorizontalLayout {...layoutProps} />;
-      case 'sections':
-        return <SectionsLayout {...layoutProps} />;
-      case 'table':
-        return (
-          <TableLayout
-            {...layoutProps}
-            formData={formData}
-            onFieldChange={(field, value) => updateField(field as keyof typeof formData, value)}
-          />
-        );
-      case 'excel':
-        return (
-          <ExcelLayout
-            warnings={warningsComponent}
-            expenses={expensesComponent}
-            advances={advancesComponent}
-            cashBalanceCard={cashBalanceCardComponent}
-            waiterShifts={waiterShifts}
-            formData={formData}
-            onFieldChange={(field, value) => updateField(field as keyof typeof formData, value)}
-            totalKassiertBrutto={totalKassiertBrutto}
-            kellnerUmsatz={kellnerUmsatz}
-            totalCardTotal={totalCardTotal}
-            totalDeliveryRevenue={totalDeliveryRevenue}
-            totalOpenInvoices={totalOpenInvoices}
-            totalExpenses={totalExpenses}
-            totalKitchenTip={totalKitchenTip}
-            waiterTipPool={waiterTipPool}
-            waiterShareCount={waiterShareCount}
-            tipPerWaiter={tipPerWaiter}
-            uniqueKitchenStaff={uniqueKitchenStaff}
-            tipPerKitchen={tipPerKitchen}
-            bargeld={bargeld}
-            totalAdvances={totalAdvances}
-          />
-        );
-      case 'columns':
-      default:
-        return <ColumnsLayout {...layoutProps} />;
-    }
-  };
+  const renderExcelLayout = () => (
+    <ExcelLayout
+      warnings={warningsComponent}
+      expenses={expensesComponent}
+      advances={advancesComponent}
+      cashBalanceCard={cashBalanceCardComponent}
+      waiterShifts={waiterShifts}
+      formData={formData}
+      onFieldChange={(field, value) => updateField(field as keyof typeof formData, value)}
+      totalKassiertBrutto={totalKassiertBrutto}
+      kellnerUmsatz={kellnerUmsatz}
+      totalCardTotal={totalCardTotal}
+      totalDeliveryRevenue={totalDeliveryRevenue}
+      totalOpenInvoices={totalOpenInvoices}
+      totalExpenses={totalExpenses}
+      totalKitchenTip={totalKitchenTip}
+      waiterTipPool={waiterTipPool}
+      waiterShareCount={waiterShareCount}
+      tipPerWaiter={tipPerWaiter}
+      uniqueKitchenStaff={uniqueKitchenStaff}
+      tipPerKitchen={tipPerKitchen}
+      bargeld={bargeld}
+      totalAdvances={totalAdvances}
+    />
+  );
 
   return (
     <AppLayout>
@@ -1140,7 +1084,6 @@ export default function DailySummary() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <LayoutSwitcher value={layoutMode} onChange={handleLayoutChange} />
             <DateSelector date={selectedDate} onDateChange={setSelectedDate} />
             {session && (
               <Button onClick={handleExportPDF} variant="outline" className="gap-2">
@@ -1167,7 +1110,7 @@ export default function DailySummary() {
         )}
 
         {/* Session Content */}
-        {session && renderLayout()}
+        {session && renderExcelLayout()}
       </div>
 
       {/* Transfer Dialog */}
