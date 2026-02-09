@@ -148,11 +148,11 @@ export function ExcelLayout({
                 <ExcelInputRow label="Gutschein Verkauf" value={formData.vouchers_sold} onChange={(v) => onFieldChange('vouchers_sold', v)} />
                 <ExcelInputRow label="Gutschein Eingelöst" value={formData.vouchers_redeemed} onChange={(v) => onFieldChange('vouchers_redeemed', v)} />
                 <ExcelInputRow label="FineDine" value={formData.finedine_vouchers} onChange={(v) => onFieldChange('finedine_vouchers', v)} />
-                <ExcelReadonlyRow label="Offene Rechnungen" value={totalOpenInvoices} />
-                <ExcelReadonlyRow label="Vorschuss" value={totalAdvances} />
+                {totalOpenInvoices !== 0 && <ExcelReadonlyRow label="Offene Rechnungen" value={totalOpenInvoices} />}
+                {totalAdvances !== 0 && <ExcelReadonlyRow label="Vorschuss" value={totalAdvances} />}
                 <ExcelInputRow label="Einladung" value={formData.einladung} onChange={(v) => onFieldChange('einladung', v)} />
                 <ExcelInputRow label="Sonstige Einnahmen" value={formData.sonstige_einnahme} onChange={(v) => onFieldChange('sonstige_einnahme', v)} />
-                <ExcelReadonlyRow label="Ausgaben" value={-totalExpenses} />
+                {totalExpenses !== 0 && <ExcelReadonlyRow label="Ausgaben" value={-totalExpenses} />}
               </tbody>
             </table>
 
