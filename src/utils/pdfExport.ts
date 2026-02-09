@@ -230,8 +230,10 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
     y = (doc as any).lastAutoTable.finalY + 4;
   }
 
-  // ========== KELLNER-DETAILS TABLE ==========
+  // ========== PAGE 2: KELLNER-DETAILS TABLE ==========
   if (data.waiterShifts.length > 0) {
+    doc.addPage();
+    y = 20;
     // Calculate tip per waiter share
     const poolParticipants = data.waiterShifts.reduce((count, w) => {
       if (!w.participates_in_pool) return count;
@@ -277,11 +279,20 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
     y = (doc as any).lastAutoTable.finalY + 4;
   }
 
-  // ========== Ensure single page only ==========
+  // ========== Footer with page numbers ==========
   const pageCount = doc.getNumberOfPages();
-  while (doc.getNumberOfPages() > 1) {
-    doc.deletePage(2);
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(128);
+    doc.text(
+      `Seite ${i} von ${pageCount}`,
+      pageWidth / 2,
+      doc.internal.pageSize.getHeight() - 10,
+      { align: 'center' }
+    );
   }
+  doc.setTextColor(0);
 
   const fileName = `Tagesabrechnung_${format(new Date(data.session.session_date), 'yyyy-MM-dd')}.pdf`;
   
