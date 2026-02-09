@@ -157,7 +157,8 @@ export default function DailySummary() {
         await updateSession.mutateAsync({
           id: session.id,
           ...updatedFormData,
-        });
+          updated_by_name: user?.name || undefined,
+        } as any);
       } catch (error) {
         console.error('Auto-save failed:', error);
       }
@@ -294,7 +295,7 @@ export default function DailySummary() {
   const handleCreateSession = async () => {
     if (!restaurantId) return;
     try {
-      await createSession.mutateAsync({ date: selectedDate, restaurantId });
+      await createSession.mutateAsync({ date: selectedDate, restaurantId, createdByName: user?.name || undefined });
       toast({ title: 'Session erstellt', description: `Session für ${format(selectedDate, 'dd.MM.yyyy')} wurde erstellt.` });
     } catch (error) {
       toast({ title: 'Fehler', description: 'Session konnte nicht erstellt werden.', variant: 'destructive' });
@@ -1001,7 +1002,15 @@ export default function DailySummary() {
             <p className="text-xl lg:text-2xl font-semibold text-foreground mt-1">
               {format(selectedDate, "EEEE, d. MMMM yyyy", { locale: de })}
             </p>
-            {user?.name && (
+            {session?.created_by_name && (
+              <p className="text-sm text-muted-foreground mt-1">
+                Erstellt von: {session.created_by_name}
+                {session.updated_by_name && session.updated_by_name !== session.created_by_name && (
+                  <span> · Zuletzt bearbeitet von: {session.updated_by_name}</span>
+                )}
+              </p>
+            )}
+            {!session && user?.name && (
               <p className="text-sm text-muted-foreground mt-1">{user.name}</p>
             )}
           </div>

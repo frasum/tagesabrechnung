@@ -398,6 +398,7 @@ export type Database = {
         Row: {
           card_total_gl: number | null
           created_at: string
+          created_by_name: string | null
           einladung: number | null
           finedine_vouchers: number | null
           id: string
@@ -414,6 +415,7 @@ export type Database = {
           terminal_1_total: number | null
           terminal_2_total: number | null
           updated_at: string
+          updated_by_name: string | null
           vorschuss: number | null
           vouchers_redeemed: number | null
           vouchers_sold: number | null
@@ -422,6 +424,7 @@ export type Database = {
         Insert: {
           card_total_gl?: number | null
           created_at?: string
+          created_by_name?: string | null
           einladung?: number | null
           finedine_vouchers?: number | null
           id?: string
@@ -438,6 +441,7 @@ export type Database = {
           terminal_1_total?: number | null
           terminal_2_total?: number | null
           updated_at?: string
+          updated_by_name?: string | null
           vorschuss?: number | null
           vouchers_redeemed?: number | null
           vouchers_sold?: number | null
@@ -446,6 +450,7 @@ export type Database = {
         Update: {
           card_total_gl?: number | null
           created_at?: string
+          created_by_name?: string | null
           einladung?: number | null
           finedine_vouchers?: number | null
           id?: string
@@ -462,6 +467,7 @@ export type Database = {
           terminal_1_total?: number | null
           terminal_2_total?: number | null
           updated_at?: string
+          updated_by_name?: string | null
           vorschuss?: number | null
           vouchers_redeemed?: number | null
           vouchers_sold?: number | null
