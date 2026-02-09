@@ -2,6 +2,8 @@ import { createContext, useContext, ReactNode } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { hasPermission } from '@/types/permissions';
 
 interface Restaurant {
   id: string;
@@ -71,16 +73,33 @@ export function useRestaurant() {
 
 // Hook to get all available restaurants for the switcher
 export function useRestaurants() {
+  const { user } = useAuth();
+  const staffId = user?.staffId;
+  const isAdmin = hasPermission(user?.permissionLevel || 'staff', 'admin');
+
   return useQuery({
-    queryKey: ['restaurants'],
+    queryKey: ['restaurants', staffId, isAdmin],
     queryFn: async () => {
+      if (isAdmin) {
+        const { data, error } = await supabase
+          .from('restaurants')
+          .select('*')
+          .order('name');
+        if (error) throw error;
+        return data as Restaurant[];
+      }
+
+      // Staff/Manager: only assigned restaurants
       const { data, error } = await supabase
-        .from('restaurants')
-        .select('*')
-        .order('name');
-      
+        .from('staff_restaurants')
+        .select('restaurant_id, restaurants(id, name, slug)')
+        .eq('staff_id', staffId!);
+
       if (error) throw error;
-      return data as Restaurant[];
+      return (data ?? [])
+        .map((sr: any) => sr.restaurants as Restaurant)
+        .filter(Boolean);
     },
+    enabled: isAdmin || !!staffId,
   });
 }
