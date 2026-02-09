@@ -1,54 +1,31 @@
 
-# Wechselgeldbestand durch Tresor-Seite (Excel-Struktur) ersetzen
+# QR-Poster in die Sidebar verschieben und aus der Mitarbeiterverwaltung entfernen
 
 ## Uebersicht
+Die QR-Poster-Funktion (Kellner Self-Service) wird als eigenstaendiger Navigationspunkt in die Sidebar verschoben. Da sie dort erreichbar ist, wird die `WaiterQRCode`-Komponente von der Mitarbeiterverwaltungsseite (`/staff`) entfernt.
 
-Der Navigationspunkt "Wechselgeldbestand" wird in "Tresor" umbenannt und die Seite komplett umgebaut, sodass sie die Struktur der Excel-Tabelle abbildet: Eine einfache Tabelle mit den Spalten **Datum**, **Name**, **Einzahlung**, **Auszahlung**.
+## Aenderungen
 
-## Datenbankänderung
+### 1. QR-Poster von der Mitarbeiterverwaltung entfernen (`src/pages/StaffManagement.tsx`)
+- Import von `WaiterQRCode` entfernen (Zeile 12)
+- Die Komponente `<WaiterQRCode />` in Zeile 174 entfernen
 
-Die Tabelle `register_transfers` bekommt eine neue Spalte `created_by_name` (text, nullable), um den Namen der Person zu erfassen, die den Transfer durchgefuehrt hat.
+### 2. Sidebar-Navigation erweitern (`src/components/layout/AppLayout.tsx`)
+- `QrCode`-Icon aus lucide-react importieren
+- Neuen Eintrag in `allNavItems` hinzufuegen:
+  - Pfad: `qr-poster`
+  - Label: `QR-Poster`
+  - Icon: `QrCode`
+  - minLevel: `manager`
 
-## Aenderungen im Detail
+### 3. Berechtigungen ergaenzen (`src/types/permissions.ts`)
+- `NAV_PERMISSIONS` um den Eintrag `'qr-poster'` erweitern mit Label "QR-Poster", Beschreibung "Kellner Self-Service Poster", minLevel `manager`
+- `MANAGER_NAV_ITEMS` um `{ path: 'qr-poster', label: 'QR-Poster' }` erweitern, damit Admins die Sichtbarkeit pro Manager steuern koennen
 
-### 1. Datenbank-Migration
+### 4. Route absichern (`src/App.tsx`)
+- Die bestehende Route `qr-poster` (Zeile 49) mit `ProtectedRoute requiredLevel="manager"` umschliessen (aktuell ist sie ungeschuetzt)
 
-- Neue Spalte `created_by_name` (text, nullable) in `register_transfers`
-
-### 2. Navigation (`src/components/layout/AppLayout.tsx`)
-
-- Label von "Wechselgeldbestand" zu "Tresor" aendern
-- Icon von `ArrowUpDown` zu `Vault` aendern
-
-### 3. Hook (`src/hooks/useRegisterTransfers.ts`)
-
-- Interface `RegisterTransfer` um `created_by_name` erweitern
-- `createTransfer` akzeptiert `created_by_name`
-
-### 4. Seite (`src/pages/RegisterBalance.tsx`)
-
-- Seitentitel: "Tresor" mit Untertitel "Einzahlungen und Auszahlungen"
-- Oberer Bereich: Zwei kompakte Zusammenfassungs-Karten (Gesamte Einzahlungen / Gesamte Auszahlungen / Saldo)
-- Hauptbereich: Tabelle mit Spalten Datum | Name | Einzahlung | Auszahlung
-- Button "Neu" oeffnet den ueberarbeiteten Dialog
-
-### 5. Transfer-Dialog (`src/components/register/TransferDialog.tsx`)
-
-- Felder: Datum, Name (Freitext-Eingabe), Richtung (Einzahlung/Auszahlung), Betrag
-- Das bisherige "Grund"-Feld wird entfernt (Name ersetzt es)
-
-### 6. Transfer-Liste (`src/components/register/TransferList.tsx`)
-
-- Umbau von der bisherigen Listenansicht zu einer Tabellenansicht mit den Spalten: Datum | Name | Einzahlung | Auszahlung | Loeschen-Button
-- Einzahlung und Auszahlung werden in getrennten Spalten angezeigt (je nach `direction`)
-
-### 7. RegisterCard (`src/components/register/RegisterCard.tsx`)
-
-- Wird vereinfacht oder kann entfallen, da die Seite jetzt eine Tabelle mit Zusammenfassung zeigt
-
-## Technische Details
-
-- `direction: 'to_safe'` entspricht "EINZAHLUNG" (Geld geht in den Tresor)
-- `direction: 'to_restaurant'` entspricht "AUSZAHLUNG" (Geld wird aus dem Tresor entnommen)
-- Die bestehende Balance-Berechnung im Hook bleibt erhalten
-- Die `reason`-Spalte in der Datenbank bleibt bestehen (Abwaertskompatibilitaet), wird aber im UI nicht mehr angezeigt
+## Ergebnis
+- QR-Poster ist ueber die Sidebar erreichbar (fuer Manager und Admins)
+- Die Mitarbeiterverwaltungsseite wird aufgeraeumt
+- Admins koennen die Sichtbarkeit pro Manager in `/permissions` konfigurieren
