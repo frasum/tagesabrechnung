@@ -1,32 +1,49 @@
 
-# PDF-Export Anpassungen: Datum groesser, Bargeld-Feld schwarz-weiss, Tabelle zentriert
+# Dritte Rolle "Beides" fuer Mitarbeiter
+
+## Uebersicht
+Mitarbeiter, die sowohl als Kellner als auch in der Kueche arbeiten, bekommen eine eigene Rolle `both`. Sie erscheinen dann in **beiden** Gruppen (Kellner und Kueche) in der Uebersicht.
 
 ## Aenderungen
 
-### 1. Datum groesser und fett
-Das Datum wird von 18pt normal auf **24pt bold** erhoeht, damit es deutlich prominenter ist.
+### 1. Datenbank: Neuen Enum-Wert hinzufuegen
+- Den Wert `both` zum bestehenden `staff_role`-Enum hinzufuegen per Migration
 
-### 2. Bargeld-Zeile: Schwarz-weiss statt gruen
-Da ein Schwarz-Weiss-Drucker verwendet wird, wird die gruene Hintergrundfarbe (`fillColor: [220, 252, 231]`) entfernt. Stattdessen bekommt die Zeile:
-- Weisser Hintergrund
-- Schwarzer Rahmen drumherum
-- Etwas groessere Schrift (11pt statt 9pt)
+### 2. TypeScript-Typen anpassen
+- **`src/hooks/useStaff.ts`**: `StaffRole` erweitern auf `'waiter' | 'kitchen' | 'both'`
 
-### 3. Tabelle mittig auf der Seite
-Die Tabelle wird horizontal zentriert, indem der linke Margin dynamisch berechnet wird:
-`marginLeft = (pageWidth - tableWidth) / 2`
+### 3. Mitarbeiter-Dialog: Dritte Option anbieten
+- **`src/components/staff/StaffDialogNative.tsx`**: Im Rollen-Dropdown eine dritte Option "Kellner & Kueche" hinzufuegen
 
-Aktuell ist die Tabelle linksbuendig mit `margin: { left: 14 }`. Neu wird sie mittig gesetzt.
+### 4. Gruppierung in der Mitarbeiterverwaltung anpassen
+- **`src/pages/StaffManagement.tsx`**: Mitarbeiter mit Rolle `both` werden sowohl in die Kellner- als auch in die Kueche-Gruppe einsortiert. Im Filter-Tab zaehlen sie bei beiden mit.
 
-## Technische Umsetzung
+### 5. StaffSelect-Komponente anpassen
+- **`src/components/shared/StaffSelect.tsx`**: Mitarbeiter mit Rolle `both` werden sowohl bei `role='waiter'` als auch bei `role='kitchen'` Abfragen angezeigt
 
-In `src/utils/pdfExport.ts`:
+### 6. Statistiken und andere Stellen
+- **`src/components/statistics/MonthlyTipBreakdown.tsx`** und aehnliche Stellen: `both`-Mitarbeiter erscheinen in beiden Tabs
 
-| Zeile | Aenderung |
-|-------|-----------|
-| 87-88 | Datum: `setFontSize(24)` + `setFont('helvetica', 'bold')` |
-| 125 | `tableWidth` bleibt bei 55%, aber margins werden zentriert: `const tableMarginLeft = (pageWidth - tableWidth) / 2` |
-| 146-148 | Bargeld-Zeile: `fillColor` entfernen, stattdessen `lineWidth` und `lineColor` fuer schwarzen Rahmen verwenden |
-| 150-158 | autoTable margin links/rechts auf zentrierte Werte setzen |
-| 165-169 | "ohne hilfmahl" ebenfalls zentriert positionieren |
-| 174-193 | Ausgaben-Tabelle ebenfalls zentriert |
+## Technische Details
+
+**Migration SQL:**
+```sql
+ALTER TYPE staff_role ADD VALUE 'both';
+```
+
+**Gruppierungslogik (StaffManagement.tsx):**
+```typescript
+if (staff.role === 'waiter' || staff.role === 'both') {
+  group.waiters.push(staff);
+}
+if (staff.role === 'kitchen' || staff.role === 'both') {
+  group.kitchen.push(staff);
+}
+```
+
+**StaffSelect Filter:**
+```typescript
+// Bei role='waiter': zeige waiter + both
+// Bei role='kitchen': zeige kitchen + both
+const filteredByRole = staffList.filter(s => s.role === role || s.role === 'both');
+```
