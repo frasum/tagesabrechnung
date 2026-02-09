@@ -51,8 +51,10 @@ export default function Login() {
         title: 'Willkommen!',
         description: `Anmeldung erfolgreich als ${name}.`,
       });
-      // Mobile users go to /waiter, desktop users go to /
-      navigate(isMobile ? '/waiter' : '/');
+      // Navigate with restaurant prefix (from URL or default)
+      const pathMatch = window.location.pathname.match(/^\/([^/]+)/);
+      const restaurant = pathMatch && pathMatch[1] !== 'login' ? pathMatch[1] : 'spicery';
+      navigate(isMobile ? `/${restaurant}/waiter` : `/${restaurant}`, { replace: true });
     } else {
       toast({
         title: 'Anmeldung fehlgeschlagen',
