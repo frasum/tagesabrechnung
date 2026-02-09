@@ -26,7 +26,8 @@ export default function StaffManagement() {
 
   // Filter staff by role and search query
   const filteredStaff = allStaff.filter(s => {
-    const matchesRole = filter === 'all' || s.role === filter;
+    const matchesRole = filter === 'all' || s.role === filter || 
+      (s.role === 'both' && (filter === 'waiter' || filter === 'kitchen'));
     const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           s.notes?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesRole && matchesSearch;
@@ -38,23 +39,26 @@ export default function StaffManagement() {
     const restaurantMap = new Map<string, { id: string; name: string; waiters: Staff[]; kitchen: Staff[] }>();
     const noRestaurant: { waiters: Staff[]; kitchen: Staff[] } = { waiters: [], kitchen: [] };
 
+    const addToGroup = (group: { waiters: Staff[]; kitchen: Staff[] }, staff: Staff) => {
+      if (staff.role === 'waiter' || staff.role === 'both') {
+        if (!group.waiters.find(s => s.id === staff.id)) group.waiters.push(staff);
+      }
+      if (staff.role === 'kitchen' || staff.role === 'both') {
+        if (!group.kitchen.find(s => s.id === staff.id)) group.kitchen.push(staff);
+      }
+    };
+
     for (const staff of filteredStaff) {
       const restaurants = staff.staff_restaurants ?? [];
       if (restaurants.length === 0) {
-        if (staff.role === 'waiter') noRestaurant.waiters.push(staff);
-        else noRestaurant.kitchen.push(staff);
+        addToGroup(noRestaurant, staff);
       } else {
         for (const sr of restaurants) {
           const r = sr.restaurants;
           if (!restaurantMap.has(r.id)) {
             restaurantMap.set(r.id, { id: r.id, name: r.name, waiters: [], kitchen: [] });
           }
-          const group = restaurantMap.get(r.id)!;
-          if (staff.role === 'waiter') {
-            if (!group.waiters.find(s => s.id === staff.id)) group.waiters.push(staff);
-          } else {
-            if (!group.kitchen.find(s => s.id === staff.id)) group.kitchen.push(staff);
-          }
+          addToGroup(restaurantMap.get(r.id)!, staff);
         }
       }
     }
@@ -72,8 +76,8 @@ export default function StaffManagement() {
     return { restaurants: result, noRestaurant };
   })();
 
-  const waiterCount = allStaff.filter(s => s.role === 'waiter').length;
-  const kitchenCount = allStaff.filter(s => s.role === 'kitchen').length;
+  const waiterCount = allStaff.filter(s => s.role === 'waiter' || s.role === 'both').length;
+  const kitchenCount = allStaff.filter(s => s.role === 'kitchen' || s.role === 'both').length;
 
   const handleOpenNew = () => {
     setEditingStaff(null);

@@ -105,6 +105,7 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
               <SelectContent>
                 <SelectItem value="waiter">Kellner</SelectItem>
                 <SelectItem value="kitchen">Küche</SelectItem>
+                <SelectItem value="both">Kellner & Küche</SelectItem>
               </SelectContent>
             </Select>
           </div>
