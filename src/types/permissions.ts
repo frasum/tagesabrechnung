@@ -22,7 +22,7 @@ export const NAV_PERMISSIONS: Record<string, PermissionConfig> = {
 
 // Manager-configurable navigation items (excludes staff-only and admin-only)
 export const MANAGER_NAV_ITEMS = [
-  { path: 'manager', label: 'Manager Dashboard' },
+  { path: 'manager', label: 'Kellnerabrechnung' },
   { path: 'kitchen', label: 'Küchen Trinkgeld' },
   { path: 'summary', label: 'Tagesabrechnung' },
   { path: 'statistics', label: 'Statistiken' },
