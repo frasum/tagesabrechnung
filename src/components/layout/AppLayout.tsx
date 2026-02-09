@@ -73,7 +73,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const hasCustomPermissions = isManager && managerPaths.length > 0;
   
   // Paths that managers ALWAYS see (core functionality)
-  const alwaysVisibleForManager = ['', 'summary', 'kitchen', 'register-balance'];
+  const alwaysVisibleForManager = [''];
   
   // Filter nav items based on permission level and manager-specific permissions
   const navItems = useMemo(() => {

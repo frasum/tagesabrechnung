@@ -174,6 +174,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (storedUser) {
           const parsed = JSON.parse(storedUser);
 
+          // Invalidate old sessions without staffId (forces re-login)
+          if (!parsed.staffId && !parsed.isOAuthUser) {
+            console.log('Cached PIN session missing staffId, forcing re-login');
+            localStorage.removeItem(AUTH_STORAGE_KEY);
+            if (isMounted) setIsLoading(false);
+            return;
+          }
+
           // For OAuth users, try to refresh the profile data
           if (parsed.isOAuthUser) {
             try {
