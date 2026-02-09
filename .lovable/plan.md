@@ -1,51 +1,33 @@
 
 
-# Aenderungszeitpunkt bei Kellnern im PDF anzeigen
+# Zweiten Kellner im Self-Service (Mobile) hinzufuegen
 
 ## Ziel
 
-Im PDF-Export auf Seite 2 soll bei jedem Kellner angezeigt werden, ob und wann eine Aenderung an seinen Daten vorgenommen wurde. Die "Abgabe"-Spalte zeigt bereits die Erstabgabe-Zeit (`submitted_at`). Zusaetzlich soll eine Aenderungszeit sichtbar sein, falls die Daten nachtraeglich bearbeitet wurden.
+Im mobilen Self-Service (`/waiter`) soll ein Kellner optional einen zweiten Kellner auswaehlen koennen, wenn sie zusammen an einer Station arbeiten. Das entspricht der Funktionalitaet, die im Manager-Bereich (`WaiterCashUp`) bereits existiert.
 
-## Ansatz
+## Aenderungen
 
-Da `submitted_at` bei jedem Speichern (Erstabgabe und Aenderung) ueberschrieben wird, gibt es derzeit keine Moeglichkeit zwischen Erstabgabe und Aenderung zu unterscheiden. Loesung: Eine neue Spalte `updated_at` hinzufuegen, die nur bei Updates gesetzt wird.
+### Datei: `src/pages/WaiterMobile.tsx`
 
-## Technische Aenderungen
+1. **SecondWaiterSelect importieren** (`src/components/shared/SecondWaiterSelect.tsx`) -- diese Komponente existiert bereits und wird im Manager-Bereich genutzt.
 
-### 1. Datenbank-Migration
+2. **Neuen State hinzufuegen**: `secondWaiterName` mit Standardwert `"none"`.
 
-Neue Spalte `updated_at` in der Tabelle `waiter_shifts`:
-- Typ: `timestamp with time zone`, nullable, default `null`
-- Wird nur bei UPDATE gesetzt (nicht bei INSERT)
-- Automatischer Trigger: Bei jedem UPDATE wird `updated_at = now()` gesetzt
+3. **Formular erweitern**: Zwischen dem Kellner-Header und den Eingabefeldern ein `SecondWaiterSelect`-Dropdown einfuegen mit:
+   - `excludeWaiter={staffName}` -- damit der eingeloggte Kellner sich nicht selbst als zweiten Kellner waehlen kann
+   - `restaurantId={restaurantId}` -- damit nur Kellner des aktuellen Restaurants angezeigt werden
+   - Label: "Zweiter Kellner (optional)"
 
-### 2. Datei: `src/utils/pdfExport.ts`
+4. **Speichern-Logik anpassen**:
+   - Bei `createWaiterShift`: `second_waiter_name` auf den gewaehlten Wert setzen (oder `null` wenn `"none"`)
+   - Bei `updateWaiterShift`: `second_waiter_name` ebenfalls mitsenden
 
-**WaiterShift-Interface erweitern:**
-- Neues optionales Feld `updated_at?: string | null`
+5. **Bestehende Daten laden**: Wenn `myShift` geladen wird und bereits ein `second_waiter_name` hat, diesen Wert in den State uebernehmen.
 
-**Kellner-Tabelle erweitern:**
-- Neue Spalte "Geaend." (Geaendert) in der Tabelle
-- Zeigt die Uhrzeit der letzten Aenderung an, falls vorhanden
-- Wenn `updated_at` vorhanden ist: Uhrzeit im Format `HH:mm` anzeigen
-- Wenn nicht: leerer Wert `---`
-- Tabellen-Header wird: `['Kellner', 'Umsatz', 'Abgabe', 'Geaend.', 'TG', 'TG %']`
+## Technische Details
 
-### 3. Datei: `src/pages/DailySummary.tsx`
-
-- `updated_at` aus den Waiter-Shift-Daten an die PDF-Export-Daten weitergeben (analog zu `submitted_at`)
-
-### 4. Datei: `src/hooks/useSession.ts` und `src/hooks/useWaiterShiftAudit.ts`
-
-- Beim **Update** einer Kellner-Schicht wird `updated_at` nicht manuell gesetzt, da der Datenbank-Trigger dies automatisch uebernimmt
-- Beim **Insert** bleibt `updated_at` auf `null`
-
-## Seitenaufteilung Seite 2 (aktualisiert)
-
-| Kellner | Umsatz | Abgabe | Geaend. | TG | TG % |
-|---------|--------|--------|---------|----|------|
-| Max     | 850,00 EUR | 23:15 | ---   | 45,00 EUR | 3,2% |
-| Lisa    | 720,00 EUR | 22:50 | 23:30 | 38,00 EUR | 3,1% |
-
-Lisa hat ihre Daten um 22:50 abgegeben und um 23:30 nochmal geaendert.
+- Die `SecondWaiterSelect`-Komponente normalisiert `"none"` bereits intern nicht -- das passiert in `useCreateWaiterShift` (Zeile 96), wo `"none"` zu `null` konvertiert wird. Das gleiche gilt fuer `useUpdateWaiterShift`.
+- Keine Datenbank-Aenderungen noetig -- `second_waiter_name` existiert bereits in der `waiter_shifts`-Tabelle.
+- Kein neuer Hook noetig -- die bestehenden Hooks unterstuetzen `second_waiter_name` bereits.
 
