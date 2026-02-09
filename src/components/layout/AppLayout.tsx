@@ -67,7 +67,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const isManager = userLevel === 'manager';
   
   // Fetch manager-specific nav permissions (only for managers)
-  const { data: managerPaths = [] } = useManagerNavPermissions(
+  const { data: managerPaths = [], isLoading: isLoadingPermissions } = useManagerNavPermissions(
     isManager ? user?.staffId : undefined
   );
   const hasCustomPermissions = isManager && managerPaths.length > 0;
@@ -84,6 +84,11 @@ export function AppLayout({ children }: AppLayoutProps) {
       // Manager ALWAYS sees core navigation items
       if (isManager && alwaysVisibleForManager.includes(item.path)) return true;
       
+      // Manager permissions still loading - show only core items
+      if (isManager && isLoadingPermissions) {
+        return alwaysVisibleForManager.includes(item.path);
+      }
+      
       // Manager with custom permissions - check if path is allowed
       if (isManager && hasCustomPermissions) {
         return managerPaths.includes(item.path);
@@ -97,7 +102,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       // Staff - only staff level items
       return item.minLevel === 'staff';
     });
-  }, [userLevel, isAdmin, isManager, hasCustomPermissions, managerPaths, alwaysVisibleForManager]);
+  }, [userLevel, isAdmin, isManager, isLoadingPermissions, hasCustomPermissions, managerPaths, alwaysVisibleForManager]);
 
   const handleLogout = () => {
     logout();
