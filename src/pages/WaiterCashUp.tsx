@@ -315,7 +315,7 @@ export default function WaiterCashUp() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Umsatz</Label>
+                    <Label>Leistung</Label>
                     <CurrencyInput value={newPosSales} onChange={setNewPosSales} />
                   </div>
                   <div>
