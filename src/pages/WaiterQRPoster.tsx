@@ -25,128 +25,83 @@ export default function WaiterQRPoster() {
       </div>
 
       {/* Poster Content */}
-      <div className="min-h-screen bg-white flex items-center justify-center p-8 print:p-0">
-        <div className="w-full max-w-[210mm] mx-auto bg-white print:shadow-none">
+      <div className="min-h-screen bg-white flex items-center justify-center p-8 print:p-0 print:min-h-0">
+        <div className="w-full max-w-[210mm] mx-auto bg-white print:shadow-none print:h-[257mm] print:flex print:flex-col print:justify-between">
           {/* Header */}
-          <div className="text-center mb-8 print:mb-6">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-primary/10 mb-4">
-              <Utensils className="w-10 h-10 text-primary" />
+          <div className="text-center mb-6 print:mb-3">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-3 print:w-12 print:h-12 print:mb-2">
+              <Utensils className="w-8 h-8 text-primary print:w-6 print:h-6" />
             </div>
-            <h1 className="text-4xl font-bold text-foreground mb-2 print:text-3xl">
+            <h1 className="text-4xl font-bold text-foreground mb-1 print:text-2xl">
               Kellner Self-Service
             </h1>
             {restaurantName && (
-              <p className="text-2xl font-semibold text-primary mb-2 print:text-xl">
+              <p className="text-2xl font-semibold text-primary mb-1 print:text-lg">
                 {restaurantName}
               </p>
             )}
-            <p className="text-xl text-muted-foreground print:text-lg">
+            <p className="text-xl text-muted-foreground print:text-base">
               Deine Abrechnung schnell & einfach eingeben
             </p>
           </div>
 
           {/* QR Code */}
-          <div className="flex justify-center mb-8 print:mb-6">
-            <div className="p-6 bg-white border-4 border-primary/20 rounded-3xl shadow-lg print:shadow-none print:border-2">
+          <div className="flex justify-center mb-6 print:mb-3">
+            <div className="p-6 bg-white border-4 border-primary/20 rounded-3xl shadow-lg print:shadow-none print:border-2 print:p-4 print:rounded-2xl">
               <QRCodeSVG
                 value={waiterUrl}
                 size={220}
                 level="H"
                 includeMargin
+                className="print:!w-[180px] print:!h-[180px]"
               />
             </div>
           </div>
 
           {/* Scan Instructions */}
-          <div className="text-center mb-10 print:mb-8">
-            <p className="text-2xl font-semibold text-foreground mb-2 print:text-xl">
+          <div className="text-center mb-8 print:mb-3">
+            <p className="text-2xl font-semibold text-foreground mb-1 print:text-lg">
               📱 QR-Code mit dem Handy scannen
             </p>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground print:text-sm">
               oder direkt besuchen: <span className="font-mono font-medium text-foreground">{waiterUrl}</span>
             </p>
           </div>
 
           {/* Steps */}
-          <div className="bg-muted/50 rounded-2xl p-6 mb-8 print:bg-gray-50 print:mb-6">
-            <h2 className="text-xl font-bold text-foreground mb-6 text-center print:text-lg">
+          <div className="bg-muted/50 rounded-2xl p-6 mb-8 print:bg-gray-50 print:mb-3 print:p-4 print:rounded-xl">
+            <h2 className="text-xl font-bold text-foreground mb-4 text-center print:text-base print:mb-3">
               So funktioniert's:
             </h2>
-            <div className="grid gap-4">
-              {/* Step 1 */}
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-lg">
-                  1
-                </div>
-                <div className="flex-1 pt-2">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Smartphone className="w-5 h-5 text-primary" />
-                    <span className="font-semibold text-foreground">QR-Code scannen</span>
+            <div className="grid gap-3 print:gap-2">
+              {[
+                { icon: Smartphone, title: 'QR-Code scannen', desc: 'Öffne die Kamera-App und halte sie auf den QR-Code' },
+                { icon: LogIn, title: 'Anmelden', desc: 'Mit Google/Apple anmelden oder Name & PIN eingeben' },
+                { icon: FileText, title: 'Abrechnung eingeben', desc: 'Trage Umsatz, Kartenzahlungen und Bargeld ein' },
+                { icon: CheckCircle, title: 'Speichern – Fertig!', desc: 'Deine Abrechnung wird sofort an den Manager übermittelt' },
+              ].map((step, i) => (
+                <div key={i} className="flex items-start gap-3 print:gap-2">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-base print:w-8 print:h-8 print:text-sm">
+                    {i + 1}
                   </div>
-                  <p className="text-muted-foreground text-sm">
-                    Öffne die Kamera-App und halte sie auf den QR-Code
-                  </p>
-                </div>
-              </div>
-
-              {/* Step 2 */}
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-lg">
-                  2
-                </div>
-                <div className="flex-1 pt-2">
-                  <div className="flex items-center gap-2 mb-1">
-                    <LogIn className="w-5 h-5 text-primary" />
-                    <span className="font-semibold text-foreground">Anmelden</span>
+                  <div className="flex-1 pt-1.5 print:pt-1">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <step.icon className="w-4 h-4 text-primary" />
+                      <span className="font-semibold text-foreground text-sm print:text-xs">{step.title}</span>
+                    </div>
+                    <p className="text-muted-foreground text-sm print:text-xs">{step.desc}</p>
                   </div>
-                  <p className="text-muted-foreground text-sm">
-                    Mit Google/Apple anmelden <strong>oder</strong> Name & PIN eingeben
-                  </p>
                 </div>
-              </div>
-
-              {/* Step 3 */}
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-lg">
-                  3
-                </div>
-                <div className="flex-1 pt-2">
-                  <div className="flex items-center gap-2 mb-1">
-                    <FileText className="w-5 h-5 text-primary" />
-                    <span className="font-semibold text-foreground">Abrechnung eingeben</span>
-                  </div>
-                  <p className="text-muted-foreground text-sm">
-                    Trage Umsatz, Kartenzahlungen und Bargeld ein
-                  </p>
-                </div>
-              </div>
-
-              {/* Step 4 */}
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-lg">
-                  4
-                </div>
-                <div className="flex-1 pt-2">
-                  <div className="flex items-center gap-2 mb-1">
-                    <CheckCircle className="w-5 h-5 text-primary" />
-                    <span className="font-semibold text-foreground">Speichern – Fertig!</span>
-                  </div>
-                  <p className="text-muted-foreground text-sm">
-                    Deine Abrechnung wird sofort an den Manager übermittelt
-                  </p>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
 
           {/* Footer */}
-          <div className="text-center text-sm text-muted-foreground border-t pt-6 print:pt-4">
+          <div className="text-center text-sm text-muted-foreground border-t pt-4 print:pt-2 print:text-xs">
             <p className="mb-1">
               <strong>Tipp:</strong> Speichere die Seite als Lesezeichen für schnellen Zugriff!
             </p>
-            <p>
-              Bei Fragen wende dich an den Manager.
-            </p>
+            <p>Bei Fragen wende dich an den Manager.</p>
           </div>
         </div>
       </div>
