@@ -998,8 +998,8 @@ export default function DailySummary() {
             <h1 className="text-2xl lg:text-3xl font-display font-bold text-foreground">
               Tagesabrechnung
             </h1>
-            <p className="text-muted-foreground mt-1">
-              Komplette Übersicht für {format(selectedDate, "EEEE, d. MMMM yyyy", { locale: de })}
+            <p className="text-xl lg:text-2xl font-semibold text-foreground mt-1">
+              {format(selectedDate, "EEEE, d. MMMM yyyy", { locale: de })}
             </p>
           </div>
           <div className="flex items-center gap-2">
