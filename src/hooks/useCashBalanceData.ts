@@ -51,10 +51,19 @@ export function useCashBalanceData(restaurantId: string | null) {
 
       if (expensesError) throw expensesError;
 
+      // 4. Alle advances laden
+      const { data: advancesData, error: advancesError } = await supabase
+        .from('advances')
+        .select('*')
+        .in('session_id', sessionIds);
+
+      if (advancesError) throw advancesError;
+
       // 4. Pro Session direkt die DB-Werte verwenden
       return (sessions || []).map((session) => {
         const shifts = (waiterShifts || []).filter((s) => s.session_id === session.id);
         const sessionExpenses = (expenses || []).filter((e) => e.session_id === session.id);
+        const sessionAdvances = (advancesData || []).filter((a) => a.session_id === session.id);
 
         // Direkt aus der Session-Tabelle
         const tagesumsatz = session.pos_total || 0;
@@ -65,7 +74,10 @@ export function useCashBalanceData(restaurantId: string | null) {
         const finedine = session.finedine_vouchers || 0;
         const gutscheineVK = session.vouchers_sold || 0;
         const einladung = session.einladung || 0;
-        const vorschuss = session.vorschuss || 0;
+        // Vorschuss aus advances-Tabelle summieren, Fallback auf session.vorschuss
+        const vorschuss = sessionAdvances.length > 0
+          ? sessionAdvances.reduce((sum, a) => sum + a.amount, 0)
+          : (session.vorschuss || 0);
 
         // Aggregierte Werte
         const totalOpenInvoices = shifts.reduce((sum, w) => sum + (w.open_invoices || 0), 0);

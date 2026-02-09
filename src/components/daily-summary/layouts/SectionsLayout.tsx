@@ -13,6 +13,7 @@ interface SectionsLayoutProps {
   waiterStatus: ReactNode;
   other: ReactNode;
   expenses: ReactNode;
+  advances: ReactNode;
   cashBalanceCard: ReactNode;
 }
 
@@ -40,6 +41,7 @@ export function SectionsLayout({
   waiterStatus,
   other,
   expenses,
+  advances,
   cashBalanceCard,
 }: SectionsLayoutProps) {
   return (
@@ -74,10 +76,11 @@ export function SectionsLayout({
       {/* STATUS Section */}
       <section className="rounded-xl bg-muted/30 p-6 border border-border/50">
         <SectionHeader title="Status" />
-        <div className="grid md:grid-cols-3 gap-4">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
           {waiterStatus}
           {cashBalanceCard}
           {expenses}
+          {advances}
         </div>
       </section>
     </div>

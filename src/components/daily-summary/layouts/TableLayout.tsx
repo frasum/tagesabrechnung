@@ -13,6 +13,7 @@ interface TableLayoutProps {
   tipsCard: ReactNode;
   waiterStatus: ReactNode;
   expenses: ReactNode;
+  advances: ReactNode;
   cashBalanceCard: ReactNode;
   formData: {
     pos_total: number;
@@ -25,7 +26,6 @@ interface TableLayoutProps {
     vouchers_sold: number;
     vouchers_redeemed: number;
     finedine_vouchers: number;
-    vorschuss: number;
     einladung: number;
     sonstige_einnahme: number;
     notes: string;
@@ -41,6 +41,7 @@ export function TableLayout({
   tipsCard,
   waiterStatus,
   expenses,
+  advances,
   cashBalanceCard,
   formData,
   onFieldChange,
@@ -60,7 +61,6 @@ export function TableLayout({
     { label: 'Gutschein Verkauf', field: 'vouchers_sold', value: formData.vouchers_sold },
     { label: 'Gutschein Eingelöst', field: 'vouchers_redeemed', value: formData.vouchers_redeemed },
     { label: 'FineDine', field: 'finedine_vouchers', value: formData.finedine_vouchers },
-    { label: 'Vorschuss', field: 'vorschuss', value: formData.vorschuss },
     { label: 'Einladung', field: 'einladung', value: formData.einladung },
     { label: 'Sonstige Einnahmen', field: 'sonstige_einnahme', value: formData.sonstige_einnahme },
   ];
@@ -95,9 +95,10 @@ export function TableLayout({
         </CardContent>
       </Card>
 
-      {/* Expenses & Notes side by side */}
-      <div className="grid md:grid-cols-2 gap-6">
+      {/* Expenses, Advances & Notes */}
+      <div className="grid md:grid-cols-3 gap-6">
         {expenses}
+        {advances}
         
         {/* Notes */}
         <Card>

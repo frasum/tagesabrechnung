@@ -1,11 +1,13 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useActiveStaff, StaffRole } from '@/hooks/useStaff';
-import { User, ChefHat } from 'lucide-react';
+import { User, ChefHat, Users } from 'lucide-react';
+
+export type StaffSelectRole = StaffRole | 'all';
 
 interface StaffSelectProps {
   value: string;
   onValueChange: (value: string) => void;
-  role: StaffRole;
+  role: StaffSelectRole;
   placeholder?: string;
   disabled?: boolean;
   excludeNames?: string[];
@@ -19,12 +21,12 @@ export function StaffSelect({
   disabled = false,
   excludeNames = [],
 }: StaffSelectProps) {
-  const { data: staffList = [], isLoading } = useActiveStaff(role);
+  const { data: staffList = [], isLoading } = useActiveStaff(role === 'all' ? undefined : role);
   const filteredStaff = excludeNames.length > 0
     ? staffList.filter((s) => !excludeNames.includes(s.name))
     : staffList;
   
-  const Icon = role === 'kitchen' ? ChefHat : User;
+  const Icon = role === 'all' ? Users : role === 'kitchen' ? ChefHat : User;
 
   return (
     <Select value={value} onValueChange={onValueChange} disabled={disabled || isLoading}>
@@ -37,7 +39,7 @@ export function StaffSelect({
       <SelectContent>
         {filteredStaff.length === 0 ? (
           <div className="px-2 py-4 text-sm text-muted-foreground text-center">
-            Keine aktiven {role === 'kitchen' ? 'Küchenmitarbeiter' : 'Kellner'} vorhanden.
+            Keine aktiven {role === 'kitchen' ? 'Küchenmitarbeiter' : role === 'all' ? 'Mitarbeiter' : 'Kellner'} vorhanden.
             <br />
             <span className="text-xs">Bitte in der Mitarbeiterverwaltung hinzufügen.</span>
           </div>

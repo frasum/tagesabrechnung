@@ -65,6 +65,7 @@ interface PDFExportData {
     bargeld: number;
     posMismatch: number;
     cardTerminalMismatch: number;
+    totalAdvances?: number;
   };
 }
 
@@ -137,7 +138,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
     ['FineDine', formatCurrency(data.session.finedine_vouchers || 0)],
     ['Gutscheine VK', formatCurrency(data.session.vouchers_sold || 0)],
     ['Offen', formatCurrency(data.totals.totalOpenInvoices)],
-    ['Personal', formatCurrency(data.session.vorschuss || 0)],
+    ['Personal', formatCurrency(data.totals.totalAdvances ?? data.session.vorschuss ?? 0)],
     ['Einladung', formatCurrency(data.session.einladung || 0)],
     ['Sonstige Einnahme', formatCurrency(data.session.sonstige_einnahme || 0)],
     ['Bar Ausgaben', formatCurrency(data.totals.totalExpenses)],

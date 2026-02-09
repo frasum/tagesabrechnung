@@ -14,6 +14,38 @@ export type Database = {
   }
   public: {
     Tables: {
+      advances: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          session_id: string
+          staff_name: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          session_id: string
+          staff_name: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          session_id?: string
+          staff_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "advances_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string

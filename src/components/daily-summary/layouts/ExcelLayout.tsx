@@ -23,6 +23,7 @@ interface WaiterShiftData {
 interface ExcelLayoutProps {
   warnings: ReactNode;
   expenses: ReactNode;
+  advances: ReactNode;
   cashBalanceCard: ReactNode;
   waiterShifts: WaiterShiftData[];
   formData: {
@@ -36,7 +37,6 @@ interface ExcelLayoutProps {
     vouchers_sold: number;
     vouchers_redeemed: number;
     finedine_vouchers: number;
-    vorschuss: number;
     einladung: number;
     sonstige_einnahme: number;
     notes: string;
@@ -56,11 +56,13 @@ interface ExcelLayoutProps {
   uniqueKitchenStaff: number;
   tipPerKitchen: number;
   bargeld: number;
+  totalAdvances: number;
 }
 
 export function ExcelLayout({
   warnings,
   expenses,
+  advances,
   cashBalanceCard,
   waiterShifts,
   formData,
@@ -78,6 +80,7 @@ export function ExcelLayout({
   uniqueKitchenStaff,
   tipPerKitchen,
   bargeld,
+  totalAdvances,
 }: ExcelLayoutProps) {
   const fmt = (value: number) =>
     new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
@@ -149,7 +152,7 @@ export function ExcelLayout({
                 <ExcelInputRow label="Gutschein Eingelöst" value={formData.vouchers_redeemed} onChange={(v) => onFieldChange('vouchers_redeemed', v)} />
                 <ExcelInputRow label="FineDine" value={formData.finedine_vouchers} onChange={(v) => onFieldChange('finedine_vouchers', v)} />
                 <ExcelReadonlyRow label="Offene Rechnungen" value={totalOpenInvoices} />
-                <ExcelInputRow label="Vorschuss" value={formData.vorschuss} onChange={(v) => onFieldChange('vorschuss', v)} />
+                <ExcelReadonlyRow label="Vorschuss" value={totalAdvances} />
                 <ExcelInputRow label="Einladung" value={formData.einladung} onChange={(v) => onFieldChange('einladung', v)} />
                 <ExcelInputRow label="Sonstige Einnahmen" value={formData.sonstige_einnahme} onChange={(v) => onFieldChange('sonstige_einnahme', v)} />
                 <ExcelReadonlyRow label="Ausgaben" value={-totalExpenses} />
@@ -195,6 +198,9 @@ export function ExcelLayout({
 
           {/* Expenses */}
           {expenses}
+
+          {/* Advances */}
+          {advances}
         </div>
       </div>
     </div>

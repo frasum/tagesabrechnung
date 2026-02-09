@@ -13,6 +13,7 @@ interface HorizontalLayoutProps {
   waiterStatus: ReactNode;
   other: ReactNode;
   expenses: ReactNode;
+  advances: ReactNode;
   cashBalanceCard: ReactNode;
 }
 
@@ -29,6 +30,7 @@ export function HorizontalLayout({
   waiterStatus,
   other,
   expenses,
+  advances,
   cashBalanceCard,
 }: HorizontalLayoutProps) {
   return (
@@ -58,10 +60,11 @@ export function HorizontalLayout({
         {waiterStatus}
       </div>
       
-      {/* Kassenstand & Ausgaben */}
-      <div className="grid md:grid-cols-2 gap-6">
+      {/* Kassenstand, Ausgaben & Vorschuss */}
+      <div className="grid md:grid-cols-3 gap-6">
         {cashBalanceCard}
         {expenses}
+        {advances}
       </div>
     </div>
   );

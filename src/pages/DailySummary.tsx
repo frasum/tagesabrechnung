@@ -35,6 +35,8 @@ import {
   useCreateExpense,
   useDeleteExpense,
 } from '@/hooks/useSession';
+import { useAdvances, useCreateAdvance, useDeleteAdvance } from '@/hooks/useAdvances';
+import { StaffSelect } from '@/components/shared/StaffSelect';
 
 const LAYOUT_STORAGE_KEY = 'daily-summary-layout';
 
@@ -85,6 +87,10 @@ export default function DailySummary() {
   const [expenseDescription, setExpenseDescription] = useState('');
   const [expenseAmount, setExpenseAmount] = useState(0);
 
+  // Advance form
+  const [advanceStaffName, setAdvanceStaffName] = useState('');
+  const [advanceAmount, setAdvanceAmount] = useState(0);
+
   // Data hooks
   const { data: session, isLoading: sessionLoading } = useSession(selectedDate, restaurantId);
   const createSession = useCreateSession();
@@ -94,6 +100,9 @@ export default function DailySummary() {
   const { data: expenses = [] } = useExpenses(session?.id);
   const createExpense = useCreateExpense();
   const deleteExpense = useDeleteExpense();
+  const { data: advances = [] } = useAdvances(session?.id);
+  const createAdvance = useCreateAdvance();
+  const deleteAdvance = useDeleteAdvance();
   
   // Cash balance hooks
   const { transfers, balances, createTransfer, isCreating } = useRegisterTransfers(restaurantId);
@@ -192,6 +201,33 @@ export default function DailySummary() {
     }
   };
 
+  // Advance handlers
+  const handleAddAdvance = async () => {
+    if (!session?.id || !advanceStaffName || advanceAmount <= 0) return;
+    try {
+      await createAdvance.mutateAsync({
+        session_id: session.id,
+        staff_name: advanceStaffName,
+        amount: advanceAmount,
+      });
+      setAdvanceStaffName('');
+      setAdvanceAmount(0);
+      toast({ title: 'Vorschuss hinzugefügt' });
+    } catch (error) {
+      toast({ title: 'Fehler', variant: 'destructive' });
+    }
+  };
+
+  const handleDeleteAdvance = async (id: string) => {
+    if (!session?.id) return;
+    try {
+      await deleteAdvance.mutateAsync({ id, sessionId: session.id });
+      toast({ title: 'Vorschuss gelöscht' });
+    } catch (error) {
+      toast({ title: 'Fehler', variant: 'destructive' });
+    }
+  };
+
   // Calculate totals
   const kellnerUmsatz = waiterShifts.reduce((sum, w) => sum + (w.pos_sales || 0), 0);
   const totalCardTotal = waiterShifts.reduce((sum, w) => sum + (w.card_total || 0), 0) 
@@ -224,6 +260,7 @@ export default function DailySummary() {
   const uniqueKitchenStaff = new Set(kitchenShifts.map(k => k.staff_name)).size;
   const tipPerKitchen = uniqueKitchenStaff > 0 ? totalKitchenTip / uniqueKitchenStaff : 0;
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const totalAdvances = advances.reduce((sum, a) => sum + a.amount, 0);
 
   // Delivery revenue
   const totalDeliveryRevenue = 
@@ -250,7 +287,7 @@ export default function DailySummary() {
     formData.finedine_vouchers -
     formData.einladung -
     totalOpenInvoices -
-    formData.vorschuss -
+    totalAdvances -
     totalExpenses;
 
   // Simplified daily cash balance calculation
@@ -362,6 +399,7 @@ export default function DailySummary() {
         bargeld,
         posMismatch,
         cardTerminalMismatch,
+        totalAdvances,
       },
     });
     
@@ -620,21 +658,12 @@ export default function DailySummary() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label>Vorschuss</Label>
-            <CurrencyInput
-              value={formData.vorschuss}
-              onChange={(v) => updateField('vorschuss', v)}
-            />
-          </div>
-          <div>
-            <Label>Einladung</Label>
-            <CurrencyInput
-              value={formData.einladung}
-              onChange={(v) => updateField('einladung', v)}
-            />
-          </div>
+        <div>
+          <Label>Einladung</Label>
+          <CurrencyInput
+            value={formData.einladung}
+            onChange={(v) => updateField('einladung', v)}
+          />
         </div>
         <div>
           <Label>Sonstige Einnahmen</Label>
@@ -697,6 +726,66 @@ export default function DailySummary() {
               <span className="font-medium">Summe:</span>
               <span className="font-semibold tabular-nums text-destructive">
                 {formatCurrency(totalExpenses)}
+              </span>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  const advancesComponent = (
+    <Card>
+      <CardHeader>
+        <CardTitle>Vorschuss</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <StaffSelect
+              value={advanceStaffName}
+              onValueChange={setAdvanceStaffName}
+              role="all"
+              placeholder="Mitarbeiter wählen"
+            />
+          </div>
+          <CurrencyInput
+            value={advanceAmount}
+            onChange={setAdvanceAmount}
+            className="w-28"
+          />
+          <Button onClick={handleAddAdvance} disabled={!advanceStaffName || advanceAmount <= 0}>
+            <Plus className="w-4 h-4" />
+          </Button>
+        </div>
+
+        {advances.length > 0 && (
+          <div className="space-y-2">
+            {advances.map((advance) => (
+              <div
+                key={advance.id}
+                className="flex items-center justify-between p-2 bg-muted rounded-lg"
+              >
+                <span className="text-sm">{advance.staff_name}</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium tabular-nums text-sm">
+                    {formatCurrency(advance.amount)}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => handleDeleteAdvance(advance.id)}
+                  >
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+            <div className="flex justify-between pt-2 border-t">
+              <span className="font-medium">Summe:</span>
+              <span className="font-semibold tabular-nums text-destructive">
+                {formatCurrency(totalAdvances)}
               </span>
             </div>
           </div>
@@ -814,8 +903,12 @@ export default function DailySummary() {
               <TableCell className="text-right tabular-nums py-2">{formatCurrency(formData.finedine_vouchers)}</TableCell>
             </TableRow>
             <TableRow>
-              <TableCell className="py-2">Vorschuss + Einladung</TableCell>
-              <TableCell className="text-right tabular-nums py-2">{formatCurrency(formData.vorschuss + formData.einladung)}</TableCell>
+              <TableCell className="py-2">Vorschuss</TableCell>
+              <TableCell className="text-right tabular-nums py-2">{formatCurrency(totalAdvances)}</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell className="py-2">Einladung</TableCell>
+              <TableCell className="text-right tabular-nums py-2">{formatCurrency(formData.einladung)}</TableCell>
             </TableRow>
             <TableRow>
               <TableCell className="py-2">Offene Rechnungen</TableCell>
@@ -837,7 +930,7 @@ export default function DailySummary() {
                   formData.terminal_2_total +
                   formData.vouchers_redeemed +
                   formData.finedine_vouchers +
-                  formData.vorschuss +
+                   totalAdvances +
                   formData.einladung +
                   totalOpenInvoices +
                   totalExpenses +
@@ -968,6 +1061,7 @@ export default function DailySummary() {
     waiterStatus: waiterStatusComponent,
     other: otherComponent,
     expenses: expensesComponent,
+    advances: advancesComponent,
     cashBalanceCard: cashBalanceCardComponent,
   };
 
@@ -990,6 +1084,7 @@ export default function DailySummary() {
           <ExcelLayout
             warnings={warningsComponent}
             expenses={expensesComponent}
+            advances={advancesComponent}
             cashBalanceCard={cashBalanceCardComponent}
             waiterShifts={waiterShifts}
             formData={formData}
@@ -1007,6 +1102,7 @@ export default function DailySummary() {
             uniqueKitchenStaff={uniqueKitchenStaff}
             tipPerKitchen={tipPerKitchen}
             bargeld={bargeld}
+            totalAdvances={totalAdvances}
           />
         );
       case 'columns':

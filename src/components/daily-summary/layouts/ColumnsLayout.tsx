@@ -13,6 +13,7 @@ interface ColumnsLayoutProps {
   waiterStatus: ReactNode;
   other: ReactNode;
   expenses: ReactNode;
+  advances: ReactNode;
   cashBalanceCard: ReactNode;
 }
 
@@ -29,6 +30,7 @@ export function ColumnsLayout({
   waiterStatus,
   other,
   expenses,
+  advances,
   cashBalanceCard,
 }: ColumnsLayoutProps) {
   return (
@@ -46,6 +48,7 @@ export function ColumnsLayout({
           {vouchers}
           {other}
           {expenses}
+          {advances}
         </div>
 
         {/* RIGHT COLUMN - Summary & Status */}
