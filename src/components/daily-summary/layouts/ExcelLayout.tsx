@@ -102,9 +102,9 @@ export function ExcelLayout({
       <div className="grid lg:grid-cols-[minmax(320px,2fr)_minmax(400px,3fr)] gap-4">
         {/* LEFT COLUMN - Hauptdaten */}
         <div className="space-y-0">
-          <div className="border rounded-lg overflow-hidden">
+          <div className="border rounded-lg overflow-hidden shadow-sm">
             {/* Section: Umsatz */}
-            <div className="bg-muted/30 px-3 py-1.5 border-b">
+            <div className="bg-muted/50 px-3 py-2 border-b border-l-4 border-l-primary">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Umsatz</span>
             </div>
             <table className="w-full text-sm">
@@ -117,7 +117,7 @@ export function ExcelLayout({
             </table>
 
             {/* Section: Kredit Karten */}
-            <div className="bg-muted/30 px-3 py-1.5 border-y">
+            <div className="bg-muted/50 px-3 py-2 border-y border-l-4 border-l-amber-500">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Kredit Karten</span>
             </div>
             <table className="w-full text-sm">
@@ -130,7 +130,7 @@ export function ExcelLayout({
             </table>
 
             {/* Section: Take Away */}
-            <div className="bg-muted/30 px-3 py-1.5 border-y">
+            <div className="bg-muted/50 px-3 py-2 border-y border-l-4 border-l-emerald-500">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Take Away</span>
             </div>
             <table className="w-full text-sm">
@@ -143,7 +143,7 @@ export function ExcelLayout({
             </table>
 
             {/* Section: Gutscheine */}
-            <div className="bg-muted/30 px-3 py-1.5 border-y">
+            <div className="bg-muted/50 px-3 py-2 border-y border-l-4 border-l-violet-500">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Gutscheine & Sonstiges</span>
             </div>
             <table className="w-full text-sm">
@@ -160,7 +160,7 @@ export function ExcelLayout({
             </table>
 
             {/* BARGELD - highlighted */}
-            <div className="bg-primary/10 border-y-2 border-primary/30">
+            <div className="bg-gradient-to-r from-primary/15 to-primary/5 border-y-2 border-primary/40 shadow-sm">
               <table className="w-full">
                 <tbody>
                   <tr>
@@ -182,7 +182,7 @@ export function ExcelLayout({
         <div className="space-y-4">
           {/* Notes */}
           <div className="border rounded-lg overflow-hidden">
-            <div className="bg-muted/30 px-3 py-1.5 border-b">
+            <div className="bg-muted/50 px-3 py-2 border-b">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Notizen</span>
             </div>
             <div className="p-3">
@@ -211,7 +211,7 @@ export function ExcelLayout({
 
 function ExcelInputRow({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
   return (
-    <tr className="border-b last:border-b-0">
+    <tr className="border-b last:border-b-0 hover:bg-muted/20 transition-colors">
       <td className="px-3 py-1.5 font-medium text-foreground">{label}</td>
       <td className="px-3 py-1.5 w-36">
         <CurrencyInput value={value} onChange={onChange} className="h-7 text-sm border-primary/20 bg-primary/5" />
@@ -237,7 +237,7 @@ function ExcelReadonlyRow({
     new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
 
   return (
-    <tr className={`border-b last:border-b-0 ${highlight === 'warning' ? 'bg-warning/10' : ''}`}>
+    <tr className={`border-b last:border-b-0 ${highlight === 'warning' ? 'bg-warning/10' : bold ? 'bg-muted/20' : ''}`}>
       <td className={`px-3 py-1.5 ${bold ? 'font-semibold' : 'font-medium'} ${muted ? 'text-muted-foreground pl-6' : 'text-foreground'}`}>
         {label}
       </td>
