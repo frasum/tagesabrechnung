@@ -139,6 +139,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
     ['Offen', formatCurrency(data.totals.totalOpenInvoices)],
     ['Personal', formatCurrency(data.session.vorschuss || 0)],
     ['Einladung', formatCurrency(data.session.einladung || 0)],
+    ['Sonstige Einnahme', formatCurrency(data.session.sonstige_einnahme || 0)],
     ['Bar Ausgaben', formatCurrency(data.totals.totalExpenses)],
     ['HilfMahl', formatCurrency(totalHilfMahl)],
     ['', ''], // empty spacer row
