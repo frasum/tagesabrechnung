@@ -1,69 +1,54 @@
 
-
-# Sessions aelter als 3 Tage: Nur Admin darf bearbeiten
+# Wechselgeldbestand durch Tresor-Seite (Excel-Struktur) ersetzen
 
 ## Uebersicht
 
-Sessions/Abrechnungen, deren Datum mehr als 3 Tage in der Vergangenheit liegt, werden fuer alle Nutzer ausser Admins in einen Nur-Lesen-Modus versetzt. Eingabeformulare, Buttons zum Hinzufuegen/Loeschen und Bearbeitungsfunktionen werden ausgeblendet oder deaktiviert.
+Der Navigationspunkt "Wechselgeldbestand" wird in "Tresor" umbenannt und die Seite komplett umgebaut, sodass sie die Struktur der Excel-Tabelle abbildet: Eine einfache Tabelle mit den Spalten **Datum**, **Name**, **Einzahlung**, **Auszahlung**.
 
-## Betroffene Seiten
+## Datenbankänderung
 
-| Seite | Pfad | Bearbeitungsfunktionen |
-|-------|------|----------------------|
-| Kellner Abrechnung | `/` (WaiterCashUp) | Kellner hinzufuegen, bearbeiten, loeschen |
-| Tagesabrechnung | `/summary` (DailySummary) | Session-Felder bearbeiten, Ausgaben/Vorschuesse hinzufuegen/loeschen |
-| Kuechen Trinkgeld | `/kitchen` (KitchenTipSplit) | Kuechenschichten hinzufuegen/loeschen |
+Die Tabelle `register_transfers` bekommt eine neue Spalte `created_by_name` (text, nullable), um den Namen der Person zu erfassen, die den Transfer durchgefuehrt hat.
 
-## Technische Umsetzung
+## Aenderungen im Detail
 
-### 1. Neue Hilfsfunktion: `isSessionLocked`
+### 1. Datenbank-Migration
 
-Datei: `src/utils/businessDate.ts` (bestehende Datei erweitern)
+- Neue Spalte `created_by_name` (text, nullable) in `register_transfers`
 
-```text
-function isSessionLocked(sessionDate: Date, permissionLevel: PermissionLevel): boolean
-```
+### 2. Navigation (`src/components/layout/AppLayout.tsx`)
 
-Prueft ob das Session-Datum mehr als 3 Tage zurueckliegt UND der Nutzer kein Admin ist. Verwendet `getBusinessDate()` als Referenz fuer "heute".
+- Label von "Wechselgeldbestand" zu "Tresor" aendern
+- Icon von `ArrowUpDown` zu `Vault` aendern
 
-### 2. WaiterCashUp (`src/pages/WaiterCashUp.tsx`)
+### 3. Hook (`src/hooks/useRegisterTransfers.ts`)
 
-- `useAuth()` importieren um `permissionLevel` zu erhalten
-- `isSessionLocked()` mit `selectedDate` und `permissionLevel` aufrufen
-- Wenn gesperrt:
-  - Eingabeformular (Kellner hinzufuegen/bearbeiten Card) ausblenden
-  - Loeschen-Buttons in der Tabelle ausblenden
-  - Tabellenzeilen nicht klickbar machen (kein `handleEditWaiter`)
-  - Hinweisbanner anzeigen: "Diese Abrechnung ist aelter als 3 Tage und kann nur von einem Admin bearbeitet werden."
+- Interface `RegisterTransfer` um `created_by_name` erweitern
+- `createTransfer` akzeptiert `created_by_name`
 
-### 3. DailySummary (`src/pages/DailySummary.tsx`)
+### 4. Seite (`src/pages/RegisterBalance.tsx`)
 
-- `isSessionLocked()` aufrufen (nutzt bereits `useAuth`)
-- Wenn gesperrt:
-  - Alle `CurrencyInput` und `Textarea` Felder auf `disabled` setzen
-  - Ausgaben-/Vorschuss-Formulare (Hinzufuegen-Buttons) deaktivieren
-  - Loeschen-Buttons fuer Ausgaben/Vorschuesse ausblenden
-  - Session-Erstellung bleibt moeglich (fuer Tage ohne Session)
-  - PDF-Export bleibt verfuegbar (nur Lesen)
-  - Hinweisbanner anzeigen
+- Seitentitel: "Tresor" mit Untertitel "Einzahlungen und Auszahlungen"
+- Oberer Bereich: Zwei kompakte Zusammenfassungs-Karten (Gesamte Einzahlungen / Gesamte Auszahlungen / Saldo)
+- Hauptbereich: Tabelle mit Spalten Datum | Name | Einzahlung | Auszahlung
+- Button "Neu" oeffnet den ueberarbeiteten Dialog
 
-### 4. KitchenTipSplit (`src/pages/KitchenTipSplit.tsx`)
+### 5. Transfer-Dialog (`src/components/register/TransferDialog.tsx`)
 
-- `useAuth()` importieren
-- `isSessionLocked()` aufrufen
-- Wenn gesperrt:
-  - Kuechenschicht-Formular (Hinzufuegen) ausblenden
-  - Loeschen-Buttons in der Tabelle ausblenden
-  - Hinweisbanner anzeigen
+- Felder: Datum, Name (Freitext-Eingabe), Richtung (Einzahlung/Auszahlung), Betrag
+- Das bisherige "Grund"-Feld wird entfernt (Name ersetzt es)
 
-### 5. Hinweisbanner-Komponente
+### 6. Transfer-Liste (`src/components/register/TransferList.tsx`)
 
-Ein einheitliches Banner mit Warnsymbol und Text, das auf allen drei Seiten angezeigt wird wenn die Session gesperrt ist. Wird als einfaches `Card`-Element mit `AlertTriangle`-Icon umgesetzt.
+- Umbau von der bisherigen Listenansicht zu einer Tabellenansicht mit den Spalten: Datum | Name | Einzahlung | Auszahlung | Loeschen-Button
+- Einzahlung und Auszahlung werden in getrennten Spalten angezeigt (je nach `direction`)
 
-## Logik-Details
+### 7. RegisterCard (`src/components/register/RegisterCard.tsx`)
 
-- "3 Tage" bedeutet: Geschaeftsdatum heute minus Session-Datum > 3 Tage
-- Admins koennen immer bearbeiten, unabhaengig vom Alter
-- Manager und Staff sehen den Nur-Lesen-Modus
-- Die Sperre ist rein clientseitig (UI-Einschraenkung), keine serverseitige Aenderung noetig, da die bestehenden RLS-Policies keine Zeitbeschraenkung haben
+- Wird vereinfacht oder kann entfallen, da die Seite jetzt eine Tabelle mit Zusammenfassung zeigt
 
+## Technische Details
+
+- `direction: 'to_safe'` entspricht "EINZAHLUNG" (Geld geht in den Tresor)
+- `direction: 'to_restaurant'` entspricht "AUSZAHLUNG" (Geld wird aus dem Tresor entnommen)
+- Die bestehende Balance-Berechnung im Hook bleibt erhalten
+- Die `reason`-Spalte in der Datenbank bleibt bestehen (Abwaertskompatibilitaet), wird aber im UI nicht mehr angezeigt
