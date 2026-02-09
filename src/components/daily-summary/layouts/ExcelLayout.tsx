@@ -111,7 +111,7 @@ export function ExcelLayout({
             </div>
             <table className="w-full text-sm">
               <tbody>
-                <ExcelInputRow label="Vectron Gesamtumsatz" value={formData.pos_total} onChange={(v) => onFieldChange('pos_total', v)} disabled={locked} />
+                <ExcelInputRow label="Umsatz Abschlag" value={formData.pos_total} onChange={(v) => onFieldChange('pos_total', v)} disabled={locked} />
               </tbody>
             </table>
 
