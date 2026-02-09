@@ -10,6 +10,7 @@ import type { Staff, StaffInput, StaffRole } from '@/hooks/useStaff';
 import { useRestaurants } from '@/hooks/useRestaurant';
 import { useUnlinkedProfiles, useLinkedProfilesForStaff, useAdminLinkAccount } from '@/hooks/useProfiles';
 import { useUserRole, useUpdateUserRole } from '@/hooks/useUserRole';
+import { useAuth } from '@/contexts/AuthContext';
 import type { PermissionLevel } from '@/types/permissions';
 import { PERMISSION_LEVEL_INFO } from '@/types/permissions';
 interface StaffDialogProps {
@@ -24,6 +25,7 @@ interface StaffDialogProps {
  * Minimal Dialog without Radix Select/Checkbox to avoid compose-refs bug.
  */
 export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: StaffDialogProps) {
+  const { user } = useAuth();
   const [name, setName] = useState('');
   const [role, setRole] = useState<StaffRole>('waiter');
   const [isActive, setIsActive] = useState(true);
@@ -96,10 +98,11 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
     });
 
     // Update permission level for existing staff
-    if (staff && permissionLevel !== currentRole) {
+    if (staff && permissionLevel !== currentRole && user?.id) {
       updateRoleMutation.mutate({
         staffId: staff.id,
         permissionLevel,
+        callerStaffId: user.id,
       });
     }
   };

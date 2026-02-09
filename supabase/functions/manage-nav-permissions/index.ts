@@ -57,7 +57,23 @@ Deno.serve(async (req) => {
 
     if (req.method === 'POST') {
       const body = await req.json();
-      const { staff_id, paths } = body;
+      const { staff_id, paths, caller_staff_id } = body;
+
+      // Verify caller is admin
+      if (!caller_staff_id) {
+        return new Response(
+          JSON.stringify({ error: 'Missing caller_staff_id' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const { data: callerPermission } = await supabase.rpc('get_staff_permission', { p_staff_id: caller_staff_id });
+      if (callerPermission !== 'admin') {
+        return new Response(
+          JSON.stringify({ error: 'Insufficient permissions. Admin role required.' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
 
       if (!staff_id || !Array.isArray(paths)) {
         return new Response(

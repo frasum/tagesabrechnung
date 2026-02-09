@@ -82,9 +82,26 @@ serve(async (req: Request) => {
 
     // POST: Set/update permission level
     if (req.method === "POST") {
-      const body: ManageRoleRequest = await req.json();
+      const body = await req.json();
+      const { staff_id, permission_level, caller_staff_id } = body as ManageRoleRequest & { caller_staff_id?: string };
 
-      if (!body.staff_id || !body.permission_level) {
+      // Verify caller is admin
+      if (!caller_staff_id) {
+        return new Response(
+          JSON.stringify({ error: "Missing caller_staff_id" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: callerPermission } = await supabase.rpc('get_staff_permission', { p_staff_id: caller_staff_id });
+      if (callerPermission !== 'admin') {
+        return new Response(
+          JSON.stringify({ error: "Insufficient permissions. Admin role required." }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (!staff_id || !permission_level) {
         return new Response(
           JSON.stringify({ error: "Missing staff_id or permission_level" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -92,7 +109,7 @@ serve(async (req: Request) => {
       }
 
       // Validate permission level
-      if (!["staff", "manager", "admin"].includes(body.permission_level)) {
+      if (!["staff", "manager", "admin"].includes(permission_level)) {
         return new Response(
           JSON.stringify({ error: "Invalid permission_level" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -104,8 +121,8 @@ serve(async (req: Request) => {
         .from("user_roles")
         .upsert(
           { 
-            staff_id: body.staff_id, 
-            permission_level: body.permission_level 
+            staff_id: staff_id, 
+            permission_level: permission_level 
           },
           { onConflict: "staff_id" }
         )

@@ -46,7 +46,7 @@ export function useUpdateUserRole() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ staffId, permissionLevel }: { staffId: string; permissionLevel: PermissionLevel }) => {
+    mutationFn: async ({ staffId, permissionLevel, callerStaffId }: { staffId: string; permissionLevel: PermissionLevel; callerStaffId: string }) => {
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-user-role`,
         {
@@ -58,12 +58,14 @@ export function useUpdateUserRole() {
           body: JSON.stringify({
             staff_id: staffId,
             permission_level: permissionLevel,
+            caller_staff_id: callerStaffId,
           }),
         }
       );
 
       if (!response.ok) {
-        throw new Error('Failed to update user role');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to update user role');
       }
 
       return response.json();

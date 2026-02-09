@@ -65,7 +65,7 @@ export function useSaveManagerNavPermissions() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ staffId, paths }: { staffId: string; paths: string[] }) => {
+    mutationFn: async ({ staffId, paths, callerStaffId }: { staffId: string; paths: string[]; callerStaffId: string }) => {
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-nav-permissions`,
         {
@@ -74,12 +74,13 @@ export function useSaveManagerNavPermissions() {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({ staff_id: staffId, paths }),
+          body: JSON.stringify({ staff_id: staffId, paths, caller_staff_id: callerStaffId }),
         }
       );
 
       if (!response.ok) {
-        throw new Error('Failed to save manager nav permissions');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to save manager nav permissions');
       }
 
       return response.json();

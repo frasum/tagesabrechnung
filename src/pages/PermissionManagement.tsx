@@ -11,6 +11,7 @@ import { useAllManagerNavPermissions, useSaveManagerNavPermissions } from '@/hoo
 import { MANAGER_NAV_ITEMS } from '@/types/permissions';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Hook to fetch all user roles
 function useAllUserRoles() {
@@ -29,6 +30,7 @@ function useAllUserRoles() {
 
 export default function PermissionManagement() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const { data: staffList = [], isLoading: staffLoading } = useStaff();
   const { data: allPermissions = {}, isLoading: permissionsLoading } = useAllManagerNavPermissions();
   const { data: userRoles = [], isLoading: rolesLoading } = useAllUserRoles();
@@ -73,6 +75,7 @@ export default function PermissionManagement() {
       await savePermissions.mutateAsync({
         staffId,
         paths: localPermissions[staffId] || [],
+        callerStaffId: user?.id || '',
       });
       toast({
         title: 'Berechtigungen gespeichert',
