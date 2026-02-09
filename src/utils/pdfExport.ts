@@ -70,335 +70,140 @@ const formatCurrency = (value: number): string => {
 };
 
 export const generateDailySummaryPDF = (data: PDFExportData): void => {
-  const doc = new jsPDF('landscape');
+  const doc = new jsPDF('portrait');
   const pageWidth = doc.internal.pageSize.getWidth();
-  const margin = 10;
-  const colGap = 6;
-  const leftColWidth = (pageWidth - 2 * margin - colGap) * 0.38;
-  const rightColX = margin + leftColWidth + colGap;
-  const rightColWidth = pageWidth - rightColX - margin;
-  let yLeft = 20;
-  let yRight = 20;
+  const margin = 14;
+  let y = 20;
 
   // ========== HEADER ==========
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text('TAGESABRECHNUNG', margin, yLeft);
-  
+  doc.text('TAGESABRECHNUNG', margin, y);
+
   const dateStr = format(new Date(data.session.session_date), "EEEE, d. MMMM yyyy", { locale: de });
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text(dateStr, margin, yLeft + 6);
-  
+  doc.text(dateStr, margin, y + 6);
+
   if (data.restaurantName) {
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.text(data.restaurantName, pageWidth - margin, yLeft, { align: 'right' });
+    doc.text(data.restaurantName, pageWidth - margin, y, { align: 'right' });
   }
-  
+
   doc.setFontSize(7);
   doc.setTextColor(128);
   const exportInfo = data.exportedBy
     ? `Erstellt: ${format(new Date(), "dd.MM.yyyy HH:mm", { locale: de })} von ${data.exportedBy}`
     : `Erstellt: ${format(new Date(), "dd.MM.yyyy HH:mm", { locale: de })}`;
-  doc.text(exportInfo, pageWidth - margin, yLeft + 6, { align: 'right' });
+  doc.text(exportInfo, pageWidth - margin, y + 6, { align: 'right' });
   doc.setTextColor(0);
 
-  yLeft += 14;
-  yRight = yLeft;
+  y += 14;
 
   // ========== WARNINGS ==========
   const adjustedPosMismatch = data.totals.posMismatch - (data.session.takeaway_total || 0);
   if (Math.abs(adjustedPosMismatch) >= 0.01 || Math.abs(data.totals.cardTerminalMismatch) >= 0.01) {
     doc.setFillColor(254, 226, 226);
-    doc.rect(margin, yLeft - 3, pageWidth - 2 * margin, 10, 'F');
+    doc.rect(margin, y - 3, pageWidth - 2 * margin, 10, 'F');
     doc.setFontSize(8);
     doc.setTextColor(185, 28, 28);
     doc.setFont('helvetica', 'bold');
     let alertText = 'ACHTUNG: ';
     if (Math.abs(adjustedPosMismatch) >= 0.01) alertText += `POS Diff: ${formatCurrency(adjustedPosMismatch)}  `;
     if (Math.abs(data.totals.cardTerminalMismatch) >= 0.01) alertText += `Terminal Diff: ${formatCurrency(data.totals.cardTerminalMismatch)}`;
-    doc.text(alertText, margin + 3, yLeft + 3);
+    doc.text(alertText, margin + 3, y + 3);
     doc.setTextColor(0);
     doc.setFont('helvetica', 'normal');
-    yLeft += 14;
-    yRight = yLeft;
+    y += 14;
   }
 
-  // ========== LEFT COLUMN: Hauptdaten ==========
-  const sectionHeaderStyle = { fillColor: [241, 245, 249] as [number, number, number], fontSize: 7, fontStyle: 'bold' as const, textColor: [51, 65, 85] as [number, number, number] };
-  const bodyStyle = { fontSize: 8 };
-  const rightAlignCol = { 1: { halign: 'right' as const } };
-
-  // -- Umsatz --
-  autoTable(doc, {
-    startY: yLeft,
-    margin: { left: margin, right: pageWidth - margin - leftColWidth },
-    head: [['Umsatz', '']],
-    body: [
-      ['Vectron Gesamtumsatz', formatCurrency(data.session.pos_total || 0)],
-      ['Kellner Umsatz', formatCurrency(data.totals.kellnerUmsatz)],
-      ['Differenz', formatCurrency(data.totals.posMismatch)],
-    ],
-    theme: 'plain',
-    headStyles: sectionHeaderStyle,
-    bodyStyles: bodyStyle,
-    columnStyles: rightAlignCol,
-    tableWidth: leftColWidth,
-  });
-  yLeft = (doc as any).lastAutoTable.finalY + 2;
-
-  // -- Kredit Karten --
+  // ========== FLAT SUMMARY TABLE (Excel-style) ==========
   const terminalTotal = (data.session.terminal_1_total || 0) + (data.session.terminal_2_total || 0);
-  autoTable(doc, {
-    startY: yLeft,
-    margin: { left: margin, right: pageWidth - margin - leftColWidth },
-    head: [['Kredit Karten', '']],
-    body: [
-      ['Terminal 1', formatCurrency(data.session.terminal_1_total || 0)],
-      ['Terminal 2', formatCurrency(data.session.terminal_2_total || 0)],
-      ['KK Umsatz GL', formatCurrency(data.session.card_total_gl || 0)],
-      ['KK Gesamt', formatCurrency(data.totals.totalCardTotal)],
-    ],
-    theme: 'plain',
-    headStyles: sectionHeaderStyle,
-    bodyStyles: bodyStyle,
-    columnStyles: rightAlignCol,
-    tableWidth: leftColWidth,
-    didParseCell: (cell) => {
-      if (cell.section === 'body' && cell.row.index === 3) cell.cell.styles.fontStyle = 'bold';
-    },
-  });
-  yLeft = (doc as any).lastAutoTable.finalY + 2;
+  const bargeldMitHilf = data.totals.bargeld;
+  const totalHilfMahl = data.totals.totalHilfMahl;
+  const bargeldOhneHilf = bargeldMitHilf - totalHilfMahl;
 
-  // -- Take Away --
-  autoTable(doc, {
-    startY: yLeft,
-    margin: { left: margin, right: pageWidth - margin - leftColWidth },
-    head: [['Take Away', '']],
-    body: [
-      ['Takeaway GL', formatCurrency(data.session.takeaway_total || 0)],
-      ['OrderSmart', formatCurrency(data.session.ordersmart_revenue || 0)],
-      ['Wolt', formatCurrency(data.session.wolt_revenue || 0)],
-      ['Take-Away Gesamt', formatCurrency(data.totals.totalDeliveryRevenue)],
-    ],
-    theme: 'plain',
-    headStyles: sectionHeaderStyle,
-    bodyStyles: bodyStyle,
-    columnStyles: rightAlignCol,
-    tableWidth: leftColWidth,
-    didParseCell: (cell) => {
-      if (cell.section === 'body' && cell.row.index === 3) cell.cell.styles.fontStyle = 'bold';
-    },
-  });
-  yLeft = (doc as any).lastAutoTable.finalY + 2;
+  const tableWidth = (pageWidth - 2 * margin) * 0.55;
 
-  // -- Gutscheine & Sonstiges --
-  autoTable(doc, {
-    startY: yLeft,
-    margin: { left: margin, right: pageWidth - margin - leftColWidth },
-    head: [['Gutscheine & Sonstiges', '']],
-    body: [
-      ['Gutschein Verkauf', formatCurrency(data.session.vouchers_sold || 0)],
-      ['Gutschein Eingelöst', formatCurrency(data.session.vouchers_redeemed || 0)],
-      ['FineDine', formatCurrency(data.session.finedine_vouchers || 0)],
-      ['Offene Rechnungen', formatCurrency(data.totals.totalOpenInvoices)],
-      ['Vorschuss', formatCurrency(data.session.vorschuss || 0)],
-      ['Einladung', formatCurrency(data.session.einladung || 0)],
-      ['Sonstige Einnahmen', formatCurrency(data.session.sonstige_einnahme || 0)],
-      ['Ausgaben', formatCurrency(-data.totals.totalExpenses)],
-    ],
-    theme: 'plain',
-    headStyles: sectionHeaderStyle,
-    bodyStyles: bodyStyle,
-    columnStyles: rightAlignCol,
-    tableWidth: leftColWidth,
-  });
-  yLeft = (doc as any).lastAutoTable.finalY + 2;
+  const summaryRows: any[][] = [
+    ['Umsatz', formatCurrency(data.session.pos_total || 0)],
+    ['KK', formatCurrency(terminalTotal)],
+    ['OrderSmart', formatCurrency(data.session.ordersmart_revenue || 0)],
+    ['Wolt', formatCurrency(data.session.wolt_revenue || 0)],
+    ['Gutscheine', formatCurrency(data.session.vouchers_redeemed || 0)],
+    ['FineDine', formatCurrency(data.session.finedine_vouchers || 0)],
+    ['Gutscheine VK', formatCurrency(data.session.vouchers_sold || 0)],
+    ['Offen', formatCurrency(data.totals.totalOpenInvoices)],
+    ['Personal', formatCurrency(data.session.vorschuss || 0)],
+    ['Einladung', formatCurrency(data.session.einladung || 0)],
+    ['Bar Ausgaben', formatCurrency(data.totals.totalExpenses)],
+    ['HilfMahl', formatCurrency(totalHilfMahl)],
+    ['', ''], // empty spacer row
+  ];
 
-  // -- BARGELD (highlighted) --
-  const bargeldIsPositive = data.totals.bargeld >= 0;
-  const bgColor: [number, number, number] = bargeldIsPositive ? [220, 252, 231] : [254, 226, 226];
-  const txtColor: [number, number, number] = bargeldIsPositive ? [22, 101, 52] : [185, 28, 28];
-  
+  // Bargeld rows with highlight
+  const bargeldRowIndex = summaryRows.length;
+  summaryRows.push([
+    { content: 'Bargeld mit HilfMahl', styles: { fontStyle: 'bold', fillColor: [220, 252, 231] as [number, number, number] } },
+    { content: formatCurrency(bargeldMitHilf), styles: { fontStyle: 'bold', fillColor: [220, 252, 231] as [number, number, number], halign: 'right' } },
+  ]);
+
   autoTable(doc, {
-    startY: yLeft,
-    margin: { left: margin, right: pageWidth - margin - leftColWidth },
-    body: [['BARGELD', formatCurrency(data.totals.bargeld)]],
+    startY: y,
+    margin: { left: margin, right: pageWidth - margin - tableWidth },
+    body: summaryRows,
     theme: 'plain',
-    bodyStyles: { fontSize: 11, fontStyle: 'bold', fillColor: bgColor, textColor: txtColor },
+    bodyStyles: { fontSize: 9, cellPadding: { top: 1.5, bottom: 1.5, left: 2, right: 2 } },
     columnStyles: { 1: { halign: 'right' as const } },
-    tableWidth: leftColWidth,
+    tableWidth: tableWidth,
   });
-  yLeft = (doc as any).lastAutoTable.finalY + 2;
 
-  // -- Küchen-Trinkgeld --
-  const uniqueKitchenNames = new Set(data.kitchenShifts.map(k => k.staff_name));
-  const uniqueKitchenStaff = uniqueKitchenNames.size;
-  const tipPerKitchen = uniqueKitchenStaff > 0 ? data.totals.totalKitchenTip / uniqueKitchenStaff : 0;
+  // ========== RIGHT SIDE: Trinkgeld p.p. + ohne HilfMahl ==========
+  const rightX = margin + tableWidth + 10;
+  const waiterCount = data.waiterShifts.length;
+  const tipPerWaiter = waiterCount > 0 ? data.totals.totalWaiterTip / waiterCount : 0;
 
-  autoTable(doc, {
-    startY: yLeft,
-    margin: { left: margin, right: pageWidth - margin - leftColWidth },
-    body: [
-      ['2% Trinkgeld Küche', formatCurrency(data.totals.totalKitchenTip)],
-      ...(uniqueKitchenStaff > 0 ? [[`→ Pro Küche (${uniqueKitchenStaff} MA)`, formatCurrency(tipPerKitchen)]] : []),
-    ],
-    theme: 'plain',
-    bodyStyles: { fontSize: 8 },
-    columnStyles: rightAlignCol,
-    tableWidth: leftColWidth,
-    didParseCell: (cell) => {
-      if (cell.section === 'body' && cell.row.index === 1) {
-        cell.cell.styles.textColor = [128, 128, 128];
-        cell.cell.styles.fontSize = 7;
-      }
-    },
-  });
-  yLeft = (doc as any).lastAutoTable.finalY + 4;
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.text('trinkgeld p.p', rightX, y + 5);
+  doc.text(formatCurrency(tipPerWaiter), pageWidth - margin, y + 5, { align: 'right' });
 
-  // -- Ausgaben (left column, below) --
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.text('service', rightX, y + 11);
+
+  // "ohne hilfmahl" at bottom-right, aligned with Bargeld row
+  const tableEndY = (doc as any).lastAutoTable.finalY;
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.text('ohne hilfmahl', rightX, tableEndY - 2);
+  doc.text(formatCurrency(bargeldOhneHilf), pageWidth - margin, tableEndY - 2, { align: 'right' });
+
+  y = tableEndY + 8;
+
+  // ========== AUSGABEN (if any) ==========
   if (data.expenses.length > 0) {
     autoTable(doc, {
-      startY: yLeft,
-      margin: { left: margin, right: pageWidth - margin - leftColWidth },
+      startY: y,
+      margin: { left: margin, right: pageWidth - margin - tableWidth },
       head: [['Ausgaben', 'Betrag']],
       body: [
         ...data.expenses.map(e => [e.description, formatCurrency(e.amount)]),
         ['Summe', formatCurrency(data.totals.totalExpenses)],
       ],
       theme: 'plain',
-      headStyles: sectionHeaderStyle,
+      headStyles: { fillColor: [241, 245, 249] as [number, number, number], fontSize: 8, fontStyle: 'bold' as const, textColor: [51, 65, 85] as [number, number, number] },
       bodyStyles: { fontSize: 8 },
-      columnStyles: rightAlignCol,
-      tableWidth: leftColWidth,
+      columnStyles: { 1: { halign: 'right' as const } },
+      tableWidth: tableWidth,
       didParseCell: (cell) => {
         if (cell.section === 'body' && cell.row.index === data.expenses.length) {
           cell.cell.styles.fontStyle = 'bold';
         }
       },
     });
-    yLeft = (doc as any).lastAutoTable.finalY + 4;
-  }
-
-  // ========== RIGHT COLUMN: Kellner (horizontal) ==========
-  if (data.waiterShifts.length > 0) {
-    const waiterNames = data.waiterShifts.map(w => w.waiter_name);
-    const headRow = ['', ...waiterNames];
-
-    const calcExpected = (w: WaiterShift) =>
-      (w.kassiert_brutto || 0) + w.hilf_mahl - w.open_invoices - w.card_total;
-
-    const bodyRows = [
-      ['Abzugeben', ...data.waiterShifts.map(w => formatCurrency(w.kassiert_brutto || 0))],
-      ['Kredit Karten', ...data.waiterShifts.map(w => formatCurrency(w.card_total))],
-      ['Hilf Mahl', ...data.waiterShifts.map(w => formatCurrency(w.hilf_mahl))],
-      ['Offene Rechn.', ...data.waiterShifts.map(w => formatCurrency(w.open_invoices))],
-      ['Soll Bargeld', ...data.waiterShifts.map(w => formatCurrency(calcExpected(w)))],
-      ['Abgegeben', ...data.waiterShifts.map(w => formatCurrency(w.cash_handed_in))],
-      ['Küchen-TG', ...data.waiterShifts.map(w => {
-        const pct = (w.kassiert_brutto || 0) > 0 ? ((w.kitchen_tip / (w.kassiert_brutto || 1)) * 100).toFixed(1) : '0.0';
-        return `${formatCurrency(w.kitchen_tip)} (${pct}%)`;
-      })],
-      ['Kellner-TG', ...data.waiterShifts.map(w => {
-        const tip = w.cash_handed_in - calcExpected(w) - w.kitchen_tip;
-        return formatCurrency(tip);
-      })],
-    ];
-
-    // Build column styles dynamically
-    const colStyles: Record<number, { halign: 'right' | 'center' }> = {};
-    for (let i = 1; i <= waiterNames.length; i++) {
-      colStyles[i] = { halign: 'right' };
-    }
-
-    autoTable(doc, {
-      startY: yRight,
-      margin: { left: rightColX, right: margin },
-      head: [headRow],
-      body: bodyRows,
-      theme: 'grid',
-      headStyles: { fillColor: [51, 65, 85], fontSize: 7, halign: 'center' },
-      bodyStyles: { fontSize: 7 },
-      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 28 }, ...colStyles },
-      tableWidth: rightColWidth,
-      didParseCell: (cell) => {
-        // "Soll Bargeld" row subtle bg
-        if (cell.section === 'body' && cell.row.index === 4) {
-          cell.cell.styles.fillColor = [241, 245, 249];
-        }
-        // "Abgegeben" row bold
-        if (cell.section === 'body' && cell.row.index === 5) {
-          cell.cell.styles.fontStyle = 'bold';
-        }
-        // "Kellner-TG" row highlighted
-        if (cell.section === 'body' && cell.row.index === 7) {
-          cell.cell.styles.fontStyle = 'bold';
-          cell.cell.styles.fillColor = [220, 252, 231];
-        }
-      },
-    });
-    yRight = (doc as any).lastAutoTable.finalY + 6;
-  }
-
-  // -- Tip Pool (right column) --
-  const waiterCount = data.waiterShifts.length;
-  const tipPerWaiter = waiterCount > 0 ? data.totals.totalWaiterTip / waiterCount : 0;
-
-  autoTable(doc, {
-    startY: yRight,
-    margin: { left: rightColX, right: margin },
-    head: [['Trinkgeld Pool', '']],
-    body: [
-      ['Küchen-TG Gesamt', formatCurrency(data.totals.totalKitchenTip)],
-      ...(uniqueKitchenStaff > 0 ? [[`→ Küche (${uniqueKitchenStaff} MA)`, formatCurrency(tipPerKitchen)]] : []),
-      ['Kellner-TG Pool', formatCurrency(data.totals.totalWaiterTip)],
-      ...(waiterCount > 0 ? [[`→ Pro Kellner (${waiterCount})`, formatCurrency(tipPerWaiter)]] : []),
-      ['TG Gesamt', formatCurrency(data.totals.totalKitchenTip + data.totals.totalWaiterTip)],
-    ],
-    theme: 'plain',
-    headStyles: sectionHeaderStyle,
-    bodyStyles: { fontSize: 8 },
-    columnStyles: rightAlignCol,
-    tableWidth: rightColWidth,
-    didParseCell: (cell) => {
-      if (cell.section === 'body') {
-        const lastIdx = (uniqueKitchenStaff > 0 ? 1 : 0) + (waiterCount > 0 ? 1 : 0) + 3 - 1;
-        if (cell.row.index === lastIdx) {
-          cell.cell.styles.fontStyle = 'bold';
-          cell.cell.styles.fillColor = [220, 252, 231];
-        }
-        // Muted sub-rows
-        const raw = cell.row.raw as string[];
-        if (raw && raw[0] && String(raw[0]).startsWith('→')) {
-          cell.cell.styles.textColor = [128, 128, 128];
-          cell.cell.styles.fontSize = 7;
-        }
-      }
-    },
-  });
-  yRight = (doc as any).lastAutoTable.finalY + 6;
-
-  // -- Kitchen staff distribution (right column) --
-  if (data.kitchenShifts.length > 0) {
-    const totalHours = data.kitchenShifts.reduce((sum, s) => sum + s.hours_worked, 0);
-
-    autoTable(doc, {
-      startY: yRight,
-      margin: { left: rightColX, right: margin },
-      head: [['Küchenpersonal', 'Stunden', 'Anteil', 'Trinkgeld']],
-      body: data.kitchenShifts.map(shift => {
-        const tipAmount = totalHours > 0 ? (shift.hours_worked / totalHours) * data.totals.totalKitchenTip : 0;
-        const pct = totalHours > 0 ? ((shift.hours_worked / totalHours) * 100).toFixed(1) : '0';
-        return [shift.staff_name, shift.hours_worked.toFixed(1) + 'h', pct + '%', formatCurrency(tipAmount)];
-      }),
-      theme: 'plain',
-      headStyles: { ...sectionHeaderStyle, fontSize: 7 },
-      bodyStyles: { fontSize: 7 },
-      columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' } },
-      tableWidth: rightColWidth,
-    });
-    yRight = (doc as any).lastAutoTable.finalY + 6;
+    y = (doc as any).lastAutoTable.finalY + 4;
   }
 
   // ========== FOOTER ==========
