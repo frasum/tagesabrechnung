@@ -19,6 +19,7 @@ import { useSession, useCreateSession, useWaiterShifts, useCreateWaiterShift, us
 import { useUpdateWaiterShiftWithAudit } from '@/hooks/useWaiterShiftAudit';
 import { useWaiterRanking } from '@/hooks/useWaiterRanking';
 import { AccountLinkingDialog } from '@/components/auth/AccountLinkingDialog';
+import { SecondWaiterSelect } from '@/components/shared/SecondWaiterSelect';
 
 export default function WaiterMobile() {
   const today = getBusinessDate();
@@ -27,6 +28,7 @@ export default function WaiterMobile() {
   const staffName = user?.name || '';
   const { toast } = useToast();
   const [showLinkingDialog, setShowLinkingDialog] = useState(false);
+  const [secondWaiterName, setSecondWaiterName] = useState('none');
 
   // Form state
   const [formData, setFormData] = useState({
@@ -64,6 +66,7 @@ export default function WaiterMobile() {
         open_invoices: myShift.open_invoices || 0,
         cash_handed_in: myShift.cash_handed_in || 0,
       });
+      setSecondWaiterName(myShift.second_waiter_name || 'none');
     }
   }, [myShift, shiftsLoading]);
 
@@ -118,20 +121,19 @@ export default function WaiterMobile() {
       }
 
       if (myShift) {
-        // Update existing shift
         await updateWaiterShift.mutateAsync({
           id: myShift.id,
           sessionId,
           restaurantId: restaurantId!,
+          second_waiter_name: secondWaiterName === 'none' ? null : secondWaiterName,
           ...formData,
         });
         toast({ title: 'Gespeichert', description: 'Deine Abrechnung wurde aktualisiert.' });
       } else {
-        // Create new shift (second_waiter_name is null for self-service, participates_in_pool is always true)
         await createWaiterShift.mutateAsync({
           session_id: sessionId,
           waiter_name: staffName,
-          second_waiter_name: null,
+          second_waiter_name: secondWaiterName === 'none' ? null : secondWaiterName,
           participates_in_pool: true,
           ...formData,
         });
@@ -200,6 +202,16 @@ export default function WaiterMobile() {
               </div>
             ) : (
               <>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Zweiter Kellner (optional)</Label>
+                  <SecondWaiterSelect
+                    value={secondWaiterName}
+                    onValueChange={setSecondWaiterName}
+                    excludeWaiter={staffName}
+                    restaurantId={restaurantId}
+                  />
+                </div>
+                <Separator />
                 <div className="space-y-3">
                   <div>
                     <Label className="text-xs text-muted-foreground">Umsatz (POS Sales)</Label>
