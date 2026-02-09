@@ -95,6 +95,9 @@ export function TableLayout({
         </CardContent>
       </Card>
 
+      {/* Expenses above Notes */}
+      {expenses}
+
       {/* Notes */}
       <Card>
         <CardHeader className="pb-2">
@@ -118,10 +121,9 @@ export function TableLayout({
       </div>
 
       {/* Status Row */}
-      <div className="grid md:grid-cols-3 gap-4">
+      <div className="grid md:grid-cols-2 gap-4">
         {waiterStatus}
         {cashBalanceCard}
-        {expenses}
       </div>
     </div>
   );
