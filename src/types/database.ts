@@ -31,6 +31,9 @@ export interface Session {
   takeaway_total: number;
   spicery_transactions: number;
   card_total_gl: number;
+  // Tracking who created/updated
+  created_by_name: string | null;
+  updated_by_name: string | null;
 }
 
 export interface WaiterShift {
