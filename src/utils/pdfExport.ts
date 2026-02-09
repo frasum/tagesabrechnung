@@ -31,6 +31,9 @@ interface WaiterShift {
   cash_handed_in: number;
   differenz: number;
   kitchen_tip: number;
+  submitted_at?: string | null;
+  participates_in_pool?: boolean;
+  second_waiter_name?: string | null;
 }
 
 interface KitchenShift {
@@ -191,6 +194,49 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
           cell.cell.styles.fontStyle = 'bold';
         }
       },
+    });
+    y = (doc as any).lastAutoTable.finalY + 4;
+  }
+
+  // ========== KELLNER-DETAILS TABLE ==========
+  if (data.waiterShifts.length > 0) {
+    // Calculate tip per waiter share
+    const poolParticipants = data.waiterShifts.reduce((count, w) => {
+      if (!w.participates_in_pool) return count;
+      return count + (w.second_waiter_name ? 2 : 1);
+    }, 0);
+    const tipPerShare = poolParticipants > 0 ? data.totals.totalWaiterTip / poolParticipants : 0;
+
+    const waiterRows = data.waiterShifts.map(shift => {
+      const posSales = shift.pos_sales || 0;
+      const shares = shift.second_waiter_name ? 2 : 1;
+      const waiterPoolShare = shift.participates_in_pool ? tipPerShare * shares : 0;
+      const tipPercent = posSales > 0 && shift.participates_in_pool
+        ? (waiterPoolShare / posSales) * 100
+        : null;
+
+      const submittedTime = shift.submitted_at
+        ? format(new Date(shift.submitted_at), 'HH:mm', { locale: de })
+        : '---';
+
+      return [
+        shift.waiter_name,
+        formatCurrency(posSales),
+        submittedTime,
+        tipPercent !== null ? tipPercent.toFixed(1).replace('.', ',') + '%' : '---',
+      ];
+    });
+
+    autoTable(doc, {
+      startY: y,
+      margin: { left: tableMarginLeft, right: tableMarginLeft },
+      head: [['Kellner', 'Umsatz', 'Abgabe', 'TG %']],
+      body: waiterRows,
+      theme: 'plain',
+      headStyles: { fillColor: [241, 245, 249] as [number, number, number], fontSize: 8, fontStyle: 'bold' as const, textColor: [51, 65, 85] as [number, number, number] },
+      bodyStyles: { fontSize: 8 },
+      columnStyles: { 1: { halign: 'right' as const }, 2: { halign: 'center' as const }, 3: { halign: 'right' as const } },
+      tableWidth: tableWidth,
     });
     y = (doc as any).lastAutoTable.finalY + 4;
   }

@@ -336,6 +336,9 @@ export default function DailySummary() {
         cash_handed_in: w.cash_handed_in || 0,
         differenz: w.differenz || 0,
         kitchen_tip: w.kitchen_tip || 0,
+        submitted_at: (w as any).submitted_at ?? null,
+        participates_in_pool: w.participates_in_pool ?? true,
+        second_waiter_name: w.second_waiter_name ?? null,
       })),
       kitchenShifts: kitchenShifts.map(k => ({
         staff_name: k.staff_name,
