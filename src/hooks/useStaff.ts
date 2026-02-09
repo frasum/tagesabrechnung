@@ -21,6 +21,8 @@ export interface LinkedProfile {
   avatar_url: string | null;
 }
 
+export type PermissionLevel = 'staff' | 'manager' | 'admin';
+
 export interface Staff {
   id: string;
   name: string;
@@ -35,6 +37,8 @@ export interface Staff {
   linked_profiles?: LinkedProfile[];
   /** @deprecated Use linked_profiles instead - kept for backward compatibility */
   linked_profile?: LinkedProfile | null;
+  /** Permission level from user_roles table */
+  permission_level?: PermissionLevel;
 }
 
 export interface StaffInput {
@@ -109,14 +113,29 @@ export function useStaff(role?: StaffRole) {
         console.error('Failed to fetch linked profiles:', e);
       }
       
-      // Merge linked_profiles into staff data
+      // Fetch user roles for all staff
+      let rolesMap: Record<string, PermissionLevel> = {};
+      try {
+        const { data: rolesData } = await supabase
+          .from('user_roles')
+          .select('staff_id, permission_level');
+        if (rolesData) {
+          for (const r of rolesData) {
+            rolesMap[r.staff_id] = r.permission_level as PermissionLevel;
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch user roles:', e);
+      }
+
+      // Merge linked_profiles and permission_level into staff data
       return (staffData || []).map((staff: any) => {
         const profiles = linkedProfilesMap[staff.id] || [];
         return {
           ...staff,
           linked_profiles: profiles,
-          // Backward compatibility: linked_profile is the first one or null
           linked_profile: profiles.length > 0 ? profiles[0] : null,
+          permission_level: rolesMap[staff.id] || 'staff',
         };
       }) as Staff[];
     },

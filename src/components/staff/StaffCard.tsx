@@ -1,4 +1,4 @@
-import { Pencil, Trash2, ChefHat, UtensilsCrossed, Store, Smartphone } from 'lucide-react';
+import { Pencil, Trash2, ChefHat, UtensilsCrossed, Store, Smartphone, Shield, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,15 @@ export function StaffCard({ staff, onEdit, onDelete }: StaffCardProps) {
   const isLinked = !!staff.linked_profile;
   const linkedEmail = staff.linked_profile?.email;
 
+  // Permission level badge config
+  const permLevel = staff.permission_level || 'staff';
+  const permConfig = {
+    staff: { label: 'Mitarbeiter', icon: Shield, className: 'bg-muted text-muted-foreground border-border' },
+    manager: { label: 'Manager', icon: ShieldCheck, className: 'bg-blue-100 text-blue-700 border-blue-200' },
+    admin: { label: 'Admin', icon: ShieldAlert, className: 'bg-amber-100 text-amber-700 border-amber-200' },
+  }[permLevel];
+  const PermIcon = permConfig.icon;
+
   return (
     <Card className={`transition-all ${!staff.is_active ? 'opacity-60' : ''}`}>
       <CardContent className="p-4">
@@ -48,6 +57,11 @@ export function StaffCard({ staff, onEdit, onDelete }: StaffCardProps) {
                 <Badge variant="outline" className="font-normal">
                   <RoleIcon className="w-3 h-3 mr-1" />
                   {roleLabel}
+                </Badge>
+                
+                <Badge className={`text-xs font-normal gap-1 ${permConfig.className}`}>
+                  <PermIcon className="w-3 h-3" />
+                  {permConfig.label}
                 </Badge>
                 
                 {/* OAuth link status badge */}
