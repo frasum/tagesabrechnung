@@ -699,6 +699,7 @@ export type Database = {
           second_waiter_name: string | null
           session_id: string
           submitted_at: string | null
+          updated_at: string | null
           waiter_name: string
         }
         Insert: {
@@ -716,6 +717,7 @@ export type Database = {
           second_waiter_name?: string | null
           session_id: string
           submitted_at?: string | null
+          updated_at?: string | null
           waiter_name: string
         }
         Update: {
@@ -733,6 +735,7 @@ export type Database = {
           second_waiter_name?: string | null
           session_id?: string
           submitted_at?: string | null
+          updated_at?: string | null
           waiter_name?: string
         }
         Relationships: [

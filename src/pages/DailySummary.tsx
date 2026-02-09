@@ -355,6 +355,7 @@ export default function DailySummary() {
         differenz: w.differenz || 0,
         kitchen_tip: w.kitchen_tip || 0,
         submitted_at: (w as any).submitted_at ?? null,
+        updated_at: (w as any).updated_at ?? null,
         participates_in_pool: w.participates_in_pool ?? true,
         second_waiter_name: w.second_waiter_name ?? null,
       })),

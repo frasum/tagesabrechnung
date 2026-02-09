@@ -32,6 +32,7 @@ interface WaiterShift {
   differenz: number;
   kitchen_tip: number;
   submitted_at?: string | null;
+  updated_at?: string | null;
   participates_in_pool?: boolean;
   second_waiter_name?: string | null;
 }
@@ -253,13 +254,17 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
         ? format(new Date(shift.submitted_at), 'HH:mm', { locale: de })
         : '---';
 
+      const updatedTime = shift.updated_at
+        ? format(new Date(shift.updated_at), 'HH:mm', { locale: de })
+        : '---';
+
       const tipStr = tipPercent !== null ? tipPercent.toFixed(1).replace('.', ',') + '%' : '---';
       const tipEuro = shift.participates_in_pool ? formatCurrency(waiterPoolShare) : '---';
 
-      const row = [shift.waiter_name, formatCurrency(posSales), submittedTime, tipEuro, tipStr];
+      const row = [shift.waiter_name, formatCurrency(posSales), submittedTime, updatedTime, tipEuro, tipStr];
 
       if (isTeam) {
-        const row2 = [shift.second_waiter_name, formatCurrency(posSales), submittedTime, tipEuro, tipStr];
+        const row2 = [shift.second_waiter_name, formatCurrency(posSales), submittedTime, updatedTime, tipEuro, tipStr];
         return [row, row2];
       }
       return [row];
@@ -268,12 +273,12 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
     autoTable(doc, {
       startY: y,
       margin: { left: tableMarginLeft, right: tableMarginLeft },
-      head: [['Kellner', 'Umsatz', 'Abgabe', 'TG', 'TG %']],
+      head: [['Kellner', 'Umsatz', 'Abgabe', 'Geänd.', 'TG', 'TG %']],
       body: waiterRows,
       theme: 'plain',
       headStyles: { fillColor: [241, 245, 249] as [number, number, number], fontSize: 8, fontStyle: 'bold' as const, textColor: [51, 65, 85] as [number, number, number] },
       bodyStyles: { fontSize: 8 },
-      columnStyles: { 1: { halign: 'right' as const }, 2: { halign: 'center' as const }, 3: { halign: 'right' as const }, 4: { halign: 'right' as const } },
+      columnStyles: { 1: { halign: 'right' as const }, 2: { halign: 'center' as const }, 3: { halign: 'center' as const }, 4: { halign: 'right' as const }, 5: { halign: 'right' as const } },
       tableWidth: tableWidth,
     });
     y = (doc as any).lastAutoTable.finalY + 4;
