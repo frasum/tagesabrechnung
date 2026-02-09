@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { format, isToday, isYesterday } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { useSelectedDate } from '@/contexts/DateContext';
-import { Plus, FileText, Euro, CreditCard, Truck, Receipt, Download, Banknote, Vault, Trash2, Settings, Wallet, ClipboardList, Clock, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Plus, FileText, Euro, CreditCard, Truck, Receipt, Download, Banknote, Vault, Trash2, Settings, Wallet, ClipboardList, Clock, CheckCircle2, AlertTriangle, FileDown, X } from 'lucide-react';
 import { generateDailySummaryPDF } from '@/utils/pdfExport';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { DateSelector } from '@/components/shared/DateSelector';
@@ -23,6 +23,8 @@ import { useRegisterTransfers } from '@/hooks/useRegisterTransfers';
 import { TransferDialog } from '@/components/register/TransferDialog';
 import { LayoutSwitcher, type LayoutMode } from '@/components/daily-summary/LayoutSwitcher';
 import { HorizontalLayout, SectionsLayout, ColumnsLayout, TableLayout, ExcelLayout } from '@/components/daily-summary/layouts';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { PdfPreview } from '@/components/shared/PdfPreview';
 import {
   useSession,
   useCreateSession,
@@ -299,10 +301,14 @@ export default function DailySummary() {
     }
   };
 
+  // PDF preview state
+  const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
+  const [pdfPreview, setPdfPreview] = useState<{ blobUrl: string; fileName: string } | null>(null);
+
   const handleExportPDF = () => {
     if (!session) return;
     
-    generateDailySummaryPDF({
+    const result = generateDailySummaryPDF({
       session: {
         ...session,
         pos_total: formData.pos_total,
@@ -355,11 +361,28 @@ export default function DailySummary() {
       },
     });
     
-    toast({
-      title: 'PDF erstellt', 
-      description: 'Die Tagesabrechnung wurde als PDF heruntergeladen.' 
-    });
+    setPdfPreview(result);
+    setPdfPreviewOpen(true);
   };
+
+  const handleDownloadPdf = useCallback(() => {
+    if (pdfPreview) {
+      const link = document.createElement('a');
+      link.href = pdfPreview.blobUrl;
+      link.download = pdfPreview.fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  }, [pdfPreview]);
+
+  const handleClosePdfPreview = useCallback(() => {
+    if (pdfPreview?.blobUrl) {
+      URL.revokeObjectURL(pdfPreview.blobUrl);
+    }
+    setPdfPreview(null);
+    setPdfPreviewOpen(false);
+  }, [pdfPreview]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value);
@@ -1020,6 +1043,31 @@ export default function DailySummary() {
           isPending={isCreating}
         />
       )}
+
+      {/* PDF Preview Dialog */}
+      <Dialog open={pdfPreviewOpen} onOpenChange={(open) => !open && handleClosePdfPreview()}>
+        <DialogContent className="max-w-5xl h-[85vh] flex flex-col p-0">
+          <DialogHeader className="px-6 py-4 border-b">
+            <DialogTitle className="flex items-center gap-2">
+              <FileDown className="h-5 w-5" />
+              PDF Vorschau - {pdfPreview?.fileName}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 p-4 min-h-0">
+            {pdfPreview && <PdfPreview blobUrl={pdfPreview.blobUrl} fileName={pdfPreview.fileName} className="h-full" />}
+          </div>
+          <DialogFooter className="px-6 py-4 border-t gap-2">
+            <Button variant="outline" onClick={handleClosePdfPreview}>
+              <X className="w-4 h-4 mr-2" />
+              Schließen
+            </Button>
+            <Button onClick={handleDownloadPdf}>
+              <Download className="w-4 h-4 mr-2" />
+              Herunterladen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

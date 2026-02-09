@@ -69,7 +69,7 @@ const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value);
 };
 
-export const generateDailySummaryPDF = (data: PDFExportData): void => {
+export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string; fileName: string } => {
   const doc = new jsPDF('portrait');
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 14;
@@ -221,12 +221,10 @@ export const generateDailySummaryPDF = (data: PDFExportData): void => {
   }
 
   const fileName = `Tagesabrechnung_${format(new Date(data.session.session_date), 'yyyy-MM-dd')}.pdf`;
-  doc.save(fileName);
-
-  // Also open in new tab for printing
+  
   const pdfBlob = doc.output('blob');
   const blobUrl = URL.createObjectURL(new Blob([pdfBlob], { type: 'application/pdf' }));
-  window.open(blobUrl, '_blank');
+  return { blobUrl, fileName };
 };
 
 // ============================================
