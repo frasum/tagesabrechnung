@@ -181,107 +181,11 @@ export function ExcelLayout({
             </table>
           </div>
 
-          {/* Expenses below left column */}
-          <div className="mt-4">
-            {expenses}
-          </div>
-
           {cashBalanceCard}
         </div>
 
-        {/* RIGHT COLUMN - Kellner + Tip Pool + Notizen */}
+        {/* RIGHT COLUMN - Notizen + Ausgaben */}
         <div className="space-y-4">
-          {/* Horizontal Waiter Table */}
-          {waiterShifts.length > 0 && (
-            <div className="border rounded-lg overflow-hidden">
-              <div className="bg-muted/30 px-3 py-1.5 border-b">
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Kellner</span>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b bg-muted/20">
-                      <th className="px-3 py-2 text-left font-medium text-muted-foreground w-28"></th>
-                      {waiterShifts.map((w) => (
-                        <th key={w.id} className="px-3 py-2 text-center font-semibold min-w-[110px]">
-                          {w.waiter_name}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <WaiterRow label="Abzugeben" shifts={waiterShifts} getValue={(w) => w.kassiert_brutto || 0} fmt={fmt} />
-                    <WaiterRow label="Kredit Karten" shifts={waiterShifts} getValue={(w) => w.card_total || 0} fmt={fmt} />
-                    <WaiterRow label="Hilf Mahl" shifts={waiterShifts} getValue={(w) => w.hilf_mahl || 0} fmt={fmt} />
-                    <WaiterRow label="Offene Rechn." shifts={waiterShifts} getValue={(w) => w.open_invoices || 0} fmt={fmt} />
-                    <WaiterRow label="Soll Bargeld" shifts={waiterShifts} getValue={calcExpected} fmt={fmt} className="border-t bg-muted/10" />
-                    <WaiterRow label="Abgegeben" shifts={waiterShifts} getValue={(w) => w.cash_handed_in || 0} fmt={fmt} bold />
-                    <WaiterRow
-                      label="Trinkgeld Küche"
-                      shifts={waiterShifts}
-                      getValue={(w) => w.kitchen_tip || 0}
-                      fmt={fmt}
-                      renderCell={(w) => {
-                        const tip = w.kitchen_tip || 0;
-                        const brutto = w.kassiert_brutto || 0;
-                        const pct = brutto > 0 ? ((tip / brutto) * 100).toFixed(1) : '0.0';
-                        return (
-                          <span>
-                            {fmt(tip)}
-                            <span className="text-xs text-muted-foreground ml-1">({pct}%)</span>
-                          </span>
-                        );
-                      }}
-                    />
-                    <WaiterRow
-                      label="Kellner-TG"
-                      shifts={waiterShifts}
-                      getValue={(w) => (w.cash_handed_in || 0) - calcExpected(w) - (w.kitchen_tip || 0)}
-                      fmt={fmt}
-                      className="border-t-2 font-semibold"
-                      colorize
-                    />
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Tip Pool */}
-          <div className="border rounded-lg overflow-hidden">
-            <div className="bg-muted/30 px-3 py-1.5 border-b">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Trinkgeld Pool</span>
-            </div>
-            <div className="px-3 py-3 space-y-1.5 text-sm">
-              <div className="flex justify-between">
-                <span>Küchen-TG Gesamt</span>
-                <span className="tabular-nums font-semibold text-success">{fmtCurrency(totalKitchenTip)}</span>
-              </div>
-              {uniqueKitchenStaff > 0 && (
-                <div className="flex justify-between text-muted-foreground">
-                  <span>→ Küche ({uniqueKitchenStaff} MA)</span>
-                  <span className="tabular-nums">{fmtCurrency(tipPerKitchen)}</span>
-                </div>
-              )}
-              <Separator className="my-1" />
-              <div className="flex justify-between">
-                <span>Kellner-TG Pool</span>
-                <span className="tabular-nums font-semibold text-success">{fmtCurrency(waiterTipPool)}</span>
-              </div>
-              {waiterShareCount > 0 && (
-                <div className="flex justify-between text-muted-foreground">
-                  <span>→ Pro Kellner ({waiterShareCount})</span>
-                  <span className="tabular-nums">{fmtCurrency(tipPerWaiter)}</span>
-                </div>
-              )}
-              <Separator className="my-1" />
-              <div className="flex justify-between font-bold">
-                <span>TG Gesamt</span>
-                <span className="tabular-nums text-success">{fmtCurrency(totalKitchenTip + waiterTipPool)}</span>
-              </div>
-            </div>
-          </div>
-
           {/* Notes */}
           <div className="border rounded-lg overflow-hidden">
             <div className="bg-muted/30 px-3 py-1.5 border-b">
@@ -297,6 +201,9 @@ export function ExcelLayout({
               />
             </div>
           </div>
+
+          {/* Expenses */}
+          {expenses}
         </div>
       </div>
     </div>
