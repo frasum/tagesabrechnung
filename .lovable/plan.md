@@ -1,49 +1,29 @@
 
-# Dritte Rolle "Beides" fuer Mitarbeiter
+# Restaurant-Name im Mobile Header dynamisch anzeigen
 
-## Uebersicht
-Mitarbeiter, die sowohl als Kellner als auch in der Kueche arbeiten, bekommen eine eigene Rolle `both`. Sie erscheinen dann in **beiden** Gruppen (Kellner und Kueche) in der Uebersicht.
+## Problem
+Im `MobileLayout.tsx` (Header der mobilen Kellner-Ansicht) ist der Name "Spicery" fest einprogrammiert (Zeile 22). Egal welches Restaurant per QR-Code aufgerufen wird, steht dort immer "Spicery".
 
-## Aenderungen
+## Loesung
+Den `useRestaurant()`-Hook im MobileLayout verwenden, um den aktuellen Restaurant-Namen dynamisch anzuzeigen.
 
-### 1. Datenbank: Neuen Enum-Wert hinzufuegen
-- Den Wert `both` zum bestehenden `staff_role`-Enum hinzufuegen per Migration
+## Aenderung
 
-### 2. TypeScript-Typen anpassen
-- **`src/hooks/useStaff.ts`**: `StaffRole` erweitern auf `'waiter' | 'kitchen' | 'both'`
+**Datei: `src/components/layout/MobileLayout.tsx`**
+- Import von `useRestaurant` aus `@/hooks/useRestaurant` hinzufuegen
+- Den hardcoded String `"Spicery"` durch `restaurantName` aus dem Context ersetzen
+- Fallback auf "Restaurant" falls der Name noch laedt
 
-### 3. Mitarbeiter-Dialog: Dritte Option anbieten
-- **`src/components/staff/StaffDialogNative.tsx`**: Im Rollen-Dropdown eine dritte Option "Kellner & Kueche" hinzufuegen
-
-### 4. Gruppierung in der Mitarbeiterverwaltung anpassen
-- **`src/pages/StaffManagement.tsx`**: Mitarbeiter mit Rolle `both` werden sowohl in die Kellner- als auch in die Kueche-Gruppe einsortiert. Im Filter-Tab zaehlen sie bei beiden mit.
-
-### 5. StaffSelect-Komponente anpassen
-- **`src/components/shared/StaffSelect.tsx`**: Mitarbeiter mit Rolle `both` werden sowohl bei `role='waiter'` als auch bei `role='kitchen'` Abfragen angezeigt
-
-### 6. Statistiken und andere Stellen
-- **`src/components/statistics/MonthlyTipBreakdown.tsx`** und aehnliche Stellen: `both`-Mitarbeiter erscheinen in beiden Tabs
-
-## Technische Details
-
-**Migration SQL:**
-```sql
-ALTER TYPE staff_role ADD VALUE 'both';
-```
-
-**Gruppierungslogik (StaffManagement.tsx):**
 ```typescript
-if (staff.role === 'waiter' || staff.role === 'both') {
-  group.waiters.push(staff);
-}
-if (staff.role === 'kitchen' || staff.role === 'both') {
-  group.kitchen.push(staff);
-}
+// Vorher:
+<span className="font-display font-semibold text-foreground">Spicery</span>
+
+// Nachher:
+const { restaurantName } = useRestaurant();
+// ...
+<span className="font-display font-semibold text-foreground">
+  {restaurantName || 'Restaurant'}
+</span>
 ```
 
-**StaffSelect Filter:**
-```typescript
-// Bei role='waiter': zeige waiter + both
-// Bei role='kitchen': zeige kitchen + both
-const filteredByRole = staffList.filter(s => s.role === role || s.role === 'both');
-```
+Minimale Aenderung, nur eine Datei betroffen.
