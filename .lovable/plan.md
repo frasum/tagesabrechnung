@@ -1,53 +1,48 @@
 
-# Kellner-Status erweitern: Umsatz, Abgabezeit und TG %
+# Kellner-Details im PDF-Export ergaenzen
 
 ## Uebersicht
-Die "Kellner-Status"-Karte in der Tagesabrechnung wird um drei zusaetzliche Informationen pro Kellner erweitert:
-1. **Umsatz** (pos_sales) - wie viel der Kellner kassiert hat
-2. **Abgabezeit** (submitted_at) - wann die Abrechnung eingereicht wurde (ist bereits vorhanden, wird aber auf Mobile ausgeblendet - das wird geaendert)
-3. **TG %** - Trinkgeld-Prozentsatz (Pool-Anteil / Umsatz)
+Unterhalb der bestehenden Zusammenfassung (nach "ohne hilfmahl" und Ausgaben) wird eine neue Tabelle mit Kellner-Details eingefuegt:
+- **Name** des Kellners
+- **Umsatz** (pos_sales)
+- **Abgabezeit** (submitted_at)
+- **TG %** (Trinkgeld-Prozentsatz vom Umsatz)
 
-## Aenderung
+## Aenderungen
 
-**Datei: `src/pages/DailySummary.tsx`** (Bereich `waiterStatusComponent`, ca. Zeile 890-931)
+### 1. WaiterShift-Interface erweitern (`src/utils/pdfExport.ts`)
+Zwei neue Felder hinzufuegen:
+- `submitted_at?: string | null` - Zeitpunkt der Abgabe
+- `participates_in_pool?: boolean` - ob am TG-Pool teilgenommen wird
+- `second_waiter_name?: string | null` - fuer korrekte Anteilsberechnung
 
-Jede Kellner-Zeile wird von einer einfachen einzeiligen Anzeige zu einer zweizeiligen Darstellung erweitert:
+### 2. Neue Kellner-Tabelle im PDF (`src/utils/pdfExport.ts`)
+Nach dem Ausgaben-Block eine neue autoTable-Tabelle einfuegen:
 
-**Zeile 1:** Name + Status-Badge (wie bisher)
-**Zeile 2:** Umsatz | TG % | Abgabezeit
+| Kellner | Umsatz | Abgabe | TG % |
+|---------|--------|--------|------|
+| Max     | 1.234 EUR | 14:32 | 3,2% |
+| Anna    | 987 EUR   | 15:10 | 4,1% |
 
-### Berechnung TG %
-- Pool-Anteil pro Kellner (`tipPerWaiter`) ist bereits berechnet
-- TG % = `tipPerWaiter / pos_sales * 100`
-- Bei Team-Schichten (second_waiter_name): Anteil wird verdoppelt (2 Shares)
-- Falls Kellner nicht am Pool teilnimmt: "---" anzeigen
-- Falls pos_sales = 0: "---" anzeigen
-
-### Layout-Skizze pro Kellner
-```text
-┌─────────────────────────────────────────────────┐
-│ Max Mustermann                    [OK] 14:32    │
-│ Umsatz: 1.234,00 EUR    TG: 3,2%               │
-└─────────────────────────────────────────────────┘
+**TG % Berechnung:**
 ```
+tipPerWaiter = totalWaiterTip / Anzahl Pool-Teilnehmer
+shares = second_waiter_name ? 2 : 1
+waiterPoolShare = participates_in_pool ? tipPerWaiter * shares : 0
+tipPercent = posSales > 0 ? (waiterPoolShare / posSales) * 100 : null
+```
+
+### 3. Daten beim Export uebergeben (`src/pages/DailySummary.tsx`)
+Die `waiterShifts`-Mapping um `submitted_at`, `participates_in_pool` und `second_waiter_name` erweitern.
+
+### 4. totalWaiterTip an PDFExportData uebergeben
+Wird bereits in `totals.totalWaiterTip` uebergeben - wird fuer die TG%-Berechnung in der PDF-Funktion genutzt.
 
 ## Technische Details
 
-Nur eine Datei wird geaendert: `src/pages/DailySummary.tsx`
+**Dateien:**
+- `src/utils/pdfExport.ts` - Interface erweitern + neue Tabelle nach Ausgaben
+- `src/pages/DailySummary.tsx` - `submitted_at`, `participates_in_pool`, `second_waiter_name` im Mapping ergaenzen
 
-- Die Variable `tipPerWaiter` ist bereits im Scope verfuegbar (Zeile 218)
-- `submitted_at` wird bereits gelesen (Zeile 901), aber mit `hidden sm:inline` auf Mobile versteckt - das wird entfernt
-- Fuer jeden Kellner wird der individuelle TG % berechnet:
-
-```typescript
-const shares = shift.second_waiter_name ? 2 : 1;
-const waiterPoolShare = shift.participates_in_pool ? tipPerWaiter * shares : 0;
-const posSales = shift.pos_sales || 0;
-const tipPercent = posSales > 0 && shift.participates_in_pool
-  ? (waiterPoolShare / posSales) * 100
-  : null;
-```
-
-- Umsatz wird als Waehrung formatiert (`de-DE`, EUR)
-- TG % wird mit einer Nachkommastelle angezeigt (z.B. "3,2%")
-- Abgabezeit wird auch auf Mobile angezeigt (entfernen von `hidden sm:inline`)
+**Layout im PDF:**
+Die Kellner-Tabelle wird zentriert mit gleicher Breite wie die Haupttabelle dargestellt, mit Header-Zeile in Grau und kompakter Schrift (8pt).
