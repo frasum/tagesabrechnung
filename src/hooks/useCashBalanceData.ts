@@ -26,7 +26,7 @@ export function useCashBalanceData(restaurantId: string | null) {
       // 1. Alle Sessions für dieses Restaurant laden
       const { data: sessions, error: sessionsError } = await supabase
         .from('sessions')
-        .select('id, session_date, pos_total, terminal_1_total, terminal_2_total, ordersmart_revenue, wolt_revenue, vouchers_redeemed, finedine_vouchers, vouchers_sold, einladung, vorschuss, sonstige_einnahme')
+        .select('id, session_date, pos_total, terminal_1_total, terminal_2_total, ordersmart_revenue, wolt_revenue, takeaway_total, vouchers_redeemed, finedine_vouchers, vouchers_sold, einladung, vorschuss, sonstige_einnahme')
         .eq('restaurant_id', restaurantId)
         .order('session_date', { ascending: true });
 
@@ -70,6 +70,7 @@ export function useCashBalanceData(restaurantId: string | null) {
         const kreditkarten = (session.terminal_1_total || 0) + (session.terminal_2_total || 0);
         const ordersmart = session.ordersmart_revenue || 0;
         const wolt = session.wolt_revenue || 0;
+        const takeaway = session.takeaway_total || 0;
         const gutscheineEL = session.vouchers_redeemed || 0;
         const finedine = session.finedine_vouchers || 0;
         const gutscheineVK = session.vouchers_sold || 0;
@@ -91,6 +92,7 @@ export function useCashBalanceData(restaurantId: string | null) {
           kreditkarten -
           ordersmart -
           wolt -
+          takeaway -
           gutscheineEL -
           finedine -
           einladung -

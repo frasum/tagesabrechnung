@@ -58,6 +58,7 @@ export function usePreviousDayDeficit(date: Date, restaurantId: string | null) {
         const kreditkarten = (session.terminal_1_total || 0) + (session.terminal_2_total || 0);
         const ordersmart = session.ordersmart_revenue || 0;
         const wolt = session.wolt_revenue || 0;
+        const takeaway = session.takeaway_total || 0;
         const gutscheineEL = session.vouchers_redeemed || 0;
         const finedine = session.finedine_vouchers || 0;
         const gutscheineVK = session.vouchers_sold || 0;
@@ -76,6 +77,7 @@ export function usePreviousDayDeficit(date: Date, restaurantId: string | null) {
           kreditkarten -
           ordersmart -
           wolt -
+          takeaway -
           gutscheineEL -
           finedine -
           einladung -

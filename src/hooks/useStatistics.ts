@@ -150,6 +150,7 @@ export function useStatistics(timeRange: TimeRange = 'month', customRange?: Cust
           (session.terminal_2_total || 0) -
           (session.ordersmart_revenue || 0) -
           (session.wolt_revenue || 0) -
+          (session.takeaway_total || 0) -
           (session.vouchers_redeemed || 0) -
           (session.finedine_vouchers || 0) -
           (session.einladung || 0) -
