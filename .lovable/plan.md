@@ -1,31 +1,48 @@
 
-# Fix: SoUse (Sonstige Einnahmen) wird doppelt gezaehlt
+
+# Fix: Takeaway-Umsatz fehlt in der BARGELD-Berechnung
 
 ## Problem
-`sonstige_einnahme` ist bereits im Vectron-Gesamtumsatz (`pos_total`) enthalten. Aktuell wird es in der BARGELD-Formel nochmals addiert (`pos_total + sonstige_einnahme`), was zu einer **doppelten Zaehlung** fuehrt und das berechnete Bargeld zu hoch ausweist.
+`takeaway_total` ist im Vectron-Gesamtumsatz (`pos_total`) enthalten, wird aber aktuell **nicht** von der BARGELD-Berechnung abgezogen. Da Takeaway-Umsaetze nicht als Bargeld in der Kasse landen, fuehrt das zu einem ueberhoeht berechneten Bargeld-Soll. Die Differenz von -290,93 EUR ergibt sich genau aus diesem fehlenden Abzug.
 
 ## Loesung
-`sonstige_einnahme` aus der Addition in der BARGELD-Formel entfernen. Es bleibt weiterhin als Eingabefeld sichtbar (zur Dokumentation), wird aber nicht mehr in die Berechnung einbezogen, da es bereits ueber `pos_total` erfasst ist.
+`- takeaway_total` an allen 5 Berechnungsstellen einfuegen.
 
-## Betroffene Dateien (5 Stellen)
+**Korrigierte Formel:**
+```text
+BARGELD = pos_total + GutscheineVK
+          - Kreditkarten
+          - OrderSmart
+          - Wolt
+          - Takeaway        <-- NEU
+          - GutscheineEL
+          - FineDine
+          - Einladung
+          - OffeneRE
+          - Vorschuss
+          - Ausgaben
+          + Fehlbetrag Vortag
+```
 
-### 1. `src/pages/DailySummary.tsx` (Zeile ~268)
-- `+ formData.sonstige_einnahme` aus der BARGELD-Berechnung entfernen
+## Aenderungen (5 Dateien)
 
-### 2. `src/hooks/useCashBalanceData.ts` (Zeile ~75)
-- `+ sonstigeEinnahme` aus der bargeld-Berechnung entfernen
+### 1. `src/pages/DailySummary.tsx` (Zeile ~271)
+`- formData.takeaway_total` nach `formData.wolt_revenue` einfuegen
 
-### 3. `src/hooks/usePreviousDayDeficit.ts` (Zeile ~75)
-- `+ sonstigeEinnahme` aus der bargeld-Berechnung entfernen
+### 2. `src/pages/ManagerDashboard.tsx` (Zeile ~237)
+`- formData.takeaway_total` nach `formData.wolt_revenue` einfuegen
 
-### 4. `src/hooks/useStatistics.ts` (Zeile ~148)
-- `+ (session.sonstige_einnahme || 0)` aus der bargeld-Berechnung entfernen
+### 3. `src/hooks/useCashBalanceData.ts` (Zeile ~68)
+Variable `takeaway` aus Session lesen (`session.takeaway_total || 0`) und `- takeaway` in die Formel einfuegen
 
-### 5. `src/pages/ManagerDashboard.tsx` (Zeile ~234)
-- `+ formData.sonstige_einnahme` aus der bargeld-Berechnung entfernen
+### 4. `src/hooks/usePreviousDayDeficit.ts` (Zeile ~65)
+Variable `takeaway` aus Session lesen und `- takeaway` in die Formel einfuegen
+
+### 5. `src/hooks/useStatistics.ts` (Zeile ~149)
+`- (session.takeaway_total || 0)` in die Formel einfuegen
 
 ## Was sich NICHT aendert
-- Das Eingabefeld "Sonstige Einnahmen" bleibt bestehen (zur Dokumentation)
-- Der Wert wird weiterhin in der Datenbank gespeichert
-- Die Anzeige im Excel-Layout und PDF bleibt sichtbar
-- Nur die rechnerische Einbeziehung in die BARGELD-Formel wird entfernt
+- Eingabefelder und Anzeige bleiben unveraendert
+- Datenbank-Speicherung bleibt unveraendert
+- Statistiken und Delivery-Breakdown bleiben unveraendert
+- Nur die mathematische BARGELD-Formel wird korrigiert
