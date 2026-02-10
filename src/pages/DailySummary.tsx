@@ -414,7 +414,7 @@ export default function DailySummary() {
   }
 
   // Render components for layout slots
-  const adjustedPosDiff = posMismatch - formData.takeaway_total - formData.ordersmart_revenue - formData.wolt_revenue;
+  const adjustedPosDiff = posMismatch - formData.takeaway_total;
   const warningsComponent = waiterShifts.length > 0 && (Math.abs(adjustedPosDiff) >= 0.01 || Math.abs(cardTerminalMismatch) >= 0.01) && (
     <div className="grid sm:grid-cols-2 gap-4">
       {Math.abs(adjustedPosDiff) >= 0.01 && (
@@ -424,7 +424,7 @@ export default function DailySummary() {
             <div>
               <p className="font-medium text-destructive">POS Differenz</p>
               <p className="text-sm text-muted-foreground">
-                POS Total ({formatCurrency(formData.pos_total)}) stimmt nicht mit Kellner-Umsätzen ({formatCurrency(kellnerUmsatz)}) + Takeaway ({formatCurrency(formData.takeaway_total)}) + Plattformen überein.
+                POS Total ({formatCurrency(formData.pos_total)}) stimmt nicht mit Kellner-Umsätzen ({formatCurrency(kellnerUmsatz)}) + Takeaway ({formatCurrency(formData.takeaway_total)}) überein.
               </p>
               <p className="text-sm font-semibold text-destructive mt-1">
                 Differenz: {formatCurrency(adjustedPosDiff)}
