@@ -58,7 +58,7 @@ export function useWaiterRanking() {
 
         // Calculate session pool (same logic as WaiterCashUp)
         const sessionPool = sessionShifts.reduce((sum, shift) => {
-          const expected = (shift.kassiert_brutto || 0) + (shift.hilf_mahl || 0) - (shift.open_invoices || 0) - (shift.card_total || 0);
+          const expected = (shift.pos_sales || 0) + (shift.hilf_mahl || 0) - (shift.open_invoices || 0) - (shift.card_total || 0);
           const contribution = (shift.cash_handed_in || 0) - expected - (shift.kitchen_tip || 0);
           return sum + contribution;
         }, 0);

@@ -191,9 +191,9 @@ export default function WaiterCashUp() {
       });
     }
   };
-  // Calculate expected cash: kassiert_brutto + hilf_mahl - open_invoices - card_total
+  // Calculate expected cash: pos_sales + hilf_mahl - open_invoices - card_total (matches DB generated column)
   const calculateExpected = (shift: typeof waiterShifts[0]) => {
-    return (shift.kassiert_brutto || 0) + shift.hilf_mahl - shift.open_invoices - shift.card_total;
+    return (shift.pos_sales || 0) + (shift.hilf_mahl || 0) - (shift.open_invoices || 0) - (shift.card_total || 0);
   };
 
   // Calculate individual contribution to the tip pool
@@ -359,13 +359,13 @@ export default function WaiterCashUp() {
                 <div className="bg-muted rounded-lg p-4 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">
-                      Erwartet ({getLabel('kassiert_brutto')}
+                      Erwartet ({getLabel('pos_sales')}
                       {!isFieldHidden('hilf_mahl') ? ` + ${getLabel('hilf_mahl')}` : ''}
                       {!isFieldHidden('open_invoices') ? ` - ${getLabel('open_invoices')}` : ''}
                       {!isFieldHidden('card_total_gl') ? ` - ${getLabel('card_total_gl')}` : ''}):
                     </span>
                     <span className="font-medium tabular-nums">
-                      {formatCurrency(newKassiertBrutto + newHilfMahl - newOpenInvoices - newCardTotal)}
+                      {formatCurrency(newPosSales + newHilfMahl - newOpenInvoices - newCardTotal)}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
@@ -377,7 +377,7 @@ export default function WaiterCashUp() {
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Trinkgeld:</span>
                     <span className="font-medium tabular-nums">
-                      {formatCurrency(newCashHandedIn - (newKassiertBrutto + newHilfMahl - newOpenInvoices - newCardTotal) - newPosSales * 0.02)}
+                      {formatCurrency(newCashHandedIn - (newPosSales + newHilfMahl - newOpenInvoices - newCardTotal) - newPosSales * 0.02)}
                     </span>
                   </div>
                 </div>
