@@ -64,39 +64,35 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Get waiter shifts for this session
+      // Get waiter shifts for this session, sorted by pos_sales desc
       const { data: shifts } = await supabase
         .from("waiter_shifts")
-        .select("*")
-        .eq("session_id", session.id);
+        .select("waiter_name, second_waiter_name, pos_sales, submitted_at")
+        .eq("session_id", session.id)
+        .order("pos_sales", { ascending: false });
 
-      // Get expenses
-      const { data: expenses } = await supabase
-        .from("expenses")
-        .select("amount")
-        .eq("session_id", session.id);
-
-      // Calculate totals
       const posTotal = session.pos_total || 0;
-      const totalCardTransactions = (shifts || []).reduce(
-        (sum: number, s: any) => sum + (s.card_total || 0), 0
-      );
-      const totalCashHandedIn = (shifts || []).reduce(
-        (sum: number, s: any) => sum + (s.cash_handed_in || 0), 0
-      );
-      const totalExpenses = (expenses || []).reduce(
-        (sum: number, e: any) => sum + (e.amount || 0), 0
-      );
-      const totalKitchenTip = (shifts || []).reduce(
-        (sum: number, s: any) => sum + (s.kitchen_tip || 0), 0
-      );
 
       lines.push(`*${restaurant.name}:*`);
       lines.push(`  Vectron: ${formatEur(posTotal)}`);
-      lines.push(`  Bargeld: ${formatEur(totalCashHandedIn)}`);
-      lines.push(`  Karten: ${formatEur(totalCardTransactions)}`);
-      lines.push(`  Ausgaben: ${formatEur(totalExpenses)}`);
-      lines.push(`  Küchen-TG: ${formatEur(totalKitchenTip)}`);
+      if (session.created_by_name) {
+        lines.push(`  Erstellt von: ${session.created_by_name}`);
+      }
+
+      if (shifts && shifts.length > 0) {
+        lines.push("");
+        lines.push("  Kellner:");
+        for (const s of shifts) {
+          const sales = s.pos_sales || 0;
+          const time = s.submitted_at
+            ? new Date(s.submitted_at).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" })
+            : "ausstehend";
+          lines.push(`  • ${s.waiter_name}: ${formatEur(sales)} (Abgabe: ${time})`);
+          if (s.second_waiter_name) {
+            lines.push(`  • ${s.second_waiter_name}: ${formatEur(sales)} (Abgabe: ${time})`);
+          }
+        }
+      }
       lines.push("");
     }
 
