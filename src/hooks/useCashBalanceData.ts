@@ -59,9 +59,7 @@ export function useCashBalanceData(restaurantId: string | null) {
 
       if (advancesError) throw advancesError;
 
-      // 4. Pro Session direkt die DB-Werte verwenden, mit Defizit-Verkettung
-      let carryOver = 0;
-
+      // 4. Pro Session direkt die DB-Werte verwenden
       return (sessions || []).map((session) => {
         const shifts = (waiterShifts || []).filter((s) => s.session_id === session.id);
         const sessionExpenses = (expenses || []).filter((e) => e.session_id === session.id);
@@ -99,11 +97,7 @@ export function useCashBalanceData(restaurantId: string | null) {
           einladung -
           totalOpenInvoices -
           vorschuss -
-          totalExpenses +
-          carryOver;
-
-        // Chain: if bargeld is negative, carry it over; otherwise reset
-        carryOver = bargeld < 0 ? bargeld : 0;
+          totalExpenses;
 
         return {
           date: session.session_date,
