@@ -18,6 +18,7 @@ import { useRestaurant } from '@/hooks/useRestaurant';
 import { useSession, useCreateSession, useWaiterShifts, useCreateWaiterShift, useWaiterTipAverages } from '@/hooks/useSession';
 import { useUpdateWaiterShiftWithAudit } from '@/hooks/useWaiterShiftAudit';
 import { useWaiterRanking } from '@/hooks/useWaiterRanking';
+import { useLabels } from '@/hooks/useLabels';
 import { AccountLinkingDialog } from '@/components/auth/AccountLinkingDialog';
 import { SecondWaiterSelect } from '@/components/shared/SecondWaiterSelect';
 
@@ -27,6 +28,7 @@ export default function WaiterMobile() {
   const { restaurantId } = useRestaurant();
   const staffName = user?.name || '';
   const { toast } = useToast();
+  const { getLabel, isFieldHidden } = useLabels(restaurantId);
   const [showLinkingDialog, setShowLinkingDialog] = useState(false);
   const [secondWaiterName, setSecondWaiterName] = useState('none');
 
@@ -224,7 +226,7 @@ export default function WaiterMobile() {
                 <Separator />
                 <div className="space-y-3">
                   <div>
-                    <Label className="text-xs text-muted-foreground">Umsatz (POS Sales)</Label>
+                    <Label className="text-xs text-muted-foreground">{getLabel('pos_sales')}</Label>
                     <CurrencyInput
                       value={formData.pos_sales}
                       onChange={(v) => updateField('pos_sales', v)}
@@ -232,39 +234,45 @@ export default function WaiterMobile() {
                     />
                   </div>
                   <div>
-                    <Label className="text-xs text-muted-foreground">Abzugebender Betrag (Kassiert Brutto)</Label>
+                    <Label className="text-xs text-muted-foreground">{getLabel('kassiert_brutto')}</Label>
                     <CurrencyInput
                       value={formData.kassiert_brutto}
                       onChange={(v) => updateField('kassiert_brutto', v)}
                       disabled={isSubmitted}
                     />
                   </div>
+                  {!isFieldHidden('card_total_gl') && (
                   <div>
-                    <Label className="text-xs text-muted-foreground">Kartenzahlung</Label>
+                    <Label className="text-xs text-muted-foreground">{getLabel('card_total_gl')}</Label>
                     <CurrencyInput
                       value={formData.card_total}
                       onChange={(v) => updateField('card_total', v)}
                       disabled={isSubmitted}
                     />
                   </div>
+                  )}
+                  {!isFieldHidden('hilf_mahl') && (
                   <div>
-                    <Label className="text-xs text-muted-foreground">Hilf Mahl</Label>
+                    <Label className="text-xs text-muted-foreground">{getLabel('hilf_mahl')}</Label>
                     <CurrencyInput
                       value={formData.hilf_mahl}
                       onChange={(v) => updateField('hilf_mahl', v)}
                       disabled={isSubmitted}
                     />
                   </div>
+                  )}
+                  {!isFieldHidden('open_invoices') && (
                   <div>
-                    <Label className="text-xs text-muted-foreground">Offene Rechnung</Label>
+                    <Label className="text-xs text-muted-foreground">{getLabel('open_invoices')}</Label>
                     <CurrencyInput
                       value={formData.open_invoices}
                       onChange={(v) => updateField('open_invoices', v)}
                       disabled={isSubmitted}
                     />
                   </div>
+                  )}
                   <div>
-                    <Label className="text-xs text-muted-foreground">Bargeld abgegeben</Label>
+                    <Label className="text-xs text-muted-foreground">{getLabel('cash_handed_in')}</Label>
                     <CurrencyInput
                       value={formData.cash_handed_in}
                       onChange={(v) => updateField('cash_handed_in', v)}
