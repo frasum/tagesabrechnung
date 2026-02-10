@@ -54,6 +54,8 @@ export function useCreateSession() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['session', data.session_date, data.restaurant_id] });
+      queryClient.invalidateQueries({ queryKey: ['previous-day-deficit'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-balance'] });
     },
   });
 }
@@ -75,6 +77,8 @@ export function useUpdateSession() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['session', data.session_date, data.restaurant_id] });
+      queryClient.invalidateQueries({ queryKey: ['previous-day-deficit'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-balance'] });
     },
   });
 }
@@ -146,6 +150,8 @@ export function useCreateWaiterShift() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['waiter-shifts', data.session_id] });
+      queryClient.invalidateQueries({ queryKey: ['previous-day-deficit'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-balance'] });
     },
   });
 }
@@ -165,6 +171,8 @@ export function useDeleteWaiterShift() {
     },
     onSuccess: (sessionId) => {
       queryClient.invalidateQueries({ queryKey: ['waiter-shifts', sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['previous-day-deficit'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-balance'] });
     },
   });
 }
@@ -195,9 +203,9 @@ export function useUpdateWaiterShift() {
       return { ...data, sessionId } as WaiterShift & { sessionId: string };
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ 
-        queryKey: ['waiter-shifts', data.sessionId] 
-      });
+      queryClient.invalidateQueries({ queryKey: ['waiter-shifts', data.sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['previous-day-deficit'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-balance'] });
     },
   });
 }
@@ -350,6 +358,8 @@ export function useCreateExpense() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['expenses', data.session_id] });
+      queryClient.invalidateQueries({ queryKey: ['previous-day-deficit'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-balance'] });
     },
   });
 }
@@ -369,6 +379,8 @@ export function useDeleteExpense() {
     },
     onSuccess: (sessionId) => {
       queryClient.invalidateQueries({ queryKey: ['expenses', sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['previous-day-deficit'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-balance'] });
     },
   });
 }

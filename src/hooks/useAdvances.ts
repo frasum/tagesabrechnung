@@ -40,6 +40,8 @@ export function useCreateAdvance() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['advances', data.session_id] });
+      queryClient.invalidateQueries({ queryKey: ['previous-day-deficit'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-balance'] });
     },
   });
 }
@@ -57,6 +59,8 @@ export function useDeleteAdvance() {
     },
     onSuccess: (sessionId) => {
       queryClient.invalidateQueries({ queryKey: ['advances', sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['previous-day-deficit'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-balance'] });
     },
   });
 }
