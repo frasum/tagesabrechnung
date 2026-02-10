@@ -38,7 +38,7 @@ export function SecondWaiterSelect({
         <SelectItem value="none">
           <div className="flex items-center gap-2">
             <User className="w-4 h-4 text-muted-foreground" />
-            Keiner (Einzelschicht)
+            2 Kollegen auf einen Schlüssel
           </div>
         </SelectItem>
         {filteredStaff.map((staff) => (
