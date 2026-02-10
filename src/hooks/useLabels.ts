@@ -28,7 +28,7 @@ export const DEFAULT_LABELS: Record<LabelKey, string> = {
   takeaway_total: 'Takeaway Abschlag',
   terminal_1: 'Terminal 1',
   terminal_2: 'Terminal 2',
-  card_total_gl: 'GL Kredit Karten',
+  card_total_gl: 'Kredit Karten',
   vouchers_sold: 'Gutschein Verkauf',
   vouchers_redeemed: 'Gutschein Eingelöst',
   finedine_vouchers: 'FineDine',
