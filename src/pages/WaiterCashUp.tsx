@@ -20,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSession, useCreateSession, useWaiterShifts, useCreateWaiterShift, useDeleteWaiterShift, useWaiterTipAverages } from '@/hooks/useSession';
 import { useUpdateWaiterShiftWithAudit } from '@/hooks/useWaiterShiftAudit';
 import { useRestaurant } from '@/hooks/useRestaurant';
+import { useLabels } from '@/hooks/useLabels';
 import type { WaiterShift } from '@/types/database';
 
 export default function WaiterCashUp() {
@@ -55,6 +56,7 @@ export default function WaiterCashUp() {
   const deleteWaiterShift = useDeleteWaiterShift();
   const updateWaiterShift = useUpdateWaiterShiftWithAudit();
   const { data: waiterTipAverages = {} } = useWaiterTipAverages(restaurantId);
+  const { getLabel } = useLabels(restaurantId);
 
   const handleCreateSession = async () => {
     if (!restaurantId) return;
@@ -315,11 +317,11 @@ export default function WaiterCashUp() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Leistung</Label>
+                    <Label>{getLabel('pos_sales')}</Label>
                     <CurrencyInput value={newPosSales} onChange={setNewPosSales} />
                   </div>
                   <div>
-                    <Label>Abzugebender Betrag</Label>
+                    <Label>{getLabel('kassiert_brutto')}</Label>
                     <CurrencyInput value={newKassiertBrutto} onChange={setNewKassiertBrutto} />
                   </div>
                 </div>
@@ -330,18 +332,18 @@ export default function WaiterCashUp() {
                     <CurrencyInput value={newCardTotal} onChange={setNewCardTotal} />
                   </div>
                   <div>
-                    <Label>Hilf Mahl</Label>
+                    <Label>{getLabel('hilf_mahl')}</Label>
                     <CurrencyInput value={newHilfMahl} onChange={setNewHilfMahl} />
                   </div>
                 </div>
 
                 <div>
-                  <Label>Offene Rechnungen</Label>
+                  <Label>{getLabel('open_invoices')}</Label>
                   <CurrencyInput value={newOpenInvoices} onChange={setNewOpenInvoices} />
                 </div>
 
                 <div>
-                  <Label>Bargeld abgegeben</Label>
+                  <Label>{getLabel('cash_handed_in')}</Label>
                   <CurrencyInput value={newCashHandedIn} onChange={setNewCashHandedIn} />
                 </div>
 
@@ -505,14 +507,14 @@ export default function WaiterCashUp() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Name</TableHead>
-                          <TableHead className="text-right">Leistung</TableHead>
-                          <TableHead className="text-right">Abzugebender Betrag</TableHead>
+                          <TableHead className="text-right">{getLabel('pos_sales')}</TableHead>
+                          <TableHead className="text-right">{getLabel('kassiert_brutto')}</TableHead>
                           <TableHead className="text-right">Kredit Karten</TableHead>
-                          <TableHead className="text-right">Hilf Mahl</TableHead>
-                          <TableHead className="text-right">Offene Rechnung</TableHead>
+                          <TableHead className="text-right">{getLabel('hilf_mahl')}</TableHead>
+                          <TableHead className="text-right">{getLabel('open_invoices')}</TableHead>
                           <TableHead className="text-right">Abgegeben</TableHead>
                           <TableHead className="text-right">Erwartet</TableHead>
-                          <TableHead className="text-right">Trinkgeld für Küche</TableHead>
+                          <TableHead className="text-right">{getLabel('kitchen_tip')}</TableHead>
                           <TableHead></TableHead>
                         </TableRow>
                       </TableHeader>

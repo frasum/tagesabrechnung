@@ -10,6 +10,7 @@ interface ExcelExportParams {
   month: number;
   year: number;
   restaurantName?: string;
+  labels?: Record<string, string>;
 }
 
 const formatCurrency = (value: number): string => {
@@ -29,7 +30,8 @@ const formatDateFull = (dateStr: string): string => {
   return format(date, 'dd.MM.yyyy', { locale: de });
 };
 
-export function generateCashBalanceExcel({ rows, deposits, month, year, restaurantName }: ExcelExportParams): void {
+export function generateCashBalanceExcel({ rows, deposits, month, year, restaurantName, labels }: ExcelExportParams): void {
+  const l = (key: string, fallback: string) => labels?.[key] || fallback;
   const monthDate = new Date(year, month);
   const monthName = format(monthDate, 'MMMM yyyy', { locale: de });
   const createdAt = format(new Date(), 'dd.MM.yyyy HH:mm', { locale: de });
@@ -55,12 +57,12 @@ export function generateCashBalanceExcel({ rows, deposits, month, year, restaura
     'Datum',
     'Tagesumsatz',
     'Kreditkarten',
-    'SoUse',
-    'Wolt',
+    l('ordersmart_revenue', 'SoUse'),
+    l('wolt_revenue', 'Wolt'),
     'Gutsch. EL',
-    'FineDine',
+    l('finedine_vouchers', 'FineDine'),
     'Gutsch. VK',
-    'Einladung',
+    l('einladung', 'Einladung'),
     'Offene RE',
     'Vorschuss',
     'Ausgaben',

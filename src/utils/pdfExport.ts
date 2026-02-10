@@ -60,6 +60,7 @@ interface PDFExportData {
   advances?: AdvanceEntry[];
   restaurantName?: string;
   exportedBy?: string;
+  labels?: Record<string, string>;
   totals: {
     kellnerUmsatz: number;
     totalCardTotal: number;
@@ -85,6 +86,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 14;
   let y = 20;
+  const l = (key: string, fallback: string) => data.labels?.[key] || fallback;
 
   // ========== HEADER - centered, large ==========
   if (data.restaurantName) {
@@ -139,17 +141,17 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
   const summaryRows: any[][] = [
     ['Umsatz', formatCurrency(data.session.pos_total || 0)],
     ['KK', formatCurrency(terminalTotal)],
-    ['SoUse', formatCurrency(data.session.ordersmart_revenue || 0)],
-    ['Wolt', formatCurrency(data.session.wolt_revenue || 0)],
+    [l('ordersmart_revenue', 'SoUse'), formatCurrency(data.session.ordersmart_revenue || 0)],
+    [l('wolt_revenue', 'Wolt'), formatCurrency(data.session.wolt_revenue || 0)],
     ['Gutscheine', formatCurrency(data.session.vouchers_redeemed || 0)],
-    ['FineDine', formatCurrency(data.session.finedine_vouchers || 0)],
-    ['Gutscheine VK', formatCurrency(data.session.vouchers_sold || 0)],
+    [l('finedine_vouchers', 'FineDine'), formatCurrency(data.session.finedine_vouchers || 0)],
+    [l('vouchers_sold', 'Gutscheine VK'), formatCurrency(data.session.vouchers_sold || 0)],
     ['Offen', formatCurrency(data.totals.totalOpenInvoices)],
     ['Personal', formatCurrency(data.totals.totalAdvances ?? data.session.vorschuss ?? 0)],
-    ['Einladung', formatCurrency(data.session.einladung || 0)],
-    ['Sonstige Einnahme', formatCurrency(data.session.sonstige_einnahme || 0)],
+    [l('einladung', 'Einladung'), formatCurrency(data.session.einladung || 0)],
+    [l('sonstige_einnahme', 'Sonstige Einnahme'), formatCurrency(data.session.sonstige_einnahme || 0)],
     ['Bar Ausgaben', formatCurrency(data.totals.totalExpenses)],
-    ['HilfMahl', formatCurrency(totalHilfMahl)],
+    [l('hilf_mahl', 'HilfMahl'), formatCurrency(totalHilfMahl)],
     ['', ''], // empty spacer row
   ];
 
@@ -355,12 +357,14 @@ interface CashBalancePDFData {
   month: number; // 0-11
   year: number;
   pettyCash?: number;
+  labels?: Record<string, string>;
 }
 
 export const generateCashBalancePDF = (data: CashBalancePDFData, options?: { preview?: boolean }): { blobUrl: string; fileName: string } | void => {
   const doc = new jsPDF('landscape');
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 14;
+  const l = (key: string, fallback: string) => data.labels?.[key] || fallback;
   let yPos = 20;
 
   // Header
@@ -521,12 +525,12 @@ export const generateCashBalancePDF = (data: CashBalancePDFData, options?: { pre
       'Datum',
       'Tagesumsatz',
       'Kreditkarten',
-      'SoUse',
-      'Wolt',
+      l('ordersmart_revenue', 'SoUse'),
+      l('wolt_revenue', 'Wolt'),
       'Gutsch. EL',
-      'FineDine',
+      l('finedine_vouchers', 'FineDine'),
       'Gutsch. VK',
-      'Einladung',
+      l('einladung', 'Einladung'),
       'Offene RE',
       'Vorschuss',
       'Ausgaben',

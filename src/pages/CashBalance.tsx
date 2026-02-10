@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Wallet, FileDown, Download, X, ChevronDown, FileSpreadsheet } from 'lucide-react';
+import { useLabels } from '@/hooks/useLabels';
 import { useCashBalanceData } from '@/hooks/useCashBalanceData';
 import { useBankDeposits } from '@/hooks/useBankDeposits';
 import { usePettyCash } from '@/hooks/useSettings';
@@ -44,6 +45,7 @@ export default function CashBalance() {
   const { data, isLoading, error } = useCashBalanceData(restaurantId);
   const { deposits, totalDeposits, latestDeposit, createDeposit, deleteDeposit, isCreating, isDeleting } = useBankDeposits(restaurantId);
   const { pettyCash, updatePettyCash } = usePettyCash(restaurantId);
+  const { getLabel } = useLabels(restaurantId);
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [previewOpen, setPreviewOpen] = useState(false);
   const [pdfPreview, setPdfPreview] = useState<{ blobUrl: string; fileName: string } | null>(null);
@@ -106,6 +108,7 @@ export default function CashBalance() {
       pettyCash: pettyCash,
       month: month - 1,
       year,
+      labels: { ordersmart_revenue: getLabel('ordersmart_revenue'), wolt_revenue: getLabel('wolt_revenue'), finedine_vouchers: getLabel('finedine_vouchers'), einladung: getLabel('einladung') },
     }, { preview: true });
     
     if (result) {
@@ -145,8 +148,9 @@ export default function CashBalance() {
       month: month - 1,
       year,
       restaurantName,
+      labels: { ordersmart_revenue: getLabel('ordersmart_revenue'), wolt_revenue: getLabel('wolt_revenue'), finedine_vouchers: getLabel('finedine_vouchers'), einladung: getLabel('einladung') },
     });
-  }, [filteredData, selectedMonth, deposits, restaurantName]);
+  }, [filteredData, selectedMonth, deposits, restaurantName, getLabel]);
 
   // Handle deposit submission
   const handleDepositSubmit = useCallback((data: { deposit_date: string; amount: number; notes?: string }) => {
@@ -243,12 +247,12 @@ export default function CashBalance() {
                     <TableHead className="sticky left-0 bg-background z-10 min-w-[100px]">Datum</TableHead>
                     <TableHead className="text-right min-w-[100px]">Tagesumsatz</TableHead>
                     <TableHead className="text-right min-w-[100px]">Kreditkarten</TableHead>
-                    <TableHead className="text-right min-w-[100px]">OrderSmart</TableHead>
-                    <TableHead className="text-right min-w-[90px]">Wolt</TableHead>
+                    <TableHead className="text-right min-w-[100px]">{getLabel('ordersmart_revenue')}</TableHead>
+                    <TableHead className="text-right min-w-[90px]">{getLabel('wolt_revenue')}</TableHead>
                     <TableHead className="text-right min-w-[100px]">Gutsch. EL</TableHead>
-                    <TableHead className="text-right min-w-[90px]">FineDine</TableHead>
+                    <TableHead className="text-right min-w-[90px]">{getLabel('finedine_vouchers')}</TableHead>
                     <TableHead className="text-right min-w-[100px]">Gutsch. VK</TableHead>
-                    <TableHead className="text-right min-w-[90px]">Einladung</TableHead>
+                    <TableHead className="text-right min-w-[90px]">{getLabel('einladung')}</TableHead>
                     <TableHead className="text-right min-w-[90px]">Offene RE</TableHead>
                     <TableHead className="text-right min-w-[90px]">Vorschuss</TableHead>
                     <TableHead className="text-right min-w-[90px]">Ausgaben</TableHead>

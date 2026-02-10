@@ -39,6 +39,8 @@ import { KitchenTipChart } from '@/components/statistics/KitchenTipChart';
 import { PeriodComparison } from '@/components/statistics/PeriodComparison';
 import { DateRangePicker } from '@/components/statistics/DateRangePicker';
 import { MonthlyTipBreakdown } from '@/components/statistics/MonthlyTipBreakdown';
+import { useLabels } from '@/hooks/useLabels';
+import { useRestaurant } from '@/hooks/useRestaurant';
 
 const COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
 
@@ -90,6 +92,8 @@ export default function Statistics() {
 
   const { data, isLoading } = useStatistics(timeRange, customRange);
   const { data: comparisonData, isLoading: comparisonLoading } = useStatisticsComparison(timeRange, customRange);
+  const { restaurantId } = useRestaurant();
+  const { getLabel } = useLabels(restaurantId);
 
   const handleTimeRangeChange = (value: string) => {
     const newRange = value as TimeRange;
@@ -117,7 +121,13 @@ export default function Statistics() {
     );
   }
 
-  const { dailyStats = [], deliveryBreakdown = [], summary, waiterTipStats = [], kitchenTipStats = [] } = data || {};
+  const { dailyStats = [], deliveryBreakdown: rawDeliveryBreakdown = [], summary, waiterTipStats = [], kitchenTipStats = [] } = data || {};
+
+  // Resolve delivery breakdown labels
+  const deliveryBreakdown = rawDeliveryBreakdown.map(d => ({
+    ...d,
+    name: getLabel(d.name as any),
+  }));
 
   // Prepare chart data with formatted dates
   const chartData = dailyStats.map(d => ({

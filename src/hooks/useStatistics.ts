@@ -168,11 +168,12 @@ export function useStatistics(timeRange: TimeRange = 'month', customRange?: Cust
         };
       });
 
-      // Calculate delivery breakdown
+      // Note: delivery breakdown labels are static here; 
+      // consumers should use getLabel() to display these names
       const deliveryBreakdown: DeliveryBreakdown[] = [
-        { name: 'Takeaway GL', value: (sessions || []).reduce((sum, s) => sum + (s.takeaway_total || 0), 0) },
-        { name: 'OrderSmart', value: (sessions || []).reduce((sum, s) => sum + (s.ordersmart_revenue || 0), 0) },
-        { name: 'Wolt', value: (sessions || []).reduce((sum, s) => sum + (s.wolt_revenue || 0), 0) },
+        { name: 'takeaway_total', value: (sessions || []).reduce((sum, s) => sum + (s.takeaway_total || 0), 0) },
+        { name: 'ordersmart_revenue', value: (sessions || []).reduce((sum, s) => sum + (s.ordersmart_revenue || 0), 0) },
+        { name: 'wolt_revenue', value: (sessions || []).reduce((sum, s) => sum + (s.wolt_revenue || 0), 0) },
       ].filter(d => d.value > 0);
 
       // Calculate summary

@@ -38,6 +38,8 @@ import {
 } from '@/hooks/useSession';
 import { useAdvances, useCreateAdvance, useDeleteAdvance } from '@/hooks/useAdvances';
 import { StaffSelect } from '@/components/shared/StaffSelect';
+import { useLabels } from '@/hooks/useLabels';
+import { LabelSettings } from '@/components/settings/LabelSettings';
 
 export default function DailySummary() {
   const { selectedDate, setSelectedDate } = useSelectedDate();
@@ -91,6 +93,9 @@ export default function DailySummary() {
   // Cash balance hooks
   const { transfers, balances, createTransfer, isCreating } = useRegisterTransfers(restaurantId);
   const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+
+  // Labels
+  const { getLabel, allLabels } = useLabels(restaurantId);
 
   // Sync form data with session
   useEffect(() => {
@@ -377,6 +382,7 @@ export default function DailySummary() {
       })),
       restaurantName,
       exportedBy: user?.name,
+      labels: allLabels,
       totals: {
         kellnerUmsatz,
         totalCardTotal,
@@ -1084,6 +1090,7 @@ export default function DailySummary() {
       bargeld={bargeld}
       totalAdvances={totalAdvances}
       locked={locked}
+      getLabel={getLabel}
     />
   );
 
@@ -1142,6 +1149,11 @@ export default function DailySummary() {
           <>
             {locked && <SessionLockedBanner />}
             {renderExcelLayout()}
+
+            {/* Label Settings for managers */}
+            {user?.permissionLevel && user.permissionLevel !== 'staff' && (
+              <LabelSettings />
+            )}
           </>
         )}
       </div>

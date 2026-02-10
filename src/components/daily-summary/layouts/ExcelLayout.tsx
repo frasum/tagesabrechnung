@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { CurrencyInput } from '@/components/shared/CurrencyInput';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import type { LabelKey } from '@/hooks/useLabels';
 
 interface WaiterShiftData {
   id: string;
@@ -58,6 +59,7 @@ interface ExcelLayoutProps {
   bargeld: number;
   totalAdvances: number;
   locked?: boolean;
+  getLabel?: (key: LabelKey) => string;
 }
 
 export function ExcelLayout({
@@ -83,7 +85,9 @@ export function ExcelLayout({
   bargeld,
   totalAdvances,
   locked,
+  getLabel: gl,
 }: ExcelLayoutProps) {
+  const getLabel = gl || ((key: LabelKey) => key);
   const fmt = (value: number) =>
     new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
 
@@ -111,7 +115,7 @@ export function ExcelLayout({
             </div>
             <table className="w-full text-sm">
               <tbody>
-                <ExcelInputRow label="Umsatz Abschlag" value={formData.pos_total} onChange={(v) => onFieldChange('pos_total', v)} disabled={locked} />
+                <ExcelInputRow label={getLabel('pos_total')} value={formData.pos_total} onChange={(v) => onFieldChange('pos_total', v)} disabled={locked} />
               </tbody>
             </table>
 
@@ -121,9 +125,9 @@ export function ExcelLayout({
             </div>
             <table className="w-full text-sm">
               <tbody>
-                <ExcelInputRow label="Terminal 1" value={formData.terminal_1_total} onChange={(v) => onFieldChange('terminal_1_total', v)} disabled={locked} />
-                <ExcelInputRow label="Terminal 2" value={formData.terminal_2_total} onChange={(v) => onFieldChange('terminal_2_total', v)} disabled={locked} />
-                <ExcelInputRow label="GL Kredit Karten" value={formData.card_total_gl} onChange={(v) => onFieldChange('card_total_gl', v)} disabled={locked} />
+                <ExcelInputRow label={getLabel('terminal_1')} value={formData.terminal_1_total} onChange={(v) => onFieldChange('terminal_1_total', v)} disabled={locked} />
+                <ExcelInputRow label={getLabel('terminal_2')} value={formData.terminal_2_total} onChange={(v) => onFieldChange('terminal_2_total', v)} disabled={locked} />
+                <ExcelInputRow label={getLabel('card_total_gl')} value={formData.card_total_gl} onChange={(v) => onFieldChange('card_total_gl', v)} disabled={locked} />
                 
               </tbody>
             </table>
@@ -134,9 +138,9 @@ export function ExcelLayout({
             </div>
             <table className="w-full text-sm">
               <tbody>
-                <ExcelInputRow label="Takeaway Abschlag" value={formData.takeaway_total} onChange={(v) => onFieldChange('takeaway_total', v)} disabled={locked} />
-                <ExcelInputRow label="SoUse" value={formData.ordersmart_revenue} onChange={(v) => onFieldChange('ordersmart_revenue', v)} disabled={locked} />
-                <ExcelInputRow label="Wolt" value={formData.wolt_revenue} onChange={(v) => onFieldChange('wolt_revenue', v)} disabled={locked} />
+                <ExcelInputRow label={getLabel('takeaway_total')} value={formData.takeaway_total} onChange={(v) => onFieldChange('takeaway_total', v)} disabled={locked} />
+                <ExcelInputRow label={getLabel('ordersmart_revenue')} value={formData.ordersmart_revenue} onChange={(v) => onFieldChange('ordersmart_revenue', v)} disabled={locked} />
+                <ExcelInputRow label={getLabel('wolt_revenue')} value={formData.wolt_revenue} onChange={(v) => onFieldChange('wolt_revenue', v)} disabled={locked} />
                 
               </tbody>
             </table>
@@ -147,13 +151,13 @@ export function ExcelLayout({
             </div>
             <table className="w-full text-sm">
               <tbody>
-                <ExcelInputRow label="Gutschein Verkauf" value={formData.vouchers_sold} onChange={(v) => onFieldChange('vouchers_sold', v)} disabled={locked} />
-                <ExcelInputRow label="Gutschein Eingelöst" value={formData.vouchers_redeemed} onChange={(v) => onFieldChange('vouchers_redeemed', v)} disabled={locked} />
-                <ExcelInputRow label="FineDine" value={formData.finedine_vouchers} onChange={(v) => onFieldChange('finedine_vouchers', v)} disabled={locked} />
+                <ExcelInputRow label={getLabel('vouchers_sold')} value={formData.vouchers_sold} onChange={(v) => onFieldChange('vouchers_sold', v)} disabled={locked} />
+                <ExcelInputRow label={getLabel('vouchers_redeemed')} value={formData.vouchers_redeemed} onChange={(v) => onFieldChange('vouchers_redeemed', v)} disabled={locked} />
+                <ExcelInputRow label={getLabel('finedine_vouchers')} value={formData.finedine_vouchers} onChange={(v) => onFieldChange('finedine_vouchers', v)} disabled={locked} />
                 {totalOpenInvoices !== 0 && <ExcelReadonlyRow label="Offene Rechnungen" value={totalOpenInvoices} />}
                 {totalAdvances !== 0 && <ExcelReadonlyRow label="Vorschuss" value={totalAdvances} />}
-                <ExcelInputRow label="Einladung" value={formData.einladung} onChange={(v) => onFieldChange('einladung', v)} disabled={locked} />
-                <ExcelInputRow label="Sonstige Einnahmen" value={formData.sonstige_einnahme} onChange={(v) => onFieldChange('sonstige_einnahme', v)} disabled={locked} />
+                <ExcelInputRow label={getLabel('einladung')} value={formData.einladung} onChange={(v) => onFieldChange('einladung', v)} disabled={locked} />
+                <ExcelInputRow label={getLabel('sonstige_einnahme')} value={formData.sonstige_einnahme} onChange={(v) => onFieldChange('sonstige_einnahme', v)} disabled={locked} />
                 {totalExpenses !== 0 && <ExcelReadonlyRow label="Ausgaben" value={-totalExpenses} />}
               </tbody>
             </table>

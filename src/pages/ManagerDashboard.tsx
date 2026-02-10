@@ -27,6 +27,7 @@ import {
   useDeleteExpense,
   useWaiterShifts,
 } from '@/hooks/useSession';
+import { useLabels } from '@/hooks/useLabels';
 
 export default function ManagerDashboard() {
   const { selectedDate, setSelectedDate } = useSelectedDate();
@@ -65,6 +66,7 @@ export default function ManagerDashboard() {
   const createExpense = useCreateExpense();
   const deleteExpense = useDeleteExpense();
   const { data: waiterShifts = [] } = useWaiterShifts(session?.id);
+  const { getLabel } = useLabels(restaurantId);
 
   // Sync form data with session
   useEffect(() => {
@@ -448,28 +450,28 @@ export default function ManagerDashboard() {
                     </div>
                   </div>
                   <div>
-                    <Label>Vectron Gesamtumsatz</Label>
+                    <Label>{getLabel('pos_total')}</Label>
                     <CurrencyInput
                       value={formData.pos_total}
                       onChange={(v) => updateField('pos_total', v)}
                     />
                   </div>
                   <div>
-                    <Label>Kredit Karten Terminal 1</Label>
+                    <Label>Kredit Karten {getLabel('terminal_1')}</Label>
                     <CurrencyInput
                       value={formData.terminal_1_total}
                       onChange={(v) => updateField('terminal_1_total', v)}
                     />
                   </div>
                   <div>
-                    <Label>Kredit Karten Terminal 2</Label>
+                    <Label>Kredit Karten {getLabel('terminal_2')}</Label>
                     <CurrencyInput
                       value={formData.terminal_2_total}
                       onChange={(v) => updateField('terminal_2_total', v)}
                     />
                   </div>
                   <div>
-                    <Label>Kreditkartenumsatz GL</Label>
+                    <Label>{getLabel('card_total_gl')}</Label>
                     <CurrencyInput
                       value={formData.card_total_gl}
                       onChange={(v) => updateField('card_total_gl', v)}
@@ -488,21 +490,21 @@ export default function ManagerDashboard() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <Label>Takeaway GL</Label>
+                    <Label>{getLabel('takeaway_total')}</Label>
                     <CurrencyInput
                       value={formData.takeaway_total}
                       onChange={(v) => updateField('takeaway_total', v)}
                     />
                   </div>
                   <div>
-                    <Label>OrderSmart</Label>
+                    <Label>{getLabel('ordersmart_revenue')}</Label>
                     <CurrencyInput
                       value={formData.ordersmart_revenue}
                       onChange={(v) => updateField('ordersmart_revenue', v)}
                     />
                   </div>
                   <div>
-                    <Label>Wolt</Label>
+                    <Label>{getLabel('wolt_revenue')}</Label>
                     <CurrencyInput
                       value={formData.wolt_revenue}
                       onChange={(v) => updateField('wolt_revenue', v)}
@@ -529,21 +531,21 @@ export default function ManagerDashboard() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <Label>Gutschein Verkauf (verkauft)</Label>
+                    <Label>{getLabel('vouchers_sold')}</Label>
                     <CurrencyInput
                       value={formData.vouchers_sold}
                       onChange={(v) => updateField('vouchers_sold', v)}
                     />
                   </div>
                   <div>
-                    <Label>Gutschein Eingelöst (eingelöst)</Label>
+                    <Label>{getLabel('vouchers_redeemed')}</Label>
                     <CurrencyInput
                       value={formData.vouchers_redeemed}
                       onChange={(v) => updateField('vouchers_redeemed', v)}
                     />
                   </div>
                   <div>
-                    <Label>FineDine Gutscheine</Label>
+                    <Label>{getLabel('finedine_vouchers')}</Label>
                     <CurrencyInput
                       value={formData.finedine_vouchers}
                       onChange={(v) => updateField('finedine_vouchers', v)}
@@ -569,14 +571,14 @@ export default function ManagerDashboard() {
                     />
                   </div>
                   <div>
-                    <Label>Einladung</Label>
+                    <Label>{getLabel('einladung')}</Label>
                     <CurrencyInput
                       value={formData.einladung}
                       onChange={(v) => updateField('einladung', v)}
                     />
                   </div>
                   <div>
-                    <Label>Sonstige Einnahmen</Label>
+                    <Label>{getLabel('sonstige_einnahme')}</Label>
                     <CurrencyInput
                       value={formData.sonstige_einnahme}
                       onChange={(v) => updateField('sonstige_einnahme', v)}
