@@ -1,51 +1,19 @@
 
+# Fix: Doppelzählung Fehlbetrag in Bargeldbestand entfernen
 
-## Vortags-Defizit automatisch uebertragen
+## Problem
+Die kuerzlich hinzugefuegte `carryOver`-Logik in `useCashBalanceData.ts` verkettet negative Bargeldbestaende zum naechsten Tag. Das fuehrt dazu, dass ein Defizit von z.B. -271,16 EUR sowohl am Ursprungstag als auch am Folgetag erscheint -- die GESAMT-Zeile summiert dann -542,32 EUR statt der korrekten -271,16 EUR.
 
-Wenn der BARGELD-Betrag eines Tages negativ ist, soll dieses Defizit am naechsten Tag automatisch als Abzugsposten in der Sektion "Gutscheine & Sonstiges" erscheinen und in die BARGELD-Berechnung einfliessen. Das Ganze kettet sich: Ist auch Tag 2 negativ (inklusive Vortags-Defizit), wird das am Tag 3 uebertragen, usw.
+## Loesung
+Die `carryOver`-Logik aus `useCashBalanceData.ts` entfernen. Jeder Tag soll sein eigenstaendiges Bargeld-Ergebnis zeigen. Die GESAMT-Zeile summiert dann korrekt alle Tageswerte auf.
 
-### Wie es funktioniert
+Die Defizit-Verkettung bleibt weiterhin in `usePreviousDayDeficit.ts` fuer die Tagesabrechnung bestehen -- dort wird sie als separater Abzugsposten "Fehlbetrag Vortag" angezeigt.
 
-- **Montag**: BARGELD = -271,16 EUR
-- **Dienstag**: In "Gutscheine & Sonstiges" erscheint eine neue Zeile "Fehlbetrag Vortag: -271,16 EUR". Dieser Betrag wird von der BARGELD-Berechnung abgezogen.
-- Die Zeile erscheint **nur**, wenn der Vortag tatsaechlich negativ war.
+## Technische Aenderungen
 
-### Technische Umsetzung
+### `src/hooks/useCashBalanceData.ts`
+- Variable `carryOver` entfernen (Zeile 63)
+- `+ carryOver` aus der Bargeld-Berechnung entfernen (Zeile 103)
+- `carryOver = bargeld < 0 ? bargeld : 0;` entfernen (Zeile 106)
 
-**1. Neuer Hook: Vortags-Bargeld laden**
-
-In `src/pages/DailySummary.tsx` wird ein zusaetzlicher Query eingefuegt, der die Session des Vortages laedt und deren BARGELD berechnet. Da sich das Defizit verketten soll, muss rekursiv zurueckgeschaut werden: Alle Sessions vor dem aktuellen Datum laden, chronologisch das Bargeld berechnen, und den letzten negativen Uebertrag ermitteln.
-
-Konkret: Eine neue Hilfsfunktion `usePreviousDayDeficit(date, restaurantId)` erstellen, die:
-- Die Session des Vortages laedt (inkl. waiter_shifts, expenses, advances)
-- Das BARGELD berechnet (gleiche Formel wie in DailySummary)
-- Falls negativ, diesen Betrag als `previousDeficit` zurueckgibt
-- Falls der Vortag selbst einen Vortags-Defizit hatte, diesen einrechnet (Verkettung)
-
-**2. `src/hooks/usePreviousDayDeficit.ts` (neue Datei)**
-
-```text
-- Laedt alle Sessions bis zum Vortag des gewaehlten Datums
-- Berechnet pro Tag das BARGELD (gleiche Logik wie useCashBalanceData)
-- Berechnet den verketteten Uebertrag: Wenn Tag N negativ ist, wird das Defizit auf Tag N+1 addiert
-- Gibt den Uebertrag fuer den aktuellen Tag zurueck (0 wenn Vortag positiv war)
-```
-
-**3. `src/pages/DailySummary.tsx` anpassen**
-
-- Den neuen Hook einbinden: `const { data: previousDeficit = 0 } = usePreviousDayDeficit(selectedDate, restaurantId)`
-- `previousDeficit` in die BARGELD-Berechnung einbeziehen (wird abgezogen)
-- `previousDeficit` als neue Prop an `ExcelLayout` uebergeben
-
-**4. `src/components/daily-summary/layouts/ExcelLayout.tsx` anpassen**
-
-- Neue Prop `previousDeficit` (number, default 0)
-- In der Sektion "Gutscheine & Sonstiges": Wenn `previousDeficit < 0`, eine neue `ExcelReadonlyRow` anzeigen mit Label "Fehlbetrag Vortag" und dem negativen Wert
-- Der Wert ist bereits in der BARGELD-Berechnung enthalten (kommt ueber die `bargeld`-Prop)
-
-### Ergebnis
-
-- Negative Bargeld-Bestaende werden automatisch auf den Folgetag uebertragen
-- Die Zeile "Fehlbetrag Vortag" erscheint nur bei tatsaechlichem Defizit
-- Die Verkettung funktioniert ueber mehrere Tage hinweg
-- Kein manueller Eingriff noetig
+Das Ergebnis: Jeder Tag zeigt nur seine eigenen Einnahmen und Abzuege, ohne Uebertrag vom Vortag. Die monatliche Gesamtsumme ist dann korrekt.
