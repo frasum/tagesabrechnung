@@ -59,7 +59,9 @@ export function useCashBalanceData(restaurantId: string | null) {
 
       if (advancesError) throw advancesError;
 
-      // 4. Pro Session direkt die DB-Werte verwenden
+      // 4. Pro Session direkt die DB-Werte verwenden, mit Defizit-Verkettung
+      let carryOver = 0;
+
       return (sessions || []).map((session) => {
         const shifts = (waiterShifts || []).filter((s) => s.session_id === session.id);
         const sessionExpenses = (expenses || []).filter((e) => e.session_id === session.id);
@@ -83,9 +85,7 @@ export function useCashBalanceData(restaurantId: string | null) {
         const totalOpenInvoices = shifts.reduce((sum, w) => sum + (w.open_invoices || 0), 0);
         const totalExpenses = sessionExpenses.reduce((sum, e) => sum + e.amount, 0);
 
-        // BARGELD = Einnahmen - Abzüge
-        // Einnahmen: Tagesumsatz (POS) + Gutschein-Verkauf + Sonstige Einnahmen
-        // Abzüge: Kreditkarten, OrderSmart, Wolt, Gutscheine EL, FineDine, Einladung, Offene RE, Vorschuss, Ausgaben
+        // BARGELD = Einnahmen - Abzüge + Vortags-Defizit
         const sonstigeEinnahme = session.sonstige_einnahme || 0;
         const bargeld =
           tagesumsatz +
@@ -99,7 +99,11 @@ export function useCashBalanceData(restaurantId: string | null) {
           einladung -
           totalOpenInvoices -
           vorschuss -
-          totalExpenses;
+          totalExpenses +
+          carryOver;
+
+        // Chain: if bargeld is negative, carry it over; otherwise reset
+        carryOver = bargeld < 0 ? bargeld : 0;
 
         return {
           date: session.session_date,
