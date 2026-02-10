@@ -1,49 +1,55 @@
 
 
-# Labels und Ausblenden in der Kellnerabrechnung
+# Labels und Ausblenden in der PWA (WaiterMobile)
 
-## Ziel
-Die Kellnerabrechnung (`WaiterCashUp`) bekommt die gleiche dynamische Label- und Ausblend-Funktionalitaet wie die Tagesabrechnung. Hardcodierte Labels werden durch `getLabel()` ersetzt, und ausgeblendete Felder werden im Formular und in der Tabelle nicht angezeigt.
+## Was wird gemacht
+Die mobile Kellner-Ansicht bekommt die gleiche dynamische Label- und Ausblend-Logik wie die Desktop-Version. Aenderungen in der Label-Verwaltung (Umbenennen, Ein-/Ausblenden) wirken sich dann automatisch auch auf die PWA aus.
 
-## Aenderungen in `src/pages/WaiterCashUp.tsx`
+## Aenderungen in `src/pages/WaiterMobile.tsx`
 
-### 1. `isFieldHidden` importieren
-- Aus dem bestehenden `useLabels`-Hook wird zusaetzlich `isFieldHidden` verwendet (ist bereits implementiert)
+### 1. useLabels-Hook einbinden
+- `useLabels` mit der aktuellen `restaurantId` importieren
+- `getLabel` und `isFieldHidden` verwenden
 
-### 2. Hardcodierte Labels ersetzen
+### 2. Labels dynamisch machen
 
-| Stelle | Aktuell | Wird zu |
-|---|---|---|
-| Zeile 331: Kartenzahlung-Label | `"Kartenzahlung (Kredit Karten)"` | `getLabel('card_total_gl')` |
-| Zeile 512: Tabellenkopf Kredit Karten | `"Kredit Karten"` | `getLabel('card_total_gl')` |
-| Zeile 515: Tabellenkopf Abgegeben | `"Abgegeben"` | `getLabel('cash_handed_in')` |
-| Zeile 353: Vorschau-Formeltext | Hardcodierte Begriffe | Dynamische Labels |
+| Aktuell hartcodiert | Wird zu |
+|---|---|
+| "Umsatz (POS Sales)" | `getLabel('pos_sales')` |
+| "Abzugebender Betrag (Kassiert Brutto)" | `getLabel('kassiert_brutto')` |
+| "Kartenzahlung" | `getLabel('card_total_gl')` |
+| "Hilf Mahl" | `getLabel('hilf_mahl')` |
+| "Offene Rechnung" | `getLabel('open_invoices')` |
+| "Bargeld abgegeben" | `getLabel('cash_handed_in')` |
 
 ### 3. Felder bedingt ausblenden
+Folgende Eingabefelder werden nur angezeigt, wenn sie nicht ausgeblendet sind:
+- `card_total_gl` (steuert das Kartenzahlung-Feld)
+- `hilf_mahl`
+- `open_invoices`
 
-Folgende Felder im **Eingabeformular** werden mit `isFieldHidden()` umschlossen:
-- `hilf_mahl` - Eingabefeld wird ausgeblendet, Wert bleibt 0
-- `open_invoices` - Eingabefeld wird ausgeblendet, Wert bleibt 0
-- `card_total_gl` (fuer `card_total`) - Eingabefeld wird ausgeblendet, Wert bleibt 0
+Wenn ein Feld ausgeblendet ist, wird das Eingabefeld nicht gerendert und der Wert bleibt 0. Die Berechnungen (Erwartet, Kuechentipp, Trinkgeld) funktionieren weiterhin korrekt.
 
-Folgende **Tabellenspalten** in der Uebersichtstabelle werden bedingt ausgeblendet:
-- `hilf_mahl` - Spalte und Zelle
-- `open_invoices` - Spalte und Zelle
-- `card_total_gl` - Spalte und Zelle
+## Technische Details
 
-### 4. Vorschau-Berechnung anpassen
-Die Formel-Beschreibung im grauen Vorschau-Kasten wird dynamisch zusammengebaut:
-- Nur sichtbare Felder werden in der Formel-Beschreibung erwaehnt
-- Die eigentliche Berechnung bleibt unveraendert (hidden Felder haben Wert 0)
-
-### 5. Logik
-- Wenn ein Feld hidden ist, wird das Eingabefeld nicht gerendert und der State-Wert bleibt 0
-- Die Berechnungen (`calculateExpected`, `calculateContribution`) funktionieren weiterhin korrekt
-- Beim Bearbeiten eines bestehenden Eintrags: hidden Felder werden nicht angezeigt, aber vorhandene Werte bleiben in der Datenbank erhalten
-
-## Betroffene Datei
+### Betroffene Datei
 
 | Datei | Aenderung |
 |---|---|
-| `src/pages/WaiterCashUp.tsx` | `isFieldHidden` nutzen, hardcodierte Labels ersetzen, bedingte Anzeige |
+| `src/pages/WaiterMobile.tsx` | `useLabels` importieren, hartcodierte Labels durch `getLabel()` ersetzen, Eingabefelder mit `isFieldHidden()` bedingt rendern |
+
+### Beispiel der Aenderung
+```typescript
+// Vorher:
+<Label>Kartenzahlung</Label>
+<CurrencyInput value={formData.card_total} ... />
+
+// Nachher:
+{!isFieldHidden('card_total_gl') && (
+  <div>
+    <Label>{getLabel('card_total_gl')}</Label>
+    <CurrencyInput value={formData.card_total} ... />
+  </div>
+)}
+```
 
