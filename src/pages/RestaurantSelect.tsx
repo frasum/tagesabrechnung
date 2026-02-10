@@ -19,6 +19,7 @@ export default function RestaurantSelect() {
   const isMobile = useIsMobile();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const isStaff = user?.permissionLevel === 'staff';
 
   useEffect(() => {
     if (!user) {
@@ -36,7 +37,7 @@ export default function RestaurantSelect() {
 
       if (error || !data || data.length === 0) {
         // Fallback: go to default
-        navigate(isMobile ? '/spicery/waiter' : '/spicery', { replace: true });
+        navigate(isStaff || isMobile ? '/spicery/waiter' : '/spicery', { replace: true });
         return;
       }
 
@@ -46,7 +47,7 @@ export default function RestaurantSelect() {
 
       if (mapped.length === 1) {
         const slug = mapped[0].slug;
-        navigate(isMobile ? `/${slug}/waiter` : `/${slug}`, { replace: true });
+        navigate(isStaff || isMobile ? `/${slug}/waiter` : `/${slug}`, { replace: true });
         return;
       }
 
@@ -58,7 +59,7 @@ export default function RestaurantSelect() {
   }, [user, navigate, isMobile]);
 
   const handleSelect = (slug: string) => {
-    navigate(isMobile ? `/${slug}/waiter` : `/${slug}`, { replace: true });
+    navigate(isStaff || isMobile ? `/${slug}/waiter` : `/${slug}`, { replace: true });
   };
 
   if (!user || isLoading) {

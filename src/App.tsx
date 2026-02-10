@@ -38,7 +38,7 @@ function RestaurantRoutes() {
     <RestaurantProvider>
       <DateProvider>
         <Routes>
-          <Route index element={<ProtectedRoute><WaiterCashUp /></ProtectedRoute>} />
+          <Route index element={<ProtectedRoute requiredLevel="manager"><WaiterCashUp /></ProtectedRoute>} />
           <Route path="waiter" element={<ProtectedRoute><WaiterMobile /></ProtectedRoute>} />
           <Route path="summary" element={<ProtectedRoute requiredLevel="manager"><DailySummary /></ProtectedRoute>} />
           <Route path="kitchen" element={<ProtectedRoute requiredLevel="manager"><KitchenTipSplit /></ProtectedRoute>} />
