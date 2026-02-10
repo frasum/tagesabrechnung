@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
+import { useQueryClient } from '@tanstack/react-query';
 import type { PermissionLevel } from '@/types/permissions';
 import { hasPermission as checkPermission } from '@/types/permissions';
 
@@ -300,7 +301,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const queryClient = useQueryClient();
+
   const logout = async () => {
+    // Clear React Query cache so next user gets fresh data
+    queryClient.clear();
     // Sign out from Supabase (for OAuth users)
     await supabase.auth.signOut();
     setUser(null);

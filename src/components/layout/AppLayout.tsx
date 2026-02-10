@@ -135,25 +135,31 @@ export function AppLayout({ children }: AppLayoutProps) {
             <div className="w-9 h-9 rounded-lg bg-sidebar-primary flex items-center justify-center">
               <Euro className="w-5 h-5 text-sidebar-primary-foreground" />
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="font-display font-semibold text-sidebar-foreground gap-1 px-2">
-                  {restaurantName || 'Restaurant'}
-                  <ChevronDown className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                {restaurants.map((r) => (
-                  <DropdownMenuItem
-                    key={r.id}
-                    onClick={() => handleRestaurantSwitch(r.slug)}
-                    className={cn(r.slug === restaurantSlug && 'bg-accent')}
-                  >
-                    {r.name}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {restaurants.length > 1 ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="font-display font-semibold text-sidebar-foreground gap-1 px-2">
+                    {restaurantName || 'Restaurant'}
+                    <ChevronDown className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  {restaurants.map((r) => (
+                    <DropdownMenuItem
+                      key={r.id}
+                      onClick={() => handleRestaurantSwitch(r.slug)}
+                      className={cn(r.slug === restaurantSlug && 'bg-accent')}
+                    >
+                      {r.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <span className="font-display font-semibold text-sidebar-foreground px-2">
+                {restaurantName || 'Restaurant'}
+              </span>
+            )}
           </div>
           <Button
             variant="ghost"
@@ -234,25 +240,31 @@ export function AppLayout({ children }: AppLayoutProps) {
           <div className="w-9 h-9 rounded-lg bg-sidebar-primary flex items-center justify-center">
             <Euro className="w-5 h-5 text-sidebar-primary-foreground" />
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="font-display font-semibold text-sidebar-foreground gap-1 px-2">
-                {restaurantName || 'Restaurant'}
-                <ChevronDown className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              {restaurants.map((r) => (
-                <DropdownMenuItem
-                  key={r.id}
-                  onClick={() => handleRestaurantSwitch(r.slug)}
-                  className={cn(r.slug === restaurantSlug && 'bg-accent')}
-                >
-                  {r.name}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {restaurants.length > 1 ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="font-display font-semibold text-sidebar-foreground gap-1 px-2">
+                  {restaurantName || 'Restaurant'}
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {restaurants.map((r) => (
+                  <DropdownMenuItem
+                    key={r.id}
+                    onClick={() => handleRestaurantSwitch(r.slug)}
+                    className={cn(r.slug === restaurantSlug && 'bg-accent')}
+                  >
+                    {r.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <span className="font-display font-semibold text-sidebar-foreground px-2">
+              {restaurantName || 'Restaurant'}
+            </span>
+          )}
         </div>
         
         <nav className="flex-1 px-4 py-6 space-y-1">
