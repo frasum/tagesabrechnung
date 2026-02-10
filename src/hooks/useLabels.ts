@@ -65,6 +65,55 @@ export function useLabels(restaurantId: string | null) {
     enabled: !!restaurantId,
   });
 
+  // Hidden fields
+  const { data: hiddenFields = [] } = useQuery({
+    queryKey: ['settings', 'hidden_fields', restaurantId],
+    queryFn: async (): Promise<LabelKey[]> => {
+      if (!restaurantId) return [];
+
+      const { data, error } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'hidden_fields')
+        .eq('restaurant_id', restaurantId)
+        .maybeSingle();
+
+      if (error) throw error;
+      return (data?.value as unknown as LabelKey[]) ?? [];
+    },
+    enabled: !!restaurantId,
+  });
+
+  const isFieldHidden = (key: LabelKey): boolean => hiddenFields.includes(key);
+
+  const { mutateAsync: saveHiddenFields, isPending: isSavingHidden } = useMutation({
+    mutationFn: async ({ hiddenFields: newHidden, restaurantId: restId }: { hiddenFields: LabelKey[]; restaurantId: string }) => {
+      const { data: existing } = await supabase
+        .from('settings')
+        .select('id')
+        .eq('key', 'hidden_fields')
+        .eq('restaurant_id', restId)
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await supabase
+          .from('settings')
+          .update({ value: newHidden as any })
+          .eq('key', 'hidden_fields')
+          .eq('restaurant_id', restId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('settings')
+          .insert({ key: 'hidden_fields', value: newHidden as any, restaurant_id: restId });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['settings', 'hidden_fields', restaurantId] });
+    },
+  });
+
   const getLabel = (key: LabelKey): string => {
     return overrides?.[key] || DEFAULT_LABELS[key];
   };
@@ -109,8 +158,12 @@ export function useLabels(restaurantId: string | null) {
     getLabel,
     allLabels,
     overrides: overrides ?? {},
+    hiddenFields,
+    isFieldHidden,
     isLoading,
     saveOverrides,
     isSaving,
+    saveHiddenFields,
+    isSavingHidden,
   };
 }

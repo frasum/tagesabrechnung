@@ -61,6 +61,7 @@ interface PDFExportData {
   restaurantName?: string;
   exportedBy?: string;
   labels?: Record<string, string>;
+  hiddenFields?: string[];
   totals: {
     kellnerUmsatz: number;
     totalCardTotal: number;
@@ -87,6 +88,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
   const margin = 14;
   let y = 20;
   const l = (key: string, fallback: string) => data.labels?.[key] || fallback;
+  const isHidden = (key: string) => data.hiddenFields?.includes(key) ?? false;
 
   // ========== HEADER - centered, large ==========
   if (data.restaurantName) {
@@ -144,7 +146,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
     [l('ordersmart_revenue', 'SoUse'), formatCurrency(data.session.ordersmart_revenue || 0)],
     [l('wolt_revenue', 'Wolt'), formatCurrency(data.session.wolt_revenue || 0)],
     ['Gutscheine', formatCurrency(data.session.vouchers_redeemed || 0)],
-    [l('finedine_vouchers', 'FineDine'), formatCurrency(data.session.finedine_vouchers || 0)],
+    ...(isHidden('finedine_vouchers') ? [] : [[l('finedine_vouchers', 'FineDine'), formatCurrency(data.session.finedine_vouchers || 0)]]),
     [l('vouchers_sold', 'Gutscheine VK'), formatCurrency(data.session.vouchers_sold || 0)],
     ['Offen', formatCurrency(data.totals.totalOpenInvoices)],
     ['Personal', formatCurrency(data.totals.totalAdvances ?? data.session.vorschuss ?? 0)],
@@ -358,6 +360,7 @@ interface CashBalancePDFData {
   year: number;
   pettyCash?: number;
   labels?: Record<string, string>;
+  hiddenFields?: string[];
 }
 
 export const generateCashBalancePDF = (data: CashBalancePDFData, options?: { preview?: boolean }): { blobUrl: string; fileName: string } | void => {
@@ -365,6 +368,7 @@ export const generateCashBalancePDF = (data: CashBalancePDFData, options?: { pre
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 14;
   const l = (key: string, fallback: string) => data.labels?.[key] || fallback;
+  const isHidden = (key: string) => data.hiddenFields?.includes(key) ?? false;
   let yPos = 20;
 
   // Header
@@ -481,17 +485,19 @@ export const generateCashBalancePDF = (data: CashBalancePDFData, options?: { pre
     bargeld: data.rows.reduce((sum, r) => sum + r.bargeld, 0),
   };
 
+  const showFinedine = !isHidden('finedine_vouchers');
+
   // Table body data
   const tableBody = data.rows.map((row) => {
     const dateFormatted = format(new Date(row.date), 'EEE d.MMM', { locale: de });
-    return [
+    const cols = [
       dateFormatted,
       formatCurrency(row.kellnerUmsatz),
       '-' + formatCurrency(row.kreditkarten),
       '-' + formatCurrency(row.ordersmart),
       '-' + formatCurrency(row.wolt),
       '-' + formatCurrency(row.gutscheineEL),
-      '-' + formatCurrency(row.finedine),
+      ...(showFinedine ? ['-' + formatCurrency(row.finedine)] : []),
       '+' + formatCurrency(row.gutscheineVK),
       '-' + formatCurrency(row.einladung),
       '-' + formatCurrency(row.offeneRE),
@@ -499,6 +505,7 @@ export const generateCashBalancePDF = (data: CashBalancePDFData, options?: { pre
       '-' + formatCurrency(row.ausgaben),
       formatCurrency(row.bargeld),
     ];
+    return cols;
   });
 
   // Add totals row
@@ -509,7 +516,7 @@ export const generateCashBalancePDF = (data: CashBalancePDFData, options?: { pre
     '-' + formatCurrency(totals.ordersmart),
     '-' + formatCurrency(totals.wolt),
     '-' + formatCurrency(totals.gutscheineEL),
-    '-' + formatCurrency(totals.finedine),
+    ...(showFinedine ? ['-' + formatCurrency(totals.finedine)] : []),
     '+' + formatCurrency(totals.gutscheineVK),
     '-' + formatCurrency(totals.einladung),
     '-' + formatCurrency(totals.offeneRE),
@@ -528,7 +535,7 @@ export const generateCashBalancePDF = (data: CashBalancePDFData, options?: { pre
       l('ordersmart_revenue', 'SoUse'),
       l('wolt_revenue', 'Wolt'),
       'Gutsch. EL',
-      l('finedine_vouchers', 'FineDine'),
+      ...(showFinedine ? [l('finedine_vouchers', 'FineDine')] : []),
       'Gutsch. VK',
       l('einladung', 'Einladung'),
       'Offene RE',
@@ -540,21 +547,27 @@ export const generateCashBalancePDF = (data: CashBalancePDFData, options?: { pre
     theme: 'striped',
     headStyles: { fillColor: [51, 65, 85], fontSize: 8 },
     bodyStyles: { fontSize: 8 },
-    columnStyles: {
-      0: { fontStyle: 'bold' },
-      1: { halign: 'right' },
-      2: { halign: 'right', textColor: [185, 28, 28] },
-      3: { halign: 'right', textColor: [185, 28, 28] },
-      4: { halign: 'right', textColor: [185, 28, 28] },
-      5: { halign: 'right', textColor: [185, 28, 28] },
-      6: { halign: 'right', textColor: [185, 28, 28] },
-      7: { halign: 'right', textColor: [22, 101, 52] },
-      8: { halign: 'right', textColor: [185, 28, 28] },
-      9: { halign: 'right', textColor: [185, 28, 28] },
-      10: { halign: 'right', textColor: [185, 28, 28] },
-      11: { halign: 'right', textColor: [185, 28, 28] },
-      12: { halign: 'right' },
-    },
+    columnStyles: (() => {
+      const bargeldIdx = showFinedine ? 12 : 11;
+      const gutschVKIdx = showFinedine ? 7 : 6;
+      const styles: Record<number, any> = {
+        0: { fontStyle: 'bold' },
+        1: { halign: 'right' },
+        2: { halign: 'right', textColor: [185, 28, 28] },
+        3: { halign: 'right', textColor: [185, 28, 28] },
+        4: { halign: 'right', textColor: [185, 28, 28] },
+        5: { halign: 'right', textColor: [185, 28, 28] },
+      };
+      if (showFinedine) {
+        styles[6] = { halign: 'right', textColor: [185, 28, 28] };
+      }
+      styles[gutschVKIdx] = { halign: 'right', textColor: [22, 101, 52] };
+      for (let i = gutschVKIdx + 1; i < bargeldIdx; i++) {
+        styles[i] = { halign: 'right', textColor: [185, 28, 28] };
+      }
+      styles[bargeldIdx] = { halign: 'right' };
+      return styles;
+    })(),
     didParseCell: function(cellHookData) {
       // Style the totals row
       if (cellHookData.section === 'body' && cellHookData.row.index === tableBody.length - 1) {
@@ -562,7 +575,8 @@ export const generateCashBalancePDF = (data: CashBalancePDFData, options?: { pre
         cellHookData.cell.styles.fillColor = [241, 245, 249];
       }
       // Color the Bargeld column based on value
-      if (cellHookData.section === 'body' && cellHookData.column.index === 12) {
+      const bargeldColIdx = showFinedine ? 12 : 11;
+      if (cellHookData.section === 'body' && cellHookData.column.index === bargeldColIdx) {
         const rowIndex = cellHookData.row.index;
         const bargeldValue = rowIndex === tableBody.length - 1 ? totals.bargeld : data.rows[rowIndex]?.bargeld ?? 0;
         if (bargeldValue >= 0) {

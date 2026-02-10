@@ -95,7 +95,7 @@ export default function DailySummary() {
   const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
 
   // Labels
-  const { getLabel, allLabels } = useLabels(restaurantId);
+  const { getLabel, allLabels, isFieldHidden, hiddenFields } = useLabels(restaurantId);
 
   // Sync form data with session
   useEffect(() => {
@@ -383,6 +383,7 @@ export default function DailySummary() {
       restaurantName,
       exportedBy: user?.name,
       labels: allLabels,
+      hiddenFields,
       totals: {
         kellnerUmsatz,
         totalCardTotal,
@@ -1091,6 +1092,7 @@ export default function DailySummary() {
       totalAdvances={totalAdvances}
       locked={locked}
       getLabel={getLabel}
+      isFieldHidden={isFieldHidden}
     />
   );
 

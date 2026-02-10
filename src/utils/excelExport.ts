@@ -11,6 +11,7 @@ interface ExcelExportParams {
   year: number;
   restaurantName?: string;
   labels?: Record<string, string>;
+  hiddenFields?: string[];
 }
 
 const formatCurrency = (value: number): string => {
@@ -30,8 +31,10 @@ const formatDateFull = (dateStr: string): string => {
   return format(date, 'dd.MM.yyyy', { locale: de });
 };
 
-export function generateCashBalanceExcel({ rows, deposits, month, year, restaurantName, labels }: ExcelExportParams): void {
+export function generateCashBalanceExcel({ rows, deposits, month, year, restaurantName, labels, hiddenFields }: ExcelExportParams): void {
   const l = (key: string, fallback: string) => labels?.[key] || fallback;
+  const isHidden = (key: string) => hiddenFields?.includes(key) ?? false;
+  const showFinedine = !isHidden('finedine_vouchers');
   const monthDate = new Date(year, month);
   const monthName = format(monthDate, 'MMMM yyyy', { locale: de });
   const createdAt = format(new Date(), 'dd.MM.yyyy HH:mm', { locale: de });
@@ -60,7 +63,7 @@ export function generateCashBalanceExcel({ rows, deposits, month, year, restaura
     l('ordersmart_revenue', 'SoUse'),
     l('wolt_revenue', 'Wolt'),
     'Gutsch. EL',
-    l('finedine_vouchers', 'FineDine'),
+    ...(showFinedine ? [l('finedine_vouchers', 'FineDine')] : []),
     'Gutsch. VK',
     l('einladung', 'Einladung'),
     'Offene RE',
@@ -78,7 +81,7 @@ export function generateCashBalanceExcel({ rows, deposits, month, year, restaura
       -row.ordersmart,
       -row.wolt,
       -row.gutscheineEL,
-      -row.finedine,
+      ...(showFinedine ? [-row.finedine] : []),
       row.gutscheineVK,
       -row.einladung,
       -row.offeneRE,
@@ -127,7 +130,7 @@ export function generateCashBalanceExcel({ rows, deposits, month, year, restaura
     -totals.ordersmart,
     -totals.wolt,
     -totals.gutscheineEL,
-    -totals.finedine,
+    ...(showFinedine ? [-totals.finedine] : []),
     totals.gutscheineVK,
     -totals.einladung,
     -totals.offeneRE,
@@ -163,7 +166,7 @@ export function generateCashBalanceExcel({ rows, deposits, month, year, restaura
     { wch: 12 }, // OrderSmart
     { wch: 10 }, // Wolt
     { wch: 12 }, // Gutsch. EL
-    { wch: 10 }, // FineDine
+    ...(showFinedine ? [{ wch: 10 }] : []), // FineDine
     { wch: 12 }, // Gutsch. VK
     { wch: 10 }, // Einladung
     { wch: 10 }, // Offene RE

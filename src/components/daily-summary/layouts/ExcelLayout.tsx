@@ -60,6 +60,7 @@ interface ExcelLayoutProps {
   totalAdvances: number;
   locked?: boolean;
   getLabel?: (key: LabelKey) => string;
+  isFieldHidden?: (key: LabelKey) => boolean;
 }
 
 export function ExcelLayout({
@@ -86,8 +87,10 @@ export function ExcelLayout({
   totalAdvances,
   locked,
   getLabel: gl,
+  isFieldHidden: ifh,
 }: ExcelLayoutProps) {
   const getLabel = gl || ((key: LabelKey) => key);
+  const isFieldHidden = ifh || (() => false);
   const fmt = (value: number) =>
     new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
 
@@ -153,7 +156,7 @@ export function ExcelLayout({
               <tbody>
                 <ExcelInputRow label={getLabel('vouchers_sold')} value={formData.vouchers_sold} onChange={(v) => onFieldChange('vouchers_sold', v)} disabled={locked} />
                 <ExcelInputRow label={getLabel('vouchers_redeemed')} value={formData.vouchers_redeemed} onChange={(v) => onFieldChange('vouchers_redeemed', v)} disabled={locked} />
-                <ExcelInputRow label={getLabel('finedine_vouchers')} value={formData.finedine_vouchers} onChange={(v) => onFieldChange('finedine_vouchers', v)} disabled={locked} />
+                {!isFieldHidden('finedine_vouchers') && <ExcelInputRow label={getLabel('finedine_vouchers')} value={formData.finedine_vouchers} onChange={(v) => onFieldChange('finedine_vouchers', v)} disabled={locked} />}
                 {totalOpenInvoices !== 0 && <ExcelReadonlyRow label="Offene Rechnungen" value={totalOpenInvoices} />}
                 {totalAdvances !== 0 && <ExcelReadonlyRow label="Vorschuss" value={totalAdvances} />}
                 <ExcelInputRow label={getLabel('einladung')} value={formData.einladung} onChange={(v) => onFieldChange('einladung', v)} disabled={locked} />

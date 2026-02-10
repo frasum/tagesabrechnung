@@ -45,7 +45,7 @@ export default function CashBalance() {
   const { data, isLoading, error } = useCashBalanceData(restaurantId);
   const { deposits, totalDeposits, latestDeposit, createDeposit, deleteDeposit, isCreating, isDeleting } = useBankDeposits(restaurantId);
   const { pettyCash, updatePettyCash } = usePettyCash(restaurantId);
-  const { getLabel } = useLabels(restaurantId);
+  const { getLabel, isFieldHidden, hiddenFields } = useLabels(restaurantId);
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [previewOpen, setPreviewOpen] = useState(false);
   const [pdfPreview, setPdfPreview] = useState<{ blobUrl: string; fileName: string } | null>(null);
@@ -109,6 +109,7 @@ export default function CashBalance() {
       month: month - 1,
       year,
       labels: { ordersmart_revenue: getLabel('ordersmart_revenue'), wolt_revenue: getLabel('wolt_revenue'), finedine_vouchers: getLabel('finedine_vouchers'), einladung: getLabel('einladung') },
+      hiddenFields,
     }, { preview: true });
     
     if (result) {
@@ -149,6 +150,7 @@ export default function CashBalance() {
       year,
       restaurantName,
       labels: { ordersmart_revenue: getLabel('ordersmart_revenue'), wolt_revenue: getLabel('wolt_revenue'), finedine_vouchers: getLabel('finedine_vouchers'), einladung: getLabel('einladung') },
+      hiddenFields,
     });
   }, [filteredData, selectedMonth, deposits, restaurantName, getLabel]);
 
@@ -250,7 +252,7 @@ export default function CashBalance() {
                     <TableHead className="text-right min-w-[100px]">{getLabel('ordersmart_revenue')}</TableHead>
                     <TableHead className="text-right min-w-[90px]">{getLabel('wolt_revenue')}</TableHead>
                     <TableHead className="text-right min-w-[100px]">Gutsch. EL</TableHead>
-                    <TableHead className="text-right min-w-[90px]">{getLabel('finedine_vouchers')}</TableHead>
+                    {!isFieldHidden('finedine_vouchers') && <TableHead className="text-right min-w-[90px]">{getLabel('finedine_vouchers')}</TableHead>}
                     <TableHead className="text-right min-w-[100px]">Gutsch. VK</TableHead>
                     <TableHead className="text-right min-w-[90px]">{getLabel('einladung')}</TableHead>
                     <TableHead className="text-right min-w-[90px]">Offene RE</TableHead>
@@ -263,7 +265,7 @@ export default function CashBalance() {
                   {isLoading ? (
                     Array.from({ length: 5 }).map((_, i) => (
                       <TableRow key={i}>
-                        {Array.from({ length: 13 }).map((_, j) => (
+                        {Array.from({ length: isFieldHidden('finedine_vouchers') ? 12 : 13 }).map((_, j) => (
                           <TableCell key={j}>
                             <Skeleton className="h-4 w-16" />
                           </TableCell>
@@ -272,7 +274,7 @@ export default function CashBalance() {
                     ))
                   ) : error ? (
                     <TableRow>
-                      <TableCell colSpan={13} className="text-center text-destructive">
+                      <TableCell colSpan={isFieldHidden('finedine_vouchers') ? 12 : 13} className="text-center text-destructive">
                         Fehler beim Laden der Daten
                       </TableCell>
                     </TableRow>
@@ -295,9 +297,11 @@ export default function CashBalance() {
                         <TableCell className="text-right tabular-nums text-destructive">
                           -{formatCurrency(row.gutscheineEL)}
                         </TableCell>
-                        <TableCell className="text-right tabular-nums text-destructive">
-                          -{formatCurrency(row.finedine)}
-                        </TableCell>
+                        {!isFieldHidden('finedine_vouchers') && (
+                          <TableCell className="text-right tabular-nums text-destructive">
+                            -{formatCurrency(row.finedine)}
+                          </TableCell>
+                        )}
                         <TableCell className="text-right tabular-nums text-emerald-600 dark:text-emerald-400">
                           +{formatCurrency(row.gutscheineVK)}
                         </TableCell>
@@ -352,9 +356,11 @@ export default function CashBalance() {
                       <TableCell className="text-right tabular-nums font-bold text-destructive">
                         -{formatCurrency(filteredData.reduce((sum, row) => sum + row.gutscheineEL, 0))}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums font-bold text-destructive">
-                        -{formatCurrency(filteredData.reduce((sum, row) => sum + row.finedine, 0))}
-                      </TableCell>
+                      {!isFieldHidden('finedine_vouchers') && (
+                        <TableCell className="text-right tabular-nums font-bold text-destructive">
+                          -{formatCurrency(filteredData.reduce((sum, row) => sum + row.finedine, 0))}
+                        </TableCell>
+                      )}
                       <TableCell className="text-right tabular-nums font-bold text-emerald-600 dark:text-emerald-400">
                         +{formatCurrency(filteredData.reduce((sum, row) => sum + row.gutscheineVK, 0))}
                       </TableCell>

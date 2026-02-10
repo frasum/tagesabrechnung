@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useLabels, DEFAULT_LABELS, type LabelKey, type LabelOverrides } from '@/hooks/useLabels';
 import { useRestaurant } from '@/hooks/useRestaurant';
-import { Save, Tag, RotateCcw } from 'lucide-react';
+import { Save, Tag, RotateCcw, Eye, EyeOff } from 'lucide-react';
 
 const LABEL_GROUPS: { title: string; keys: LabelKey[] }[] = [
   {
@@ -32,13 +32,18 @@ const LABEL_GROUPS: { title: string; keys: LabelKey[] }[] = [
 
 export function LabelSettings() {
   const { restaurantId, restaurantName } = useRestaurant();
-  const { overrides, saveOverrides, isSaving, isLoading } = useLabels(restaurantId);
+  const { overrides, hiddenFields, saveOverrides, saveHiddenFields, isSaving, isSavingHidden, isLoading } = useLabels(restaurantId);
   const { toast } = useToast();
   const [localOverrides, setLocalOverrides] = useState<LabelOverrides>({});
+  const [localHidden, setLocalHidden] = useState<LabelKey[]>([]);
 
   useEffect(() => {
     setLocalOverrides(overrides);
   }, [overrides]);
+
+  useEffect(() => {
+    setLocalHidden(hiddenFields);
+  }, [hiddenFields]);
 
   const handleChange = (key: LabelKey, value: string) => {
     setLocalOverrides((prev) => {
@@ -52,10 +57,19 @@ export function LabelSettings() {
     });
   };
 
+  const toggleHidden = (key: LabelKey) => {
+    setLocalHidden((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  };
+
   const handleSave = async () => {
     if (!restaurantId) return;
     try {
-      await saveOverrides({ overrides: localOverrides, restaurantId });
+      await Promise.all([
+        saveOverrides({ overrides: localOverrides, restaurantId }),
+        saveHiddenFields({ hiddenFields: localHidden, restaurantId }),
+      ]);
       toast({ title: 'Labels gespeichert' });
     } catch {
       toast({ title: 'Fehler beim Speichern', variant: 'destructive' });
@@ -64,9 +78,12 @@ export function LabelSettings() {
 
   const handleReset = () => {
     setLocalOverrides({});
+    setLocalHidden([]);
   };
 
-  const hasChanges = JSON.stringify(localOverrides) !== JSON.stringify(overrides);
+  const hasChanges =
+    JSON.stringify(localOverrides) !== JSON.stringify(overrides) ||
+    JSON.stringify(localHidden.slice().sort()) !== JSON.stringify(hiddenFields.slice().sort());
 
   if (isLoading) {
     return (
@@ -86,7 +103,7 @@ export function LabelSettings() {
           Label-Verwaltung
         </CardTitle>
         <CardDescription>
-          Eigene Bezeichnungen für {restaurantName || 'dieses Restaurant'} festlegen. Leere Felder verwenden den Standard-Wert.
+          Eigene Bezeichnungen für {restaurantName || 'dieses Restaurant'} festlegen. Leere Felder verwenden den Standard-Wert. Mit dem Auge-Symbol können Felder ausgeblendet werden.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -96,29 +113,43 @@ export function LabelSettings() {
               {group.title}
             </h3>
             <div className="space-y-2">
-              {group.keys.map((key) => (
-                <div key={key} className="grid grid-cols-[1fr_1fr] gap-3 items-center">
-                  <span className="text-sm text-muted-foreground">
-                    {DEFAULT_LABELS[key]}
-                  </span>
-                  <Input
-                    value={localOverrides[key] ?? ''}
-                    onChange={(e) => handleChange(key, e.target.value)}
-                    placeholder={DEFAULT_LABELS[key]}
-                    className="h-8 text-sm"
-                  />
-                </div>
-              ))}
+              {group.keys.map((key) => {
+                const isHidden = localHidden.includes(key);
+                return (
+                  <div key={key} className="grid grid-cols-[1fr_1fr_auto] gap-3 items-center">
+                    <span className={`text-sm ${isHidden ? 'text-muted-foreground/50 line-through' : 'text-muted-foreground'}`}>
+                      {DEFAULT_LABELS[key]}
+                    </span>
+                    <Input
+                      value={localOverrides[key] ?? ''}
+                      onChange={(e) => handleChange(key, e.target.value)}
+                      placeholder={DEFAULT_LABELS[key]}
+                      className="h-8 text-sm"
+                      disabled={isHidden}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className={`h-8 w-8 ${isHidden ? 'text-muted-foreground/50' : 'text-muted-foreground'}`}
+                      onClick={() => toggleHidden(key)}
+                      title={isHidden ? 'Feld einblenden' : 'Feld ausblenden'}
+                    >
+                      {isHidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                );
+              })}
             </div>
           </div>
         ))}
 
         <div className="flex gap-2 pt-4 border-t">
-          <Button onClick={handleSave} disabled={isSaving || !hasChanges} className="gap-2">
+          <Button onClick={handleSave} disabled={(isSaving || isSavingHidden) || !hasChanges} className="gap-2">
             <Save className="w-4 h-4" />
             Speichern
           </Button>
-          <Button variant="outline" onClick={handleReset} disabled={Object.keys(localOverrides).length === 0} className="gap-2">
+          <Button variant="outline" onClick={handleReset} disabled={Object.keys(localOverrides).length === 0 && localHidden.length === 0} className="gap-2">
             <RotateCcw className="w-4 h-4" />
             Zurücksetzen
           </Button>
