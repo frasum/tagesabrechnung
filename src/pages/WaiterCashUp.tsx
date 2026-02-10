@@ -56,7 +56,7 @@ export default function WaiterCashUp() {
   const deleteWaiterShift = useDeleteWaiterShift();
   const updateWaiterShift = useUpdateWaiterShiftWithAudit();
   const { data: waiterTipAverages = {} } = useWaiterTipAverages(restaurantId);
-  const { getLabel } = useLabels(restaurantId);
+  const { getLabel, isFieldHidden } = useLabels(restaurantId);
 
   const handleCreateSession = async () => {
     if (!restaurantId) return;
@@ -326,21 +326,29 @@ export default function WaiterCashUp() {
                   </div>
                 </div>
 
+                {(!isFieldHidden('card_total_gl') || !isFieldHidden('hilf_mahl')) && (
                 <div className="grid grid-cols-2 gap-4">
+                  {!isFieldHidden('card_total_gl') && (
                   <div>
-                    <Label>Kartenzahlung (Kredit Karten)</Label>
+                    <Label>{getLabel('card_total_gl')}</Label>
                     <CurrencyInput value={newCardTotal} onChange={setNewCardTotal} />
                   </div>
+                  )}
+                  {!isFieldHidden('hilf_mahl') && (
                   <div>
                     <Label>{getLabel('hilf_mahl')}</Label>
                     <CurrencyInput value={newHilfMahl} onChange={setNewHilfMahl} />
                   </div>
+                  )}
                 </div>
+                )}
 
+                {!isFieldHidden('open_invoices') && (
                 <div>
                   <Label>{getLabel('open_invoices')}</Label>
                   <CurrencyInput value={newOpenInvoices} onChange={setNewOpenInvoices} />
                 </div>
+                )}
 
                 <div>
                   <Label>{getLabel('cash_handed_in')}</Label>
@@ -350,7 +358,12 @@ export default function WaiterCashUp() {
                 {/* Preview Calculations */}
                 <div className="bg-muted rounded-lg p-4 space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Erwartet (Kassiert + Hilf Mahl - Offen - Kredit Karten):</span>
+                    <span className="text-muted-foreground">
+                      Erwartet ({getLabel('kassiert_brutto')}
+                      {!isFieldHidden('hilf_mahl') ? ` + ${getLabel('hilf_mahl')}` : ''}
+                      {!isFieldHidden('open_invoices') ? ` - ${getLabel('open_invoices')}` : ''}
+                      {!isFieldHidden('card_total_gl') ? ` - ${getLabel('card_total_gl')}` : ''}):
+                    </span>
                     <span className="font-medium tabular-nums">
                       {formatCurrency(newKassiertBrutto + newHilfMahl - newOpenInvoices - newCardTotal)}
                     </span>
@@ -509,10 +522,10 @@ export default function WaiterCashUp() {
                           <TableHead>Name</TableHead>
                           <TableHead className="text-right">{getLabel('pos_sales')}</TableHead>
                           <TableHead className="text-right">{getLabel('kassiert_brutto')}</TableHead>
-                          <TableHead className="text-right">Kredit Karten</TableHead>
-                          <TableHead className="text-right">{getLabel('hilf_mahl')}</TableHead>
-                          <TableHead className="text-right">{getLabel('open_invoices')}</TableHead>
-                          <TableHead className="text-right">Abgegeben</TableHead>
+                          {!isFieldHidden('card_total_gl') && <TableHead className="text-right">{getLabel('card_total_gl')}</TableHead>}
+                          {!isFieldHidden('hilf_mahl') && <TableHead className="text-right">{getLabel('hilf_mahl')}</TableHead>}
+                          {!isFieldHidden('open_invoices') && <TableHead className="text-right">{getLabel('open_invoices')}</TableHead>}
+                          <TableHead className="text-right">{getLabel('cash_handed_in')}</TableHead>
                           <TableHead className="text-right">Erwartet</TableHead>
                           <TableHead className="text-right">{getLabel('kitchen_tip')}</TableHead>
                           <TableHead></TableHead>
@@ -533,9 +546,9 @@ export default function WaiterCashUp() {
                               </TableCell>
                               <TableCell className="text-right tabular-nums">{formatCurrency(shift.pos_sales)}</TableCell>
                               <TableCell className="text-right tabular-nums">{formatCurrency(shift.kassiert_brutto)}</TableCell>
-                              <TableCell className="text-right tabular-nums">{formatCurrency(shift.card_total)}</TableCell>
-                              <TableCell className="text-right tabular-nums">{formatCurrency(shift.hilf_mahl)}</TableCell>
-                              <TableCell className="text-right tabular-nums">{formatCurrency(shift.open_invoices)}</TableCell>
+                              {!isFieldHidden('card_total_gl') && <TableCell className="text-right tabular-nums">{formatCurrency(shift.card_total)}</TableCell>}
+                              {!isFieldHidden('hilf_mahl') && <TableCell className="text-right tabular-nums">{formatCurrency(shift.hilf_mahl)}</TableCell>}
+                              {!isFieldHidden('open_invoices') && <TableCell className="text-right tabular-nums">{formatCurrency(shift.open_invoices)}</TableCell>}
                               <TableCell className="text-right tabular-nums">{formatCurrency(shift.cash_handed_in)}</TableCell>
                               <TableCell className="text-right tabular-nums">{formatCurrency(expected)}</TableCell>
                               <TableCell className="text-right tabular-nums text-success">{formatCurrency(shift.kitchen_tip)}</TableCell>
