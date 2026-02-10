@@ -1,74 +1,33 @@
 
 
-# Fix: BARGELD-Berechnung korrigieren fuer -290,93 EUR
+# Fix: POS-Differenz-Warnung korrigieren
 
 ## Problem
-Zwei Fehler verhindern das korrekte Ergebnis:
+Die POS-Differenz-Warnung zeigt faelschlicherweise 134,40 EUR an, weil OrderSmart- und Wolt-Umsaetze zwar im Vectron-Gesamtumsatz (pos_total) enthalten sind, aber keinem Kellner zugeordnet werden. Aktuell wird nur Takeaway von der Differenz abgezogen, nicht aber OrderSmart und Wolt.
 
-1. **Takeaway wird faelschlicherweise abgezogen**: Laut manueller Abrechnung wird Takeaway bar kassiert und ist kein Abzugsposten. Der kuerzlich eingefuegte Takeaway-Abzug muss rueckgaengig gemacht werden.
-2. **Fehlbetrag Vortag fehlt**: Der Wert "Kasse minus Vortag" (244,53 EUR) stammt aus der Excel-Abrechnung vor App-Einfuehrung. Es gibt aktuell keine Moeglichkeit, diesen initialen Fehlbetrag manuell einzutragen.
-
-## Loesung
-
-### Teil 1: Takeaway-Abzug rueckgaengig machen (5 Dateien)
-
-`- takeaway_total` aus der BARGELD-Formel entfernen in:
-
-- `src/pages/DailySummary.tsx` (Zeile 272)
-- `src/pages/ManagerDashboard.tsx`
-- `src/hooks/useCashBalanceData.ts` (Zeile 95)
-- `src/hooks/usePreviousDayDeficit.ts`
-- `src/hooks/useStatistics.ts`
-
-**Korrigierte Formel:**
+**Aktuelle Berechnung:**
 ```text
-BARGELD = pos_total + GutscheineVK
-          - Kreditkarten
-          - OrderSmart
-          - Wolt
-          - GutscheineEL
-          - FineDine
-          - Einladung
-          - OffeneRE
-          - Vorschuss
-          - Ausgaben
-          + Fehlbetrag Vortag
+POS Differenz = pos_total - kellnerUmsatz - takeaway
+             = 3.475,20 - 3.111,50 - 229,30 = 134,40 (FALSCH - Warnung erscheint)
 ```
 
-### Teil 2: Manuellen Anfangs-Fehlbetrag ermoeglichen
-
-Ein neues Feld `initial_cash_deficit` in der `restaurants`-Tabelle speichert den Startwert aus der Excel-Zeit. Dieser wird in der Berechnung des aeltesten Tages als Vortags-Fehlbetrag beruecksichtigt.
-
-**Aenderungen:**
-
-1. **Datenbank-Migration**: Spalte `initial_cash_deficit` (NUMERIC, default 0) zur `restaurants`-Tabelle hinzufuegen
-2. **Einstellungen-UI**: Neues Eingabefeld "Anfangs-Fehlbetrag" in den Restaurant-Einstellungen (oder als einmaliger Eintrag in den Kassenbuch-Einstellungen)
-3. **`usePreviousDayDeficit.ts`**: Wenn keine frueheren Sessions existieren, den `initial_cash_deficit` als Startwert verwenden
-4. **`useCashBalanceData.ts`**: Den initialen Fehlbetrag beim ersten Tag der Berechnung beruecksichtigen
-
-## Technische Details
-
-### Migration SQL
+**Korrekte Berechnung:**
 ```text
-ALTER TABLE restaurants
-ADD COLUMN initial_cash_deficit NUMERIC DEFAULT 0;
+POS Differenz = pos_total - kellnerUmsatz - takeaway - ordersmart - wolt
+             = 3.475,20 - 3.111,50 - 229,30 - 134,40 - 0 = 0,00 (RICHTIG - keine Warnung)
 ```
 
-### Logik-Aenderung in usePreviousDayDeficit
-```text
-Wenn keine Sessions vor dem gewaehlten Datum existieren:
-  -> return restaurant.initial_cash_deficit (z.B. -244.53)
-Sonst:
-  -> normale Berechnung wie bisher
-```
+## Aenderungen
 
-### Eingabefeld
-In den Kassenbuch-Einstellungen (PettyCashSetting oder CashBalanceSummary) ein Feld:
-- Label: "Fehlbetrag aus vorheriger Abrechnung"
-- Erklaerung: "Trage hier den Fehlbetrag aus der letzten Excel-Abrechnung ein"
-- Wird einmalig gesetzt und dann automatisch uebernommen
+### 1. DailySummary.tsx
+- Zeile 417/419/426/429: `posMismatch - formData.takeaway_total` ersetzen durch `posMismatch - formData.takeaway_total - formData.ordersmart_revenue - formData.wolt_revenue`
 
-## Erwartetes Ergebnis
-Mit Takeaway nicht abgezogen und Vortag = -244,53:
-`3.475,20 - 3.216,60 - 134,40 - 170,60 + (-244,53) = -290,93 EUR`
+### 2. ManagerDashboard.tsx
+- Zeile 273/275/282/285: Gleiche Korrektur wie in DailySummary
+
+### 3. pdfExport.ts
+- Zeile 119: `adjustedPosMismatch` ebenfalls um OrderSmart und Wolt korrigieren
+
+## Ergebnis
+Die POS-Differenz-Warnung erscheint nur noch bei echten Diskrepanzen, nicht bei korrekt erfassten Plattform-Umsaetzen.
 
