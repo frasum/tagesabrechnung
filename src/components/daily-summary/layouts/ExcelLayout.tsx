@@ -126,7 +126,7 @@ export function ExcelLayout({
 
             {/* Section: Kredit Karten */}
             <div className="bg-muted/50 px-3 py-2 border-y border-l-4 border-l-amber-500">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Kredit Karten</span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">KK GL</span>
             </div>
             <table className="w-full text-sm">
               <tbody>
