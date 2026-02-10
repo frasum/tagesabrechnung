@@ -61,7 +61,7 @@ export default function WaiterCashUp() {
   const handleCreateSession = async () => {
     if (!restaurantId) return;
     try {
-      await createSession.mutateAsync({ date: selectedDate, restaurantId });
+      await createSession.mutateAsync({ date: selectedDate, restaurantId, createdByName: user?.name || undefined });
       toast({
         title: 'Session erstellt',
         description: `Session für ${format(selectedDate, 'dd.MM.yyyy')} wurde erstellt.`

@@ -118,7 +118,7 @@ export default function WaiterMobile() {
       // Create session if not exists
       let sessionId = session?.id;
       if (!sessionId) {
-        const newSession = await createSession.mutateAsync({ date: today, restaurantId });
+        const newSession = await createSession.mutateAsync({ date: today, restaurantId, createdByName: user?.name || undefined });
         sessionId = newSession.id;
       }
 

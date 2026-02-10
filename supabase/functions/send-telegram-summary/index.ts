@@ -75,8 +75,9 @@ Deno.serve(async (req) => {
 
       lines.push(`*${restaurant.name}:*`);
       lines.push(`  Vectron: ${formatEur(posTotal)}`);
-      if (session.created_by_name) {
-        lines.push(`  Erstellt von: ${session.created_by_name}`);
+      const managerName = session.created_by_name || session.updated_by_name;
+      if (managerName) {
+        lines.push(`  Erstellt von: ${managerName}`);
       }
 
       if (shifts && shifts.length > 0) {

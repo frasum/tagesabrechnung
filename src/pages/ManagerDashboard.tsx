@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { format, isToday, isYesterday } from 'date-fns';
 import { useSelectedDate } from '@/contexts/DateContext';
 import { de } from 'date-fns/locale';
@@ -32,6 +33,7 @@ import { useLabels } from '@/hooks/useLabels';
 export default function ManagerDashboard() {
   const { selectedDate, setSelectedDate } = useSelectedDate();
   const { restaurantId } = useRestaurant();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [showTransferDialog, setShowTransferDialog] = useState(false);
   // Form state
@@ -114,7 +116,7 @@ export default function ManagerDashboard() {
   const handleCreateSession = async () => {
     if (!restaurantId) return;
     try {
-      await createSession.mutateAsync({ date: selectedDate, restaurantId });
+      await createSession.mutateAsync({ date: selectedDate, restaurantId, createdByName: user?.name || undefined });
       toast({ title: 'Session erstellt', description: `Session für ${format(selectedDate, 'dd.MM.yyyy')} wurde erstellt.` });
     } catch (error) {
       toast({ title: 'Fehler', description: 'Session konnte nicht erstellt werden.', variant: 'destructive' });
