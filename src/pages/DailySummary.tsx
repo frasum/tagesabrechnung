@@ -1152,8 +1152,8 @@ export default function DailySummary() {
             {locked && <SessionLockedBanner />}
             {renderExcelLayout()}
 
-            {/* Label Settings for managers */}
-            {user?.permissionLevel && user.permissionLevel !== 'staff' && (
+            {/* Label Settings for admins only */}
+            {user?.permissionLevel === 'admin' && (
               <LabelSettings />
             )}
           </>
