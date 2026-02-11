@@ -810,6 +810,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_duplicate_staff_name: {
+        Args: { p_exclude_id?: string; p_name: string }
+        Returns: {
+          error_message: string
+          exists: boolean
+        }[]
+      }
       get_staff_permission: {
         Args: { p_staff_id: string }
         Returns: Database["public"]["Enums"]["app_permission_level"]

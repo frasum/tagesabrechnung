@@ -229,6 +229,15 @@ export function useCreateStaff() {
     mutationFn: async (input: StaffInput) => {
       const { restaurant_ids, pin_code, ...staffData } = input;
       
+      // Check for duplicate staff name
+      const { data: duplicateCheck, error: checkError } = await supabase
+        .rpc('check_duplicate_staff_name', { p_name: input.name });
+      
+      if (checkError) throw checkError;
+      if (duplicateCheck && duplicateCheck.length > 0 && duplicateCheck[0].exists) {
+        throw new Error(duplicateCheck[0].error_message || 'Ein Mitarbeiter mit diesem Namen existiert bereits.');
+      }
+      
       // Create the staff member (without pin_code, which is in separate table)
       const { data: staff, error } = await supabase
         .from('staff')
@@ -287,6 +296,17 @@ export function useUpdateStaff() {
 
   return useMutation({
     mutationFn: async ({ id, restaurant_ids, pin_code, ...staffData }: Partial<StaffInput> & { id: string }) => {
+      // Check for duplicate staff name if name is being changed
+      if (staffData.name) {
+        const { data: duplicateCheck, error: checkError } = await supabase
+          .rpc('check_duplicate_staff_name', { p_name: staffData.name, p_exclude_id: id });
+        
+        if (checkError) throw checkError;
+        if (duplicateCheck && duplicateCheck.length > 0 && duplicateCheck[0].exists) {
+          throw new Error(duplicateCheck[0].error_message || 'Ein Mitarbeiter mit diesem Namen existiert bereits.');
+        }
+      }
+      
       // Update the staff member (without pin_code, which is in separate table)
       const { data, error } = await supabase
         .from('staff')
