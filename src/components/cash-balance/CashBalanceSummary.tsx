@@ -55,7 +55,7 @@ export function CashBalanceSummary({
                      <p className="text-sm text-muted-foreground">
                        {monthLabel ? `Bargeld bis ${monthLabel}` : 'Bargeld gesamt'}
                      </p>
-                     <p className="text-xl font-semibold tabular-nums text-success">
+                     <p className={`text-xl font-semibold tabular-nums ${totalCash >= 0 ? 'text-success' : 'text-destructive'}`}>
                        {formatCurrency(totalCash)}
                      </p>
                    </div>
