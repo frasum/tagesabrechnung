@@ -68,13 +68,13 @@ export function CashBalanceSummary({
                       -{formatCurrency(totalDeposits)}
                     </p>
                   </div>
-                  <div>
-                    <Separator orientation="horizontal" className="sm:hidden mb-2" />
-                    <p className="text-sm text-muted-foreground font-medium">Verbleibendes Bargeld</p>
-                    <p className={`text-2xl font-bold tabular-nums ${remainingCash >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}>
-                      {formatCurrency(remainingCash)}
-                    </p>
-                  </div>
+                   <div>
+                     <Separator orientation="horizontal" className="sm:hidden mb-2" />
+                     <p className="text-sm text-muted-foreground font-medium">Verbleibendes Bargeld</p>
+                     <p className={`text-2xl font-bold tabular-nums ${remainingCash >= 0 ? 'text-success' : 'text-destructive'}`}>
+                       {formatCurrency(remainingCash)}
+                     </p>
+                   </div>
                 </div>
               </div>
 
