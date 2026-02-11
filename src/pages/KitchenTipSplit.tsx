@@ -35,8 +35,8 @@ export default function KitchenTipSplit() {
 
   // Form state
   const [staffName, setStaffName] = useState('');
-  const [shiftStart, setShiftStart] = useState('09:00');
-  const [shiftEnd, setShiftEnd] = useState('17:00');
+  const [shiftStart, setShiftStart] = useState('15:00');
+  const [shiftEnd, setShiftEnd] = useState('23:30');
 
   // Data hooks
   const { data: session, isLoading: sessionLoading } = useSession(selectedDate, restaurantId);
