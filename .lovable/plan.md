@@ -1,39 +1,62 @@
 
 
-# Kassenbestand in Tagesabrechnung und PDF anzeigen
+# Telegram-Zusammenfassung erweitern: Kassenbestand und Kuechenteam
 
-## Berechnung
+## Was sich aendert
 
-```text
-Kassenbestand = Wechselgeld + Summe(Bargeld aller Tage bis einschliesslich ausgewaehltem Datum)
+Die taegliche Telegram-Nachricht wird um zwei Informationen pro Restaurant ergaenzt:
+
+1. **Kassenbestand** -- der kumulative Bargeldbestand bis zum jeweiligen Datum
+2. **Kueche** -- Liste der Kuechenmitarbeiter, die an dem Tag gearbeitet haben (mit Stunden)
+
+## Beispiel-Nachricht (vorher vs. nachher)
+
+**Vorher:**
+```
+Restaurant XY:
+  Vectron: 3.450,00 EUR
+  Erstellt von: Gerard
+
+  Kellner:
+  - Max: 1.200,00 EUR (Abgabe: 23:15)
+  - Lisa: 980,00 EUR (Abgabe: 22:50)
 ```
 
-Bankeinzahlungen werden NICHT abgezogen.
+**Nachher:**
+```
+Restaurant XY:
+  Vectron: 3.450,00 EUR
+  Kassenbestand: 12.340,50 EUR
+  Erstellt von: Gerard
 
-## Aenderungen
+  Kellner:
+  - Max: 1.200,00 EUR (Abgabe: 23:15)
+  - Lisa: 980,00 EUR (Abgabe: 22:50)
 
-### 1. Neuer Hook: `src/hooks/useRemainingCash.ts`
-- Nutzt `useCashBalanceData` und `usePettyCash` (beides vorhanden)
-- Filtert die Tages-Zeilen bis zum ausgewaehlten Datum
-- Summiert das Bargeld und addiert das Wechselgeld
-- Gibt `{ remainingCash, isLoading }` zurueck
+  Kueche:
+  - Ali (10:00-22:00, 12h)
+  - Marco (11:00-20:00, 9h)
+```
 
-### 2. DailySummary.tsx
-- `useRemainingCash` Hook einbinden
-- Neue StatCard unterhalb der Bargeld-Karte:
-  - Label: "Kassenbestand"
-  - Icon: Wallet
-  - Wert: formatierter Betrag (gruen wenn positiv, rot wenn negativ)
-- Den Wert an `generateDailySummaryPDF` weitergeben
+## Technische Umsetzung
 
-### 3. pdfExport.ts
-- Neues optionales Feld `remainingCash?: number` im `PDFExportData`-Interface
-- Nach der "ohne hilfmahl"-Zeile eine neue hervorgehobene Zeile:
-  - **"Kassenbestand"** mit dem Betrag
-  - Hintergrundfarbe: gruen bei positivem Wert, rot bei negativem
+### Aenderung: `supabase/functions/send-telegram-summary/index.ts`
 
-## Technische Details
-- Keine neuen DB-Abfragen -- alles basiert auf vorhandenen Hooks
-- `useCashBalanceData` laedt bereits alle Sessions fuer das Restaurant
-- `usePettyCash` laedt das Wechselgeld aus der settings-Tabelle
-- Der Hook filtert nur nach Datum und summiert
+Fuer jedes Restaurant werden zwei zusaetzliche Abfragen gemacht:
+
+**Kassenbestand-Berechnung (im Edge Function):**
+- Alle Sessions des Restaurants bis zum Zieldatum laden
+- Pro Session die zugehoerigen waiter_shifts (open_invoices), expenses und advances laden
+- Bargeld pro Tag berechnen nach der bestehenden Formel:
+  `Vectron + Gutschein-VK - Kreditkarten - OrderSmart - Wolt - Gutschein-EL - FineDine - Einladung - offeneRE - Vorschuss - Ausgaben`
+- Alle Tageswerte summieren
+- Wechselgeld (petty_cash) aus der settings-Tabelle addieren
+- Ergebnis als "Kassenbestand" in die Nachricht einfuegen
+
+**Kuechenteam:**
+- `kitchen_shifts` Tabelle abfragen fuer die jeweilige Session
+- Name, Schichtzeiten und Stunden auflisten
+
+### Keine weiteren Dateien betroffen
+Die Aenderung beschraenkt sich ausschliesslich auf die Edge Function. Es sind keine Datenbank-Aenderungen oder Frontend-Aenderungen noetig.
+
