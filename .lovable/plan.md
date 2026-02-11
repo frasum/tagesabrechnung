@@ -1,46 +1,57 @@
 
-## Ziel
-Die Pfeile (Up/Down-Stepper) im Feld **„Gästeanzahl“** vollständig entfernen – in allen Browsern.
+## Validierungsmeldung für fehlende Gästeanzahl beim PDF-Export
 
-## Warum die Pfeile noch da sind
-Das Feld ist aktuell `type="number"`. Manche Browser (insb. Safari/Firefox, teils auch macOS) zeigen die Stepper-Pfeile trotz einzelner CSS-Regeln weiterhin oder nur teilweise ausgeblendet.
+### Aktueller Zustand
+Der PDF-Export-Button zeigt derzeit `disabled={formData.guest_count === 0}`, was bedeutet:
+- Der Button ist grau/deaktiviert, wenn keine Gästeanzahl eingetragen ist
+- Nutzer können den Button nicht klicken
+- Es gibt keine visuelle Rückmeldung, **warum** der Button deaktiviert ist
 
-## Lösung (robust, browserübergreifend)
-Wir machen das „Gästeanzahl“-Feld zu einem **Textfeld mit numerischer Tastatur**, statt `type="number"`.
-- `type="text"`
-- `inputMode="numeric"` + `pattern="[0-9]*"` → auf Mobilgeräten kommt weiterhin die Zifferntastatur
-- Eingabe wird beim Tippen auf **nur Ziffern** gefiltert
-- Gespeichert wird weiterhin eine Zahl (Integer) wie bisher
+### Gewünschter Zustand
+- Der Button bleibt **klickbar** (nicht mehr `disabled`)
+- Wenn die Gästeanzahl 0 ist, zeigt ein Toast-Hinweis: "Gästeanzahl fehlt" (mit `variant="destructive"`)
+- Der PDF-Export wird nicht durchgeführt
+- Wenn die Gästeanzahl `> 0` ist, läuft der PDF-Export normal ab
 
-Damit gibt es keine Stepper-Pfeile mehr, weil die Browser diese nur bei `type="number"` anzeigen.
+### Technische Umsetzung
 
-## Konkrete Änderungen
+**Datei:** `src/pages/DailySummary.tsx`
 
-### 1) `src/components/daily-summary/layouts/ExcelLayout.tsx`
-Im „Gästeanzahl“-Row:
-- `Input` ändern von:
-  - `type="number"` → `type="text"`
-  - `min={0}` entfernen (gilt nur für number)
-- Value-Control:
-  - `value={guestCount > 0 ? String(guestCount) : ''}`
-- `onChange` anpassen:
-  - Ziffern filtern: `const cleaned = e.target.value.replace(/\D/g, '')`
-  - `onGuestCountChange?.(cleaned ? parseInt(cleaned, 10) : 0)`
-- Klassen:
-  - Spinner-spezifische Klassen können raus (werden nicht mehr benötigt)
-  - restliche Styles bleiben gleich (Höhe, Breite, right-align, etc.)
+**Änderungen am PDF-Export-Button (Zeile 1081):**
 
-### 2) Testfälle (kurz)
-- Gästeanzahl eintippen (z.B. 142) → keine Pfeile sichtbar
-- Feld leeren → wird als 0 gespeichert, Platzhalter „0“ sichtbar
-- Durchschnitt (⌀) erscheint weiterhin erst ab Gästeanzahl > 0
-- PDF-Export Button bleibt wie gewünscht erst aktiv, wenn Gästeanzahl > 0
+1. **Attribut `disabled={...}` entfernen** – Der Button wird nicht mehr deaktiviert
+2. **`onClick` Handler anpassen:**
+   ```typescript
+   onClick={() => {
+     if (formData.guest_count === 0) {
+       toast({ 
+         title: "Gästeanzahl fehlt", 
+         variant: "destructive" 
+       });
+       return;
+     }
+     handleExportPDF();
+   }}
+   ```
 
-## Risiko / Nebenwirkungen
-- Vorteil: Pfeile garantiert weg.
-- Verhalten bleibt identisch: es werden nur ganze Zahlen akzeptiert (keine Kommas/Punkte).
-- Mobile Usability bleibt gut durch `inputMode="numeric"`.
+**Was bleibt gleich:**
+- Der `handleExportPDF`-Hook ist bereits vorhanden (Zeile 318)
+- Der `toast`-Hook ist bereits importiert (Zeile 21)
+- Die Gesamtlogik ändert sich nicht – nur die Validierung wird zur Laufzeit geprüft statt vorher
 
-## Umsetzungsschritte (in Reihenfolge)
-1. ExcelLayout „Gästeanzahl“-Input von number → text umstellen (inkl. Filter/Parsing).
-2. Kurz in der Vorschau prüfen (Desktop + ggf. mobile View), ob Pfeile weg sind und Berechnung/Export unverändert funktionieren.
+### Benutzerfluss nach der Änderung
+
+1. **Nutzer drückt PDF-Export ohne Gästeanzahl:**
+   - Toast erscheint: "Gästeanzahl fehlt" (rot)
+   - Kein Export
+   - Nutzer weiß sofort, was zu tun ist
+
+2. **Nutzer trägt Gästeanzahl ein (z.B. 5) und drückt PDF-Export:**
+   - Toast verschwindet
+   - PDF-Export lädt/wird generiert
+   - Alles funktioniert wie gewohnt
+
+### Risiken / Nebeneffekte
+- Keine – die Validierungslogik bleibt identisch, nur die **Präsentation** ändert sich
+- Button-Styling bleibt unverändert
+- Mobile Nutzbarkeit unverändert
