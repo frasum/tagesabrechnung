@@ -1078,7 +1078,13 @@ export default function DailySummary() {
           <div className="flex items-center gap-2">
             <DateSelector date={selectedDate} onDateChange={setSelectedDate} />
             {session && (
-              <Button onClick={handleExportPDF} variant="outline" className="gap-2" disabled={formData.guest_count === 0}>
+              <Button onClick={() => {
+                if (formData.guest_count === 0) {
+                  toast({ title: "Gästeanzahl fehlt", variant: "destructive" });
+                  return;
+                }
+                handleExportPDF();
+              }} variant="outline" className="gap-2">
                 <Download className="w-4 h-4" />
                 PDF Export
               </Button>
