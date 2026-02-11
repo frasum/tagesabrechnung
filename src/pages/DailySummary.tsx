@@ -1040,6 +1040,8 @@ export default function DailySummary() {
       isFieldHidden={isFieldHidden}
       previousDeficit={previousDeficit}
       remainingCash={remainingCash}
+      createdByName={session?.created_by_name || undefined}
+      updatedByName={session?.updated_by_name || undefined}
     />
   );
 
