@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCurrentMonthTips } from '@/hooks/useMonthlyStaffTips';
+import { useRestaurant } from '@/hooks/useRestaurant';
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value);
@@ -15,7 +16,8 @@ const formatHours = (hours: number) => {
 };
 
 export function MonthlyKitchenTipCard() {
-  const { data: monthData, isLoading } = useCurrentMonthTips();
+  const { restaurantId } = useRestaurant();
+  const { data: monthData, isLoading } = useCurrentMonthTips(restaurantId);
   
   const currentMonthLabel = format(new Date(), 'MMMM yyyy', { locale: de });
 

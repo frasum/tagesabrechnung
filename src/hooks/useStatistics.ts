@@ -48,9 +48,10 @@ export interface CustomDateRange {
   to: Date;
 }
 
-export function useStatistics(timeRange: TimeRange = 'month', customRange?: CustomDateRange) {
+export function useStatistics(timeRange: TimeRange = 'month', customRange?: CustomDateRange, restaurantId?: string | null) {
   return useQuery({
-    queryKey: ['statistics', timeRange, customRange?.from?.toISOString(), customRange?.to?.toISOString()],
+    queryKey: ['statistics', timeRange, customRange?.from?.toISOString(), customRange?.to?.toISOString(), restaurantId],
+    enabled: !!restaurantId,
     queryFn: async () => {
       const now = new Date();
       let startDate: Date;
@@ -81,6 +82,7 @@ export function useStatistics(timeRange: TimeRange = 'month', customRange?: Cust
       const { data: sessions, error: sessionsError } = await supabase
         .from('sessions')
         .select('*')
+        .eq('restaurant_id', restaurantId!)
         .gte('session_date', format(startDate, 'yyyy-MM-dd'))
         .lte('session_date', format(endDate, 'yyyy-MM-dd'))
         .order('session_date', { ascending: true });

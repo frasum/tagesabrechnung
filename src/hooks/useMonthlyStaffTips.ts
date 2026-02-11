@@ -19,7 +19,7 @@ export interface MonthlyTipData {
   totalKitchenHours: number;
 }
 
-async function fetchMonthlyStaffTips(monthsBack: number = 12): Promise<MonthlyTipData[]> {
+async function fetchMonthlyStaffTips(monthsBack: number = 12, restaurantId?: string): Promise<MonthlyTipData[]> {
   const now = new Date();
   const monthsData: MonthlyTipData[] = [];
 
@@ -27,12 +27,18 @@ async function fetchMonthlyStaffTips(monthsBack: number = 12): Promise<MonthlyTi
   const startDate = startOfMonth(subMonths(now, monthsBack - 1));
   const endDate = endOfMonth(now);
 
-  const { data: sessions, error: sessionsError } = await supabase
+  const query = supabase
     .from('sessions')
     .select('id, session_date')
     .gte('session_date', format(startDate, 'yyyy-MM-dd'))
     .lte('session_date', format(endDate, 'yyyy-MM-dd'))
     .order('session_date', { ascending: true });
+
+  if (restaurantId) {
+    query.eq('restaurant_id', restaurantId);
+  }
+
+  const { data: sessions, error: sessionsError } = await query;
 
   if (sessionsError) throw sessionsError;
   if (!sessions || sessions.length === 0) return [];
@@ -195,17 +201,18 @@ async function fetchMonthlyStaffTips(monthsBack: number = 12): Promise<MonthlyTi
   return monthsData.sort((a, b) => b.month.localeCompare(a.month));
 }
 
-export function useMonthlyStaffTips(monthsBack: number = 12) {
+export function useMonthlyStaffTips(monthsBack: number = 12, restaurantId?: string | null) {
   return useQuery({
-    queryKey: ['monthly-staff-tips', monthsBack],
-    queryFn: () => fetchMonthlyStaffTips(monthsBack),
+    queryKey: ['monthly-staff-tips', monthsBack, restaurantId],
+    queryFn: () => fetchMonthlyStaffTips(monthsBack, restaurantId || undefined),
+    enabled: !!restaurantId,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 
 // Helper hook to get current month data only
-export function useCurrentMonthTips() {
-  const { data, ...rest } = useMonthlyStaffTips(1);
+export function useCurrentMonthTips(restaurantId?: string | null) {
+  const { data, ...rest } = useMonthlyStaffTips(1, restaurantId);
   const currentMonth = format(new Date(), 'yyyy-MM');
   const currentMonthData = data?.find(m => m.month === currentMonth);
   
