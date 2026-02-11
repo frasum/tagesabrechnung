@@ -660,6 +660,51 @@ export type Database = {
           },
         ]
       }
+      telegram_settings: {
+        Row: {
+          bot_token: string
+          chat_id: string
+          created_at: string | null
+          excluded_restaurants: string[] | null
+          id: string
+          show_cash_balance: boolean | null
+          show_created_by: boolean | null
+          show_guest_count: boolean | null
+          show_kitchen: boolean | null
+          show_pos_total: boolean | null
+          show_waiters: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          bot_token?: string
+          chat_id?: string
+          created_at?: string | null
+          excluded_restaurants?: string[] | null
+          id?: string
+          show_cash_balance?: boolean | null
+          show_created_by?: boolean | null
+          show_guest_count?: boolean | null
+          show_kitchen?: boolean | null
+          show_pos_total?: boolean | null
+          show_waiters?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          bot_token?: string
+          chat_id?: string
+          created_at?: string | null
+          excluded_restaurants?: string[] | null
+          id?: string
+          show_cash_balance?: boolean | null
+          show_created_by?: boolean | null
+          show_guest_count?: boolean | null
+          show_kitchen?: boolean | null
+          show_pos_total?: boolean | null
+          show_waiters?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

@@ -16,7 +16,8 @@ import {
   QrCode,
   ChevronDown,
   LucideIcon,
-  Shield
+  Shield,
+  Send
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -221,6 +222,19 @@ export function AppLayout({ children }: AppLayoutProps) {
                   <Shield className="w-5 h-5" />
                   Berechtigungen
                 </Link>
+                <Link
+                  to="/telegram"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors",
+                    location.pathname === '/telegram'
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground" 
+                      : "text-sidebar-foreground hover:bg-sidebar-accent"
+                  )}
+                >
+                  <Send className="w-5 h-5" />
+                  Telegram
+                </Link>
               </>
             )}
             <button
@@ -311,6 +325,18 @@ export function AppLayout({ children }: AppLayoutProps) {
               >
                 <Shield className="w-5 h-5" />
                 Berechtigungen
+              </Link>
+              <Link
+                to="/telegram"
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                  location.pathname === '/telegram'
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground" 
+                    : "text-sidebar-foreground hover:bg-sidebar-accent"
+                )}
+              >
+                <Send className="w-5 h-5" />
+                Telegram
               </Link>
             </>
           )}

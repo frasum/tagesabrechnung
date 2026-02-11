@@ -28,6 +28,7 @@ const OAuthCallback = lazy(() => import("./pages/OAuthCallback"));
 const ConfirmLoginPage = lazy(() => import("./pages/ConfirmLoginPage").then(m => ({ default: m.ConfirmLoginPage })));
 const PermissionManagement = lazy(() => import("./pages/PermissionManagement"));
 const RestaurantSelect = lazy(() => import("./pages/RestaurantSelect"));
+const TelegramSettings = lazy(() => import("./pages/TelegramSettings"));
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -104,6 +105,7 @@ function AppContent() {
           <Route path="/confirm-login/:token" element={<ConfirmLoginPage />} />
           <Route path="/staff" element={<ProtectedRoute requiredLevel="admin"><StaffManagement /></ProtectedRoute>} />
           <Route path="/permissions" element={<ProtectedRoute requiredLevel="admin"><PermissionManagement /></ProtectedRoute>} />
+          <Route path="/telegram" element={<ProtectedRoute requiredLevel="admin"><TelegramSettings /></ProtectedRoute>} />
 
           {/* Redirect root to restaurant selection */}
           <Route path="/" element={<Navigate to="/select-restaurant" replace />} />
