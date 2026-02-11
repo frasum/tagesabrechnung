@@ -85,6 +85,10 @@ Deno.serve(async (req) => {
 
       lines.push(`*${restaurant.name}:*`);
       lines.push(`  Vectron: ${formatEur(posTotal)}`);
+      if (session.guest_count && session.guest_count > 0) {
+        const avgSpend = posTotal / session.guest_count;
+        lines.push(`  Gäste: ${session.guest_count} (⌀ ${formatEur(avgSpend)})`);
+      }
       if (cashBalance !== null) {
         lines.push(`  Kassenbestand: ${formatEur(cashBalance)}`);
       }
