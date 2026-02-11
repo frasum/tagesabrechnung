@@ -6,11 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, Send } from 'lucide-react';
+import { Loader2, Send, Info } from 'lucide-react';
 import { useTelegramSettings } from '@/hooks/useTelegramSettings';
 import { useRestaurants } from '@/hooks/useRestaurant';
 import { RestaurantProvider } from '@/contexts/RestaurantContext';
 import { DateProvider } from '@/contexts/DateContext';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const metricToggles = [
   { key: 'show_pos_total', label: 'Vectron (Tagesumsatz)' },
@@ -28,8 +29,6 @@ function TelegramSettingsContent() {
   const { settings, isLoading, save, isSaving, sendTest, isSending } = useTelegramSettings();
   const { data: restaurants = [] } = useRestaurants();
 
-  const [botToken, setBotToken] = useState('');
-  const [chatId, setChatId] = useState('');
   const [excludedRestaurants, setExcludedRestaurants] = useState<string[]>([]);
   const [metrics, setMetrics] = useState<Record<MetricKey, boolean>>({
     show_pos_total: true,
@@ -48,8 +47,6 @@ function TelegramSettingsContent() {
 
   useEffect(() => {
     if (settings) {
-      setBotToken(settings.bot_token);
-      setChatId(settings.chat_id);
       setExcludedRestaurants(settings.excluded_restaurants || []);
       setMetrics({
         show_pos_total: settings.show_pos_total,
@@ -66,8 +63,6 @@ function TelegramSettingsContent() {
   const handleSave = () => {
     save({
       id: settings?.id,
-      bot_token: botToken,
-      chat_id: chatId,
       excluded_restaurants: excludedRestaurants,
       ...metrics,
     });
@@ -91,32 +86,12 @@ function TelegramSettingsContent() {
     <div className="max-w-2xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold">Telegram Einstellungen</h1>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Verbindung</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="bot-token">Bot-Token</Label>
-            <Input
-              id="bot-token"
-              type="password"
-              value={botToken}
-              onChange={e => setBotToken(e.target.value)}
-              placeholder="123456:ABC-DEF..."
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="chat-id">Chat-ID</Label>
-            <Input
-              id="chat-id"
-              value={chatId}
-              onChange={e => setChatId(e.target.value)}
-              placeholder="-1001234567890"
-            />
-          </div>
-        </CardContent>
-      </Card>
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertDescription>
+          Bot-Token und Chat-ID werden sicher über Umgebungsvariablen verwaltet und sind nicht über die Oberfläche einsehbar.
+        </AlertDescription>
+      </Alert>
 
       <Card>
         <CardHeader>

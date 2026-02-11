@@ -41,39 +41,25 @@ interface DayCashDetails {
 async function loadSettings(supabase: any): Promise<TelegramSettings> {
   const { data } = await supabase
     .from("telegram_settings")
-    .select("*")
+    .select("excluded_restaurants, show_pos_total, show_guest_count, show_cash_balance, show_cash_details, show_created_by, show_waiters, show_kitchen")
     .limit(1)
     .maybeSingle();
 
-  const envToken = Deno.env.get("TELEGRAM_BOT_TOKEN") || "";
-  const envChatId = Deno.env.get("TELEGRAM_CHAT_ID") || "";
-
-  if (!data) {
-    return {
-      bot_token: envToken,
-      chat_id: envChatId,
-      excluded_restaurants: [],
-      show_pos_total: true,
-      show_guest_count: true,
-      show_cash_balance: true,
-      show_cash_details: true,
-      show_created_by: true,
-      show_waiters: true,
-      show_kitchen: true,
-    };
-  }
+  // Credentials ONLY from environment variables (never from DB)
+  const bot_token = Deno.env.get("TELEGRAM_BOT_TOKEN") || "";
+  const chat_id = Deno.env.get("TELEGRAM_CHAT_ID") || "";
 
   return {
-    bot_token: data.bot_token || envToken,
-    chat_id: data.chat_id || envChatId,
-    excluded_restaurants: data.excluded_restaurants || [],
-    show_pos_total: data.show_pos_total ?? true,
-    show_guest_count: data.show_guest_count ?? true,
-    show_cash_balance: data.show_cash_balance ?? true,
-    show_cash_details: data.show_cash_details ?? true,
-    show_created_by: data.show_created_by ?? true,
-    show_waiters: data.show_waiters ?? true,
-    show_kitchen: data.show_kitchen ?? true,
+    bot_token,
+    chat_id,
+    excluded_restaurants: data?.excluded_restaurants || [],
+    show_pos_total: data?.show_pos_total ?? true,
+    show_guest_count: data?.show_guest_count ?? true,
+    show_cash_balance: data?.show_cash_balance ?? true,
+    show_cash_details: data?.show_cash_details ?? true,
+    show_created_by: data?.show_created_by ?? true,
+    show_waiters: data?.show_waiters ?? true,
+    show_kitchen: data?.show_kitchen ?? true,
   };
 }
 
