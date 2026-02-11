@@ -52,13 +52,13 @@ export function CashBalanceSummary({
                 <InitialDeficitSetting />
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">
-                      {monthLabel ? `Bargeld bis ${monthLabel}` : 'Bargeld gesamt'}
-                    </p>
-                    <p className="text-xl font-semibold tabular-nums text-foreground">
-                      {formatCurrency(totalCash)}
-                    </p>
-                  </div>
+                     <p className="text-sm text-muted-foreground">
+                       {monthLabel ? `Bargeld bis ${monthLabel}` : 'Bargeld gesamt'}
+                     </p>
+                     <p className="text-xl font-semibold tabular-nums text-success">
+                       {formatCurrency(totalCash)}
+                     </p>
+                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground flex items-center gap-1">
                       <Landmark className="h-3 w-3" />
