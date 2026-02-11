@@ -303,7 +303,7 @@ export default function KitchenTipSplit() {
             </div>
 
             {/* Monthly Overview Card */}
-            <MonthlyKitchenTipCard />
+            {user?.permissionLevel === 'admin' && <MonthlyKitchenTipCard />}
 
             {/* Info Box */}
             {waiterShifts.length === 0 && (
