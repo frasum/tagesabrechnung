@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import { User, PenLine } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { CurrencyInput } from '@/components/shared/CurrencyInput';
@@ -63,6 +64,8 @@ interface ExcelLayoutProps {
   isFieldHidden?: (key: LabelKey) => boolean;
   previousDeficit?: number;
   remainingCash?: number;
+  createdByName?: string;
+  updatedByName?: string;
 }
 
 export function ExcelLayout({
@@ -92,6 +95,8 @@ export function ExcelLayout({
   isFieldHidden: ifh,
   previousDeficit = 0,
   remainingCash,
+  createdByName,
+  updatedByName,
 }: ExcelLayoutProps) {
   const getLabel = gl || ((key: LabelKey) => key);
   const isFieldHidden = ifh || (() => false);
@@ -110,6 +115,24 @@ export function ExcelLayout({
   return (
     <div className="space-y-4">
       {warnings}
+
+      {/* Session creator/editor info */}
+      {(createdByName || updatedByName) && (
+        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+          {createdByName && (
+            <span className="inline-flex items-center gap-1.5">
+              <User className="w-3.5 h-3.5" />
+              Erstellt von: <span className="font-medium text-foreground">{createdByName}</span>
+            </span>
+          )}
+          {updatedByName && updatedByName !== createdByName && (
+            <span className="inline-flex items-center gap-1.5">
+              <PenLine className="w-3.5 h-3.5" />
+              Bearbeitet von: <span className="font-medium text-foreground">{updatedByName}</span>
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Main Excel-style two-column layout */}
       <div className="grid lg:grid-cols-[minmax(320px,2fr)_minmax(400px,3fr)] gap-4">
