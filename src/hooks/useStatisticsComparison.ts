@@ -26,10 +26,11 @@ interface ComparisonResult {
   previousPeriodLabel: string;
 }
 
-async function fetchPeriodStats(startDate: Date, endDate: Date): Promise<StatsSummary> {
+async function fetchPeriodStats(startDate: Date, endDate: Date, restaurantId: string): Promise<StatsSummary> {
   const { data: sessions, error: sessionsError } = await supabase
     .from('sessions')
     .select('*')
+    .eq('restaurant_id', restaurantId)
     .gte('session_date', format(startDate, 'yyyy-MM-dd'))
     .lte('session_date', format(endDate, 'yyyy-MM-dd'));
 
@@ -96,9 +97,10 @@ function calculatePercentChange(current: number, previous: number): number {
   return ((current - previous) / Math.abs(previous)) * 100;
 }
 
-export function useStatisticsComparison(timeRange: TimeRange = 'month', customRange?: CustomDateRange) {
+export function useStatisticsComparison(timeRange: TimeRange = 'month', customRange?: CustomDateRange, restaurantId?: string | null) {
   return useQuery({
-    queryKey: ['statistics-comparison', timeRange, customRange?.from?.toISOString(), customRange?.to?.toISOString()],
+    queryKey: ['statistics-comparison', timeRange, customRange?.from?.toISOString(), customRange?.to?.toISOString(), restaurantId],
+    enabled: !!restaurantId,
     queryFn: async (): Promise<ComparisonResult> => {
       const now = new Date();
       let currentStart: Date;
@@ -148,8 +150,8 @@ export function useStatisticsComparison(timeRange: TimeRange = 'month', customRa
       }
 
       const [current, previous] = await Promise.all([
-        fetchPeriodStats(currentStart, currentEnd),
-        fetchPeriodStats(previousStart, previousEnd),
+        fetchPeriodStats(currentStart, currentEnd, restaurantId!),
+        fetchPeriodStats(previousStart, previousEnd, restaurantId!),
       ]);
 
       return {

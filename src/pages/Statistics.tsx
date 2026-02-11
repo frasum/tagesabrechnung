@@ -90,9 +90,9 @@ export default function Statistics() {
     ? { from: customDateRange.from, to: customDateRange.to }
     : undefined;
 
-  const { data, isLoading } = useStatistics(timeRange, customRange);
-  const { data: comparisonData, isLoading: comparisonLoading } = useStatisticsComparison(timeRange, customRange);
   const { restaurantId } = useRestaurant();
+  const { data, isLoading } = useStatistics(timeRange, customRange, restaurantId);
+  const { data: comparisonData, isLoading: comparisonLoading } = useStatisticsComparison(timeRange, customRange, restaurantId);
   const { getLabel } = useLabels(restaurantId);
 
   const handleTimeRangeChange = (value: string) => {
