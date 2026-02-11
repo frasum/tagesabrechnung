@@ -1,35 +1,57 @@
 
 
-## Bug: „Sonstige Einnahmen" fehlen in der BARGELD-Berechnung
+## Automatische Abschoepfung: Kassenbestand wird auf Wechselgeld gekappt
 
-### Problem
-Das Feld „Sonstige Einnahmen" wird zwar gespeichert, aber nirgendwo in die BARGELD-Berechnung einbezogen. Der bisherige Kommentar im Code lautet: *„sonstige_einnahme is already included in pos_total (Vectron)"* -- das stimmt aber nicht, wenn der Wert manuell separat eingetragen wird. Das Ergebnis: 500 EUR eingegeben, aber weder BARGELD noch Kassenbestand aendern sich.
+### Konzept
+Wenn am Ende eines Tages der Kassenbestand (Wechselgeld + kumuliertes Bargeld) den Wechselgeld-Betrag (z.B. 2.000 EUR) uebersteigt, wird der Ueberschuss als "Abschoepfung" angezeigt. Der Kassenbestand wird auf den Wechselgeld-Betrag zurueckgesetzt. Die Abschoepfung wird **nur berechnet und angezeigt**, nicht separat gespeichert.
 
-### Loesung
-`sonstige_einnahme` wird in allen BARGELD-Formeln als **Einnahme addiert** (genau wie `vouchers_sold`).
+### Logik (Tag-fuer-Tag-Simulation)
 
-### Betroffene Dateien (5 Stellen)
+```text
+Fuer jeden Tag:
+  kassenbestand = vorheriger_kassenbestand + bargeld_heute
+  wenn kassenbestand > wechselgeld:
+    abschoepfung = kassenbestand - wechselgeld
+    kassenbestand = wechselgeld
+  sonst:
+    abschoepfung = 0
+```
 
-1. **`src/pages/DailySummary.tsx`** (Zeile ~272)
-   - `+ formData.sonstige_einnahme` zur Bargeld-Formel hinzufuegen
+Beispiel mit Wechselgeld = 2.000 EUR:
+- Tag 1: Bargeld 209,07 EUR -> Kassenbestand 2.209,07 -> Abschoepfung 209,07 -> Kassenbestand = 2.000
+- Tag 2: Bargeld -50 EUR -> Kassenbestand 1.950 -> keine Abschoepfung -> Kassenbestand = 1.950
+- Tag 3: Bargeld 300 EUR -> Kassenbestand 2.250 -> Abschoepfung 250 -> Kassenbestand = 2.000
 
-2. **`src/pages/ManagerDashboard.tsx`** (Zeile ~231)
-   - `+ formData.sonstige_einnahme` zur bargeldPreview-Formel hinzufuegen
+### Technische Umsetzung
 
-3. **`src/hooks/useCashBalanceData.ts`** (Zeile ~78)
-   - `+ sonstigeEinnahme` zur Bargeld-Formel hinzufuegen (Variable aus `session.sonstige_einnahme` lesen)
+**1. `src/hooks/useRemainingCash.ts` erweitern**
+- Statt einfach `pettyCash + sum(bargeld)` zu rechnen, Tag-fuer-Tag simulieren
+- Neuen Rueckgabewert `todaySkimAmount` (Abschoepfung des aktuellen Tages) hinzufuegen
+- Neuen Rueckgabewert `totalSkimmed` (kumulierte Abschoepfung) hinzufuegen
+- Der `remainingCash` wird nun gekappt: maximal `pettyCash`
 
-4. **`src/hooks/usePreviousDayDeficit.ts`** (Zeile ~80)
-   - `+ sonstigeEinnahme` zur Bargeld-Formel hinzufuegen (Variable ist dort bereits gelesen, nur nicht verwendet)
+**2. `src/pages/DailySummary.tsx` anpassen**
+- `todaySkimAmount` aus `useRemainingCash` auslesen
+- Diesen Wert an `ExcelLayout` weitergeben
 
-5. **`src/hooks/useStatistics.ts`** (Zeile ~147)
-   - `+ (session.sonstige_einnahme || 0)` zur Bargeld-Formel hinzufuegen
+**3. `src/components/daily-summary/layouts/ExcelLayout.tsx` anpassen**
+- Zwischen BARGELD und Kassenbestand eine neue Zeile "Abschoepfung" anzeigen (nur wenn > 0)
+- Zeigt den Betrag, der ins Buero gebracht wird
+- Styling: dezent, z.B. mit einem Pfeil-Icon
 
-### Auswirkung
-- BARGELD steigt um den Betrag der sonstigen Einnahmen
-- Kassenbestand passt sich entsprechend an
-- Fehlbetrag-Vortag-Berechnung beruecksichtigt den Wert ebenfalls
-- Statistiken zeigen korrekte Werte
+**4. `src/pages/CashBalance.tsx` (Monatsuebersicht) anpassen**
+- Die kumulierte Kassenbestand-Berechnung ebenfalls auf die Tag-fuer-Tag-Simulation umstellen
+- So stimmen Tagesabrechnung und Monatsuebersicht ueberein
 
-### Risiko
-Gering. Reine Addition eines bereits gespeicherten Feldes. Keine Schema-Aenderungen noetig.
+### Was sich aendert fuer den Nutzer
+- BARGELD bleibt unveraendert (209,07 EUR wie bisher)
+- Neue Zeile "Abschoepfung": 209,07 EUR (Betrag fuer Buero)
+- Kassenbestand: 2.000,00 EUR (statt 2.209,07 EUR)
+- In der Monatsuebersicht wird ebenfalls die gedeckelte Berechnung verwendet
+
+### Was gleich bleibt
+- Bargeld-Formel aendert sich nicht
+- Bankeinzahlungen funktionieren weiterhin wie bisher
+- Fehlbetrag-Vortag-Berechnung bleibt unveraendert
+- PDF-Export zeigt die Abschoepfung mit an
+
