@@ -1,50 +1,38 @@
 
+# Statistiken nach Restaurant filtern
 
-## Taegliche Bargeld-Uebersicht in Telegram-Nachricht
+## Problem
+Die drei Hooks, die Daten fuer die Statistik-Seite laden, filtern nicht nach dem aktuell ausgewaehlten Restaurant. Beim Wechsel zwischen Restaurants (z.B. Spicery / YUM) bleiben die Daten identisch, weil alle Sessions aller Restaurants geladen werden.
 
-### Was sich aendert
+Betroffen sind:
+- `useStatistics` -- Hauptstatistiken (Umsatz, Trinkgeld, Charts)
+- `useStatisticsComparison` -- Vergleich mit Vorperiode
+- `useMonthlyStaffTips` -- Monatliche Trinkgeld-Auswertung
 
-Die Telegram-Nachricht wird pro Restaurant um eine kompakte **Bargeld-Aufschluesselung** fuer den jeweiligen Tag erweitert. Das ist die gleiche Information, die in der Tabelle auf der Bargeldbestand-Seite angezeigt wird.
+## Loesung
 
-### Beispiel-Nachricht (neuer Abschnitt)
+### 1. `useStatistics` anpassen
+- Parameter `restaurantId` hinzufuegen
+- In den `queryKey` aufnehmen, damit React Query bei Restaurant-Wechsel neu laedt
+- `.eq('restaurant_id', restaurantId)` zur Sessions-Abfrage hinzufuegen
 
-```
-*Yum:*
-  Vectron: 3.500,00 €
-  Kassenbestand: 2.000,00 €
+### 2. `useStatisticsComparison` anpassen
+- Parameter `restaurantId` an den Hook und an `fetchPeriodStats` durchreichen
+- `.eq('restaurant_id', restaurantId)` zur Sessions-Abfrage hinzufuegen
+- In den `queryKey` aufnehmen
 
-  Bargeld-Details:
-  Kreditkarten: -1.200,00 €
-  OrderSmart: -150,00 €
-  Wolt: -80,00 €
-  Gutsch. EL: -50,00 €
-  Gutsch. VK: +30,00 €
-  Einladung: -20,00 €
-  Offene RE: -45,00 €
-  Vorschuss: -100,00 €
-  Ausgaben: -60,00 €
-  ➜ Bargeld: 1.825,00 €
-```
+### 3. `useMonthlyStaffTips` anpassen
+- Parameter `restaurantId` hinzufuegen
+- `.eq('restaurant_id', restaurantId)` zur Sessions-Abfrage hinzufuegen
+- In den `queryKey` aufnehmen
+- Query nur ausfuehren wenn `restaurantId` vorhanden (`enabled: !!restaurantId`)
 
-### Technische Aenderungen
+### 4. `Statistics.tsx` (Seite) anpassen
+- `restaurantId` aus `useRestaurant()` an alle drei Hooks weitergeben
 
-**Datei: `supabase/functions/send-telegram-summary/index.ts`**
+### 5. `MonthlyTipBreakdown.tsx` (Komponente) anpassen
+- `useRestaurant()` importieren und `restaurantId` an `useMonthlyStaffTips` weitergeben
 
-1. Neuen Toggle `show_cash_details` zur Settings-Logik hinzufuegen (Standard: `true`)
-2. Im Restaurant-Loop fuer den Zieldatum die gleichen Werte berechnen wie `useCashBalanceData`:
-   - Kreditkarten, OrderSmart, Wolt, Gutscheine EL/VK, Einladung, Offene RE, Vorschuss, Ausgaben
-   - Deficit Chaining bis zum Zieldatum anwenden
-3. Diese Werte als kompakte Liste in die Nachricht einfuegen (nur wenn `show_cash_details` aktiv)
+## Technische Details
 
-**Datei: `src/pages/TelegramSettings.tsx`**
-
-4. Neuen Toggle "Bargeld-Details" in die Einstellungs-Seite aufnehmen
-
-**Datei: `src/hooks/useTelegramSettings.ts`**
-
-5. `show_cash_details` zum Interface und zur Save-Logik hinzufuegen
-
-**Datenbank-Migration:**
-
-6. Neue Spalte `show_cash_details boolean default true` zur Tabelle `telegram_settings` hinzufuegen
-
+Alle drei Hooks erhalten `restaurantId: string | null` als Parameter. Die Supabase-Abfragen werden um `.eq('restaurant_id', restaurantId)` ergaenzt. Der `queryKey` enthaelt die `restaurantId`, sodass React Query bei jedem Restaurant-Wechsel automatisch neue Daten laedt.
