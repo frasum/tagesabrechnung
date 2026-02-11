@@ -439,6 +439,7 @@ export type Database = {
           created_by_name: string | null
           einladung: number | null
           finedine_vouchers: number | null
+          guest_count: number | null
           id: string
           is_finalized: boolean | null
           notes: string | null
@@ -465,6 +466,7 @@ export type Database = {
           created_by_name?: string | null
           einladung?: number | null
           finedine_vouchers?: number | null
+          guest_count?: number | null
           id?: string
           is_finalized?: boolean | null
           notes?: string | null
@@ -491,6 +493,7 @@ export type Database = {
           created_by_name?: string | null
           einladung?: number | null
           finedine_vouchers?: number | null
+          guest_count?: number | null
           id?: string
           is_finalized?: boolean | null
           notes?: string | null

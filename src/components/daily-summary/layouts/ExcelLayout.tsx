@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import { Input } from '@/components/ui/input';
 import { User, PenLine } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -66,6 +67,8 @@ interface ExcelLayoutProps {
   remainingCash?: number;
   createdByName?: string;
   updatedByName?: string;
+  guestCount?: number;
+  onGuestCountChange?: (value: number) => void;
 }
 
 export function ExcelLayout({
@@ -97,6 +100,8 @@ export function ExcelLayout({
   remainingCash,
   createdByName,
   updatedByName,
+  guestCount = 0,
+  onGuestCountChange,
 }: ExcelLayoutProps) {
   const getLabel = gl || ((key: LabelKey) => key);
   const isFieldHidden = ifh || (() => false);
@@ -146,6 +151,28 @@ export function ExcelLayout({
             <table className="w-full text-sm">
               <tbody>
                 <ExcelInputRow label={getLabel('pos_total')} value={formData.pos_total} onChange={(v) => onFieldChange('pos_total', v)} disabled={locked} />
+                <tr className="border-b last:border-b-0 hover:bg-muted/20 transition-colors">
+                  <td className="px-3 py-1.5 font-medium text-foreground">Gästeanzahl</td>
+                  <td className="px-3 py-1.5 w-36">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        value={guestCount || ''}
+                        placeholder="0"
+                        onChange={(e) => onGuestCountChange?.(parseInt(e.target.value) || 0)}
+                        className="h-7 text-sm border-primary/20 bg-primary/5 w-20 text-right"
+                        disabled={locked}
+                      />
+                      {guestCount > 0 && (
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          ⌀ {new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(formData.pos_total / guestCount)} €
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
               </tbody>
             </table>
 

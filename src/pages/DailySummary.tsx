@@ -67,6 +67,7 @@ export default function DailySummary() {
     takeaway_total: 0,
     spicery_transactions: 0,
     card_total_gl: 0,
+    guest_count: 0,
   });
 
   // Expense form
@@ -119,6 +120,7 @@ export default function DailySummary() {
         takeaway_total: session.takeaway_total || 0,
         spicery_transactions: session.spicery_transactions || 0,
         card_total_gl: session.card_total_gl || 0,
+        guest_count: (session as any).guest_count || 0,
       });
     } else {
       setFormData({
@@ -138,6 +140,7 @@ export default function DailySummary() {
         takeaway_total: 0,
         spicery_transactions: 0,
         card_total_gl: 0,
+        guest_count: 0,
       });
     }
   }, [session]);
@@ -1042,6 +1045,8 @@ export default function DailySummary() {
       remainingCash={remainingCash}
       createdByName={session?.created_by_name || undefined}
       updatedByName={session?.updated_by_name || undefined}
+      guestCount={formData.guest_count}
+      onGuestCountChange={(v) => updateField('guest_count', v)}
     />
   );
 

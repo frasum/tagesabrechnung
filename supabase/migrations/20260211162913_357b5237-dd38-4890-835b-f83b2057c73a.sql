@@ -1,0 +1,1 @@
+ALTER TABLE public.sessions ADD COLUMN guest_count integer DEFAULT 0;
