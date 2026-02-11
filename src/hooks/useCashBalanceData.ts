@@ -22,6 +22,14 @@ export function useCashBalanceData(restaurantId: string | null) {
     queryKey: ['cash-balance', restaurantId],
     queryFn: async (): Promise<CashBalanceRow[]> => {
       if (!restaurantId) return [];
+
+      // 0. initial_cash_deficit laden
+      const { data: restaurantData } = await supabase
+        .from('restaurants')
+        .select('initial_cash_deficit')
+        .eq('id', restaurantId)
+        .single();
+      const initialDeficit = (restaurantData as any)?.initial_cash_deficit ?? 0;
       
       // 1. Alle Sessions für dieses Restaurant laden
       const { data: sessions, error: sessionsError } = await supabase
@@ -59,7 +67,9 @@ export function useCashBalanceData(restaurantId: string | null) {
 
       if (advancesError) throw advancesError;
 
-      // 4. Pro Session direkt die DB-Werte verwenden
+      // 4. Pro Session direkt die DB-Werte verwenden + Deficit Chaining
+      let carryOver = initialDeficit;
+
       return (sessions || []).map((session) => {
         const shifts = (waiterShifts || []).filter((s) => s.session_id === session.id);
         const sessionExpenses = (expenses || []).filter((e) => e.session_id === session.id);
@@ -70,13 +80,11 @@ export function useCashBalanceData(restaurantId: string | null) {
         const kreditkarten = (session.terminal_1_total || 0) + (session.terminal_2_total || 0);
         const ordersmart = session.ordersmart_revenue || 0;
         const wolt = session.wolt_revenue || 0;
-        const takeaway = session.takeaway_total || 0;
         const gutscheineEL = session.vouchers_redeemed || 0;
         const finedine = session.finedine_vouchers || 0;
         const gutscheineVK = session.vouchers_sold || 0;
         const einladung = session.einladung || 0;
         const sonstigeEinnahme = session.sonstige_einnahme || 0;
-        // Vorschuss aus advances-Tabelle summieren, Fallback auf session.vorschuss
         const vorschuss = sessionAdvances.length > 0
           ? sessionAdvances.reduce((sum, a) => sum + a.amount, 0)
           : (session.vorschuss || 0);
@@ -85,8 +93,8 @@ export function useCashBalanceData(restaurantId: string | null) {
         const totalOpenInvoices = shifts.reduce((sum, w) => sum + (w.open_invoices || 0), 0);
         const totalExpenses = sessionExpenses.reduce((sum, e) => sum + e.amount, 0);
 
-        // BARGELD = Einnahmen - Abzüge
-        const bargeld =
+        // BARGELD = Einnahmen - Abzüge (roh)
+        const rawBargeld =
           tagesumsatz +
           gutscheineVK +
           sonstigeEinnahme -
@@ -99,6 +107,10 @@ export function useCashBalanceData(restaurantId: string | null) {
           totalOpenInvoices -
           vorschuss -
           totalExpenses;
+
+        // Deficit Chaining: Fehlbetrag Vortag einrechnen
+        const bargeld = rawBargeld + carryOver;
+        carryOver = bargeld < 0 ? bargeld : 0;
 
         return {
           date: session.session_date,
