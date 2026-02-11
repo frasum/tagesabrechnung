@@ -1,46 +1,39 @@
 
 
-# Team-Schichten in zwei Zeilen aufteilen (mit korrekter Trinkgeld-%)
+# TG% bei Team-Schichten auf Gesamtumsatz berechnen
 
-## Was wird geaendert
+## Problem
 
-In der Trinkgeld-Pool-Tabelle auf der Kellner-Abrechnungsseite werden Team-Schichten (z.B. "Europe + Andi") in **zwei separate Zeilen** aufgeteilt.
+Bei Team-Schichten wird die Trinkgeld-Prozentanzeige aktuell auf den halbierten Umsatz (pos_sales / 2) berechnet. Das fuehrt zu unrealistisch hohen Prozentwerten, weil jeder seinen vollen Anteil gegen nur die Haelfte des Umsatzes gerechnet bekommt.
 
-## Darstellung vorher vs. nachher
+## Loesung
+
+Die TG%-Berechnung fuer Team-Schichten soll den **vollen Schicht-Umsatz** (pos_sales) als Basis verwenden, nicht den halbierten.
 
 ```text
-VORHER:
-| Name            | Beitrag    | Anteil         | TG %  | Ø TG % |
-| Europe + Andi   | 106,34 EUR | 87,83 EUR x 2  | 13.0% | 13.0%  |
+VORHER (halbierter Umsatz als Basis):
+| Europe | 53,17 EUR | 87,83 EUR | 21.5% | 13.0% |
+| Andi   | 53,17 EUR | 87,83 EUR | 21.5% | 12.5% |
 
-NACHHER:
-| Name            | Beitrag    | Anteil         | TG %  | Ø TG % |
-| Europe          |  53,17 EUR | 87,83 EUR      | 13.0% | 13.0%  |
-| Andi            |  53,17 EUR | 87,83 EUR      | 13.0% | 12.5%  |
+NACHHER (voller Umsatz als Basis):
+| Europe | 53,17 EUR | 87,83 EUR | 10.7% | 13.0% |
+| Andi   | 53,17 EUR | 87,83 EUR | 10.7% | 12.5% |
 ```
 
-## Berechnung pro Zeile
+## Technische Aenderung
 
-Fuer jede Person einer Team-Schicht gilt:
+### Datei: `src/pages/WaiterCashUp.tsx` (Zeilen 457-462)
 
-| Spalte | Berechnung | Erklaerung |
-|--------|-----------|------------|
-| **Beitrag** | `contribution / 2` | Der Gesamtbeitrag der Schicht wird halbiert |
-| **Anteil** | `tipPerWaiter` | Jeder bekommt seinen individuellen Pool-Anteil (ohne "x 2") |
-| **TG %** | `tipPerWaiter / (pos_sales / 2) * 100` | Trinkgeld-Prozent bezogen auf den halben Umsatz -- bleibt identisch fuer beide |
-| **Ø TG %** | Lookup in `waiterTipAverages` | Fuer den ersten Kellner wird `waiterTipAverages[waiter_name]` verwendet, fuer den zweiten `waiterTipAverages[second_waiter_name]` -- dadurch erhaelt jeder seinen eigenen historischen Durchschnitt |
+Nur eine kleine Aenderung: `personalSalesShare` fuer Team-Schichten soll den vollen `pos_sales` verwenden statt `pos_sales / 2`:
 
-## Technische Umsetzung
+```typescript
+// VORHER:
+const personalSalesShare = isTeam
+  ? (shift.pos_sales || 0) / 2
+  : (shift.pos_sales || 0);
 
-### Datei: `src/pages/WaiterCashUp.tsx` (Zeilen 453-501)
+// NACHHER:
+const personalSalesShare = shift.pos_sales || 0;
+```
 
-- `waiterShifts.map()` wird zu `waiterShifts.flatMap()` geaendert
-- Bei Team-Schichten (`shift.second_waiter_name` vorhanden) werden zwei `TableRow`-Elemente erzeugt
-- Erste Zeile: Name des Haupt-Kellners, halber Beitrag, individueller Anteil, TG %, eigener Ø TG %
-- Zweite Zeile: Name des zweiten Kellners, halber Beitrag, individueller Anteil, TG %, eigener Ø TG %
-- Bei Einzel-Schichten bleibt alles wie bisher
-
-### Keine Aenderungen noetig in:
-- **PDF-Export** (`pdfExport.ts`) -- dort werden Team-Schichten bereits korrekt aufgeteilt
-- **Tagesabrechnung** (`DailySummary.tsx`) -- dort ebenfalls bereits implementiert
-- **Pool-Berechnung** -- `waiterShareCount`, `totalPool`, `tipPerWaiter` bleiben unveraendert, da Team-Schichten dort schon als 2 Anteile gezaehlt werden
+Da `personalSalesShare` nur fuer die TG%-Anzeige verwendet wird und der Beitrag separat berechnet wird, hat diese Aenderung keine Auswirkung auf andere Berechnungen. Alle anderen Spalten (Beitrag, Anteil, Ø TG%) bleiben unveraendert.
