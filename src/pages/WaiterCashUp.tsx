@@ -560,7 +560,7 @@ export default function WaiterCashUp() {
                           {!isFieldHidden('open_invoices') && <TableHead className="text-right">{getLabel('open_invoices')}</TableHead>}
                           <TableHead className="text-right">{getLabel('cash_handed_in')}</TableHead>
                           <TableHead className="text-right">Erwartet</TableHead>
-                          <TableHead className="text-right">{getLabel('kitchen_tip')}</TableHead>
+                          
                           <TableHead></TableHead>
                         </TableRow>
                       </TableHeader>
@@ -584,7 +584,7 @@ export default function WaiterCashUp() {
                               {!isFieldHidden('open_invoices') && <TableCell className="text-right tabular-nums">{formatCurrency(shift.open_invoices)}</TableCell>}
                               <TableCell className="text-right tabular-nums">{formatCurrency(shift.cash_handed_in)}</TableCell>
                               <TableCell className="text-right tabular-nums">{formatCurrency(expected)}</TableCell>
-                              <TableCell className="text-right tabular-nums text-success">{formatCurrency(shift.kitchen_tip)}</TableCell>
+                              
                               <TableCell>
                                 {!locked && (
                                 <div className="flex gap-1">
