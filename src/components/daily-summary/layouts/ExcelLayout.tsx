@@ -245,9 +245,7 @@ export function ExcelLayout({
                 <table className="w-full">
                   <tbody>
                     <tr>
-                      <td className="px-3 py-1.5 font-medium text-sm text-amber-700 dark:text-amber-400">
-                        ↗ Abschöpfung (Büro)
-                      </td>
+                      <td className="px-3 py-1.5 font-medium text-sm text-amber-700 dark:text-amber-400">Bargeld in die Abrechnung</td>
                       <td className="px-3 py-1.5 text-right tabular-nums font-semibold text-sm text-amber-700 dark:text-amber-400">
                         {fmt(todaySkimAmount)} €
                       </td>
