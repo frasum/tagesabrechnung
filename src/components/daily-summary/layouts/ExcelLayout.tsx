@@ -162,7 +162,7 @@ export function ExcelLayout({
                         value={guestCount || ''}
                         placeholder="0"
                         onChange={(e) => onGuestCountChange?.(parseInt(e.target.value) || 0)}
-                        className="h-7 text-sm border-primary/20 bg-primary/5 w-20 text-right"
+                        className="h-7 text-sm border-primary/20 bg-primary/5 w-20 text-right [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         disabled={locked}
                       />
                       {guestCount > 0 && (
