@@ -230,7 +230,8 @@ export default function ManagerDashboard() {
   // BARGELD calculation - uses pos_total (Vectron total) as base
   const bargeldPreview = 
     formData.pos_total +
-    formData.vouchers_sold -
+    formData.vouchers_sold +
+    formData.sonstige_einnahme -
     formData.terminal_1_total -
     formData.terminal_2_total -
     formData.ordersmart_revenue -

@@ -143,9 +143,9 @@ export function useStatistics(timeRange: TimeRange = 'month', customRange?: Cust
           (session.takeaway_total || 0);
 
         // BARGELD calculation - uses pos_total (Vectron total) as base
-        // Note: sonstige_einnahme is already included in pos_total (Vectron), so not added here
         const bargeld = (session.pos_total || 0) +
-          (session.vouchers_sold || 0) -
+          (session.vouchers_sold || 0) +
+          (session.sonstige_einnahme || 0) -
           (session.terminal_1_total || 0) -
           (session.terminal_2_total || 0) -
           (session.ordersmart_revenue || 0) -

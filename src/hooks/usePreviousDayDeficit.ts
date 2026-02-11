@@ -73,17 +73,17 @@ export function usePreviousDayDeficit(date: Date, restaurantId: string | null) {
         const finedine = session.finedine_vouchers || 0;
         const gutscheineVK = session.vouchers_sold || 0;
         const einladung = session.einladung || 0;
-        const sonstigeEinnahme = session.sonstige_einnahme || 0; // kept for reference, already in pos_total
+        const sonstigeEinnahme = session.sonstige_einnahme || 0;
         const vorschuss = sessionAdvances.length > 0
           ? sessionAdvances.reduce((sum, a) => sum + a.amount, 0)
           : (session.vorschuss || 0);
         const totalOpenInvoices = shifts.reduce((sum, w) => sum + (w.open_invoices || 0), 0);
         const totalExpenses = sessionExpenses.reduce((sum, e) => sum + e.amount, 0);
 
-        // Note: sonstige_einnahme is already included in pos_total (Vectron), so not added here
         const bargeld =
           tagesumsatz +
-          gutscheineVK -
+          gutscheineVK +
+          sonstigeEinnahme -
           kreditkarten -
           ordersmart -
           wolt -
