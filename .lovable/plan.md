@@ -1,46 +1,50 @@
 
 
-## Telegram Kassenbestand an Bargeldbestand-Seite angleichen
+## Taegliche Bargeld-Uebersicht in Telegram-Nachricht
 
-### Problem
-Die `calculateCashBalance`-Funktion in der Telegram Edge Function berechnet den Kassenbestand anders als die Bargeldbestand-Seite. Es fehlen:
-- **Deficit Chaining** (Fehlbetrag-Vortag wird nicht weitergereicht)
-- **`sonstige_einnahme`** wird nicht beruecksichtigt
-- **`initial_cash_deficit`** aus der Restaurants-Tabelle fehlt
-- **Skimming-Logik** (Abschoepfung ueber Wechselgeld-Grenze) fehlt
+### Was sich aendert
 
-### Loesung
-Die `calculateCashBalance`-Funktion im Edge Function `send-telegram-summary` wird komplett ueberarbeitet, damit sie exakt dieselbe Berechnung wie `useRemainingCash` durchfuehrt.
+Die Telegram-Nachricht wird pro Restaurant um eine kompakte **Bargeld-Aufschluesselung** fuer den jeweiligen Tag erweitert. Das ist die gleiche Information, die in der Tabelle auf der Bargeldbestand-Seite angezeigt wird.
+
+### Beispiel-Nachricht (neuer Abschnitt)
+
+```
+*Yum:*
+  Vectron: 3.500,00 €
+  Kassenbestand: 2.000,00 €
+
+  Bargeld-Details:
+  Kreditkarten: -1.200,00 €
+  OrderSmart: -150,00 €
+  Wolt: -80,00 €
+  Gutsch. EL: -50,00 €
+  Gutsch. VK: +30,00 €
+  Einladung: -20,00 €
+  Offene RE: -45,00 €
+  Vorschuss: -100,00 €
+  Ausgaben: -60,00 €
+  ➜ Bargeld: 1.825,00 €
+```
 
 ### Technische Aenderungen
 
 **Datei: `supabase/functions/send-telegram-summary/index.ts`**
 
-Die Funktion `calculateCashBalance` wird wie folgt angepasst:
+1. Neuen Toggle `show_cash_details` zur Settings-Logik hinzufuegen (Standard: `true`)
+2. Im Restaurant-Loop fuer den Zieldatum die gleichen Werte berechnen wie `useCashBalanceData`:
+   - Kreditkarten, OrderSmart, Wolt, Gutscheine EL/VK, Einladung, Offene RE, Vorschuss, Ausgaben
+   - Deficit Chaining bis zum Zieldatum anwenden
+3. Diese Werte als kompakte Liste in die Nachricht einfuegen (nur wenn `show_cash_details` aktiv)
 
-1. **`sonstige_einnahme`** zur Session-Abfrage hinzufuegen
-2. **`initial_cash_deficit`** aus `restaurants`-Tabelle laden
-3. **`petty_cash`** aus `settings`-Tabelle laden (bereits vorhanden)
-4. **Deficit Chaining** einbauen: Pro Tag wird `rawBargeld + carryOver` berechnet; wenn negativ, wird der Betrag auf den naechsten Tag uebertragen
-5. **Skimming-Logik** einbauen: Kassenbestand startet bei `petty_cash`, taegliches Bargeld wird addiert, ueberschuessiges Bargeld ueber `petty_cash` wird abgeschoepft
+**Datei: `src/pages/TelegramSettings.tsx`**
 
-```text
-Aktuell (falsch):
-  totalCash += bargeld  (einfache Summe)
-  return totalCash + pettyCash
+4. Neuen Toggle "Bargeld-Details" in die Einstellungs-Seite aufnehmen
 
-Neu (korrekt):
-  1. carryOver = initial_cash_deficit
-  2. Pro Tag:
-     rawBargeld = Einnahmen - Abzuege
-     bargeld = rawBargeld + carryOver
-     carryOver = bargeld < 0 ? bargeld : 0
-  3. kassenbestand = pettyCash
-  4. Pro Tag:
-     kassenbestand += bargeld
-     if kassenbestand > pettyCash: kassenbestand = pettyCash
-  5. return kassenbestand
-```
+**Datei: `src/hooks/useTelegramSettings.ts`**
 
-Keine Aenderungen an der UI oder anderen Dateien noetig.
+5. `show_cash_details` zum Interface und zur Save-Logik hinzufuegen
+
+**Datenbank-Migration:**
+
+6. Neue Spalte `show_cash_details boolean default true` zur Tabelle `telegram_settings` hinzufuegen
 
