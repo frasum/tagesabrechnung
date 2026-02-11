@@ -1,62 +1,40 @@
 
-
-# Telegram-Zusammenfassung erweitern: Kassenbestand und Kuechenteam
+# Gasteanzahl und Durchschnittsverzehr
 
 ## Was sich aendert
 
-Die taegliche Telegram-Nachricht wird um zwei Informationen pro Restaurant ergaenzt:
+Unterhalb des "Transaktionen"-Feldes (pos_total) im UMSATZ-Bereich wird ein neues Eingabefeld "Gaesteanzahl" hinzugefuegt. Daneben wird automatisch der Durchschnittsverzehr pro Gast berechnet und angezeigt (pos_total / Gaesteanzahl).
 
-1. **Kassenbestand** -- der kumulative Bargeldbestand bis zum jeweiligen Datum
-2. **Kueche** -- Liste der Kuechenmitarbeiter, die an dem Tag gearbeitet haben (mit Stunden)
+## Beispiel
 
-## Beispiel-Nachricht (vorher vs. nachher)
-
-**Vorher:**
 ```
-Restaurant XY:
-  Vectron: 3.450,00 EUR
-  Erstellt von: Gerard
-
-  Kellner:
-  - Max: 1.200,00 EUR (Abgabe: 23:15)
-  - Lisa: 980,00 EUR (Abgabe: 22:50)
-```
-
-**Nachher:**
-```
-Restaurant XY:
-  Vectron: 3.450,00 EUR
-  Kassenbestand: 12.340,50 EUR
-  Erstellt von: Gerard
-
-  Kellner:
-  - Max: 1.200,00 EUR (Abgabe: 23:15)
-  - Lisa: 980,00 EUR (Abgabe: 22:50)
-
-  Kueche:
-  - Ali (10:00-22:00, 12h)
-  - Marco (11:00-20:00, 9h)
+UMSATZ
+Transaktionen          [3.475,20 €]
+Gaesteanzahl           [  142  ]    ⌀ 24,47 € / Gast
 ```
 
 ## Technische Umsetzung
 
-### Aenderung: `supabase/functions/send-telegram-summary/index.ts`
+### 1. Datenbank-Migration
 
-Fuer jedes Restaurant werden zwei zusaetzliche Abfragen gemacht:
+Neue Spalte `guest_count` (integer, nullable, default 0) in der `sessions`-Tabelle.
 
-**Kassenbestand-Berechnung (im Edge Function):**
-- Alle Sessions des Restaurants bis zum Zieldatum laden
-- Pro Session die zugehoerigen waiter_shifts (open_invoices), expenses und advances laden
-- Bargeld pro Tag berechnen nach der bestehenden Formel:
-  `Vectron + Gutschein-VK - Kreditkarten - OrderSmart - Wolt - Gutschein-EL - FineDine - Einladung - offeneRE - Vorschuss - Ausgaben`
-- Alle Tageswerte summieren
-- Wechselgeld (petty_cash) aus der settings-Tabelle addieren
-- Ergebnis als "Kassenbestand" in die Nachricht einfuegen
+### 2. ExcelLayout erweitern
 
-**Kuechenteam:**
-- `kitchen_shifts` Tabelle abfragen fuer die jeweilige Session
-- Name, Schichtzeiten und Stunden auflisten
+- Neues Prop `guestCount` und `onGuestCountChange` in `ExcelLayoutProps`
+- Unterhalb der `pos_total`-Zeile im UMSATZ-Bereich: eine neue Zeile mit einem Integer-Eingabefeld (kein Waehrungsformat) und rechts daneben den berechneten Durchschnitt (`pos_total / guest_count`), sofern `guest_count > 0`
 
-### Keine weiteren Dateien betroffen
-Die Aenderung beschraenkt sich ausschliesslich auf die Edge Function. Es sind keine Datenbank-Aenderungen oder Frontend-Aenderungen noetig.
+### 3. DailySummary anpassen
 
+- `guest_count` in `formData` aufnehmen (Default: 0)
+- Sync mit Session-Daten
+- Auto-Save wie bei allen anderen Feldern
+- Wert als Props an `ExcelLayout` weitergeben
+
+### 4. Dateien
+
+| Datei | Aenderung |
+|-------|-----------|
+| Migration (SQL) | `ALTER TABLE sessions ADD COLUMN guest_count integer DEFAULT 0` |
+| `src/components/daily-summary/layouts/ExcelLayout.tsx` | Neue Zeile mit Gaesteanzahl-Input + Durchschnitt |
+| `src/pages/DailySummary.tsx` | `guest_count` in formData, sync, auto-save |
