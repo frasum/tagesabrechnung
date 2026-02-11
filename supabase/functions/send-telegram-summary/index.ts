@@ -237,7 +237,10 @@ async function calculateCashBalance(supabase: any, restaurantId: string, upToDat
   const waiterShifts = shiftsRes.data || [];
   const expenses = expensesRes.data || [];
   const advances = advancesRes.data || [];
-  const pettyCash = settingsRes.data?.value ? Number(settingsRes.data.value) : 0;
+  const pettyCashRaw = settingsRes.data?.value;
+  const pettyCash = pettyCashRaw
+    ? (typeof pettyCashRaw === "object" && pettyCashRaw.amount != null ? Number(pettyCashRaw.amount) : Number(pettyCashRaw))
+    : 0;
   const initialDeficit = restaurantRes.data?.initial_cash_deficit ?? 0;
 
   // 3. Deficit chaining: compute bargeld per day
