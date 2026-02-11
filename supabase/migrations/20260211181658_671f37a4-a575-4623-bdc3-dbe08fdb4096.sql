@@ -1,0 +1,1 @@
+ALTER TABLE public.telegram_settings ADD COLUMN show_cash_details boolean DEFAULT true;

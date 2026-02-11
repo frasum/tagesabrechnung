@@ -10,6 +10,7 @@ export interface TelegramSettings {
   show_pos_total: boolean;
   show_guest_count: boolean;
   show_cash_balance: boolean;
+  show_cash_details: boolean;
   show_created_by: boolean;
   show_waiters: boolean;
   show_kitchen: boolean;
@@ -44,6 +45,7 @@ export function useTelegramSettings() {
             show_pos_total: settings.show_pos_total,
             show_guest_count: settings.show_guest_count,
             show_cash_balance: settings.show_cash_balance,
+            show_cash_details: settings.show_cash_details,
             show_created_by: settings.show_created_by,
             show_waiters: settings.show_waiters,
             show_kitchen: settings.show_kitchen,
@@ -60,6 +62,7 @@ export function useTelegramSettings() {
             show_pos_total: settings.show_pos_total,
             show_guest_count: settings.show_guest_count,
             show_cash_balance: settings.show_cash_balance,
+            show_cash_details: settings.show_cash_details,
             show_created_by: settings.show_created_by,
             show_waiters: settings.show_waiters,
             show_kitchen: settings.show_kitchen,

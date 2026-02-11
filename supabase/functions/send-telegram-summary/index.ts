@@ -17,9 +17,25 @@ interface TelegramSettings {
   show_pos_total: boolean;
   show_guest_count: boolean;
   show_cash_balance: boolean;
+  show_cash_details: boolean;
   show_created_by: boolean;
   show_waiters: boolean;
   show_kitchen: boolean;
+}
+
+interface DayCashDetails {
+  kreditkarten: number;
+  ordersmart: number;
+  wolt: number;
+  gutscheineEL: number;
+  finedine: number;
+  gutscheineVK: number;
+  einladung: number;
+  offeneRE: number;
+  vorschuss: number;
+  ausgaben: number;
+  sonstigeEinnahme: number;
+  bargeld: number;
 }
 
 async function loadSettings(supabase: any): Promise<TelegramSettings> {
@@ -40,6 +56,7 @@ async function loadSettings(supabase: any): Promise<TelegramSettings> {
       show_pos_total: true,
       show_guest_count: true,
       show_cash_balance: true,
+      show_cash_details: true,
       show_created_by: true,
       show_waiters: true,
       show_kitchen: true,
@@ -53,6 +70,7 @@ async function loadSettings(supabase: any): Promise<TelegramSettings> {
     show_pos_total: data.show_pos_total ?? true,
     show_guest_count: data.show_guest_count ?? true,
     show_cash_balance: data.show_cash_balance ?? true,
+    show_cash_details: data.show_cash_details ?? true,
     show_created_by: data.show_created_by ?? true,
     show_waiters: data.show_waiters ?? true,
     show_kitchen: data.show_kitchen ?? true,
@@ -124,10 +142,29 @@ Deno.serve(async (req) => {
         const avgSpend = posTotal / session.guest_count;
         lines.push(`  Gäste: ${session.guest_count} (⌀ ${formatEur(avgSpend)})`);
       }
-      if (settings.show_cash_balance) {
-        const cashBalance = await calculateCashBalance(supabase, restaurant.id, targetDate);
-        if (cashBalance !== null) {
-          lines.push(`  Kassenbestand: ${formatEur(cashBalance)}`);
+      if (settings.show_cash_balance || settings.show_cash_details) {
+        const cashResult = await calculateCashBalance(supabase, restaurant.id, targetDate);
+        if (cashResult !== null) {
+          if (settings.show_cash_balance) {
+            lines.push(`  Kassenbestand: ${formatEur(cashResult.kassenbestand)}`);
+          }
+          if (settings.show_cash_details && cashResult.details) {
+            const d = cashResult.details;
+            lines.push("");
+            lines.push("  Bargeld-Details:");
+            if (d.kreditkarten) lines.push(`  Kreditkarten: -${formatEur(d.kreditkarten)}`);
+            if (d.ordersmart) lines.push(`  OrderSmart: -${formatEur(d.ordersmart)}`);
+            if (d.wolt) lines.push(`  Wolt: -${formatEur(d.wolt)}`);
+            if (d.gutscheineEL) lines.push(`  Gutsch. EL: -${formatEur(d.gutscheineEL)}`);
+            if (d.finedine) lines.push(`  FineDine: -${formatEur(d.finedine)}`);
+            if (d.gutscheineVK) lines.push(`  Gutsch. VK: +${formatEur(d.gutscheineVK)}`);
+            if (d.sonstigeEinnahme) lines.push(`  Sonst. Einnahme: +${formatEur(d.sonstigeEinnahme)}`);
+            if (d.einladung) lines.push(`  Einladung: -${formatEur(d.einladung)}`);
+            if (d.offeneRE) lines.push(`  Offene RE: -${formatEur(d.offeneRE)}`);
+            if (d.vorschuss) lines.push(`  Vorschuss: -${formatEur(d.vorschuss)}`);
+            if (d.ausgaben) lines.push(`  Ausgaben: -${formatEur(d.ausgaben)}`);
+            lines.push(`  ➜ Bargeld: ${formatEur(d.bargeld)}`);
+          }
         }
       }
       if (settings.show_created_by) {
@@ -212,8 +249,7 @@ Deno.serve(async (req) => {
   }
 });
 
-async function calculateCashBalance(supabase: any, restaurantId: string, upToDate: string): Promise<number | null> {
-  // 1. Load sessions with sonstige_einnahme
+async function calculateCashBalance(supabase: any, restaurantId: string, upToDate: string): Promise<{ kassenbestand: number; details: DayCashDetails | null } | null> {
   const { data: sessions, error: sessionsError } = await supabase
     .from("sessions")
     .select("id, session_date, pos_total, terminal_1_total, terminal_2_total, ordersmart_revenue, wolt_revenue, vouchers_redeemed, finedine_vouchers, vouchers_sold, einladung, vorschuss, sonstige_einnahme")
@@ -225,7 +261,6 @@ async function calculateCashBalance(supabase: any, restaurantId: string, upToDat
 
   const sessionIds = sessions.map((s: any) => s.id);
 
-  // 2. Load related data + initial_cash_deficit
   const [shiftsRes, expensesRes, advancesRes, settingsRes, restaurantRes] = await Promise.all([
     supabase.from("waiter_shifts").select("session_id, open_invoices").in("session_id", sessionIds),
     supabase.from("expenses").select("session_id, amount").in("session_id", sessionIds),
@@ -243,9 +278,9 @@ async function calculateCashBalance(supabase: any, restaurantId: string, upToDat
     : 0;
   const initialDeficit = restaurantRes.data?.initial_cash_deficit ?? 0;
 
-  // 3. Deficit chaining: compute bargeld per day
   let carryOver = initialDeficit;
   const dailyBargeld: number[] = [];
+  let targetDetails: DayCashDetails | null = null;
 
   for (const session of sessions) {
     const tagesumsatz = session.pos_total || 0;
@@ -275,9 +310,25 @@ async function calculateCashBalance(supabase: any, restaurantId: string, upToDat
     const bargeld = rawBargeld + carryOver;
     carryOver = bargeld < 0 ? bargeld : 0;
     dailyBargeld.push(bargeld);
+
+    if (session.session_date === upToDate) {
+      targetDetails = {
+        kreditkarten,
+        ordersmart,
+        wolt,
+        gutscheineEL,
+        finedine,
+        gutscheineVK,
+        einladung,
+        offeneRE: totalOpenInvoices,
+        vorschuss,
+        ausgaben: totalExpenses,
+        sonstigeEinnahme,
+        bargeld,
+      };
+    }
   }
 
-  // 4. Skimming: kassenbestand starts at pettyCash, excess is skimmed
   let kassenbestand = pettyCash;
   for (const bargeld of dailyBargeld) {
     kassenbestand += bargeld;
@@ -286,7 +337,7 @@ async function calculateCashBalance(supabase: any, restaurantId: string, upToDat
     }
   }
 
-  return kassenbestand;
+  return { kassenbestand, details: targetDetails };
 }
 
 function getYesterday(): string {

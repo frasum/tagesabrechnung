@@ -668,6 +668,7 @@ export type Database = {
           excluded_restaurants: string[] | null
           id: string
           show_cash_balance: boolean | null
+          show_cash_details: boolean | null
           show_created_by: boolean | null
           show_guest_count: boolean | null
           show_kitchen: boolean | null
@@ -682,6 +683,7 @@ export type Database = {
           excluded_restaurants?: string[] | null
           id?: string
           show_cash_balance?: boolean | null
+          show_cash_details?: boolean | null
           show_created_by?: boolean | null
           show_guest_count?: boolean | null
           show_kitchen?: boolean | null
@@ -696,6 +698,7 @@ export type Database = {
           excluded_restaurants?: string[] | null
           id?: string
           show_cash_balance?: boolean | null
+          show_cash_details?: boolean | null
           show_created_by?: boolean | null
           show_guest_count?: boolean | null
           show_kitchen?: boolean | null
