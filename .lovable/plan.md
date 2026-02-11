@@ -1,57 +1,35 @@
 
-## Validierungsmeldung für fehlende Gästeanzahl beim PDF-Export
 
-### Aktueller Zustand
-Der PDF-Export-Button zeigt derzeit `disabled={formData.guest_count === 0}`, was bedeutet:
-- Der Button ist grau/deaktiviert, wenn keine Gästeanzahl eingetragen ist
-- Nutzer können den Button nicht klicken
-- Es gibt keine visuelle Rückmeldung, **warum** der Button deaktiviert ist
+## Bug: „Sonstige Einnahmen" fehlen in der BARGELD-Berechnung
 
-### Gewünschter Zustand
-- Der Button bleibt **klickbar** (nicht mehr `disabled`)
-- Wenn die Gästeanzahl 0 ist, zeigt ein Toast-Hinweis: "Gästeanzahl fehlt" (mit `variant="destructive"`)
-- Der PDF-Export wird nicht durchgeführt
-- Wenn die Gästeanzahl `> 0` ist, läuft der PDF-Export normal ab
+### Problem
+Das Feld „Sonstige Einnahmen" wird zwar gespeichert, aber nirgendwo in die BARGELD-Berechnung einbezogen. Der bisherige Kommentar im Code lautet: *„sonstige_einnahme is already included in pos_total (Vectron)"* -- das stimmt aber nicht, wenn der Wert manuell separat eingetragen wird. Das Ergebnis: 500 EUR eingegeben, aber weder BARGELD noch Kassenbestand aendern sich.
 
-### Technische Umsetzung
+### Loesung
+`sonstige_einnahme` wird in allen BARGELD-Formeln als **Einnahme addiert** (genau wie `vouchers_sold`).
 
-**Datei:** `src/pages/DailySummary.tsx`
+### Betroffene Dateien (5 Stellen)
 
-**Änderungen am PDF-Export-Button (Zeile 1081):**
+1. **`src/pages/DailySummary.tsx`** (Zeile ~272)
+   - `+ formData.sonstige_einnahme` zur Bargeld-Formel hinzufuegen
 
-1. **Attribut `disabled={...}` entfernen** – Der Button wird nicht mehr deaktiviert
-2. **`onClick` Handler anpassen:**
-   ```typescript
-   onClick={() => {
-     if (formData.guest_count === 0) {
-       toast({ 
-         title: "Gästeanzahl fehlt", 
-         variant: "destructive" 
-       });
-       return;
-     }
-     handleExportPDF();
-   }}
-   ```
+2. **`src/pages/ManagerDashboard.tsx`** (Zeile ~231)
+   - `+ formData.sonstige_einnahme` zur bargeldPreview-Formel hinzufuegen
 
-**Was bleibt gleich:**
-- Der `handleExportPDF`-Hook ist bereits vorhanden (Zeile 318)
-- Der `toast`-Hook ist bereits importiert (Zeile 21)
-- Die Gesamtlogik ändert sich nicht – nur die Validierung wird zur Laufzeit geprüft statt vorher
+3. **`src/hooks/useCashBalanceData.ts`** (Zeile ~78)
+   - `+ sonstigeEinnahme` zur Bargeld-Formel hinzufuegen (Variable aus `session.sonstige_einnahme` lesen)
 
-### Benutzerfluss nach der Änderung
+4. **`src/hooks/usePreviousDayDeficit.ts`** (Zeile ~80)
+   - `+ sonstigeEinnahme` zur Bargeld-Formel hinzufuegen (Variable ist dort bereits gelesen, nur nicht verwendet)
 
-1. **Nutzer drückt PDF-Export ohne Gästeanzahl:**
-   - Toast erscheint: "Gästeanzahl fehlt" (rot)
-   - Kein Export
-   - Nutzer weiß sofort, was zu tun ist
+5. **`src/hooks/useStatistics.ts`** (Zeile ~147)
+   - `+ (session.sonstige_einnahme || 0)` zur Bargeld-Formel hinzufuegen
 
-2. **Nutzer trägt Gästeanzahl ein (z.B. 5) und drückt PDF-Export:**
-   - Toast verschwindet
-   - PDF-Export lädt/wird generiert
-   - Alles funktioniert wie gewohnt
+### Auswirkung
+- BARGELD steigt um den Betrag der sonstigen Einnahmen
+- Kassenbestand passt sich entsprechend an
+- Fehlbetrag-Vortag-Berechnung beruecksichtigt den Wert ebenfalls
+- Statistiken zeigen korrekte Werte
 
-### Risiken / Nebeneffekte
-- Keine – die Validierungslogik bleibt identisch, nur die **Präsentation** ändert sich
-- Button-Styling bleibt unverändert
-- Mobile Nutzbarkeit unverändert
+### Risiko
+Gering. Reine Addition eines bereits gespeicherten Feldes. Keine Schema-Aenderungen noetig.
