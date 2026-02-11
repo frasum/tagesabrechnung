@@ -334,6 +334,7 @@ export default function DailySummary() {
         wolt_revenue: formData.wolt_revenue,
         takeaway_total: formData.takeaway_total,
         card_total_gl: formData.card_total_gl,
+        guest_count: formData.guest_count,
       },
       waiterShifts: waiterShifts.map(w => ({
         waiter_name: w.waiter_name,

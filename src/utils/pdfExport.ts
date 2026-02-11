@@ -19,6 +19,7 @@ interface Session {
   takeaway_total?: number;
   spicery_transactions?: number;
   card_total_gl?: number;
+  guest_count?: number;
 }
 
 interface WaiterShift {
@@ -153,6 +154,10 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
 
   const summaryRows: any[][] = [
     ['Umsatz', formatCurrency(data.session.pos_total || 0)],
+    ...((data.session.guest_count ?? 0) > 0 ? [[
+      `Gäste: ${data.session.guest_count}`,
+      `⌀ ${formatCurrency((data.session.pos_total || 0) / data.session.guest_count!)} / Gast`
+    ]] : []),
     ['KK', formatCurrency(terminalTotal)],
     [l('ordersmart_revenue', 'SoUse'), formatCurrency(data.session.ordersmart_revenue || 0)],
     [l('wolt_revenue', 'Wolt'), formatCurrency(data.session.wolt_revenue || 0)],
