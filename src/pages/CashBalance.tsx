@@ -311,7 +311,7 @@ export default function CashBalance() {
                             -{formatCurrency(row.finedine)}
                           </TableCell>
                         )}
-                        <TableCell className="text-right tabular-nums text-emerald-600 dark:text-emerald-400">
+                        <TableCell className="text-right tabular-nums text-success">
                           +{formatCurrency(row.gutscheineVK)}
                         </TableCell>
                         <TableCell className="text-right tabular-nums text-destructive">
@@ -370,7 +370,7 @@ export default function CashBalance() {
                           -{formatCurrency(filteredData.reduce((sum, row) => sum + row.finedine, 0))}
                         </TableCell>
                       )}
-                      <TableCell className="text-right tabular-nums font-bold text-emerald-600 dark:text-emerald-400">
+                      <TableCell className="text-right tabular-nums font-bold text-success">
                         +{formatCurrency(filteredData.reduce((sum, row) => sum + row.gutscheineVK, 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-destructive">
@@ -385,7 +385,10 @@ export default function CashBalance() {
                       <TableCell className="text-right tabular-nums font-bold text-destructive">
                         -{formatCurrency(filteredData.reduce((sum, row) => sum + row.ausgaben, 0))}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums font-bold text-emerald-600 dark:text-emerald-400">
+                      <TableCell className={cn(
+                        'text-right tabular-nums font-bold',
+                        cumulativeCash >= 0 ? 'text-success' : 'text-destructive'
+                      )}>
                         {formatCurrency(cumulativeCash)}
                       </TableCell>
                     </TableRow>
