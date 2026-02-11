@@ -156,13 +156,16 @@ export function ExcelLayout({
                   <td className="px-3 py-1.5 w-36">
                     <div className="flex items-center gap-2">
                       <Input
-                        type="number"
+                        type="text"
                         inputMode="numeric"
-                        min={0}
-                        value={guestCount || ''}
+                        pattern="[0-9]*"
+                        value={guestCount > 0 ? String(guestCount) : ''}
                         placeholder="0"
-                        onChange={(e) => onGuestCountChange?.(parseInt(e.target.value) || 0)}
-                        className="h-7 text-sm border-primary/20 bg-primary/5 w-20 text-right [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        onChange={(e) => {
+                          const cleaned = e.target.value.replace(/\D/g, '');
+                          onGuestCountChange?.(cleaned ? parseInt(cleaned, 10) : 0);
+                        }}
+                        className="h-7 text-sm border-primary/20 bg-primary/5 w-20 text-right"
                         disabled={locked}
                       />
                       {guestCount > 0 && (
