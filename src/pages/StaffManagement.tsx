@@ -1,5 +1,4 @@
-// Force cache bust
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Users, Plus, ChefHat, UtensilsCrossed, Search, Trophy, ChevronDown } from 'lucide-react';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
 import { Button } from '@/components/ui/button';
@@ -15,8 +14,10 @@ import { TipRanking, RankingItem } from '@/components/waiter/TipRanking';
 import { useStaff, useCreateStaff, useUpdateStaff, useDeleteStaff, Staff, StaffInput, StaffRole } from '@/hooks/useStaff';
 import { useShowTipRanking } from '@/hooks/useSettings';
 import { useWaiterRanking } from '@/hooks/useWaiterRanking';
+import { useRestaurants } from '@/hooks/useRestaurant';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function StaffManagement() {
   const [filter, setFilter] = useState<StaffRole | 'all'>('all');
@@ -25,8 +26,10 @@ export default function StaffManagement() {
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
   const [deleteStaff, setDeleteStaff] = useState<Staff | null>(null);
   const [rankingOpen, setRankingOpen] = useState(false);
+  const [selectedRankingRestaurantId, setSelectedRankingRestaurantId] = useState<string | null>(null);
 
-  const restaurantId: string | null = null;
+  const { data: restaurants = [] } = useRestaurants();
+  const restaurantId = selectedRankingRestaurantId;
   const { showTipRanking, updateShowTipRanking, isUpdating: isUpdatingRanking } = useShowTipRanking(restaurantId);
 
   const { data: allStaff = [], isLoading } = useStaff();
@@ -90,6 +93,13 @@ export default function StaffManagement() {
 
   const waiterCount = allStaff.filter(s => s.role === 'waiter' || s.role === 'both').length;
   const kitchenCount = allStaff.filter(s => s.role === 'kitchen' || s.role === 'both').length;
+
+  // Auto-select first restaurant for ranking toggle
+  useEffect(() => {
+    if (!selectedRankingRestaurantId && restaurants.length > 0) {
+      setSelectedRankingRestaurantId(restaurants[0].id);
+    }
+  }, [restaurants, selectedRankingRestaurantId]);
 
   const handleOpenNew = () => {
     setEditingStaff(null);
@@ -183,22 +193,39 @@ export default function StaffManagement() {
         </div>
 
         {/* Tip Ranking Toggle */}
-        {restaurantId && (
-          <div className="flex items-center gap-3 rounded-lg border p-3 bg-card">
-            <Trophy className="w-5 h-5 text-primary shrink-0" />
-            <Label htmlFor="tip-ranking-toggle" className="flex-1 cursor-pointer text-sm font-medium">
-              Trinkgeld Ranking für Kellner anzeigen
-            </Label>
-            <Switch
-              id="tip-ranking-toggle"
-              checked={showTipRanking}
-              disabled={isUpdatingRanking}
-              onCheckedChange={(checked) => {
-                if (restaurantId) {
-                  updateShowTipRanking({ enabled: checked, restaurantId });
-                }
-              }}
-            />
+        {restaurants.length > 0 && (
+          <div className="flex flex-col gap-3 rounded-lg border p-4 bg-card">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-primary shrink-0" />
+                <Label htmlFor="tip-ranking-toggle" className="cursor-pointer text-sm font-medium">
+                  Trinkgeld Ranking für Kellner anzeigen
+                </Label>
+              </div>
+              <Switch
+                id="tip-ranking-toggle"
+                checked={showTipRanking}
+                disabled={isUpdatingRanking || !restaurantId}
+                onCheckedChange={(checked) => {
+                  if (restaurantId) {
+                    updateShowTipRanking({ enabled: checked, restaurantId });
+                  }
+                }}
+              />
+            </div>
+            <Select
+              value={selectedRankingRestaurantId ?? undefined}
+              onValueChange={setSelectedRankingRestaurantId}
+            >
+              <SelectTrigger className="w-full sm:w-64">
+                <SelectValue placeholder="Restaurant wählen…" />
+              </SelectTrigger>
+              <SelectContent>
+                {restaurants.map(r => (
+                  <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         )}
 
