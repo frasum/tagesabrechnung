@@ -1,42 +1,87 @@
 
+# Trinkgeld-Ranking: Umstellung auf individuelles Trinkgeld
 
-# Trinkgeld-Ranking Toggle sichtbar machen
+## Aktuelles System
 
-## Problem
+Die Ranking-Berechnung in `useWaiterRanking.ts` basiert derzeit auf einem **gleichmäßigen Pool-Verteilungssystem**:
 
-Die Mitarbeiterverwaltungs-Seite verwendet das `GlobalLayout`, das keinen Restaurant-Kontext bereitstellt. Daher ist `restaurantId` immer `null` und der Toggle zum Ein-/Ausschalten des Trinkgeld-Rankings wird nie gerendert.
+1. Der gesamte Trinkgeld-Pool wird aus allen Kellner-Beiträgen berechnet
+2. Der Pool wird **gleichmäßig** auf alle Kellner verteilt (= `sharePerWaiter`)
+3. Die Ranking-Position basiert auf `tipPercent = (sharePerWaiter / pos_sales) * 100`
 
-## Loesung
+**Problem**: Jeder Kellner erhält den gleichen Trinkgeldbetrag pro Schicht, unabhängig davon, wie viel er tatsächlich verdient hat.
 
-Da die Staff-Seite kein einzelnes Restaurant im Kontext hat (Mitarbeiter koennen mehreren Restaurants zugeordnet sein), wird ein Restaurant-Dropdown direkt in der Toggle-Zeile angezeigt. Der Admin waehlt das Restaurant aus, fuer das er das Ranking ein- oder ausschalten moechte.
+## Gewünschtes System
 
-## Aenderungen
+Das Ranking soll statt auf dem gleichmäßigen Anteil auf dem **tatsächlichen individuellen Trinkgeldbeitrag** basieren:
 
-### `src/pages/StaffManagement.tsx`
+```
+Individuelles Trinkgeld = cash_handed_in - expected - kitchen_tip
 
-1. `useRestaurants` Hook importieren (liefert alle Restaurants)
-2. Neuen State `selectedRankingRestaurantId` hinzufuegen
-3. Die Bedingung `{restaurantId && ...}` entfernen -- der Toggle-Bereich wird immer angezeigt, sobald Restaurants vorhanden sind
-4. Ein kompaktes Select-Dropdown fuer das Restaurant neben dem Switch einbauen
-5. `useShowTipRanking` mit dem ausgewaehlten Restaurant verbinden
-
-### Technische Details
-
-```text
-+---------------------------------------------------------+
-| [Trophy Icon]  Trinkgeld Ranking anzeigen               |
-| Restaurant: [Dropdown: Restaurant A v]    [Toggle: ON]  |
-+---------------------------------------------------------+
+Wo:
+- expected = pos_sales + hilf_mahl - open_invoices - card_total
+- kitchen_tip = Küchen-Trinkgeld (normalerweise 2% vom Umsatz)
 ```
 
-- `useRestaurants()` aus `@/hooks/useRestaurant` liefert die Liste
-- Beim ersten Laden wird automatisch das erste Restaurant vorausgewaehlt
-- Der `useShowTipRanking(selectedRestaurantId)` Hook reagiert auf Aenderungen
-- Der Switch aendert die Einstellung fuer das jeweils gewaehlte Restaurant
+Dies entspricht exakt der `calculateContribution()`-Logik aus `WaiterCashUp.tsx`.
 
-### Betroffene Datei
+## Implementierung
 
-| Datei | Aenderung |
+### Dateiänderung: `src/hooks/useWaiterRanking.ts`
+
+**Schritt 1**: Im Abschnitt "Calculate tip percent for each waiter in each session" (Zeilen 69-79):
+
+Aktuell:
+```typescript
+for (const shift of sessionShifts) {
+  const name = shift.waiter_name;
+  const sales = shift.pos_sales || 0;
+  const tipPercent = sales > 0 ? (sharePerWaiter / sales) * 100 : 0;
+  ...
+}
+```
+
+Neu:
+```typescript
+for (const shift of sessionShifts) {
+  const name = shift.waiter_name;
+  const sales = shift.pos_sales || 0;
+  
+  // Berechne individuellen Trinkgeld-Beitrag (statt Pool-Anteil)
+  const expected = (shift.pos_sales || 0) + (shift.hilf_mahl || 0) 
+                   - (shift.open_invoices || 0) - (shift.card_total || 0);
+  const individualTip = (shift.cash_handed_in || 0) - expected - (shift.kitchen_tip || 0);
+  
+  // Trinkgeld-Prozentsatz basiert auf individuellem Trinkgeld
+  const tipPercent = sales > 0 ? (individualTip / sales) * 100 : 0;
+  ...
+}
+```
+
+**Auswirkungen**:
+- Kellner mit höheren individuellen Trinkgeldbeiträgen erhalten bessere Rankings
+- Die Trend-Berechnung bleibt unverändert (relativ Vergleich recent vs. older)
+- Die Anzeige in der UI (`avgTipPercent`) zeigt nun den durchschnittlichen Prozentsatz des individuellen Trinkgelds
+
+### UI-Auswirkungen
+
+Keine Änderungen in `TipRanking.tsx` erforderlich – die Komponente zeigt weiterhin `avgTipPercent` an, aber jetzt basiert dieser auf den individuellen Beiträgen statt dem Pool.
+
+### Memory-Update
+
+Die Memory zu "reconciliation/tip-system" sollte aktualisiert werden:
+- **Alt**: "Trinkgeld-Berechnung basiert auf dem Systemumsatz zur Gewährleistung der Konsistenz"
+- **Neu**: "Trinkgeld-Ranking basiert auf dem tatsächlichen individuellen Trinkgeldbeitrag pro Kellner, berechnet als (cash_handed_in - expected - kitchen_tip) / pos_sales. Dies spiegelt die tatsächliche Performance wider."
+
+## Betroffene Dateien
+
+| Datei | Änderung |
 |-------|-----------|
-| `src/pages/StaffManagement.tsx` | Restaurant-Select + Toggle immer sichtbar machen |
+| `src/hooks/useWaiterRanking.ts` | Umstellung von `sharePerWaiter` auf `individualTip` in der Berechnung (Zeilen 69-79) |
 
+## Technische Details
+
+- **Keine DB-Änderungen** erforderlich
+- **Keine Typ-Änderungen** erforderlich
+- Die Berechnung folgt exakt der bewährten Logik aus `WaiterCashUp.tsx`
+- Team-Schichten: Jeder Kellner wird mit seinem individuellen Beitrag berücksichtigt (nicht geteilt)
