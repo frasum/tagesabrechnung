@@ -1,21 +1,23 @@
 // Force cache bust
 import { useState } from 'react';
-import { Users, Plus, ChefHat, UtensilsCrossed, Search } from 'lucide-react';
+import { Users, Plus, ChefHat, UtensilsCrossed, Search, Trophy, ChevronDown } from 'lucide-react';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { StaffCard } from '@/components/staff/StaffCard';
 import { StaffDialog } from '@/components/staff/StaffDialogNative';
+import { TipRanking, RankingItem } from '@/components/waiter/TipRanking';
 
 import { useStaff, useCreateStaff, useUpdateStaff, useDeleteStaff, Staff, StaffInput, StaffRole } from '@/hooks/useStaff';
 import { useShowTipRanking } from '@/hooks/useSettings';
 import { useRestaurant } from '@/hooks/useRestaurant';
+import { useWaiterRanking } from '@/hooks/useWaiterRanking';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Trophy } from 'lucide-react';
 
 export default function StaffManagement() {
   const [filter, setFilter] = useState<StaffRole | 'all'>('all');
@@ -23,6 +25,7 @@ export default function StaffManagement() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
   const [deleteStaff, setDeleteStaff] = useState<Staff | null>(null);
+  const [rankingOpen, setRankingOpen] = useState(false);
 
   const { restaurantId } = useRestaurant();
   const { showTipRanking, updateShowTipRanking, isUpdating: isUpdatingRanking } = useShowTipRanking(restaurantId);
@@ -31,8 +34,10 @@ export default function StaffManagement() {
   const createMutation = useCreateStaff();
   const updateMutation = useUpdateStaff();
   const deleteMutation = useDeleteStaff();
+  const { data: rankings = [], isLoading: rankingsLoading } = useWaiterRanking();
 
-  // Filter staff by role and search query
+  // Create a map of waiter name -> ranking data for quick lookup
+  const rankingMap = new Map(rankings.map(r => [r.name.toLowerCase(), r]));
   const filteredStaff = allStaff.filter(s => {
     const matchesRole = filter === 'all' || s.role === filter || 
       (s.role === 'both' && (filter === 'waiter' || filter === 'kitchen'));
@@ -227,7 +232,7 @@ export default function StaffManagement() {
                     </h3>
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                       {group.waiters.map(staff => (
-                        <StaffCard key={staff.id} staff={staff} onEdit={handleEdit} onDelete={setDeleteStaff} />
+                        <StaffCard key={staff.id} staff={staff} onEdit={handleEdit} onDelete={setDeleteStaff} rankingData={rankingMap.get(staff.name.toLowerCase())} />
                       ))}
                     </div>
                   </div>
@@ -241,7 +246,7 @@ export default function StaffManagement() {
                     </h3>
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                       {group.kitchen.map(staff => (
-                        <StaffCard key={staff.id} staff={staff} onEdit={handleEdit} onDelete={setDeleteStaff} />
+                        <StaffCard key={staff.id} staff={staff} onEdit={handleEdit} onDelete={setDeleteStaff} rankingData={rankingMap.get(staff.name.toLowerCase())} />
                       ))}
                     </div>
                   </div>
@@ -261,7 +266,7 @@ export default function StaffManagement() {
                     </h3>
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                       {groupedByRestaurant.noRestaurant.waiters.map(staff => (
-                        <StaffCard key={staff.id} staff={staff} onEdit={handleEdit} onDelete={setDeleteStaff} />
+                        <StaffCard key={staff.id} staff={staff} onEdit={handleEdit} onDelete={setDeleteStaff} rankingData={rankingMap.get(staff.name.toLowerCase())} />
                       ))}
                     </div>
                   </div>
@@ -274,7 +279,7 @@ export default function StaffManagement() {
                     </h3>
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                       {groupedByRestaurant.noRestaurant.kitchen.map(staff => (
-                        <StaffCard key={staff.id} staff={staff} onEdit={handleEdit} onDelete={setDeleteStaff} />
+                        <StaffCard key={staff.id} staff={staff} onEdit={handleEdit} onDelete={setDeleteStaff} rankingData={rankingMap.get(staff.name.toLowerCase())} />
                       ))}
                     </div>
                   </div>
@@ -282,6 +287,34 @@ export default function StaffManagement() {
               </div>
             )}
           </div>
+        )}
+
+        {/* Collapsible Ranking Table */}
+        {rankings.length > 0 && (
+          <Collapsible open={rankingOpen} onOpenChange={setRankingOpen}>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full justify-between gap-2">
+                <span className="flex items-center gap-2">
+                  <Trophy className="w-4 h-4 text-primary" />
+                  Trinkgeld Ranking ({rankings.length} Kellner)
+                </span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${rankingOpen ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-3">
+              <TipRanking
+                rankings={rankings.map(r => ({
+                  name: r.name,
+                  avgTipPercent: r.avgTipPercent,
+                  trend: r.trend,
+                  trendValue: r.trendValue,
+                  rank: r.rank,
+                }))}
+                currentUserName=""
+                isLoading={rankingsLoading}
+              />
+            </CollapsibleContent>
+          </Collapsible>
         )}
       </div>
 

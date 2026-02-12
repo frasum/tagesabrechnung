@@ -1,17 +1,19 @@
-import { Pencil, Trash2, ChefHat, UtensilsCrossed, Store, Smartphone, Shield, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { Pencil, Trash2, ChefHat, UtensilsCrossed, Store, Smartphone, Shield, ShieldCheck, ShieldAlert, Trophy } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Staff } from '@/hooks/useStaff';
+import type { WaiterRankingItem } from '@/hooks/useWaiterRanking';
 
 interface StaffCardProps {
   staff: Staff;
   onEdit: (staff: Staff) => void;
   onDelete: (staff: Staff) => void;
+  rankingData?: WaiterRankingItem;
 }
 
-export function StaffCard({ staff, onEdit, onDelete }: StaffCardProps) {
+export function StaffCard({ staff, onEdit, onDelete, rankingData }: StaffCardProps) {
   const RoleIcon = staff.role === 'kitchen' ? ChefHat : UtensilsCrossed;
   const roleLabel = staff.role === 'kitchen' ? 'Küche' : 'Kellner';
   
@@ -50,6 +52,21 @@ export function StaffCard({ staff, onEdit, onDelete }: StaffCardProps) {
                 <h3 className="font-semibold text-foreground truncate">{staff.name}</h3>
                 {!staff.is_active && (
                   <Badge variant="secondary" className="text-xs">Inaktiv</Badge>
+                )}
+                {rankingData && (staff.role === 'waiter' || staff.role === 'both') && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge className="text-xs font-normal gap-1 bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-50">
+                          <Trophy className="w-3 h-3" />
+                          #{rankingData.rank} · {rankingData.avgTipPercent.toFixed(1)}%
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Ø Trinkgeld: {rankingData.avgTipPercent.toFixed(1)}% · {rankingData.shiftsCount} Schichten</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 )}
               </div>
               
