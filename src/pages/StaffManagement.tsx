@@ -14,7 +14,6 @@ import { TipRanking, RankingItem } from '@/components/waiter/TipRanking';
 
 import { useStaff, useCreateStaff, useUpdateStaff, useDeleteStaff, Staff, StaffInput, StaffRole } from '@/hooks/useStaff';
 import { useShowTipRanking } from '@/hooks/useSettings';
-import { useRestaurant } from '@/hooks/useRestaurant';
 import { useWaiterRanking } from '@/hooks/useWaiterRanking';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -27,7 +26,7 @@ export default function StaffManagement() {
   const [deleteStaff, setDeleteStaff] = useState<Staff | null>(null);
   const [rankingOpen, setRankingOpen] = useState(false);
 
-  const { restaurantId } = useRestaurant();
+  const restaurantId: string | null = null;
   const { showTipRanking, updateShowTipRanking, isUpdating: isUpdatingRanking } = useShowTipRanking(restaurantId);
 
   const { data: allStaff = [], isLoading } = useStaff();
