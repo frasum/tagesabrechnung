@@ -16,7 +16,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 const metricToggles = [
   { key: 'show_pos_total', label: 'Vectron (Tagesumsatz)' },
   { key: 'show_guest_count', label: 'Gäste + Durchschnittsverbrauch' },
-  { key: 'show_cash_balance', label: 'Kassenbestand' },
+  { key: 'show_cash_balance', label: 'Wechselgeldbestand' },
   { key: 'show_cash_details', label: 'Bargeld-Details' },
   { key: 'show_created_by', label: 'Erstellt von' },
   { key: 'show_waiters', label: 'Kellner-Details' },

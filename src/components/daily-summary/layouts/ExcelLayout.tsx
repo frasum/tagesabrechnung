@@ -261,7 +261,7 @@ export function ExcelLayout({
                 <table className="w-full">
                   <tbody>
                     <tr>
-                      <td className="px-3 py-1.5 font-semibold text-sm">Kassenbestand</td>
+                      <td className="px-3 py-1.5 font-semibold text-sm">Wechselgeldbestand</td>
                       <td className={`px-3 py-1.5 text-right tabular-nums font-semibold text-sm ${remainingCash >= 0 ? 'text-success' : 'text-destructive'}`}>
                         {fmt(remainingCash)} €
                       </td>
