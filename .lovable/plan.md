@@ -1,48 +1,43 @@
 
 
-# Einmalige Korrekturbuchung fuer Kassenbestand = 2.000 EUR
+# register_transfers in die Bargeld-Berechnung integrieren
 
-## Uebersicht
+## Zusammenfassung
 
-Die `register_transfers`-Tabelle existiert bereits in der Datenbank, wird aber aktuell nicht in die Bargeld-Berechnung einbezogen. Wir integrieren diese Tabelle in die Berechnungslogik und erstellen dann fuer beide Restaurants Korrekturbuchungen, die den Kassenbestand exakt auf 2.000 EUR bringen.
+Der "Kassenbestand" in der Tagesabrechnung soll den **Wechselgeldbestand** widerspiegeln -- also idealerweise 2.000 EUR. Aktuell kann er darunter liegen, weil negative Tage den Bestand druecken und die bestehenden Korrekturbuchungen in `register_transfers` vom Code ignoriert werden.
 
-## Warum ist der Kassenbestand aktuell nicht 2.000 EUR?
+Die Loesung: `register_transfers` in die Berechnung einbinden. Danach greifen die bereits vorhandenen Korrekturbuchungen (542,43 EUR fuer YUM, 768,72 EUR fuer Spicery vom 15.02.), und der Kassenbestand sollte auf 2.000 EUR kommen. Falls nicht exakt, werden die Betraege angepasst.
 
-Obwohl das Wechselgeld (Petty Cash) auf 2.000 EUR eingestellt ist, kann der Kassenbestand darunter liegen, wenn einzelne Tage ein negatives Bargeld-Ergebnis hatten, das noch nicht aufgeholt wurde. Die Skimming-Logik deckelt nur nach oben (auf 2.000 EUR), federt aber Defizite nicht ab.
+## Was sich aendert
 
-## Loesung
+**Eine Datei**: `src/hooks/useCashBalanceData.ts`
 
-### Schritt 1: register_transfers in die Bargeld-Berechnung einbinden
+Die Aenderung besteht aus zwei Teilen:
 
-Die Datei `src/hooks/useCashBalanceData.ts` wird erweitert:
-- register_transfers fuer das Restaurant werden geladen
-- Transfers mit Richtung "in" erhoehen das Bargeld am jeweiligen Tag
-- Transfers mit Richtung "out" reduzieren das Bargeld am jeweiligen Tag
-- Die Transfers werden nach Datum den Sessions zugeordnet
+1. **Laden der register_transfers**: Zusaetzliche Abfrage an die `register_transfers`-Tabelle fuer das Restaurant
+2. **Einrechnung pro Tag**: Nach der Bargeld-Berechnung jeder Session werden Transfers desselben Datums addiert (`to_restaurant` = plus) oder abgezogen (`to_safe` = minus), bevor das Deficit Chaining greift
 
-### Schritt 2: Korrekturbetrag ermitteln
+## Was sich NICHT aendert
 
-Nach der Code-Aenderung wird der aktuelle Kassenbestand fuer beide Restaurants geprueft. Die Differenz zu 2.000 EUR ergibt den Korrekturbetrag.
+- Die Skimming-Logik in `useRemainingCash.ts` bleibt exakt gleich
+- Bankeinzahlungen bleiben unberuehrt
+- Kein neues UI noetig
+- Keine neuen Datenbank-Eintraege noetig (Korrekturbuchungen existieren bereits)
 
-### Schritt 3: Korrekturbuchungen erstellen
+## Technisches Detail
 
-Fuer jedes Restaurant wird ein `register_transfer`-Eintrag erstellt:
-- **Datum**: Heutiges Datum (2026-02-16)
-- **Richtung**: "in" (Geld wird dem Kassenbestand hinzugefuegt)
-- **Betrag**: Exakt die Differenz zu 2.000 EUR
-- **Grund**: "Einmalige Korrektur Kassenbestand"
+```text
+Aktuelle Berechnung pro Tag:
+  rawBargeld = Umsatz + GutscheineVK + Sonstige - Abzuege
+  bargeld = rawBargeld + carryOver
 
-### Betroffene Dateien
+Neue Berechnung pro Tag:
+  rawBargeld = Umsatz + GutscheineVK + Sonstige - Abzuege
+  transferEffect = SUM(to_restaurant) - SUM(to_safe) fuer diesen Tag
+  bargeld = rawBargeld + transferEffect + carryOver
+```
 
-| Datei | Aenderung |
-|-------|-----------|
-| `src/hooks/useCashBalanceData.ts` | register_transfers laden und in bargeld-Berechnung einbeziehen |
-| Datenbank (register_transfers) | Korrekturbuchungen fuer YUM und Spicery einfuegen |
+## Verifikation
 
-### Was sich NICHT aendert
-
-- Die Skimming-Logik in `useRemainingCash.ts` bleibt unveraendert (nutzt automatisch die korrigierten bargeld-Werte)
-- Die Tagesabrechnung zeigt automatisch den korrigierten Kassenbestand
-- Die monatliche Bargeld-Uebersicht funktioniert weiterhin korrekt
-- Kein neues UI-Element noetig -- die Korrektur fliesst unsichtbar in die Berechnung ein
+Nach der Code-Aenderung wird geprueft, ob der Kassenbestand fuer beide Restaurants exakt 2.000 EUR betraegt. Falls die bestehenden Korrekturbuchungen nicht ausreichen, werden die Betraege in der Datenbank angepasst.
 
