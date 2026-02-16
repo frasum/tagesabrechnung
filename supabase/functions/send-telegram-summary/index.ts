@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
         const cashResult = await calculateCashBalance(supabase, restaurant.id, targetDate);
         if (cashResult !== null) {
           if (settings.show_cash_balance) {
-            lines.push(`  Kassenbestand: ${formatEur(cashResult.kassenbestand)}`);
+            lines.push(`  Wechselgeldbestand: ${formatEur(cashResult.kassenbestand)}`);
           }
           if (settings.show_cash_details && cashResult.details) {
             const d = cashResult.details;

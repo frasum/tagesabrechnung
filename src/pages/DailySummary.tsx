@@ -487,7 +487,7 @@ export default function DailySummary() {
         variant={bargeld >= 0 ? 'success' : 'error'}
       />
       <StatCard
-        label="Kassenbestand"
+        label="Wechselgeldbestand"
         value={remainingCash}
         icon={<Wallet className="w-5 h-5" />}
         variant={remainingCash >= 0 ? 'success' : 'error'}

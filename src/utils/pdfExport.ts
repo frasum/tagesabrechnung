@@ -212,7 +212,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(0);
-    doc.text('Kassenbestand', tableMarginLeft + 2, y);
+    doc.text('Wechselgeldbestand', tableMarginLeft + 2, y);
     doc.text(formatCurrency(rc), tableMarginLeft + tableWidth - 2, y, { align: 'right' });
     y += 10;
   }
