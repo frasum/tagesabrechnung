@@ -440,7 +440,7 @@ export default function DailySummary() {
   }
 
   // Render components for layout slots
-  const adjustedPosDiff = posMismatch - formData.takeaway_total - formData.ordersmart_revenue;
+  const adjustedPosDiff = posMismatch - formData.takeaway_total;
   const warningsComponent = waiterShifts.length > 0 && (Math.abs(adjustedPosDiff) >= 0.01 || Math.abs(cardTerminalMismatch) >= 0.01) && (
     <div className="grid sm:grid-cols-2 gap-4">
       {Math.abs(adjustedPosDiff) >= 0.01 && (

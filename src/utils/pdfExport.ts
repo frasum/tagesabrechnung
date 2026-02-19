@@ -127,7 +127,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
   y += 6;
 
   // ========== WARNINGS ==========
-  const adjustedPosMismatch = data.totals.posMismatch - (data.session.takeaway_total || 0) - (data.session.ordersmart_revenue || 0);
+  const adjustedPosMismatch = data.totals.posMismatch - (data.session.takeaway_total || 0);
   if (Math.abs(adjustedPosMismatch) >= 0.01 || Math.abs(data.totals.cardTerminalMismatch) >= 0.01) {
     doc.setFillColor(254, 226, 226);
     doc.rect(margin, y - 3, pageWidth - 2 * margin, 10, 'F');
