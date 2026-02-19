@@ -30,7 +30,7 @@ import { useLabels } from '@/hooks/useLabels';
 
 export default function ManagerDashboard() {
   const { selectedDate, setSelectedDate } = useSelectedDate();
-  const { restaurantId } = useRestaurant();
+  const { restaurantId, restaurant } = useRestaurant();
   const { user } = useAuth();
   const { toast } = useToast();
   
@@ -271,7 +271,7 @@ export default function ManagerDashboard() {
         </div>
 
         {/* Warning Cards - Show when there are mismatches */}
-        {(() => { const adjustedPosDiff = posMismatch - formData.takeaway_total; return session && waiterShifts.length > 0 && (Math.abs(adjustedPosDiff) >= 0.01 || Math.abs(cardTerminalMismatch) >= 0.01) && (
+        {(() => { const ordersmartInTakeaway = restaurant?.ordersmart_in_takeaway ?? true; const adjustedPosDiff = posMismatch - formData.takeaway_total - (ordersmartInTakeaway ? 0 : formData.ordersmart_revenue); return session && waiterShifts.length > 0 && (Math.abs(adjustedPosDiff) >= 0.01 || Math.abs(cardTerminalMismatch) >= 0.01) && (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {Math.abs(adjustedPosDiff) >= 0.01 && (
               <Card className="border-destructive/30 bg-destructive/5">

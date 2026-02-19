@@ -46,7 +46,7 @@ import { useTelegramSettings } from '@/hooks/useTelegramSettings';
 export default function DailySummary() {
   const { selectedDate, setSelectedDate } = useSelectedDate();
   const { toast } = useToast();
-  const { restaurantId, restaurantName } = useRestaurant();
+  const { restaurantId, restaurantName, restaurant } = useRestaurant();
   const { settings } = useTelegramSettings();
   const { user } = useAuth();
   const locked = isSessionLocked(selectedDate, user?.permissionLevel || 'staff');
@@ -373,6 +373,7 @@ export default function DailySummary() {
       updatedByName: session?.updated_by_name || undefined,
       labels: allLabels,
       hiddenFields,
+      ordersmartInTakeaway: restaurant?.ordersmart_in_takeaway ?? true,
       totals: {
         kellnerUmsatz,
         totalCardTotal,
@@ -440,7 +441,8 @@ export default function DailySummary() {
   }
 
   // Render components for layout slots
-  const adjustedPosDiff = posMismatch - formData.takeaway_total;
+  const ordersmartInTakeaway = restaurant?.ordersmart_in_takeaway ?? true;
+  const adjustedPosDiff = posMismatch - formData.takeaway_total - (ordersmartInTakeaway ? 0 : formData.ordersmart_revenue);
   const warningsComponent = waiterShifts.length > 0 && (Math.abs(adjustedPosDiff) >= 0.01 || Math.abs(cardTerminalMismatch) >= 0.01) && (
     <div className="grid sm:grid-cols-2 gap-4">
       {Math.abs(adjustedPosDiff) >= 0.01 && (
