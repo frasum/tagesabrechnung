@@ -1,33 +1,37 @@
 
 
-## POS-Differenz-Warnung: OrderSmart nicht doppelt abziehen
+## Bugfix: Doppelte Defizit-Verrechnung im Wechselgeldbestand
 
 ### Problem
-Die POS-Differenz-Warnung zeigt faelschlicherweise -137,08 EUR an. Der Grund: OrderSmart-Umsaetze sind bereits im Takeaway-Betrag enthalten, werden aber in der Formel nochmal separat abgezogen.
+Der angezeigte Wechselgeldbestand (1.355,31 EUR) ist falsch, weil Defizite doppelt gezaehlt werden:
+- `useCashBalanceData` berechnet `bargeld` bereits MIT Deficit Chaining (Fehlbetrag Vortag eingerechnet)
+- `useRemainingCash` und `CashBalance.tsx` summieren diese bereits verketteten Werte dann nochmal Tag fuer Tag auf
+- Ergebnis: Negative Tage werden mehrfach abgezogen
 
-### Beweis (18.02.2026, Spicery)
-```text
-Aktuelle Formel:  4.469,00 - 4.136,60 - 332,40 - 137,08 = -137,08  (FALSCH)
-Korrigierte Formel: 4.469,00 - 4.136,60 - 332,40         =    0,00  (KORREKT)
-```
+### Korrekter Wert
+- Angezeigt: 1.355,31 EUR (falsch)
+- Korrekt: ca. 1.593,84 EUR (nah an den tatsaechlichen ~1.585 EUR)
 
-### Aenderung
-`- ordersmart_revenue` aus der POS-Differenz-Berechnung entfernen. Drei Stellen:
+### Loesung
+Das `bargeld`-Feld in `useCashBalanceData` enthaelt bereits das Deficit Chaining. Die Konsumenten (`useRemainingCash` und `CashBalance.tsx`) fuehren aber ihre eigene kumulative Simulation durch, die nochmal akkumuliert. 
 
-1. **src/pages/DailySummary.tsx** (Zeile 443)
-   - Alt: `posMismatch - formData.takeaway_total - formData.ordersmart_revenue`
-   - Neu: `posMismatch - formData.takeaway_total`
+Die einfachste Loesung: `useCashBalanceData` soll zusaetzlich den **Roh-Bargeldwert** (ohne Deficit Chaining) zurueckgeben. Die Skimming-Simulation in `useRemainingCash` und `CashBalance.tsx` arbeitet dann mit den Roh-Werten.
 
-2. **src/pages/ManagerDashboard.tsx** (Zeile 274)
-   - Alt: `posMismatch - formData.takeaway_total - formData.ordersmart_revenue`
-   - Neu: `posMismatch - formData.takeaway_total`
+### Aenderungen
 
-3. **src/utils/pdfExport.ts** (Zeile 130)
-   - Alt: `data.totals.posMismatch - (data.session.takeaway_total || 0) - (data.session.ordersmart_revenue || 0)`
-   - Neu: `data.totals.posMismatch - (data.session.takeaway_total || 0)`
+**1. `src/hooks/useCashBalanceData.ts`**
+- Neues Feld `rawBargeld` zum `CashBalanceRow`-Interface hinzufuegen
+- Im Return-Objekt sowohl `bargeld` (mit Chaining, fuer Tabellenansicht) als auch `rawBargeld` (ohne Chaining) zurueckgeben
+
+**2. `src/hooks/useRemainingCash.ts`**
+- Statt `row.bargeld` wird `row.rawBargeld` verwendet
+- Die Skimming-Logik bleibt gleich, arbeitet aber mit den richtigen Roh-Werten
+
+**3. `src/pages/CashBalance.tsx`**
+- Gleiche Anpassung: `row.rawBargeld` statt `row.bargeld` in der kumulativen Simulation verwenden
 
 ### Auswirkung
-- Warnung erscheint nur noch bei echten Differenzen
-- Kein Einfluss auf BARGELD-Berechnung (dort wird OrderSmart korrekt separat behandelt)
-- Keine Datenbank-Aenderungen noetig
-
+- Wechselgeldbestand in der Tagesabrechnung wird korrekt angezeigt
+- Bargeldbestand-Seite (Monatsuebersicht) wird ebenfalls korrigiert
+- PDF-Export und Telegram-Bericht profitieren automatisch (nutzen `useRemainingCash`)
+- Die Tabellendarstellung der Bargeldbestand-Seite (Spalte "Bargeld") bleibt unveraendert, da sie weiterhin `bargeld` (mit Chaining) nutzt
