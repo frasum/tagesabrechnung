@@ -156,7 +156,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
     ['Umsatz', formatCurrency(data.session.pos_total || 0)],
     ...((data.session.guest_count ?? 0) > 0 ? [[
       `Gäste: ${data.session.guest_count}`,
-      `⌀ ${formatCurrency((data.session.pos_total || 0) / data.session.guest_count!)} / Gast`
+      `⌀ ${formatCurrency(((data.session.pos_total || 0) - (data.session.takeaway_total || 0)) / data.session.guest_count!)} / Gast`
     ]] : []),
     ['KK', formatCurrency(terminalTotal)],
     [l('ordersmart_revenue', 'SoUse'), formatCurrency(data.session.ordersmart_revenue || 0)],

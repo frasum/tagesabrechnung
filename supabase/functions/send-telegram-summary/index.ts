@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
         lines.push(`  Vectron: ${formatEur(posTotal)}`);
       }
       if (settings.show_guest_count && session.guest_count && session.guest_count > 0) {
-        const avgSpend = posTotal / session.guest_count;
+        const avgSpend = (posTotal - (session.takeaway_total || 0)) / session.guest_count;
         lines.push(`  Gäste: ${session.guest_count} (⌀ ${formatEur(avgSpend)})`);
       }
       if (settings.show_cash_balance || settings.show_cash_details) {

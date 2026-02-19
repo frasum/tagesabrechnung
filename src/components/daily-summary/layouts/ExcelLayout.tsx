@@ -172,7 +172,7 @@ export function ExcelLayout({
 
                       {guestCount > 0 &&
                       <span className="text-xs text-muted-foreground whitespace-nowrap">
-                          ⌀ {new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(formData.pos_total / guestCount)} €
+                          ⌀ {new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format((formData.pos_total - (formData.takeaway_total || 0)) / guestCount)} €
                         </span>
                       }
                     </div>
