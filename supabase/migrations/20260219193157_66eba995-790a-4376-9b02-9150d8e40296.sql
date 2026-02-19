@@ -1,0 +1,1 @@
+CREATE POLICY "Allow restaurants update via app" ON public.restaurants FOR UPDATE USING (true);

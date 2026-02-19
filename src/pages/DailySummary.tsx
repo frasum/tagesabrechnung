@@ -39,6 +39,7 @@ import { useAdvances, useCreateAdvance, useDeleteAdvance } from '@/hooks/useAdva
 import { StaffSelect } from '@/components/shared/StaffSelect';
 import { useLabels } from '@/hooks/useLabels';
 import { LabelSettings } from '@/components/settings/LabelSettings';
+import { OrdersmartTakeawaySetting } from '@/components/settings/OrdersmartTakeawaySetting';
 import { usePreviousDayDeficit } from '@/hooks/usePreviousDayDeficit';
 import { useRemainingCash } from '@/hooks/useRemainingCash';
 import { useTelegramSettings } from '@/hooks/useTelegramSettings';
@@ -1131,9 +1132,12 @@ export default function DailySummary() {
             {locked && <SessionLockedBanner />}
             {renderExcelLayout()}
 
-            {/* Label Settings for admins only */}
+            {/* Settings for admins only */}
             {user?.permissionLevel === 'admin' && (
-              <LabelSettings />
+              <>
+                <OrdersmartTakeawaySetting />
+                <LabelSettings />
+              </>
             )}
           </>
         )}

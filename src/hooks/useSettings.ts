@@ -125,6 +125,46 @@ export function useShowTipRanking(restaurantId: string | null) {
   };
 }
 
+export function useOrdersmartInTakeaway(restaurantId: string | null) {
+  const queryClient = useQueryClient();
+
+  const { data: ordersmartInTakeaway, isLoading } = useQuery({
+    queryKey: ['ordersmart-in-takeaway', restaurantId],
+    queryFn: async () => {
+      if (!restaurantId) return true;
+      const { data, error } = await supabase
+        .from('restaurants')
+        .select('ordersmart_in_takeaway')
+        .eq('id', restaurantId)
+        .single();
+      if (error) throw error;
+      return data?.ordersmart_in_takeaway ?? true;
+    },
+    enabled: !!restaurantId,
+  });
+
+  const { mutate: updateOrdersmartInTakeaway, isPending: isUpdating } = useMutation({
+    mutationFn: async ({ value, restaurantId: restId }: { value: boolean; restaurantId: string }) => {
+      const { error } = await supabase
+        .from('restaurants')
+        .update({ ordersmart_in_takeaway: value })
+        .eq('id', restId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ordersmart-in-takeaway', restaurantId] });
+      queryClient.invalidateQueries({ queryKey: ['restaurant'] });
+    },
+  });
+
+  return {
+    ordersmartInTakeaway: ordersmartInTakeaway ?? true,
+    isLoading,
+    updateOrdersmartInTakeaway,
+    isUpdating,
+  };
+}
+
 export function useInitialCashDeficit(restaurantId: string | null) {
   const queryClient = useQueryClient();
 
