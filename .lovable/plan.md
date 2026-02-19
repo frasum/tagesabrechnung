@@ -1,48 +1,45 @@
 
 
-# SoUse nicht in Vectron Takeaway (Restaurant-spezifische Einstellung)
+# OrderSmart-in-Takeaway Toggle in den Restaurant-Einstellungen
 
-## Problem
-Bei **YUM** ist der SoUse (OrderSmart)-Umsatz **nicht** im Vectron Takeaway-Total enthalten, bei **Spicery** jedoch schon. Das aktuelle System geht davon aus, dass OrderSmart bereits im Takeaway enthalten ist, weshalb es in der **POS-Differenz-Berechnung** nicht separat abgezogen wird.
+## Uebersicht
+Ein neuer Switch/Toggle wird fuer Admins hinzugefuegt, um die Einstellung `ordersmart_in_takeaway` pro Restaurant umschalten zu koennen. Die Darstellung folgt dem bestehenden Muster der `LabelSettings`-Komponente am Ende der Tagesabrechnung.
 
-Das fuehrt dazu, dass die POS-Differenz bei YUM falsch berechnet wird, sobald OrderSmart-Umsaetze vorhanden sind.
+## Aenderungen
 
-## Loesung
-Eine neue Einstellung pro Restaurant: `ordersmart_in_takeaway` (Boolean). 
+### 1. Neuer Hook in `src/hooks/useSettings.ts`
+- `useOrdersmartInTakeaway(restaurantId)` hinzufuegen
+- Laedt den aktuellen Wert aus der `restaurants`-Tabelle
+- Bietet eine `updateOrdersmartInTakeaway`-Mutation (analog zu `useInitialCashDeficit`)
 
-- **true** (Standard/Spicery): OrderSmart ist im Takeaway enthalten, wird nicht separat abgezogen
-- **false** (YUM): OrderSmart ist NICHT im Takeaway enthalten, muss in der POS-Differenz separat abgezogen werden
+### 2. Neue Komponente `src/components/settings/OrdersmartTakeawaySetting.tsx`
+- Einfache Zeile mit Label und Switch-Toggle
+- Zeigt: "SoUse in Takeaway enthalten" mit einem Switch
+- Nutzt `useOrdersmartInTakeaway` Hook
+- Nur fuer Admins sichtbar
 
-## Betroffene Stellen
+### 3. Integration in `src/pages/DailySummary.tsx`
+- Die neue Komponente wird neben den bestehenden `LabelSettings` fuer Admins angezeigt
+- Oder alternativ als eigene Card innerhalb des Admin-Bereichs
 
-### 1. Datenbank
-- Neue Spalte `ordersmart_in_takeaway` (boolean, default `true`) in der `restaurants`-Tabelle
+### 4. RLS-Policy fuer UPDATE
+- Eine neue RLS-Policy wird benoetigt, damit die `restaurants`-Tabelle aktualisiert werden kann (aktuell ist UPDATE nicht erlaubt)
+- Migration: `CREATE POLICY "Allow restaurants update via app" ON public.restaurants FOR UPDATE USING (true);`
 
-### 2. POS-Differenz-Berechnung
-Die Formel `adjustedPosDiff = posMismatch - takeaway_total` muss erweitert werden:
+## Technische Details
 
-```text
-Wenn ordersmart_in_takeaway = false:
-  adjustedPosDiff = pos_total - kellnerUmsatz - takeaway_total - ordersmart_revenue
-
-Wenn ordersmart_in_takeaway = true (bisheriges Verhalten):
-  adjustedPosDiff = pos_total - kellnerUmsatz - takeaway_total
+### Hook-Struktur (analog zu `useInitialCashDeficit`):
+```
+useOrdersmartInTakeaway(restaurantId) {
+  query: SELECT ordersmart_in_takeaway FROM restaurants WHERE id = restaurantId
+  mutation: UPDATE restaurants SET ordersmart_in_takeaway = value WHERE id = restaurantId
+  onSuccess: invalidate restaurant queries + RestaurantContext
+}
 ```
 
-Betroffene Dateien:
-- `src/pages/DailySummary.tsx` (Zeile 443)
-- `src/pages/ManagerDashboard.tsx` (Zeile 274)
-- `src/utils/pdfExport.ts` (Zeile 130)
+### Komponenten-Layout:
+```
+[Truck-Icon] SoUse in Takeaway enthalten  [Switch: An/Aus]
+Beschreibung: Wenn deaktiviert, wird SoUse in der POS-Differenz separat abgezogen.
+```
 
-### 3. Restaurant-Daten laden
-- Die Restaurant-Einstellung muss geladen und an die betroffenen Komponenten weitergegeben werden (ueber den bestehenden RestaurantContext oder useSettings)
-
-### 4. Kein Einfluss auf BARGELD
-Die BARGELD-Formel in `useCashBalanceData.ts` zieht OrderSmart bereits separat ab -- dort aendert sich nichts.
-
-## Technische Schritte
-
-1. **Migration**: Spalte `ordersmart_in_takeaway` (boolean, default true) zur `restaurants`-Tabelle hinzufuegen. Fuer YUM auf `false` setzen.
-2. **Restaurant-Kontext erweitern**: Die neue Einstellung im RestaurantContext oder beim Laden der Session verfuegbar machen.
-3. **POS-Differenz anpassen**: In DailySummary, ManagerDashboard und pdfExport die Formel konditional erweitern.
-4. **Optional**: Einstellung in den Restaurant-Settings im UI konfigurierbar machen.
