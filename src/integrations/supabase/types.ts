@@ -414,6 +414,7 @@ export type Database = {
           id: string
           initial_cash_deficit: number | null
           name: string
+          ordersmart_in_takeaway: boolean
           slug: string
         }
         Insert: {
@@ -421,6 +422,7 @@ export type Database = {
           id?: string
           initial_cash_deficit?: number | null
           name: string
+          ordersmart_in_takeaway?: boolean
           slug: string
         }
         Update: {
@@ -428,6 +430,7 @@ export type Database = {
           id?: string
           initial_cash_deficit?: number | null
           name?: string
+          ordersmart_in_takeaway?: boolean
           slug?: string
         }
         Relationships: []

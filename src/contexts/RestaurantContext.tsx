@@ -9,6 +9,7 @@ interface Restaurant {
   id: string;
   name: string;
   slug: string;
+  ordersmart_in_takeaway: boolean;
 }
 
 interface RestaurantContextValue {
