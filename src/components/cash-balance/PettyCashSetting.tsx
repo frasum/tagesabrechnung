@@ -64,7 +64,7 @@ export function PettyCashSetting() {
   return (
     <div className="flex items-center gap-2">
       <Coins className="h-4 w-4 text-muted-foreground" />
-      <span className="text-sm text-muted-foreground">Wechselgeld -START </span>
+      <span className="text-sm text-muted-foreground">Wechselgeld - START</span>
       
       {isEditing ?
       <div className="flex items-center gap-1">
