@@ -289,6 +289,8 @@ export default function DailySummary() {
     totalExpenses +
     previousDeficit;
 
+  // Raw daily cash (without previous deficit carry-over)
+  const bargeldRaw = bargeld - previousDeficit;
 
   // Format submission timestamp
   const formatSubmittedAt = (timestamp: string | null) => {
@@ -1056,6 +1058,7 @@ export default function DailySummary() {
       uniqueKitchenStaff={uniqueKitchenStaff}
       tipPerKitchen={tipPerKitchen}
       bargeld={bargeld}
+      bargeldRaw={bargeldRaw}
       totalAdvances={totalAdvances}
       locked={locked}
       getLabel={getLabel}
