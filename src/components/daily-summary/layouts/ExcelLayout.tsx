@@ -64,6 +64,7 @@ interface ExcelLayoutProps {
   getLabel?: (key: LabelKey) => string;
   isFieldHidden?: (key: LabelKey) => boolean;
   previousDeficit?: number;
+  bargeldRaw?: number;
   remainingCash?: number;
   todaySkimAmount?: number;
   createdByName?: string;
@@ -98,6 +99,7 @@ export function ExcelLayout({
   getLabel: gl,
   isFieldHidden: ifh,
   previousDeficit = 0,
+  bargeldRaw,
   remainingCash,
   todaySkimAmount = 0,
   createdByName,
@@ -231,6 +233,22 @@ export function ExcelLayout({
                 {totalExpenses !== 0 && <ExcelReadonlyRow label="Ausgaben" value={-totalExpenses} />}
               </tbody>
             </table>
+
+            {/* Tages-Bargeld (raw, without previous deficit) - only show when deficit exists */}
+            {previousDeficit < 0 && bargeldRaw !== undefined &&
+            <div className="bg-muted/30 border-y">
+                <table className="w-full">
+                  <tbody>
+                    <tr>
+                      <td className="px-3 py-1.5 font-semibold text-sm">Tages-Bargeld</td>
+                      <td className={`px-3 py-1.5 text-right tabular-nums font-semibold text-sm ${bargeldRaw >= 0 ? 'text-success' : 'text-destructive'}`}>
+                        {fmt(bargeldRaw)} €
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            }
 
             {/* BARGELD - highlighted */}
             <div className="bg-gradient-to-r from-primary/15 to-primary/5 border-y-2 border-primary/40 shadow-sm">
