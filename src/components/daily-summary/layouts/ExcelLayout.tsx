@@ -281,12 +281,12 @@ export function ExcelLayout({
             }
 
             {/* Kassenbestand */}
-            <div className={`border-b ${(remainingCash ?? 0) >= 0 ? 'bg-success/10' : 'bg-destructive/10'}`}>
+            <div className={`border-b ${(remainingCash ?? 0) >= 2000 ? 'bg-success/10' : 'bg-destructive/10'}`}>
                 <table className="w-full">
                   <tbody>
                     <tr>
                       <td className="px-3 py-1.5 font-semibold text-sm">Wechselgeldbestand (soll ist 2000 €)</td>
-                      <td className={`px-3 py-1.5 text-right tabular-nums font-semibold text-sm ${(remainingCash ?? 0) >= 0 ? 'text-success' : 'text-destructive'}`}>
+                      <td className={`px-3 py-1.5 text-right tabular-nums font-semibold text-sm ${(remainingCash ?? 0) >= 2000 ? 'text-success' : 'text-destructive'}`}>
                         {fmt(remainingCash ?? 0)} €
                       </td>
                     </tr>
