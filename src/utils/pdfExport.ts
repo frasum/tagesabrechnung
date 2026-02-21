@@ -92,28 +92,27 @@ const formatCurrency = (value: number): string => {
 export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string; fileName: string } => {
   const doc = new jsPDF('portrait');
   const pageWidth = doc.internal.pageSize.getWidth();
-  const margin = 14;
-  let y = 20;
+  const margin = 10;
+  let y = 12;
   const l = (key: string, fallback: string) => data.labels?.[key] || fallback;
   const isHidden = (key: string) => data.hiddenFields?.includes(key) ?? false;
 
   // ========== HEADER - centered, compact ==========
   if (data.restaurantName) {
-    doc.setFontSize(20);
+    doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
     doc.text(data.restaurantName, pageWidth / 2, y, { align: 'center' });
-    y += 8;
+    y += 6;
   }
 
   const dateStr = format(new Date(data.session.session_date), "EEEE, d. MMMM", { locale: de });
-  doc.setFontSize(16);
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.text(dateStr, pageWidth / 2, y, { align: 'center' });
 
-  y += 5;
-  doc.setFontSize(7);
+  y += 4;
+  doc.setFontSize(6);
   doc.setTextColor(128);
-  // Show session creator, editor, and export info
   const parts: string[] = [];
   if (data.createdByName) {
     parts.push(`Erstellt von: ${data.createdByName}`);
@@ -126,24 +125,24 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
   doc.text(exportInfo, pageWidth / 2, y, { align: 'center' });
   doc.setTextColor(0);
 
-  y += 6;
+  y += 4;
 
   // ========== WARNINGS ==========
   const ordersmartExtra = (data.ordersmartInTakeaway ?? true) ? 0 : (data.session.ordersmart_revenue || 0);
   const adjustedPosMismatch = data.totals.posMismatch - (data.session.takeaway_total || 0) - ordersmartExtra;
   if (Math.abs(adjustedPosMismatch) >= 0.01 || Math.abs(data.totals.cardTerminalMismatch) >= 0.01) {
     doc.setFillColor(254, 226, 226);
-    doc.rect(margin, y - 3, pageWidth - 2 * margin, 10, 'F');
-    doc.setFontSize(8);
+    doc.rect(margin, y - 3, pageWidth - 2 * margin, 8, 'F');
+    doc.setFontSize(7);
     doc.setTextColor(185, 28, 28);
     doc.setFont('helvetica', 'bold');
     let alertText = 'ACHTUNG: ';
     if (Math.abs(adjustedPosMismatch) >= 0.01) alertText += `POS Diff: ${formatCurrency(adjustedPosMismatch)}  `;
     if (Math.abs(data.totals.cardTerminalMismatch) >= 0.01) alertText += `Terminal Diff: ${formatCurrency(data.totals.cardTerminalMismatch)}`;
-    doc.text(alertText, margin + 3, y + 3);
+    doc.text(alertText, margin + 3, y + 2);
     doc.setTextColor(0);
     doc.setFont('helvetica', 'normal');
-    y += 14;
+    y += 10;
   }
 
   // ========== FLAT SUMMARY TABLE (Excel-style) ==========
@@ -183,8 +182,8 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
   // Bargeld rows with highlight
   const bargeldRowIndex = summaryRows.length;
   summaryRows.push([
-    { content: 'Bargeld mit HilfMahl', styles: { fontStyle: 'bold', fontSize: 11, fillColor: [255, 255, 255] as [number, number, number], lineWidth: 0.5, lineColor: [0, 0, 0] as [number, number, number] } },
-    { content: formatCurrency(bargeldMitHilf), styles: { fontStyle: 'bold', fontSize: 11, fillColor: [255, 255, 255] as [number, number, number], halign: 'right', lineWidth: 0.5, lineColor: [0, 0, 0] as [number, number, number] } },
+    { content: 'Bargeld mit HilfMahl', styles: { fontStyle: 'bold', fontSize: 9, fillColor: [255, 255, 255] as [number, number, number], lineWidth: 0.5, lineColor: [0, 0, 0] as [number, number, number] } },
+    { content: formatCurrency(bargeldMitHilf), styles: { fontStyle: 'bold', fontSize: 9, fillColor: [255, 255, 255] as [number, number, number], halign: 'right', lineWidth: 0.5, lineColor: [0, 0, 0] as [number, number, number] } },
   ]);
 
   autoTable(doc, {
@@ -192,7 +191,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
     margin: { left: tableMarginLeft, right: tableMarginLeft },
     body: summaryRows,
     theme: 'plain',
-    bodyStyles: { fontSize: 8, cellPadding: { top: 1, bottom: 1, left: 2, right: 2 } },
+    bodyStyles: { fontSize: 7, cellPadding: { top: 0.5, bottom: 0.5, left: 2, right: 2 } },
     columnStyles: { 1: { halign: 'right' as const } },
     tableWidth: tableWidth,
   });
@@ -202,26 +201,26 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
   const totalHilfMahl2 = data.totals.totalHilfMahl;
   const bargeldOhneHilf2 = bargeldMitHilf - totalHilfMahl2;
 
-  y = tableEndY + 4;
-  doc.setFontSize(8);
+  y = tableEndY + 2;
+  doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
   doc.text('ohne hilfmahl', tableMarginLeft + 2, y);
   doc.text(formatCurrency(bargeldOhneHilf2), tableMarginLeft + tableWidth - 2, y, { align: 'right' });
 
-  y += 6;
+  y += 4;
 
   // Kassenbestand row (highlighted)
   if (data.totals.remainingCash !== undefined) {
     const rc = data.totals.remainingCash;
     const fillColor: [number, number, number] = rc >= 2000 ? [220, 252, 231] : [254, 226, 226];
     doc.setFillColor(...fillColor);
-    doc.rect(tableMarginLeft, y - 4, tableWidth, 7, 'F');
-    doc.setFontSize(9);
+    doc.rect(tableMarginLeft, y - 3, tableWidth, 6, 'F');
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(0);
     doc.text('Wechselgeldbestand', tableMarginLeft + 2, y);
     doc.text(formatCurrency(rc), tableMarginLeft + tableWidth - 2, y, { align: 'right' });
-    y += 10;
+    y += 6;
   }
 
   // ========== AUSGABEN (if any) ==========
@@ -235,8 +234,8 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
         ['Summe', formatCurrency(data.totals.totalExpenses)],
       ],
       theme: 'plain',
-      headStyles: { fillColor: [241, 245, 249] as [number, number, number], fontSize: 8, fontStyle: 'bold' as const, textColor: [51, 65, 85] as [number, number, number] },
-      bodyStyles: { fontSize: 8 },
+      headStyles: { fillColor: [241, 245, 249] as [number, number, number], fontSize: 7, fontStyle: 'bold' as const, textColor: [51, 65, 85] as [number, number, number] },
+      bodyStyles: { fontSize: 7, cellPadding: { top: 0.5, bottom: 0.5, left: 2, right: 2 } },
       columnStyles: { 1: { halign: 'right' as const } },
       tableWidth: tableWidth,
       didParseCell: (cell) => {
@@ -245,7 +244,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
         }
       },
     });
-    y = (doc as any).lastAutoTable.finalY + 4;
+    y = (doc as any).lastAutoTable.finalY + 2;
   }
 
   // ========== VORSCHUSS (if any) ==========
@@ -259,8 +258,8 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
         ['Summe', formatCurrency(data.totals.totalAdvances ?? 0)],
       ],
       theme: 'plain',
-      headStyles: { fillColor: [241, 245, 249] as [number, number, number], fontSize: 8, fontStyle: 'bold' as const, textColor: [51, 65, 85] as [number, number, number] },
-      bodyStyles: { fontSize: 8 },
+      headStyles: { fillColor: [241, 245, 249] as [number, number, number], fontSize: 7, fontStyle: 'bold' as const, textColor: [51, 65, 85] as [number, number, number] },
+      bodyStyles: { fontSize: 7, cellPadding: { top: 0.5, bottom: 0.5, left: 2, right: 2 } },
       columnStyles: { 1: { halign: 'right' as const } },
       tableWidth: tableWidth,
       didParseCell: (cell) => {
@@ -269,7 +268,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
         }
       },
     });
-    y = (doc as any).lastAutoTable.finalY + 4;
+    y = (doc as any).lastAutoTable.finalY + 2;
   }
 
   // ========== KELLNER-DETAILS TABLE ==========
@@ -315,25 +314,23 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
       head: [['Kellner', 'Umsatz', 'Abgabe', 'Geänd.', 'TG', 'TG %']],
       body: waiterRows,
       theme: 'plain',
-      headStyles: { fillColor: [241, 245, 249] as [number, number, number], fontSize: 8, fontStyle: 'bold' as const, textColor: [51, 65, 85] as [number, number, number] },
-      bodyStyles: { fontSize: 8 },
+      headStyles: { fillColor: [241, 245, 249] as [number, number, number], fontSize: 7, fontStyle: 'bold' as const, textColor: [51, 65, 85] as [number, number, number] },
+      bodyStyles: { fontSize: 7, cellPadding: { top: 0.5, bottom: 0.5, left: 2, right: 2 } },
       columnStyles: { 1: { halign: 'right' as const }, 2: { halign: 'center' as const }, 3: { halign: 'center' as const }, 4: { halign: 'right' as const }, 5: { halign: 'right' as const } },
       tableWidth: tableWidth,
     });
-    y = (doc as any).lastAutoTable.finalY + 4;
+    y = (doc as any).lastAutoTable.finalY + 2;
 
     // Trinkgeld-Aufschlüsselung
     const totalTipAll = data.totals.totalWaiterTip + data.totals.totalKitchenTip;
     const totalTipPercent = data.totals.kellnerUmsatz > 0
       ? (totalTipAll / data.totals.kellnerUmsatz) * 100
       : 0;
-    y += 4;
-    doc.setFontSize(8);
+    y += 2;
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Kellner-Pool: ${formatCurrency(data.totals.totalWaiterTip)}`, tableMarginLeft + 2, y);
+    doc.text(`Kellner-Pool: ${formatCurrency(data.totals.totalWaiterTip)}  ·  Küchen-Pool: ${formatCurrency(data.totals.totalKitchenTip)}`, tableMarginLeft + 2, y);
     y += 3;
-    doc.text(`Küchen-Pool: ${formatCurrency(data.totals.totalKitchenTip)}`, tableMarginLeft + 2, y);
-    y += 4;
     doc.setFont('helvetica', 'bold');
     doc.text(
       `Ø Trinkgeld: ${formatCurrency(totalTipAll)} von ${formatCurrency(data.totals.kellnerUmsatz)} Umsatz = ${totalTipPercent.toFixed(1).replace('.', ',')}%`,
@@ -343,14 +340,14 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
 
   // ========== KONTROLL-ABSCHNITT (zum Ausschneiden) ==========
   if (data.totals.remainingCash !== undefined) {
-    y += 10;
+    y += 6;
     const rc = data.totals.remainingCash;
     
-    // Check if we need a new page for the control section (need ~60mm)
+    // Check if we need a new page for the control section (need ~45mm)
     const pageHeight = doc.internal.pageSize.getHeight();
-    if (y + 60 > pageHeight - 15) {
+    if (y + 45 > pageHeight - 10) {
       doc.addPage();
-      y = 20;
+      y = 15;
     }
 
     // Dashed separator line
@@ -358,33 +355,33 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
     doc.setLineDashPattern([3, 3], 0);
     doc.line(margin, y, pageWidth - margin, y);
     doc.setLineDashPattern([], 0);
-    y += 12;
+    y += 8;
 
     // "Wechselgeldbestand" label
-    doc.setFontSize(14);
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(80);
     doc.text('Wechselgeldbestand', pageWidth / 2, y, { align: 'center' });
-    y += 14;
+    y += 10;
 
-    // Amount in very large font, colored
-    doc.setFontSize(28);
+    // Amount in large font, colored
+    doc.setFontSize(24);
     doc.setFont('helvetica', 'bold');
     if (rc >= 2000) {
-      doc.setTextColor(22, 163, 74); // green
+      doc.setTextColor(22, 163, 74);
     } else {
-      doc.setTextColor(220, 38, 38); // red
+      doc.setTextColor(220, 38, 38);
     }
     doc.text(formatCurrency(rc), pageWidth / 2, y, { align: 'center' });
-    y += 14;
+    y += 10;
 
     // Creator name
-    doc.setFontSize(11);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(60);
     if (data.exportedBy || data.createdByName) {
       doc.text(`Abgerechnet von: ${data.exportedBy || data.createdByName}`, pageWidth / 2, y, { align: 'center' });
-      y += 6;
+      y += 5;
     }
 
     // Date
