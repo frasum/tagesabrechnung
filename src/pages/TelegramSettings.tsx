@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { format, subDays } from 'date-fns';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -41,11 +42,7 @@ function TelegramSettingsContent() {
     show_kitchen: true,
     show_pdf_export_notification: true,
   });
-  const [testDate, setTestDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 1);
-    return d.toISOString().split('T')[0];
-  });
+  const [testDate, setTestDate] = useState(() => format(subDays(new Date(), 1), 'yyyy-MM-dd'));
 
   useEffect(() => {
     if (settings) {
