@@ -35,7 +35,8 @@ export function useCashBalanceData(restaurantId: string | null) {
           .from('sessions')
           .select('id, session_date, pos_total, terminal_1_total, terminal_2_total, ordersmart_revenue, wolt_revenue, takeaway_total, vouchers_redeemed, finedine_vouchers, vouchers_sold, einladung, vorschuss, sonstige_einnahme')
           .eq('restaurant_id', restaurantId)
-          .order('session_date', { ascending: true }),
+          .order('session_date', { ascending: true })
+          .limit(10000),
       ]);
 
       const initialDeficit = (restaurantResult.data as any)?.initial_cash_deficit ?? 0;
@@ -45,35 +46,32 @@ export function useCashBalanceData(restaurantId: string | null) {
 
       const sessionIds = sessions.map(s => s.id);
 
-      // 2. Alle waiter_shifts laden (für offene Rechnungen)
-      const { data: waiterShifts, error: shiftsError } = await supabase
-        .from('waiter_shifts')
-        .select('session_id, open_invoices')
-        .in('session_id', sessionIds);
+      // Batch session IDs in chunks of 500 to avoid query limits
+      const chunkSize = 500;
+      const chunks: string[][] = [];
+      for (let i = 0; i < sessionIds.length; i += chunkSize) {
+        chunks.push(sessionIds.slice(i, i + chunkSize));
+      }
 
-      if (shiftsError) throw shiftsError;
-
-      // 3. Alle expenses laden
-      const { data: expenses, error: expensesError } = await supabase
-        .from('expenses')
-        .select('session_id, amount')
-        .in('session_id', sessionIds);
-
-      if (expensesError) throw expensesError;
-
-      // 4. Alle advances laden
-      const { data: advancesData, error: advancesError } = await supabase
-        .from('advances')
-        .select('session_id, amount')
-        .in('session_id', sessionIds);
-
-      if (advancesError) throw advancesError;
+      // 2-4. Load waiter_shifts, expenses, advances in parallel per chunk
+      const [allShifts, allExpenses, allAdvances] = await Promise.all([
+        Promise.all(chunks.map(chunk =>
+          supabase.from('waiter_shifts').select('session_id, open_invoices').in('session_id', chunk).limit(10000)
+        )).then(results => results.flatMap(r => { if (r.error) throw r.error; return r.data || []; })),
+        Promise.all(chunks.map(chunk =>
+          supabase.from('expenses').select('session_id, amount').in('session_id', chunk).limit(10000)
+        )).then(results => results.flatMap(r => { if (r.error) throw r.error; return r.data || []; })),
+        Promise.all(chunks.map(chunk =>
+          supabase.from('advances').select('session_id, amount').in('session_id', chunk).limit(10000)
+        )).then(results => results.flatMap(r => { if (r.error) throw r.error; return r.data || []; })),
+      ]);
 
       // 5. Register transfers laden
       const { data: transfers, error: transfersError } = await supabase
         .from('register_transfers')
         .select('transfer_date, amount, direction')
-        .eq('restaurant_id', restaurantId);
+        .eq('restaurant_id', restaurantId)
+        .limit(10000);
 
       if (transfersError) throw transfersError;
 
@@ -81,9 +79,9 @@ export function useCashBalanceData(restaurantId: string | null) {
       let carryOver = initialDeficit;
 
       return (sessions || []).map((session) => {
-        const shifts = (waiterShifts || []).filter((s) => s.session_id === session.id);
-        const sessionExpenses = (expenses || []).filter((e) => e.session_id === session.id);
-        const sessionAdvances = (advancesData || []).filter((a) => a.session_id === session.id);
+        const shifts = allShifts.filter((s) => s.session_id === session.id);
+        const sessionExpenses = allExpenses.filter((e) => e.session_id === session.id);
+        const sessionAdvances = allAdvances.filter((a) => a.session_id === session.id);
 
         // Direkt aus der Session-Tabelle
         const tagesumsatz = session.pos_total || 0;
