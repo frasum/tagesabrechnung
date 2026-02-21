@@ -173,7 +173,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
     [l('sonstige_einnahme', 'Sonstige Einnahme'), formatCurrency(data.session.sonstige_einnahme || 0)],
     ...((data.totals.previousDeficit ?? 0) < 0 ? [['Fehlbetrag Vortag', formatCurrency(data.totals.previousDeficit!)]] : []),
     ['Bar Ausgaben', formatCurrency(data.totals.totalExpenses)],
-    ...((data.totals.previousDeficit ?? 0) < 0 && data.totals.bargeldRaw !== undefined ? [[
+    ...(data.totals.bargeldRaw !== undefined ? [[
       { content: 'Tages-Bargeld', styles: { fontStyle: 'bold' as const, textColor: data.totals.bargeldRaw >= 0 ? [22, 163, 74] as [number, number, number] : [220, 38, 38] as [number, number, number] } },
       { content: formatCurrency(data.totals.bargeldRaw), styles: { fontStyle: 'bold' as const, halign: 'right' as const, textColor: data.totals.bargeldRaw >= 0 ? [22, 163, 74] as [number, number, number] : [220, 38, 38] as [number, number, number] } },
     ]] : []),
@@ -213,7 +213,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
   // Kassenbestand row (highlighted)
   if (data.totals.remainingCash !== undefined) {
     const rc = data.totals.remainingCash;
-    const fillColor: [number, number, number] = rc >= 0 ? [220, 252, 231] : [254, 226, 226];
+    const fillColor: [number, number, number] = rc >= 2000 ? [220, 252, 231] : [254, 226, 226];
     doc.setFillColor(...fillColor);
     doc.rect(tableMarginLeft, y - 4, tableWidth, 7, 'F');
     doc.setFontSize(9);
@@ -339,6 +339,58 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
       `Ø Trinkgeld: ${formatCurrency(totalTipAll)} von ${formatCurrency(data.totals.kellnerUmsatz)} Umsatz = ${totalTipPercent.toFixed(1).replace('.', ',')}%`,
       tableMarginLeft + 2, y
     );
+  }
+
+  // ========== KONTROLL-ABSCHNITT (zum Ausschneiden) ==========
+  if (data.totals.remainingCash !== undefined) {
+    y += 10;
+    const rc = data.totals.remainingCash;
+    
+    // Check if we need a new page for the control section (need ~60mm)
+    const pageHeight = doc.internal.pageSize.getHeight();
+    if (y + 60 > pageHeight - 15) {
+      doc.addPage();
+      y = 20;
+    }
+
+    // Dashed separator line
+    doc.setDrawColor(120);
+    doc.setLineDashPattern([3, 3], 0);
+    doc.line(margin, y, pageWidth - margin, y);
+    doc.setLineDashPattern([], 0);
+    y += 12;
+
+    // "Wechselgeldbestand" label
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(80);
+    doc.text('Wechselgeldbestand', pageWidth / 2, y, { align: 'center' });
+    y += 14;
+
+    // Amount in very large font, colored
+    doc.setFontSize(28);
+    doc.setFont('helvetica', 'bold');
+    if (rc >= 2000) {
+      doc.setTextColor(22, 163, 74); // green
+    } else {
+      doc.setTextColor(220, 38, 38); // red
+    }
+    doc.text(formatCurrency(rc), pageWidth / 2, y, { align: 'center' });
+    y += 14;
+
+    // Creator name
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(60);
+    if (data.createdByName) {
+      doc.text(`Abgerechnet von: ${data.createdByName}`, pageWidth / 2, y, { align: 'center' });
+      y += 6;
+    }
+
+    // Date
+    const dateStrControl = format(new Date(data.session.session_date), "EEEE, d. MMMM yyyy", { locale: de });
+    doc.text(`Datum: ${dateStrControl}`, pageWidth / 2, y, { align: 'center' });
+    doc.setTextColor(0);
   }
 
   // ========== Footer with page numbers ==========
