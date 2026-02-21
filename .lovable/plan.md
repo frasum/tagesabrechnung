@@ -1,55 +1,40 @@
 
 
-# Telegram-Bargeldberechnung mit Web-App synchronisieren
-
 ## Problem
-Die Telegram-Funktion (`send-telegram-summary`) berechnet Bargeld und Wechselgeldbestand OHNE die Tabelle `register_transfers` zu beruecksichtigen. Die Web-App (`useCashBalanceData`) bezieht diese Transfers jedoch ein. Dadurch weichen die Telegram-Werte von der Tagesabrechnung ab.
 
-Zusaetzlich ignoriert der Hook `usePreviousDayDeficit` (genutzt auf der Tagesabrechnung fuer den Fehlbetrag Vortag) ebenfalls die `register_transfers` und hat ein 30-Tage-Lookback-Limit.
+Zwei Werte fehlen in der Tagesabrechnung:
+
+1. **Tages-Bargeld** (`bargeldRaw`): Wird absichtlich nur angezeigt, wenn ein Fehlbetrag vom Vortag existiert (`previousDeficit < 0`). An Tagen ohne Vortags-Defizit wird die Zeile ausgeblendet.
+
+2. **Wechselgeldbestand** (`remainingCash`): Sollte immer sichtbar sein (`remainingCash !== undefined`), da der Hook immer eine Zahl liefert. Eventuell gibt es ein Timing-Problem beim Rendering.
 
 ## Loesung
 
-### 1. Telegram Edge Function: `register_transfers` einbauen
+Beide Werte werden **immer** in der Tagesabrechnung angezeigt, unabhaengig davon ob ein Fehlbetrag vom Vortag existiert oder nicht.
 
-**Datei:** `supabase/functions/send-telegram-summary/index.ts`
+### Aenderungen
 
-In der Funktion `calculateCashBalance`:
-- Zusaetzlich `register_transfers` fuer das Restaurant laden
-- Pro Tag den Transfer-Effekt berechnen (`to_restaurant` = +, `to_safe` = -)
-- In die `rawBargeld`-Berechnung einrechnen (analog zu `useCashBalanceData`)
+**Datei: `src/components/daily-summary/layouts/ExcelLayout.tsx`**
 
-Aenderung in der Bargeld-Zeile:
+1. **Tages-Bargeld immer anzeigen**: Die Bedingung `previousDeficit < 0 && bargeldRaw !== undefined` wird entfernt. Stattdessen wird die Zeile immer angezeigt (wenn `bargeldRaw` definiert ist), damit der Tageswert isoliert sichtbar bleibt.
+
+2. **Wechselgeldbestand immer anzeigen**: Die Bedingung `remainingCash !== undefined` bleibt bestehen, aber es wird sichergestellt, dass kein anderer Faktor die Anzeige verhindert. Zusaetzlich wird ein Fallback-Wert (`?? 0`) verwendet, um sicherzustellen, dass der Wert nie `undefined` ist.
+
+### Technische Details
+
 ```text
-// NEU: Transfer-Effekt pro Tag
-const dayTransfers = transfers.filter(t => t.transfer_date === session.session_date);
-const transferEffect = dayTransfers.reduce((sum, t) => {
-  return t.direction === 'to_restaurant' ? sum + Number(t.amount) : sum - Number(t.amount);
-}, 0);
+Vorher (Tages-Bargeld):
+  {previousDeficit < 0 && bargeldRaw !== undefined && <div>...</div>}
 
-const rawBargeld = tagesumsatz + gutscheineVK + sonstigeEinnahme
-  - kreditkarten - ordersmart - wolt - gutscheineEL - finedine - einladung
-  - totalOpenInvoices - vorschuss - totalExpenses
-  + transferEffect;  // <-- NEU
+Nachher (Tages-Bargeld):
+  {bargeldRaw !== undefined && <div>...</div>}
+
+Vorher (Wechselgeldbestand):  
+  {remainingCash !== undefined && <div>...</div>}
+
+Nachher (Wechselgeldbestand):
+  <div>...</div>  (immer sichtbar, mit Fallback remainingCash ?? 0)
 ```
 
-### 2. `usePreviousDayDeficit` Hook: `register_transfers` einbauen
-
-**Datei:** `src/hooks/usePreviousDayDeficit.ts`
-
-- `register_transfers` fuer das Restaurant laden (gefiltert auf den Lookback-Zeitraum)
-- Pro Session den Transfer-Effekt in die Bargeld-Berechnung einrechnen
-- 30-Tage-Lookback-Limit beibehalten (Performance), da aeltere Defizite ohnehin aufgeloest sein sollten
-
-### 3. Keine Aenderungen noetig
-
-- `useCashBalanceData` - bereits korrekt
-- `useRemainingCash` - nutzt `useCashBalanceData`, daher korrekt
-- `ExcelLayout` / `DailySummary` UI - keine Aenderungen noetig
-
-## Zusammenfassung der Dateien
-
-| Datei | Aenderung |
-|---|---|
-| `supabase/functions/send-telegram-summary/index.ts` | `register_transfers` laden und in Bargeld-Berechnung einbeziehen |
-| `src/hooks/usePreviousDayDeficit.ts` | `register_transfers` laden und in Deficit-Chaining einbeziehen |
+Damit sind beide Werte auf jeder Tagesabrechnung sichtbar, egal ob ein Fehlbetrag vom Vortag besteht oder nicht.
 
