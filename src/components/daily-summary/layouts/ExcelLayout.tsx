@@ -235,7 +235,7 @@ export function ExcelLayout({
             </table>
 
             {/* Tages-Bargeld (raw, without previous deficit) - only show when deficit exists */}
-            {previousDeficit < 0 && bargeldRaw !== undefined &&
+            {bargeldRaw !== undefined &&
             <div className="bg-muted/30 border-y">
                 <table className="w-full">
                   <tbody>
@@ -281,20 +281,18 @@ export function ExcelLayout({
             }
 
             {/* Kassenbestand */}
-            {remainingCash !== undefined &&
-            <div className={`border-b ${remainingCash >= 0 ? 'bg-success/10' : 'bg-destructive/10'}`}>
+            <div className={`border-b ${(remainingCash ?? 0) >= 0 ? 'bg-success/10' : 'bg-destructive/10'}`}>
                 <table className="w-full">
                   <tbody>
                     <tr>
                       <td className="px-3 py-1.5 font-semibold text-sm">Wechselgeldbestand</td>
-                      <td className={`px-3 py-1.5 text-right tabular-nums font-semibold text-sm ${remainingCash >= 0 ? 'text-success' : 'text-destructive'}`}>
-                        {fmt(remainingCash)} €
+                      <td className={`px-3 py-1.5 text-right tabular-nums font-semibold text-sm ${(remainingCash ?? 0) >= 0 ? 'text-success' : 'text-destructive'}`}>
+                        {fmt(remainingCash ?? 0)} €
                       </td>
                     </tr>
                   </tbody>
                 </table>
               </div>
-            }
 
           </div>
 
