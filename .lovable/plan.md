@@ -1,33 +1,21 @@
 
 
-## Kontroll-Abschnitt am Ende des PDF-Exports
+## Kontroll-Abschnitt: Name des eingeloggten Benutzers anzeigen
 
-Am Ende der Tagesabrechnung (PDF) wird ein neuer, grosser Abschnitt hinzugefuegt, der zum Ausschneiden und Ablegen in die Wechselgeldkasse gedacht ist.
+### Problem
 
-### Aufbau
+Im Kontroll-Abschnitt am Ende des PDF-Exports steht aktuell der Name der Person, die die Session **erstellt** hat (`createdByName`). Gewuenscht ist stattdessen der Name der Person, die **gerade eingeloggt ist** und den Export durchfuehrt.
 
-```text
-- - - - - - - - - - - - - - - - - - - - - -   (gestrichelte Trennlinie)
+### Aenderung
 
-         Wechselgeldbestand
-            2.150,00 EUR              (sehr grosse Schrift, farblich: gruen ab 2000, rot darunter)
+**Datei: `src/utils/pdfExport.ts`** (1 Zeile)
 
-         Abgerechnet von: Max Mustermann
-         Datum: Freitag, 21. Februar
+Im Kontroll-Abschnitt (ca. Zeile 385-386) wird `data.createdByName` durch `data.exportedBy` ersetzt:
+
+```
+Vorher:  "Abgerechnet von: {createdByName}"   (wer die Session erstellt hat)
+Nachher: "Abgerechnet von: {exportedBy}"       (wer gerade eingeloggt ist)
 ```
 
-### Aenderungen
-
-**Datei: `src/utils/pdfExport.ts`**
-
-1. Nach dem letzten Inhalt (Trinkgeld-Aufschluesselung) und vor dem Footer wird ein neuer Abschnitt eingefuegt:
-   - Gestrichelte Trennlinie ueber die gesamte Seitenbreite
-   - **Wechselgeldbestand** als Ueberschrift (Schriftgroesse ca. 14)
-   - **Betrag** in sehr grosser Schrift (Schriftgroesse ca. 24-28), farblich eingefaerbt (gruen ab 2000 EUR, rot darunter)
-   - **Name der Person** die die Abrechnung erstellt hat (`createdByName`)
-   - **Datum** der Abrechnung
-
-2. Gleichzeitig werden zwei bestehende Fehler im PDF korrigiert:
-   - **Tages-Bargeld**: Die Bedingung `previousDeficit < 0` wird entfernt, damit der Wert immer angezeigt wird (analog zur UI-Aenderung)
-   - **Wechselgeldbestand-Farbe**: Der Schwellenwert wird von `>= 0` auf `>= 2000` geaendert (analog zur UI-Aenderung)
+Der Wert `exportedBy` wird bereits korrekt aus `user?.name` uebergeben (DailySummary.tsx, Zeile 374) — es muss nur die Referenz im PDF-Code geaendert werden.
 
