@@ -199,13 +199,13 @@ export function ExcelLayout({
             {/* Section: Take Away */}
             <div className="bg-muted/50 px-3 py-2 border-y border-l-4 border-l-emerald-500 flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Take Away</span>
-              {formData.pos_total > 0 && (
-                <span className="text-xs text-muted-foreground tabular-nums">
+              {formData.pos_total > 0 &&
+              <span className="text-xs text-muted-foreground tabular-nums">
                   {new Intl.NumberFormat('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(
-                    ((formData.takeaway_total + formData.ordersmart_revenue + formData.wolt_revenue) / formData.pos_total) * 100
-                  )} %
+                  (formData.takeaway_total + formData.ordersmart_revenue + formData.wolt_revenue) / formData.pos_total * 100
+                )} %
                 </span>
-              )}
+              }
             </div>
             <table className="w-full text-sm">
               <tbody>
@@ -255,7 +255,7 @@ export function ExcelLayout({
               <table className="w-full">
                 <tbody>
                   <tr>
-                    <td className="px-3 py-2.5 font-bold text-base">BARGELD</td>
+                    <td className="px-3 py-2.5 font-bold text-base">Differenz Wechselgeld </td>
                     <td className={`px-3 py-2.5 text-right tabular-nums font-bold text-base ${bargeld >= 0 ? 'text-success' : 'text-destructive'}`}>
                       {fmt(bargeld)} €
                     </td>
