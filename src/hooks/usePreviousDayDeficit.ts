@@ -42,19 +42,22 @@ export function usePreviousDayDeficit(date: Date, restaurantId: string | null) {
       const sessionIds = sessions.map(s => s.id);
 
       // Load related data in parallel
-      const [shiftsResult, expensesResult, advancesResult] = await Promise.all([
+      const [shiftsResult, expensesResult, advancesResult, transfersResult] = await Promise.all([
         supabase.from('waiter_shifts').select('*').in('session_id', sessionIds),
         supabase.from('expenses').select('*').in('session_id', sessionIds),
         supabase.from('advances').select('*').in('session_id', sessionIds),
+        supabase.from('register_transfers').select('*').eq('restaurant_id', restaurantId).gte('transfer_date', lookbackDate).lt('transfer_date', dateStr),
       ]);
 
       if (shiftsResult.error) throw shiftsResult.error;
       if (expensesResult.error) throw expensesResult.error;
       if (advancesResult.error) throw advancesResult.error;
+      if (transfersResult.error) throw transfersResult.error;
 
       const allShifts = shiftsResult.data || [];
       const allExpenses = expensesResult.data || [];
       const allAdvances = advancesResult.data || [];
+      const allTransfers = transfersResult.data || [];
 
       // Calculate BARGELD per day and chain deficits
       let carryOver = initialDeficit;
@@ -80,6 +83,11 @@ export function usePreviousDayDeficit(date: Date, restaurantId: string | null) {
         const totalOpenInvoices = shifts.reduce((sum, w) => sum + (w.open_invoices || 0), 0);
         const totalExpenses = sessionExpenses.reduce((sum, e) => sum + e.amount, 0);
 
+        const sessionTransfers = allTransfers.filter(t => t.transfer_date === session.session_date);
+        const transferEffect = sessionTransfers.reduce((sum, t) => {
+          return t.direction === 'to_restaurant' ? sum + Number(t.amount) : sum - Number(t.amount);
+        }, 0);
+
         const bargeld =
           tagesumsatz +
           gutscheineVK +
@@ -93,6 +101,7 @@ export function usePreviousDayDeficit(date: Date, restaurantId: string | null) {
           totalOpenInvoices -
           vorschuss -
           totalExpenses +
+          transferEffect +
           carryOver; // include previous day's deficit
 
         // Chain: if bargeld is negative, carry it over; otherwise reset

@@ -247,17 +247,19 @@ async function calculateCashBalance(supabase: any, restaurantId: string, upToDat
 
   const sessionIds = sessions.map((s: any) => s.id);
 
-  const [shiftsRes, expensesRes, advancesRes, settingsRes, restaurantRes] = await Promise.all([
+  const [shiftsRes, expensesRes, advancesRes, settingsRes, restaurantRes, transfersRes] = await Promise.all([
     supabase.from("waiter_shifts").select("session_id, open_invoices").in("session_id", sessionIds),
     supabase.from("expenses").select("session_id, amount").in("session_id", sessionIds),
     supabase.from("advances").select("session_id, amount").in("session_id", sessionIds),
     supabase.from("settings").select("value").eq("restaurant_id", restaurantId).eq("key", "petty_cash").maybeSingle(),
     supabase.from("restaurants").select("initial_cash_deficit").eq("id", restaurantId).single(),
+    supabase.from("register_transfers").select("transfer_date, direction, amount").eq("restaurant_id", restaurantId).lte("transfer_date", upToDate),
   ]);
 
   const waiterShifts = shiftsRes.data || [];
   const expenses = expensesRes.data || [];
   const advances = advancesRes.data || [];
+  const transfers = transfersRes.data || [];
   const pettyCashRaw = settingsRes.data?.value;
   const pettyCash = pettyCashRaw
     ? (typeof pettyCashRaw === "object" && pettyCashRaw.amount != null ? Number(pettyCashRaw.amount) : Number(pettyCashRaw))
@@ -289,9 +291,15 @@ async function calculateCashBalance(supabase: any, restaurantId: string, upToDat
       ? sessionAdvances.reduce((sum: number, a: any) => sum + a.amount, 0)
       : (session.vorschuss || 0);
 
+    const dayTransfers = transfers.filter((t: any) => t.transfer_date === session.session_date);
+    const transferEffect = dayTransfers.reduce((sum: number, t: any) => {
+      return t.direction === 'to_restaurant' ? sum + Number(t.amount) : sum - Number(t.amount);
+    }, 0);
+
     const rawBargeld = tagesumsatz + gutscheineVK + sonstigeEinnahme
       - kreditkarten - ordersmart - wolt - gutscheineEL - finedine - einladung
-      - totalOpenInvoices - vorschuss - totalExpenses;
+      - totalOpenInvoices - vorschuss - totalExpenses
+      + transferEffect;
 
     const bargeld = rawBargeld + carryOver;
     carryOver = bargeld < 0 ? bargeld : 0;
