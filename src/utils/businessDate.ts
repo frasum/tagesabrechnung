@@ -1,3 +1,5 @@
+import { format } from 'date-fns';
+
 /**
  * Berechnet das "Geschäftsdatum" für die Tagesabrechnung.
  * Der Geschäftstag endet erst um 3:00 Uhr nachts - alles zwischen 
@@ -28,8 +30,8 @@ export function getBusinessDate(referenceDate?: Date): Date {
  */
 export function isBusinessToday(date: Date): boolean {
   const businessToday = getBusinessDate();
-  const dateStr = date.toISOString().split('T')[0];
-  const todayStr = businessToday.toISOString().split('T')[0];
+  const dateStr = format(date, 'yyyy-MM-dd');
+  const todayStr = format(businessToday, 'yyyy-MM-dd');
   return dateStr === todayStr;
 }
 
@@ -41,8 +43,8 @@ export function isSessionLocked(sessionDate: Date, permissionLevel: 'staff' | 'm
   if (permissionLevel === 'admin') return false;
   
   const today = getBusinessDate();
-  const todayStr = today.toISOString().split('T')[0];
-  const sessionStr = sessionDate.toISOString().split('T')[0];
+  const todayStr = format(today, 'yyyy-MM-dd');
+  const sessionStr = format(sessionDate, 'yyyy-MM-dd');
   
   const todayMs = new Date(todayStr).getTime();
   const sessionMs = new Date(sessionStr).getTime();

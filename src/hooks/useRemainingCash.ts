@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { format } from 'date-fns';
 import { useCashBalanceData } from './useCashBalanceData';
 import { usePettyCash } from './useSettings';
 
@@ -9,7 +10,7 @@ export function useRemainingCash(restaurantId: string | null, selectedDate: Date
   const result = useMemo(() => {
     if (!cashRows) return { remainingCash: 0, todaySkimAmount: 0, totalSkimmed: 0 };
     
-    const dateStr = selectedDate.toISOString().split('T')[0];
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
     const filteredRows = cashRows
       .filter(r => r.date <= dateStr)
       .sort((a, b) => a.date.localeCompare(b.date));
