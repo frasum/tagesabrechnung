@@ -22,6 +22,7 @@ import { useLabels } from '@/hooks/useLabels';
 import { useShowTipRanking } from '@/hooks/useSettings';
 import { AccountLinkingDialog } from '@/components/auth/AccountLinkingDialog';
 import { SecondWaiterSelect } from '@/components/shared/SecondWaiterSelect';
+import { WebAuthnRegistrationPrompt, shouldShowWebAuthnPrompt } from '@/components/auth/WebAuthnRegistrationPrompt';
 
 export default function WaiterMobile() {
   const today = getBusinessDate();
@@ -31,6 +32,7 @@ export default function WaiterMobile() {
   const { toast } = useToast();
   const { getLabel, isFieldHidden } = useLabels(restaurantId);
   const [showLinkingDialog, setShowLinkingDialog] = useState(false);
+  const [showWebAuthnPrompt, setShowWebAuthnPrompt] = useState(() => shouldShowWebAuthnPrompt());
   const [secondWaiterName, setSecondWaiterName] = useState('none');
 
   // Form state
@@ -349,6 +351,7 @@ export default function WaiterMobile() {
         onOpenChange={setShowLinkingDialog}
         onSuccess={linkAccount}
       />
+      <WebAuthnRegistrationPrompt open={showWebAuthnPrompt} onOpenChange={setShowWebAuthnPrompt} />
     </MobileLayout>
   );
 }
