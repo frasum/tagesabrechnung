@@ -135,7 +135,7 @@ export default function KitchenTipSplit() {
           <Card className="border-dashed">
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground mb-4">
-                Keine Session für diesen Tag vorhanden.
+                Noch keine Abrechnung für diesen Tag vorhanden.
               </p>
               <Button onClick={handleCreateSession} disabled={createSession.isPending || !restaurantId}>
                 <Plus className="w-4 h-4 mr-2" />
