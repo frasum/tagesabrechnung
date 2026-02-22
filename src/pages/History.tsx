@@ -266,11 +266,11 @@ export default function History() {
                           <TableCell>
                             <Button
                               variant="ghost"
-                              size="sm"
+                              size="icon"
                               onClick={() => handleViewSession(session.session_date)}
+                              title="Ansehen"
                             >
-                              <Eye className="w-4 h-4 mr-1" />
-                              Ansehen
+                              <Eye className="w-4 h-4" />
                             </Button>
                           </TableCell>
                         </TableRow>
