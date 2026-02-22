@@ -63,7 +63,7 @@ export default function Install() {
             </div>
             <CardTitle className="text-2xl">App installiert!</CardTitle>
             <CardDescription>
-              Die Spicery Kellner App ist bereits auf deinem Gerät installiert.
+              Die Spicery Mitarbeiter App ist bereits auf deinem Gerät installiert.
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
@@ -83,7 +83,7 @@ export default function Install() {
           <div className="mx-auto w-20 h-20 rounded-2xl overflow-hidden mb-4 shadow-lg">
             <img src="/pwa-192x192.png" alt="Spicery App Icon" className="w-full h-full" />
           </div>
-          <CardTitle className="text-2xl">Spicery Kellner</CardTitle>
+          <CardTitle className="text-2xl">Spicery Mitarbeiter</CardTitle>
           <CardDescription>
             Installiere die App auf deinem Handy für schnellen Zugriff
           </CardDescription>

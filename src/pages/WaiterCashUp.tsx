@@ -119,7 +119,7 @@ export default function WaiterCashUp() {
     if (newSecondWaiterName !== 'none' && newSecondWaiterName === newWaiterName.trim()) {
       toast({
         title: 'Fehler',
-        description: 'Der zweite Kellner kann nicht die gleiche Person sein.',
+        description: 'Der zweite Mitarbeiter kann nicht die gleiche Person sein.',
         variant: 'destructive'
       });
       return;
@@ -143,7 +143,7 @@ export default function WaiterCashUp() {
           cash_handed_in: newCashHandedIn
         });
         toast({
-          title: 'Kellner aktualisiert',
+          title: 'Mitarbeiter aktualisiert',
           description: `${newWaiterName} wurde aktualisiert.`
         });
       } else {
@@ -161,7 +161,7 @@ export default function WaiterCashUp() {
           cash_handed_in: newCashHandedIn
         });
         toast({
-          title: 'Kellner hinzugefügt',
+          title: 'Mitarbeiter hinzugefügt',
           description: `${newWaiterName} wurde hinzugefügt.`
         });
       }
@@ -169,7 +169,7 @@ export default function WaiterCashUp() {
     } catch (error) {
       toast({
         title: 'Fehler',
-        description: editingShiftId ? 'Kellner konnte nicht aktualisiert werden.' : 'Kellner konnte nicht hinzugefügt werden.',
+        description: editingShiftId ? 'Mitarbeiter konnte nicht aktualisiert werden.' : 'Mitarbeiter konnte nicht hinzugefügt werden.',
         variant: 'destructive'
       });
     }
@@ -183,7 +183,7 @@ export default function WaiterCashUp() {
       });
 
       toast({
-        title: 'Kellner gelöscht'
+        title: 'Mitarbeiter gelöscht'
       });
     } catch (error) {
       toast({
@@ -233,7 +233,7 @@ export default function WaiterCashUp() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl lg:text-3xl font-display font-bold text-foreground">
-              Kellner Abrechnung
+              Mitarbeiter Abrechnung
             </h1>
             <p className="text-muted-foreground mt-1">
               Tägliche Kassenabrechnung für jeden Mitarbeiter 
@@ -270,7 +270,7 @@ export default function WaiterCashUp() {
                     {editingShiftId ?
                   <>
                         <Pencil className="w-5 h-5" />
-                        Kellner bearbeiten: {newWaiterName}
+                        Mitarbeiter bearbeiten: {newWaiterName}
                       </> :
 
                   <>
@@ -299,13 +299,13 @@ export default function WaiterCashUp() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label>Kellner auswählen</Label>
-                  <StaffSelect value={newWaiterName} onValueChange={setNewWaiterName} role="waiter" placeholder="Kellner wählen" excludeNames={waiterShifts.filter((s) => s.id !== editingShiftId).map((s) => s.waiter_name)} restaurantId={restaurantId} />
+                  <Label>Mitarbeiter auswählen</Label>
+                  <StaffSelect value={newWaiterName} onValueChange={setNewWaiterName} role="waiter" placeholder="Mitarbeiter wählen" excludeNames={waiterShifts.filter((s) => s.id !== editingShiftId).map((s) => s.waiter_name)} restaurantId={restaurantId} />
                 </div>
 
                 {newParticipatesInPool &&
               <div>
-                    <Label>Zweiter Kellner (optional)</Label>
+                    <Label>Zweiter Mitarbeiter (optional)</Label>
                     <SecondWaiterSelect
                   value={newSecondWaiterName}
                   onValueChange={setNewSecondWaiterName}
@@ -403,7 +403,7 @@ export default function WaiterCashUp() {
 
                   <>
                         <Plus className="w-4 h-4 mr-2" />
-                        Kellner hinzufügen
+                        Mitarbeiter hinzufügen
                       </>
                   }
                   </Button>
@@ -420,20 +420,20 @@ export default function WaiterCashUp() {
                   Trinkgeld Pool
                 </CardTitle>
                 <CardDescription>
-                  Pool wird gleichmäßig auf alle Kellner verteilt
+                  Pool wird gleichmäßig auf alle Mitarbeiter verteilt
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {waiterShifts.length === 0 ?
               <p className="text-muted-foreground text-center py-8">
-                    Fügen Sie Kellner hinzu, um den Trinkgeld-Pool zu sehen.
+                    Fügen Sie Mitarbeiter hinzu, um den Trinkgeld-Pool zu sehen.
                   </p> :
 
               <div className="space-y-4">
                     {/* Pool Summary - 4 colored StatCards */}
                     <div className="grid grid-cols-2 gap-3">
                       <StatCard label="Trinkgeld ohne Küche" value={totalPool} icon={<Users className="w-5 h-5" />} variant={totalPool >= 0 ? 'success' : 'error'} />
-                      <StatCard label={`Pro Kellner (${waiterShareCount})`} value={tipPerWaiter} icon={<User className="w-5 h-5" />} variant={tipPerWaiter >= 0 ? 'success' : 'error'} />
+                      <StatCard label={`Pro Mitarbeiter (${waiterShareCount})`} value={tipPerWaiter} icon={<User className="w-5 h-5" />} variant={tipPerWaiter >= 0 ? 'success' : 'error'} />
                       <StatCard label="Küche" value={totalKitchenTip} icon={<Users className="w-5 h-5" />} variant="success" />
                       <StatCard label="Trinkgeld %" value={`${tipPercentage.toFixed(1)} %`} icon={<Percent className="w-5 h-5" />} variant="success" />
                     </div>
@@ -545,7 +545,7 @@ export default function WaiterCashUp() {
             {waiterShifts.length > 0 &&
         <Card>
                 <CardHeader>
-                  <CardTitle>Abgerechnete Kellner</CardTitle>
+                  <CardTitle>Abgerechnete Mitarbeiter</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">

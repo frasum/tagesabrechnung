@@ -93,7 +93,7 @@ export function AuditLogList() {
               {/* What was changed */}
               <div className="text-sm">
                 <span className="text-muted-foreground">
-                  Kellner-Abrechnung von{' '}
+                  Mitarbeiter-Abrechnung von{' '}
                 </span>
                 <span className="font-medium">"{waiterName}"</span>
                 <span className="text-muted-foreground"> geändert:</span>

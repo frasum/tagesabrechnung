@@ -456,7 +456,7 @@ export default function DailySummary() {
             <div>
               <p className="font-medium text-destructive">POS Differenz</p>
               <p className="text-sm text-muted-foreground">
-                POS Total ({formatCurrency(formData.pos_total)}) stimmt nicht mit Kellner-Umsätzen ({formatCurrency(kellnerUmsatz)}) + Takeaway ({formatCurrency(formData.takeaway_total)}) überein.
+                POS Total ({formatCurrency(formData.pos_total)}) stimmt nicht mit Mitarbeiter-Umsätzen ({formatCurrency(kellnerUmsatz)}) + Takeaway ({formatCurrency(formData.takeaway_total)}) überein.
               </p>
               <p className="text-sm font-semibold text-destructive mt-1">
                 Differenz: {formatCurrency(adjustedPosDiff)}
@@ -472,7 +472,7 @@ export default function DailySummary() {
             <div>
               <p className="font-medium text-destructive">Terminal Differenz</p>
               <p className="text-sm text-muted-foreground">
-                Terminals ({formatCurrency(terminalTotal)}) stimmen nicht mit Kartenzahlungen ({formatCurrency(waiterCardTotal)} Kellner + {formatCurrency(formData.card_total_gl)} GL = {formatCurrency(totalCardTotal)}) überein.
+                Terminals ({formatCurrency(terminalTotal)}) stimmen nicht mit Kartenzahlungen ({formatCurrency(waiterCardTotal)} Mitarbeiter + {formatCurrency(formData.card_total_gl)} GL = {formatCurrency(totalCardTotal)}) überein.
               </p>
               <p className="text-sm font-semibold text-destructive mt-1">
                 Differenz: {formatCurrency(cardTerminalMismatch)}
@@ -543,7 +543,7 @@ export default function DailySummary() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <Label>Kellner Abzugebender Betrag</Label>
+          <Label>Mitarbeiter Abzugebender Betrag</Label>
           <div className="h-10 px-3 flex items-center justify-end rounded-md border bg-muted text-right tabular-nums font-medium">
             {new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(totalKassiertBrutto)} €
           </div>
@@ -953,12 +953,12 @@ export default function DailySummary() {
               </TableRow>
             )}
             <TableRow>
-              <TableCell className="py-2">Kellner Pool</TableCell>
+              <TableCell className="py-2">Mitarbeiter Pool</TableCell>
               <TableCell className="text-right tabular-nums font-medium text-success py-2">{formatCurrency(waiterTipPool)}</TableCell>
             </TableRow>
             {waiterShareCount > 0 && (
               <TableRow>
-                <TableCell className="py-2 pl-6 text-muted-foreground">→ Pro Kellner ({waiterShareCount})</TableCell>
+                <TableCell className="py-2 pl-6 text-muted-foreground">→ Pro Mitarbeiter ({waiterShareCount})</TableCell>
                 <TableCell className="text-right tabular-nums text-success py-2">{formatCurrency(tipPerWaiter)}</TableCell>
               </TableRow>
             )}

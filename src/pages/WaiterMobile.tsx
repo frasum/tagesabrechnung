@@ -227,7 +227,7 @@ export default function WaiterMobile() {
                   </Alert>
                 )}
                 <div>
-                  <Label className="text-xs text-muted-foreground">Zweiter Kellner (optional)</Label>
+                  <Label className="text-xs text-muted-foreground">Zweiter Mitarbeiter (optional)</Label>
                   <SecondWaiterSelect
                     value={secondWaiterName}
                     onValueChange={setSecondWaiterName}

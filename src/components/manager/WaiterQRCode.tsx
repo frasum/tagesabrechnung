@@ -57,7 +57,7 @@ export function WaiterQRCode() {
       }
       
       const link = document.createElement('a');
-      link.download = `kellner-self-service-${selectedSlug}.png`;
+      link.download = `mitarbeiter-self-service-${selectedSlug}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
       
@@ -85,10 +85,10 @@ export function WaiterQRCode() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <QrCode className="w-5 h-5" />
-          Kellner Self-Service
+          Mitarbeiter Self-Service
         </CardTitle>
         <CardDescription>
-          QR-Code für die mobile Kellner-Abrechnung
+          QR-Code für die mobile Mitarbeiter-Abrechnung
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -157,7 +157,7 @@ export function WaiterQRCode() {
         </Button>
 
         <p className="text-xs text-muted-foreground text-center">
-          Kellner können diesen QR-Code scannen und sich mit Google/Apple oder PIN anmelden, um ihre Abrechnung für {selectedRestaurant?.name} einzugeben
+          Mitarbeiter können diesen QR-Code scannen und sich mit Google/Apple oder PIN anmelden, um ihre Abrechnung für {selectedRestaurant?.name} einzugeben
         </p>
       </CardContent>
     </Card>

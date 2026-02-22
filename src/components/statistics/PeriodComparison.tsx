@@ -133,7 +133,7 @@ export function PeriodComparison({ data }: PeriodComparisonProps) {
           percentChange={data.changes.kitchenTipPercent}
         />
         <MetricRow
-          label="Kellner TG Pool"
+          label="Mitarbeiter TG Pool"
           current={data.current.totalWaiterTip}
           previous={data.previous.totalWaiterTip}
           change={data.changes.waiterTip}

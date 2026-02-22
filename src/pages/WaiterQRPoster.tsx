@@ -45,7 +45,7 @@ export default function WaiterQRPoster() {
               <Utensils className="w-8 h-8 text-primary print:w-6 print:h-6" />
             </div>
             <h1 className="text-4xl font-bold text-foreground mb-1 print:text-2xl">
-              Kellner Self-Service
+              Mitarbeiter Self-Service
             </h1>
             {restaurantName && (
               <p className="text-2xl font-semibold text-primary mb-1 print:text-lg">

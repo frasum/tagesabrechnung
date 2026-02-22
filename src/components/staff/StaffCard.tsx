@@ -15,7 +15,7 @@ interface StaffCardProps {
 
 export function StaffCard({ staff, onEdit, onDelete, rankingData }: StaffCardProps) {
   const RoleIcon = staff.role === 'kitchen' ? ChefHat : UtensilsCrossed;
-  const roleLabel = staff.role === 'kitchen' ? 'Küche' : 'Kellner';
+  const roleLabel = staff.role === 'kitchen' ? 'Küche' : 'Mitarbeiter';
   
   // Get restaurant names from the relation
   const restaurantNames = staff.staff_restaurants

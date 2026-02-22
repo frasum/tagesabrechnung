@@ -44,7 +44,7 @@ export function StaffSelect({
       <SelectContent>
         {filteredStaff.length === 0 ? (
           <div className="px-2 py-4 text-sm text-muted-foreground text-center">
-            Keine aktiven {role === 'kitchen' ? 'Küchenmitarbeiter' : role === 'all' ? 'Mitarbeiter' : 'Kellner'} vorhanden.
+            Keine aktiven {role === 'kitchen' ? 'Küchenmitarbeiter' : 'Mitarbeiter'} vorhanden.
             <br />
             <span className="text-xs">Bitte in der Mitarbeiterverwaltung hinzufügen.</span>
           </div>

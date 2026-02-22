@@ -129,7 +129,7 @@ export const fieldLabels: Record<string, string> = {
   open_invoices: 'Offene Rechnungen',
   cash_handed_in: 'Bargeld abgegeben',
   kitchen_tip: 'Küchen-Trinkgeld',
-  waiter_name: 'Kellner',
-  second_waiter_name: 'Zweiter Kellner',
+  waiter_name: 'Mitarbeiter',
+  second_waiter_name: 'Zweiter Mitarbeiter',
   participates_in_pool: 'Pool-Teilnahme',
 };

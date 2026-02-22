@@ -271,7 +271,7 @@ export function MonthlyTipBreakdown() {
           <TabsList className="mb-4">
             <TabsTrigger value="waiter" className="gap-2">
               <Users className="w-4 h-4" />
-              Kellner
+              Mitarbeiter
             </TabsTrigger>
             <TabsTrigger value="kitchen" className="gap-2">
               <ChefHat className="w-4 h-4" />
@@ -282,7 +282,7 @@ export function MonthlyTipBreakdown() {
           <TabsContent value="waiter" className="space-y-6">
             <TipChart
               data={selectedMonthData?.waiterTips || []}
-              title="Kellner Trinkgeld"
+              title="Mitarbeiter Trinkgeld"
             />
             <TipTable
               data={selectedMonthData?.waiterTips || []}

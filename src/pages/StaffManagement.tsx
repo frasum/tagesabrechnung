@@ -152,7 +152,7 @@ export default function StaffManagement() {
               Mitarbeiterverwaltung
             </h1>
             <p className="text-muted-foreground mt-1">
-              Kellner und Küchenpersonal verwalten
+              Mitarbeiter und Küchenpersonal verwalten
             </p>
           </div>
           
@@ -182,7 +182,7 @@ export default function StaffManagement() {
               </TabsTrigger>
               <TabsTrigger value="waiter" className="gap-2">
                 <UtensilsCrossed className="w-4 h-4" />
-                Kellner ({waiterCount})
+                Mitarbeiter ({waiterCount})
               </TabsTrigger>
               <TabsTrigger value="kitchen" className="gap-2">
                 <ChefHat className="w-4 h-4" />
@@ -199,7 +199,7 @@ export default function StaffManagement() {
               <div className="flex items-center gap-2">
                 <Trophy className="w-5 h-5 text-primary shrink-0" />
                 <Label htmlFor="tip-ranking-toggle" className="cursor-pointer text-sm font-medium">
-                  Trinkgeld Ranking für Kellner anzeigen
+                  Trinkgeld Ranking für Mitarbeiter anzeigen
                 </Label>
               </div>
               <Switch

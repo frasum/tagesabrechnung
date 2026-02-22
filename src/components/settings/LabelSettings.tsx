@@ -25,7 +25,7 @@ const LABEL_GROUPS: { title: string; keys: LabelKey[] }[] = [
     keys: ['vouchers_sold', 'vouchers_redeemed', 'finedine_vouchers', 'einladung', 'sonstige_einnahme'],
   },
   {
-    title: 'Kellner',
+    title: 'Mitarbeiter',
     keys: ['open_invoices', 'hilf_mahl', 'cash_handed_in', 'kitchen_tip'],
   },
 ];

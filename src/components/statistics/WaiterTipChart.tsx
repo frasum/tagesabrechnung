@@ -63,12 +63,12 @@ export function WaiterTipChart({ data }: WaiterTipChartProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <User className="w-5 h-5" />
-            Kellner Trinkgeld
+            Mitarbeiter Trinkgeld
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-[200px] flex items-center justify-center text-muted-foreground">
-            Keine Kellner-Daten vorhanden
+            Keine Mitarbeiter-Daten vorhanden
           </div>
         </CardContent>
       </Card>
@@ -82,7 +82,7 @@ export function WaiterTipChart({ data }: WaiterTipChartProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <User className="w-5 h-5" />
-          Kellner Trinkgeld
+          Mitarbeiter Trinkgeld
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">

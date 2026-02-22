@@ -310,8 +310,8 @@ export default function KitchenTipSplit() {
               <Card className="bg-muted/50 border-dashed">
                 <CardContent className="py-6 text-center">
                   <p className="text-muted-foreground">
-                    <strong>Hinweis:</strong> Der Küchen-Trinkgeld-Pool wird aus den Kellner-Abrechnungen berechnet (2% des POS-Umsatzes).
-                    Fügen Sie zuerst Kellner-Schichten hinzu.
+                    <strong>Hinweis:</strong> Der Küchen-Trinkgeld-Pool wird aus den Mitarbeiter-Abrechnungen berechnet (2% des POS-Umsatzes).
+                    Fügen Sie zuerst Mitarbeiter-Schichten hinzu.
                   </p>
                 </CardContent>
               </Card>

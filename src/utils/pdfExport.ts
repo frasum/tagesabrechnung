@@ -269,7 +269,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
     autoTable(doc, {
       startY: columnsStartY,
       margin: { left: rightX, right: margin },
-      head: [['Kellner', 'Umsatz', 'Abgabe', 'Geänd.', 'TG']],
+      head: [['Mitarbeiter', 'Umsatz', 'Abgabe', 'Geänd.', 'TG']],
       body: waiterRows,
       theme: 'plain',
       headStyles: { fillColor: [241, 245, 249] as [number, number, number], fontSize: 9, fontStyle: 'bold' as const, textColor: [51, 65, 85] as [number, number, number] },
@@ -287,7 +287,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
     rightEndY += 4;
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Kellner-Pool: ${formatCurrency(data.totals.totalWaiterTip)}  ·  Küchen-Pool: ${formatCurrency(data.totals.totalKitchenTip)}`, rightX + 2, rightEndY);
+    doc.text(`Mitarbeiter-Pool: ${formatCurrency(data.totals.totalWaiterTip)}  ·  Küchen-Pool: ${formatCurrency(data.totals.totalKitchenTip)}`, rightX + 2, rightEndY);
     rightEndY += 3;
     doc.setFont('helvetica', 'bold');
     doc.text(

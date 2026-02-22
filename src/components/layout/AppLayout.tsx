@@ -44,7 +44,7 @@ interface NavItem {
 }
 
 const allNavItems: NavItem[] = [
-  { path: '', label: 'Kellner Abrechnung', icon: Users, minLevel: 'staff' },
+  { path: '', label: 'Mitarbeiter Abrechnung', icon: Users, minLevel: 'staff' },
   { path: 'kitchen', label: 'Küchen Trinkgeld', icon: ChefHat, minLevel: 'manager' },
   { path: 'summary', label: 'Tagesabrechnung', icon: FileText, minLevel: 'manager' },
   

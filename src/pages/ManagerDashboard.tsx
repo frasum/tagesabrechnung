@@ -280,7 +280,7 @@ export default function ManagerDashboard() {
                   <div>
                     <p className="font-medium text-destructive">POS Differenz</p>
                     <p className="text-sm text-muted-foreground">
-                      POS Total ({formatCurrency(formData.pos_total)}) stimmt nicht mit Kellner-Umsätzen ({formatCurrency(kellnerUmsatz)}) + Takeaway ({formatCurrency(formData.takeaway_total)}) überein.
+                      POS Total ({formatCurrency(formData.pos_total)}) stimmt nicht mit Mitarbeiter-Umsätzen ({formatCurrency(kellnerUmsatz)}) + Takeaway ({formatCurrency(formData.takeaway_total)}) überein.
                     </p>
                     <p className="text-sm font-semibold text-destructive mt-1">
                       Differenz: {formatCurrency(adjustedPosDiff)}
@@ -296,7 +296,7 @@ export default function ManagerDashboard() {
                   <div>
                     <p className="font-medium text-destructive">Terminal Differenz</p>
                     <p className="text-sm text-muted-foreground">
-                      Terminals ({formatCurrency(terminalTotal)}) stimmen nicht mit Kartenzahlungen ({formatCurrency(waiterCardTotal)} Kellner + {formatCurrency(formData.card_total_gl)} GL = {formatCurrency(totalCardTotal)}) überein.
+                      Terminals ({formatCurrency(terminalTotal)}) stimmen nicht mit Kartenzahlungen ({formatCurrency(waiterCardTotal)} Mitarbeiter + {formatCurrency(formData.card_total_gl)} GL = {formatCurrency(totalCardTotal)}) überein.
                     </p>
                     <p className="text-sm font-semibold text-destructive mt-1">
                       Differenz: {formatCurrency(cardTerminalMismatch)}
@@ -353,7 +353,7 @@ export default function ManagerDashboard() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <Label>Kellner Abzugebender Betrag</Label>
+                    <Label>Mitarbeiter Abzugebender Betrag</Label>
                     <div className="h-10 px-3 flex items-center justify-end rounded-md border bg-muted text-right tabular-nums font-medium">
                       {new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(totalKassiertBrutto)} €
                     </div>
@@ -578,7 +578,7 @@ export default function ManagerDashboard() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <ClipboardList className="w-5 h-5" />
-                    Kellner-Abrechnungen
+                    Mitarbeiter-Abrechnungen
                   </CardTitle>
                 </CardHeader>
                 <CardContent>

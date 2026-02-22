@@ -140,7 +140,7 @@ export default function Statistics() {
     date: d.date,
     dateFormatted: format(new Date(d.date), 'dd.MM', { locale: de }),
     'Küchen TG': d.kitchenTip,
-    'Kellner TG': d.waiterTip,
+    'Mitarbeiter TG': d.waiterTip,
   }));
 
   return (
@@ -342,7 +342,7 @@ export default function Statistics() {
                           radius={[4, 4, 0, 0]}
                         />
                         <Bar 
-                          dataKey="Kellner TG" 
+                          dataKey="Mitarbeiter TG" 
                           fill="hsl(var(--chart-4))" 
                           radius={[4, 4, 0, 0]}
                         />
@@ -490,7 +490,7 @@ export default function Statistics() {
                     </p>
                   </div>
                   <div className="bg-muted rounded-lg p-4">
-                    <p className="text-sm text-muted-foreground">Kellner Trinkgeld</p>
+                    <p className="text-sm text-muted-foreground">Mitarbeiter Trinkgeld</p>
                     <p className="text-2xl font-bold tabular-nums text-success">
                       {formatCurrency(summary?.totalWaiterTip || 0)}
                     </p>
