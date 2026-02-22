@@ -214,9 +214,9 @@ export default function History() {
                       <TableRow>
                         <TableHead>Datum</TableHead>
                         <TableHead className="text-right">POS Total</TableHead>
-                         <TableHead className="text-right">Kredit Karten Terminal 1</TableHead>
-                         <TableHead className="text-right">Kredit Karten Terminal 2</TableHead>
-                         <TableHead className="text-right">Tages-Bargeld</TableHead>
+                        <TableHead className="text-right">Kreditkarten (%)</TableHead>
+                        <TableHead className="text-right">Take Away (%)</TableHead>
+                        <TableHead className="text-right">Tages-Bargeld</TableHead>
                         <TableHead></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -230,10 +230,20 @@ export default function History() {
                             {formatCurrency(session.pos_total || 0)}
                           </TableCell>
                           <TableCell className="text-right tabular-nums">
-                            {formatCurrency(session.terminal_1_total || 0)}
+                            {(() => {
+                              const kreditkarten = (session.terminal_1_total || 0) + (session.terminal_2_total || 0);
+                              const posTotal = session.pos_total || 0;
+                              const pct = posTotal > 0 ? (kreditkarten / posTotal * 100).toFixed(1) : '0.0';
+                              return <>{formatCurrency(kreditkarten)} <span className="text-muted-foreground text-xs">({pct}%)</span></>;
+                            })()}
                           </TableCell>
                           <TableCell className="text-right tabular-nums">
-                            {formatCurrency(session.terminal_2_total || 0)}
+                            {(() => {
+                              const takeaway = (session.takeaway_total || 0) + (session.ordersmart_revenue || 0) + (session.wolt_revenue || 0);
+                              const posTotal = session.pos_total || 0;
+                              const pct = posTotal > 0 ? (takeaway / posTotal * 100).toFixed(1) : '0.0';
+                              return <>{formatCurrency(takeaway)} <span className="text-muted-foreground text-xs">({pct}%)</span></>;
+                            })()}
                           </TableCell>
                           <TableCell className={`text-right tabular-nums font-medium ${(cashByDate.get(session.session_date) ?? 0) >= 0 ? 'text-success' : 'text-destructive'}`}>
                             {formatCurrency(cashByDate.get(session.session_date) ?? 0)}
