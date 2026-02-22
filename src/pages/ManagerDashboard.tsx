@@ -114,7 +114,7 @@ export default function ManagerDashboard() {
   const handleCreateSession = async () => {
     if (!restaurantId) return;
     try {
-      await createSession.mutateAsync({ date: selectedDate, restaurantId, createdByName: user?.name || undefined, permissionLevel: user?.permissionLevel });
+      await createSession.mutateAsync({ date: selectedDate, restaurantId, createdByName: user?.name || undefined });
       toast({ title: 'Session erstellt', description: `Session für ${format(selectedDate, 'dd.MM.yyyy')} wurde erstellt.` });
     } catch (error) {
       toast({ title: 'Fehler', description: 'Session konnte nicht erstellt werden.', variant: 'destructive' });
