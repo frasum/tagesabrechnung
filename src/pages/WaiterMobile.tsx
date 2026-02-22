@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { format } from 'date-fns';
 import { getBusinessDate } from '@/utils/businessDate';
 import { de } from 'date-fns/locale';
-import { Check, Loader2, CalendarDays, Link2 } from 'lucide-react';
+import { AlertTriangle, Check, Loader2, CalendarDays, Link2 } from 'lucide-react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { PerformanceCard } from '@/components/waiter/PerformanceCard';
 import { TipRanking, RankingItem } from '@/components/waiter/TipRanking';
@@ -181,6 +181,19 @@ export default function WaiterMobile() {
               </Button>
             </AlertDescription>
           </Alert>
+        )}
+
+        {/* No Session Alert for Staff */}
+        {!isLoading && !session && (
+          <div className="flex items-start gap-3 rounded-lg border border-warning/50 bg-warning/10 p-4">
+            <AlertTriangle className="w-5 h-5 text-warning shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium text-foreground">Keine Abrechnung vorhanden</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Bitte wende dich an einen Manager, um die Abrechnung für heute zu starten.
+              </p>
+            </div>
+          </div>
         )}
 
         {/* Performance Card */}
