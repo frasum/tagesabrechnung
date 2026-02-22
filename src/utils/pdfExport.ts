@@ -272,8 +272,8 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
       head: [['Kellner', 'Umsatz', 'Abgabe', 'Geänd.', 'TG']],
       body: waiterRows,
       theme: 'plain',
-      headStyles: { fillColor: [241, 245, 249] as [number, number, number], fontSize: 7, fontStyle: 'bold' as const, textColor: [51, 65, 85] as [number, number, number] },
-      bodyStyles: { fontSize: 7, cellPadding: { top: 0.5, bottom: 0.5, left: 2, right: 2 } },
+      headStyles: { fillColor: [241, 245, 249] as [number, number, number], fontSize: 9, fontStyle: 'bold' as const, textColor: [51, 65, 85] as [number, number, number] },
+      bodyStyles: { fontSize: 9, cellPadding: { top: 1, bottom: 1, left: 2, right: 2 } },
       columnStyles: { 1: { halign: 'right' as const }, 2: { halign: 'center' as const }, 3: { halign: 'center' as const }, 4: { halign: 'right' as const } },
       tableWidth: rightColWidth,
     });
@@ -285,7 +285,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
       ? (totalTipAll / data.totals.kellnerUmsatz) * 100
       : 0;
     rightEndY += 4;
-    doc.setFontSize(7);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.text(`Kellner-Pool: ${formatCurrency(data.totals.totalWaiterTip)}  ·  Küchen-Pool: ${formatCurrency(data.totals.totalKitchenTip)}`, rightX + 2, rightEndY);
     rightEndY += 3;
@@ -308,8 +308,8 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
         ['Summe', formatCurrency(data.totals.totalExpenses)],
       ],
       theme: 'plain',
-      headStyles: { fillColor: [241, 245, 249] as [number, number, number], fontSize: 7, fontStyle: 'bold' as const, textColor: [51, 65, 85] as [number, number, number] },
-      bodyStyles: { fontSize: 7, cellPadding: { top: 0.5, bottom: 0.5, left: 2, right: 2 } },
+      headStyles: { fillColor: [241, 245, 249] as [number, number, number], fontSize: 9, fontStyle: 'bold' as const, textColor: [51, 65, 85] as [number, number, number] },
+      bodyStyles: { fontSize: 9, cellPadding: { top: 1, bottom: 1, left: 2, right: 2 } },
       columnStyles: { 1: { halign: 'right' as const } },
       tableWidth: rightColWidth,
       didParseCell: (cell) => {
@@ -332,8 +332,8 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
         ['Summe', formatCurrency(data.totals.totalAdvances ?? 0)],
       ],
       theme: 'plain',
-      headStyles: { fillColor: [241, 245, 249] as [number, number, number], fontSize: 7, fontStyle: 'bold' as const, textColor: [51, 65, 85] as [number, number, number] },
-      bodyStyles: { fontSize: 7, cellPadding: { top: 0.5, bottom: 0.5, left: 2, right: 2 } },
+      headStyles: { fillColor: [241, 245, 249] as [number, number, number], fontSize: 9, fontStyle: 'bold' as const, textColor: [51, 65, 85] as [number, number, number] },
+      bodyStyles: { fontSize: 9, cellPadding: { top: 1, bottom: 1, left: 2, right: 2 } },
       columnStyles: { 1: { halign: 'right' as const } },
       tableWidth: rightColWidth,
       didParseCell: (cell) => {
