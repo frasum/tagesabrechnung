@@ -1,67 +1,45 @@
 
 
-## Telegram Wechselgeldbestand-Berechnung korrigieren
+## Session-Erstellung auf Manager/Admin beschraenken
 
-### Problem
+### Aktuelles Verhalten
 
-Die Telegram Edge Function (`send-telegram-summary`) berechnet den Wechselgeldbestand falsch, weil sie nur Tage mit einer Session beruecksichtigt. Kassentransfers an Tagen ohne Session (z.B. Einlagen am Ruhetag) werden komplett ignoriert.
+Sessions koennen derzeit von **allen Nutzern** erstellt werden -- auch von Kellnern (Staff). Das passiert an 5 Stellen:
 
-Fuer Spicery fehlen:
-- 09.02.: Entnahme 1.104 EUR + Einlage 270 EUR (netto -834 EUR)
-- 15.02.: Einlage 6.346,22 EUR
+1. **WaiterCashUp** -- "Session erstellen"-Button
+2. **KitchenTipSplit** -- "Session erstellen"-Button
+3. **DailySummary** -- "Session erstellen"-Button
+4. **ManagerDashboard** -- "Session erstellen"-Button
+5. **WaiterMobile** -- automatisch beim Speichern einer Abrechnung (wenn keine Session existiert)
 
-Dadurch ergibt sich ein Wechselgeldbestand von ~1.086 EUR statt der korrekten 2.000 EUR.
+### Geplante Aenderungen
 
-Die Web-App (`useCashBalanceData`) loest das bereits korrekt, indem sie Transfer-Only-Tage als eigene Eintraege in die Berechnung einbezieht.
+**1. `src/hooks/useSession.ts` -- `useCreateSession` absichern**
 
-### Loesung
+Eine Berechtigungspruefung direkt in der Mutation hinzufuegen. Wenn der Nutzer weder Manager noch Admin ist, wird ein Fehler geworfen, bevor der Datenbank-Aufruf stattfindet.
 
-**Datei: `supabase/functions/send-telegram-summary/index.ts`**
+**2. `src/pages/WaiterCashUp.tsx` -- Button ausblenden fuer Staff**
 
-Die Funktion `calculateCashBalance` (ab Zeile 238) wird angepasst, sodass sie -- genau wie die Web-App -- auch Transfer-Only-Tage beruecksichtigt:
+Der "Session erstellen"-Button wird nur fuer Manager und Admins angezeigt. Staff-Nutzer sehen stattdessen einen Hinweis wie "Keine Session fuer diesen Tag. Bitte einen Manager bitten, die Session zu erstellen."
 
-1. Alle Daten (Session-Tage + Transfer-Only-Tage) in eine sortierte Liste zusammenfuehren
-2. Fuer jeden Tag (mit oder ohne Session) die Bargeld-Berechnung durchfuehren
-3. Transfers werden korrekt zugeordnet, auch wenn kein Session-Eintrag existiert
+**3. `src/pages/KitchenTipSplit.tsx` -- Button ausblenden fuer Staff**
 
-### Technische Aenderungen
+Gleiche Logik -- der Button wird nur fuer berechtigte Nutzer angezeigt.
 
-Die `calculateCashBalance`-Funktion wird umgebaut:
+**4. `src/pages/DailySummary.tsx` -- Button ausblenden fuer Staff**
 
-```text
-Vorher (vereinfacht):
-  for (const session of sessions) {
-    // Nur Tage MIT Session werden berechnet
-    // Transfers ohne passende Session werden ignoriert
-  }
+Gleiche Logik.
 
-Nachher:
-  // 1. Session-Map nach Datum erstellen
-  const sessionMap = new Map();
-  for (const s of sessions) sessionMap.set(s.session_date, s);
+**5. `src/pages/ManagerDashboard.tsx` -- Keine Aenderung noetig**
 
-  // 2. Transfer-Only-Tage finden
-  const transferOnlyDates = new Set();
-  for (const t of transfers) {
-    if (!sessionMap.has(t.transfer_date)) transferOnlyDates.add(t.transfer_date);
-  }
+Diese Seite ist bereits nur fuer Manager/Admin zugaenglich (via Route-Schutz).
 
-  // 3. Alle Daten sortiert durchlaufen
-  const allDates = [...new Set([
-    ...sessions.map(s => s.session_date),
-    ...transferOnlyDates
-  ])].sort();
+**6. `src/pages/WaiterMobile.tsx` -- Auto-Erstellung entfernen**
 
-  for (const date of allDates) {
-    const session = sessionMap.get(date);
-    // Session-Werte (oder 0 wenn kein Session)
-    // + Transfer-Effekt fuer diesen Tag
-    // = korrekte Bargeld-Berechnung
-  }
-```
+Wenn ein Kellner seine Abrechnung speichert und noch keine Session existiert, wird eine Fehlermeldung angezeigt ("Keine Session fuer heute vorhanden. Bitte einen Manager bitten, die Session zu erstellen.") statt automatisch eine Session anzulegen.
 
-Dies entspricht exakt der Logik in `useCashBalanceData.ts` (Zeilen 81-120), die bereits korrekt arbeitet.
+### Technische Details
 
-### Erwartetes Ergebnis
-
-Nach der Aenderung berechnet Telegram den gleichen Wechselgeldbestand wie die Web-App (2.000 EUR fuer Spicery am 21.02.).
+- Die Pruefung nutzt `hasPermission('manager')` aus dem `AuthContext`, das bereits die Hierarchie beruecksichtigt (Admin >= Manager >= Staff)
+- Keine Datenbank-Aenderungen noetig -- die Einschraenkung erfolgt rein im Frontend
+- Der "Session erstellen"-Button bleibt auf allen Manager/Admin-Seiten unveraendert sichtbar
