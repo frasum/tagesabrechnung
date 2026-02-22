@@ -1,67 +1,75 @@
 
 
-## Telegram Wechselgeldbestand-Berechnung korrigieren
+# Biometrischer Login (Face ID / Touch ID) via WebAuthn
 
-### Problem
+## Überblick
+Mitarbeiter können nach einer einmaligen Registrierung ihren biometrischen Sensor (Face ID, Touch ID, Fingerprint) nutzen, um sich schnell einzuloggen -- ohne PIN-Eingabe.
 
-Die Telegram Edge Function (`send-telegram-summary`) berechnet den Wechselgeldbestand falsch, weil sie nur Tage mit einer Session beruecksichtigt. Kassentransfers an Tagen ohne Session (z.B. Einlagen am Ruhetag) werden komplett ignoriert.
+## Nutzer-Ablauf
 
-Fuer Spicery fehlen:
-- 09.02.: Entnahme 1.104 EUR + Einlage 270 EUR (netto -834 EUR)
-- 15.02.: Einlage 6.346,22 EUR
+1. **Registrierung (einmalig):** Nach dem normalen Login erscheint ein Button "Face ID aktivieren". Das Gerät wird mit dem Mitarbeiter-Konto verknüpft.
+2. **Login:** Auf der Login-Seite erscheint ein neuer Button "Mit Face ID anmelden". Ein Tap startet die biometrische Prüfung, und der Nutzer ist eingeloggt.
+3. **Verwaltung:** In den Einstellungen kann die biometrische Verknüpfung gelöscht werden.
 
-Dadurch ergibt sich ein Wechselgeldbestand von ~1.086 EUR statt der korrekten 2.000 EUR.
+## Technische Umsetzung
 
-Die Web-App (`useCashBalanceData`) loest das bereits korrekt, indem sie Transfer-Only-Tage als eigene Eintraege in die Berechnung einbezieht.
+### 1. Neue Datenbank-Tabelle: `webauthn_credentials`
 
-### Loesung
+Speichert die registrierten biometrischen Credentials pro Mitarbeiter/Gerät:
 
-**Datei: `supabase/functions/send-telegram-summary/index.ts`**
+- `id` (UUID, Primary Key)
+- `staff_id` (UUID, FK zu staff)
+- `credential_id` (TEXT, unique) -- Base64-kodierte WebAuthn Credential ID
+- `public_key` (TEXT) -- Base64-kodierter Public Key
+- `counter` (BIGINT) -- Replay-Schutz
+- `device_name` (TEXT, optional) -- z.B. "iPhone von Max"
+- `created_at` (TIMESTAMPTZ)
 
-Die Funktion `calculateCashBalance` (ab Zeile 238) wird angepasst, sodass sie -- genau wie die Web-App -- auch Transfer-Only-Tage beruecksichtigt:
+RLS: Nur über Edge Functions zugreifbar (kein direkter Client-Zugriff).
 
-1. Alle Daten (Session-Tage + Transfer-Only-Tage) in eine sortierte Liste zusammenfuehren
-2. Fuer jeden Tag (mit oder ohne Session) die Bargeld-Berechnung durchfuehren
-3. Transfers werden korrekt zugeordnet, auch wenn kein Session-Eintrag existiert
+### 2. Zwei neue Edge Functions
 
-### Technische Aenderungen
+**`webauthn-register`** -- Registrierung eines neuen Credentials
+- Erwartet: Auth-Token + Challenge-Response vom Browser
+- Validiert die WebAuthn-Attestation serverseitig
+- Speichert Credential in der Datenbank
 
-Die `calculateCashBalance`-Funktion wird umgebaut:
+**`webauthn-authenticate`** -- Login via Biometrie
+- Erwartet: Credential ID + signierte Challenge
+- Verifiziert die Signatur gegen den gespeicherten Public Key
+- Gibt bei Erfolg einen Auth-Token / Session zurück
 
-```text
-Vorher (vereinfacht):
-  for (const session of sessions) {
-    // Nur Tage MIT Session werden berechnet
-    // Transfers ohne passende Session werden ignoriert
-  }
+### 3. Frontend-Änderungen
 
-Nachher:
-  // 1. Session-Map nach Datum erstellen
-  const sessionMap = new Map();
-  for (const s of sessions) sessionMap.set(s.session_date, s);
+**Login-Seite (`src/pages/Login.tsx`):**
+- Neuer Button "Mit Face ID anmelden" (nur sichtbar, wenn das Gerät WebAuthn unterstützt UND ein Credential registriert ist)
+- Prüfung via `navigator.credentials.get()` mit `publicKey`-Option
 
-  // 2. Transfer-Only-Tage finden
-  const transferOnlyDates = new Set();
-  for (const t of transfers) {
-    if (!sessionMap.has(t.transfer_date)) transferOnlyDates.add(t.transfer_date);
-  }
+**Neuer Hook: `src/hooks/useWebAuthn.ts`**
+- `isSupported` -- prüft ob der Browser WebAuthn unterstützt
+- `hasCredential` -- prüft ob für dieses Gerät ein Credential in localStorage hinterlegt ist
+- `register()` -- startet den Registrierungsprozess
+- `authenticate()` -- startet den Login-Prozess
 
-  // 3. Alle Daten sortiert durchlaufen
-  const allDates = [...new Set([
-    ...sessions.map(s => s.session_date),
-    ...transferOnlyDates
-  ])].sort();
+**Registrierungs-UI:**
+- Nach erfolgreichem Login: optionaler Dialog/Banner "Möchten Sie Face ID für schnellen Login aktivieren?"
+- Oder: Button in den Einstellungen / im Profil-Bereich
 
-  for (const date of allDates) {
-    const session = sessionMap.get(date);
-    // Session-Werte (oder 0 wenn kein Session)
-    // + Transfer-Effekt fuer diesen Tag
-    // = korrekte Bargeld-Berechnung
-  }
-```
+### 4. Challenge-Handling
 
-Dies entspricht exakt der Logik in `useCashBalanceData.ts` (Zeilen 81-120), die bereits korrekt arbeitet.
+Challenges werden serverseitig generiert und temporär gespeichert (z.B. in einer `webauthn_challenges`-Tabelle mit kurzer TTL), um Replay-Angriffe zu verhindern.
 
-### Erwartetes Ergebnis
+### 5. Kompatibilität
 
-Nach der Aenderung berechnet Telegram den gleichen Wechselgeldbestand wie die Web-App (2.000 EUR fuer Spicery am 21.02.).
+- **iPhone (Safari):** Face ID / Touch ID
+- **Android (Chrome):** Fingerprint / Face Unlock
+- **Mac (Safari/Chrome):** Touch ID
+- **Windows (Edge/Chrome):** Windows Hello
+- Geräte ohne biometrische Sensoren sehen den Button nicht
+
+## Einschränkungen
+
+- WebAuthn-Credentials sind gerätegebunden -- jedes Gerät muss einzeln registriert werden
+- Erfordert HTTPS (in der PWA bereits gegeben)
+- Die serverseitige Krypto-Verifikation in Edge Functions nutzt die Web Crypto API (in Deno verfügbar)
+
