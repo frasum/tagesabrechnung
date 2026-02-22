@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.webauthn-authenticate]
 verify_jwt = false
+
+[functions.manage-webauthn]
+verify_jwt = false
