@@ -207,10 +207,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return;
           }
 
-          // PIN-based user
+          // PIN-based user - show cached immediately, refresh permissions in background
           if (isMounted) {
             setUser(parsed);
             setIsLoading(false);
+          }
+          // Background refresh of permission level
+          if (parsed.staffId) {
+            try {
+              const response = await fetch(
+                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-user-role?staff_id=${parsed.staffId}`,
+                { headers: { 'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` } }
+              );
+              if (response.ok && isMounted) {
+                const roleData = await response.json();
+                const newLevel = roleData.permission_level || 'staff';
+                if (newLevel !== parsed.permissionLevel) {
+                  const updated = { ...parsed, permissionLevel: newLevel };
+                  setUser(updated);
+                  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updated));
+                }
+              }
+            } catch { /* silent - cached data is still usable */ }
           }
           return;
         }
