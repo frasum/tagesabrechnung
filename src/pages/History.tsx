@@ -20,8 +20,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+  AlertDialogTrigger } from
+'@/components/ui/alert-dialog';
 import { useSessionHistory, useDeleteAllSessions } from '@/hooks/useSession';
 import { useRestaurant } from '@/hooks/useRestaurant';
 import { useToast } from '@/hooks/use-toast';
@@ -69,13 +69,13 @@ export default function History() {
       setConfirmText('');
       toast({
         title: 'Erfolgreich gelöscht',
-        description: `${totalSessions} Sessions wurden unwiderruflich gelöscht.`,
+        description: `${totalSessions} Sessions wurden unwiderruflich gelöscht.`
       });
     } catch (error) {
       toast({
         title: 'Fehler beim Löschen',
         description: 'Die Sessions konnten nicht gelöscht werden.',
-        variant: 'destructive',
+        variant: 'destructive'
       });
     }
   };
@@ -86,8 +86,8 @@ export default function History() {
         <div className="flex items-center justify-center h-64">
           <div className="animate-pulse text-muted-foreground">Laden...</div>
         </div>
-      </AppLayout>
-    );
+      </AppLayout>);
+
   }
 
   return (
@@ -105,11 +105,11 @@ export default function History() {
             </p>
           </div>
 
-          {totalSessions > 0 && (
-            <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => {
-              setDeleteDialogOpen(open);
-              if (!open) setConfirmText('');
-            }}>
+          {totalSessions > 0 &&
+          <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => {
+            setDeleteDialogOpen(open);
+            if (!open) setConfirmText('');
+          }}>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" size="sm">
                   <Trash2 className="w-4 h-4 mr-2" />
@@ -128,27 +128,27 @@ export default function History() {
                       Tippe <strong>"LÖSCHEN"</strong> ein, um zu bestätigen:
                     </p>
                     <Input
-                      value={confirmText}
-                      onChange={(e) => setConfirmText(e.target.value)}
-                      placeholder="LÖSCHEN"
-                      className="mt-2"
-                      autoComplete="off"
-                    />
+                    value={confirmText}
+                    onChange={(e) => setConfirmText(e.target.value)}
+                    placeholder="LÖSCHEN"
+                    className="mt-2"
+                    autoComplete="off" />
+
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Abbrechen</AlertDialogCancel>
                   <AlertDialogAction
-                    onClick={handleDeleteAll}
-                    disabled={!isConfirmValid || deleteAllSessions.isPending}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
+                  onClick={handleDeleteAll}
+                  disabled={!isConfirmValid || deleteAllSessions.isPending}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+
                     {deleteAllSessions.isPending ? 'Löschen...' : 'Endgültig löschen'}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-          )}
+          }
         </div>
 
         {/* Quick Stats */}
@@ -160,7 +160,7 @@ export default function History() {
                   <Calendar className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Gesamt Sessions</p>
+                  <p className="text-sm text-muted-foreground">Anzahl der Abrechnungen </p>
                   <p className="text-2xl font-display font-semibold">{totalSessions}</p>
                 </div>
               </div>
@@ -188,12 +188,12 @@ export default function History() {
                 locale={de}
                 className="pointer-events-auto"
                 modifiers={{
-                  hasSession: sessions.map(s => new Date(s.session_date)),
+                  hasSession: sessions.map((s) => new Date(s.session_date))
                 }}
                 modifiersClassNames={{
-                  hasSession: 'bg-primary/20 text-primary font-semibold rounded-full',
-                }}
-              />
+                  hasSession: 'bg-primary/20 text-primary font-semibold rounded-full'
+                }} />
+
             </CardContent>
           </Card>
 
@@ -203,12 +203,12 @@ export default function History() {
               <CardTitle>Letzte Sessions</CardTitle>
             </CardHeader>
             <CardContent>
-              {sessions.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">
+              {sessions.length === 0 ?
+              <p className="text-muted-foreground text-center py-8">
                   Noch keine Sessions vorhanden.
-                </p>
-              ) : (
-                <div className="overflow-x-auto">
+                </p> :
+
+              <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -222,8 +222,8 @@ export default function History() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {sessions.map((session) => (
-                        <TableRow key={session.id}>
+                      {sessions.map((session) =>
+                    <TableRow key={session.id}>
                           <TableCell className="font-medium">
                             {format(new Date(session.session_date), "EEEE, d. MMM yyyy", { locale: de })}
                           </TableCell>
@@ -232,53 +232,53 @@ export default function History() {
                           </TableCell>
                           <TableCell className="text-right tabular-nums">
                             {(() => {
-                              const kreditkarten = (session.terminal_1_total || 0) + (session.terminal_2_total || 0);
-                              const posTotal = session.pos_total || 0;
-                              const pct = posTotal > 0 ? (kreditkarten / posTotal * 100).toFixed(1) : '0.0';
-                              return <>{formatCurrency(kreditkarten)} <span className="text-muted-foreground text-xs">({pct}%)</span></>;
-                            })()}
+                          const kreditkarten = (session.terminal_1_total || 0) + (session.terminal_2_total || 0);
+                          const posTotal = session.pos_total || 0;
+                          const pct = posTotal > 0 ? (kreditkarten / posTotal * 100).toFixed(1) : '0.0';
+                          return <>{formatCurrency(kreditkarten)} <span className="text-muted-foreground text-xs">({pct}%)</span></>;
+                        })()}
                           </TableCell>
                           <TableCell className="text-right tabular-nums">
                             {(() => {
-                              const takeaway = (session.takeaway_total || 0) + (session.ordersmart_revenue || 0) + (session.wolt_revenue || 0);
-                              const posTotal = session.pos_total || 0;
-                              const pct = posTotal > 0 ? (takeaway / posTotal * 100).toFixed(1) : '0.0';
-                              return <>{formatCurrency(takeaway)} <span className="text-muted-foreground text-xs">({pct}%)</span></>;
-                            })()}
+                          const takeaway = (session.takeaway_total || 0) + (session.ordersmart_revenue || 0) + (session.wolt_revenue || 0);
+                          const posTotal = session.pos_total || 0;
+                          const pct = posTotal > 0 ? (takeaway / posTotal * 100).toFixed(1) : '0.0';
+                          return <>{formatCurrency(takeaway)} <span className="text-muted-foreground text-xs">({pct}%)</span></>;
+                        })()}
                           </TableCell>
                           <TableCell className="text-right tabular-nums">
                             {(() => {
-                              const guestCount = session.guest_count || 0;
-                              if (guestCount === 0) return <span className="text-muted-foreground">–</span>;
-                              const takeaway = (session.takeaway_total || 0) + (session.ordersmart_revenue || 0) + (session.wolt_revenue || 0);
-                              const avg = ((session.pos_total || 0) - takeaway) / guestCount;
-                              return (
-                                <div>
+                          const guestCount = session.guest_count || 0;
+                          if (guestCount === 0) return <span className="text-muted-foreground">–</span>;
+                          const takeaway = (session.takeaway_total || 0) + (session.ordersmart_revenue || 0) + (session.wolt_revenue || 0);
+                          const avg = ((session.pos_total || 0) - takeaway) / guestCount;
+                          return (
+                            <div>
                                   <div>{guestCount} Gäste</div>
                                   <div className="text-xs text-muted-foreground">Ø {formatCurrency(avg)}</div>
-                                </div>
-                              );
-                            })()}
+                                </div>);
+
+                        })()}
                           </TableCell>
                           <TableCell className={`text-right tabular-nums font-medium ${(cashByDate.get(session.session_date) ?? 0) >= 0 ? 'text-success' : 'text-destructive'}`}>
                             {formatCurrency(cashByDate.get(session.session_date) ?? 0)}
                           </TableCell>
                           <TableCell>
                             <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleViewSession(session.session_date)}
-                              title="Ansehen"
-                            >
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleViewSession(session.session_date)}
+                          title="Ansehen">
+
                               <Eye className="w-4 h-4" />
                             </Button>
                           </TableCell>
                         </TableRow>
-                      ))}
+                    )}
                     </TableBody>
                   </Table>
                 </div>
-              )}
+              }
             </CardContent>
           </Card>
         </div>
@@ -286,6 +286,6 @@ export default function History() {
         {/* Audit Log Section */}
         <AuditLogList />
       </div>
-    </AppLayout>
-  );
+    </AppLayout>);
+
 }
