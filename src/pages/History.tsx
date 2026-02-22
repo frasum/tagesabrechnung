@@ -200,7 +200,7 @@ export default function History() {
           {/* Sessions List */}
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle>Letzte Sessions</CardTitle>
+              <CardTitle>Letzte Abrechnungen</CardTitle>
             </CardHeader>
             <CardContent>
               {sessions.length === 0 ?
