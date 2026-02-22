@@ -181,7 +181,7 @@ export default function WaiterCashUp() {
         id,
         sessionId: session.id
       });
-      
+
       toast({
         title: 'Kellner gelöscht'
       });
@@ -213,7 +213,7 @@ export default function WaiterCashUp() {
   const totalKitchenTip = waiterShifts.reduce((sum, shift) => sum + shift.kitchen_tip, 0);
   const totalSales = waiterShifts.reduce((sum, s) => sum + s.pos_sales, 0);
   const totalTip = totalPool + totalKitchenTip;
-  const tipPercentage = totalSales > 0 ? (totalTip / totalSales) * 100 : 0;
+  const tipPercentage = totalSales > 0 ? totalTip / totalSales * 100 : 0;
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('de-DE', {
       style: 'currency',
@@ -236,7 +236,7 @@ export default function WaiterCashUp() {
               Kellner Abrechnung
             </h1>
             <p className="text-muted-foreground mt-1">
-              Tägliche Kassenabrechnung für jeden Kellner
+              Tägliche Kassenabrechnung für jeden Mitarbeiter 
             </p>
           </div>
           <DateSelector date={selectedDate} onDateChange={setSelectedDate} />
@@ -262,35 +262,35 @@ export default function WaiterCashUp() {
 
             <div className="grid lg:grid-cols-2 gap-6">
             {/* Add/Edit Waiter Form */}
-            {!locked && (
-            <Card className={editingShiftId ? 'ring-2 ring-primary' : ''}>
+            {!locked &&
+          <Card className={editingShiftId ? 'ring-2 ring-primary' : ''}>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
-                    {editingShiftId ? (
-                      <>
+                    {editingShiftId ?
+                  <>
                         <Pencil className="w-5 h-5" />
                         Kellner bearbeiten: {newWaiterName}
-                      </>
-                    ) : (
-                      <>
+                      </> :
+
+                  <>
                         <User className="w-5 h-5" />
-                        Mitarbeiter hinzufügen
+                        Neuen Kellner hinzufügen
                       </>
-                    )}
+                  }
                   </CardTitle>
                   <div className="flex items-center gap-2">
                     <Checkbox
-                      id="participates-in-pool"
-                      checked={newParticipatesInPool}
-                      onCheckedChange={(checked) => {
-                        const participates = checked === true;
-                        setNewParticipatesInPool(participates);
-                        if (!participates) {
-                          setNewSecondWaiterName('none');
-                        }
-                      }}
-                    />
+                    id="participates-in-pool"
+                    checked={newParticipatesInPool}
+                    onCheckedChange={(checked) => {
+                      const participates = checked === true;
+                      setNewParticipatesInPool(participates);
+                      if (!participates) {
+                        setNewSecondWaiterName('none');
+                      }
+                    }} />
+
                     <Label htmlFor="participates-in-pool" className="text-sm font-normal cursor-pointer">
                       Am Pool beteiligt
                     </Label>
@@ -299,22 +299,22 @@ export default function WaiterCashUp() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label>Mitarbeiter auswählen</Label>
-                  <StaffSelect value={newWaiterName} onValueChange={setNewWaiterName} role="waiter" placeholder="Kellner wählen" excludeNames={waiterShifts.filter(s => s.id !== editingShiftId).map(s => s.waiter_name)} restaurantId={restaurantId} />
+                  <Label>Kellner auswählen</Label>
+                  <StaffSelect value={newWaiterName} onValueChange={setNewWaiterName} role="waiter" placeholder="Kellner wählen" excludeNames={waiterShifts.filter((s) => s.id !== editingShiftId).map((s) => s.waiter_name)} restaurantId={restaurantId} />
                 </div>
 
-                {newParticipatesInPool && (
-                  <div>
+                {newParticipatesInPool &&
+              <div>
                     <Label>Zweiter Kellner (optional)</Label>
-                    <SecondWaiterSelect 
-                      value={newSecondWaiterName} 
-                      onValueChange={setNewSecondWaiterName} 
-                      excludeWaiter={newWaiterName}
-                      placeholder="Keiner (Einzelschicht)"
-                      restaurantId={restaurantId}
-                    />
+                    <SecondWaiterSelect
+                  value={newSecondWaiterName}
+                  onValueChange={setNewSecondWaiterName}
+                  excludeWaiter={newWaiterName}
+                  placeholder="Keiner (Einzelschicht)"
+                  restaurantId={restaurantId} />
+
                   </div>
-                )}
+              }
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -327,29 +327,29 @@ export default function WaiterCashUp() {
                   </div>
                 </div>
 
-                {(!isFieldHidden('card_total_gl') || !isFieldHidden('hilf_mahl')) && (
-                <div className="grid grid-cols-2 gap-4">
-                  {!isFieldHidden('card_total_gl') && (
-                  <div>
+                {(!isFieldHidden('card_total_gl') || !isFieldHidden('hilf_mahl')) &&
+              <div className="grid grid-cols-2 gap-4">
+                  {!isFieldHidden('card_total_gl') &&
+                <div>
                     <Label>{getLabel('card_total_gl')}</Label>
                     <CurrencyInput value={newCardTotal} onChange={setNewCardTotal} />
                   </div>
-                  )}
-                  {!isFieldHidden('hilf_mahl') && (
-                  <div>
+                }
+                  {!isFieldHidden('hilf_mahl') &&
+                <div>
                     <Label>{getLabel('hilf_mahl')}</Label>
                     <CurrencyInput value={newHilfMahl} onChange={setNewHilfMahl} />
                   </div>
-                  )}
+                }
                 </div>
-                )}
+              }
 
-                {!isFieldHidden('open_invoices') && (
-                <div>
+                {!isFieldHidden('open_invoices') &&
+              <div>
                   <Label>{getLabel('open_invoices')}</Label>
                   <CurrencyInput value={newOpenInvoices} onChange={setNewOpenInvoices} />
                 </div>
-                )}
+              }
 
                 <div>
                   <Label>{getLabel('cash_handed_in')}</Label>
@@ -384,33 +384,33 @@ export default function WaiterCashUp() {
                 </div>
 
                 <div className="flex gap-2">
-                  {editingShiftId && (
-                    <Button variant="outline" onClick={handleCancelEdit} className="flex-1">
+                  {editingShiftId &&
+                <Button variant="outline" onClick={handleCancelEdit} className="flex-1">
                       <X className="w-4 h-4 mr-2" />
                       Abbrechen
                     </Button>
-                  )}
-                  <Button 
-                    onClick={handleSaveWaiter} 
-                    disabled={!newWaiterName.trim() || createWaiterShift.isPending || updateWaiterShift.isPending} 
-                    className="flex-1"
-                  >
-                    {editingShiftId ? (
-                      <>
+                }
+                  <Button
+                  onClick={handleSaveWaiter}
+                  disabled={!newWaiterName.trim() || createWaiterShift.isPending || updateWaiterShift.isPending}
+                  className="flex-1">
+
+                    {editingShiftId ?
+                  <>
                         <Pencil className="w-4 h-4 mr-2" />
                         Aktualisieren
-                      </>
-                    ) : (
-                      <>
+                      </> :
+
+                  <>
                         <Plus className="w-4 h-4 mr-2" />
                         Kellner hinzufügen
                       </>
-                    )}
+                  }
                   </Button>
                 </div>
               </CardContent>
             </Card>
-            )}
+          }
 
             {/* Trinkgeld Pool */}
             <Card>
@@ -424,12 +424,12 @@ export default function WaiterCashUp() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {waiterShifts.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-8">
+                {waiterShifts.length === 0 ?
+              <p className="text-muted-foreground text-center py-8">
                     Fügen Sie Kellner hinzu, um den Trinkgeld-Pool zu sehen.
-                  </p>
-                ) : (
-                  <div className="space-y-4">
+                  </p> :
+
+              <div className="space-y-4">
                     {/* Pool Summary - 4 colored StatCards */}
                     <div className="grid grid-cols-2 gap-3">
                       <StatCard label="Trinkgeld ohne Küche" value={totalPool} icon={<Users className="w-5 h-5" />} variant={totalPool >= 0 ? 'success' : 'error'} />
@@ -451,26 +451,26 @@ export default function WaiterCashUp() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {waiterShifts.flatMap(shift => {
-                          const contribution = calculateContribution(shift);
-                          const shiftTipShare = shift.participates_in_pool ? tipPerWaiter : 0;
-                          const isTeam = !!shift.second_waiter_name;
-                           const personalSalesShare = shift.pos_sales || 0;
-                          const currentTipPercent = personalSalesShare > 0 
-                            ? (shiftTipShare / personalSalesShare) * 100 
-                            : 0;
+                        {waiterShifts.flatMap((shift) => {
+                        const contribution = calculateContribution(shift);
+                        const shiftTipShare = shift.participates_in_pool ? tipPerWaiter : 0;
+                        const isTeam = !!shift.second_waiter_name;
+                        const personalSalesShare = shift.pos_sales || 0;
+                        const currentTipPercent = personalSalesShare > 0 ?
+                        shiftTipShare / personalSalesShare * 100 :
+                        0;
 
-                          if (isTeam) {
-                            const halfContribution = contribution / 2;
-                            const avgData1 = waiterTipAverages[shift.waiter_name];
-                            const avgData2 = waiterTipAverages[shift.second_waiter_name!];
-                            return [
-                              <TableRow key={`${shift.id}-1`}>
+                        if (isTeam) {
+                          const halfContribution = contribution / 2;
+                          const avgData1 = waiterTipAverages[shift.waiter_name];
+                          const avgData2 = waiterTipAverages[shift.second_waiter_name!];
+                          return [
+                          <TableRow key={`${shift.id}-1`}>
                                 <TableCell className="font-medium">
                                   {shift.waiter_name}
-                                  {!shift.participates_in_pool && (
-                                    <span className="ml-2 text-xs text-muted-foreground">(kein Pool)</span>
-                                  )}
+                                  {!shift.participates_in_pool &&
+                              <span className="ml-2 text-xs text-muted-foreground">(kein Pool)</span>
+                              }
                                 </TableCell>
                                 <TableCell className={`text-right tabular-nums ${halfContribution >= 0 ? 'text-success' : 'text-destructive'}`}>
                                   {formatCurrency(halfContribution)}
@@ -485,12 +485,12 @@ export default function WaiterCashUp() {
                                   {avgData1 ? `${avgData1.avgTipPercent.toFixed(1)}%` : '—'}
                                 </TableCell>}
                               </TableRow>,
-                              <TableRow key={`${shift.id}-2`}>
+                          <TableRow key={`${shift.id}-2`}>
                                 <TableCell className="font-medium">
                                   {shift.second_waiter_name}
-                                  {!shift.participates_in_pool && (
-                                    <span className="ml-2 text-xs text-muted-foreground">(kein Pool)</span>
-                                  )}
+                                  {!shift.participates_in_pool &&
+                              <span className="ml-2 text-xs text-muted-foreground">(kein Pool)</span>
+                              }
                                 </TableCell>
                                 <TableCell className={`text-right tabular-nums ${halfContribution >= 0 ? 'text-success' : 'text-destructive'}`}>
                                   {formatCurrency(halfContribution)}
@@ -504,18 +504,18 @@ export default function WaiterCashUp() {
                                 {isAdmin && <TableCell className="text-right tabular-nums text-muted-foreground">
                                   {avgData2 ? `${avgData2.avgTipPercent.toFixed(1)}%` : '—'}
                                 </TableCell>}
-                              </TableRow>
-                            ];
-                          }
+                              </TableRow>];
 
-                          const avgData = waiterTipAverages[shift.waiter_name];
-                          return [
-                            <TableRow key={shift.id}>
+                        }
+
+                        const avgData = waiterTipAverages[shift.waiter_name];
+                        return [
+                        <TableRow key={shift.id}>
                               <TableCell className="font-medium">
                                 {shift.waiter_name}
-                                {!shift.participates_in_pool && (
-                                  <span className="ml-2 text-xs text-muted-foreground">(kein Pool)</span>
-                                )}
+                                {!shift.participates_in_pool &&
+                            <span className="ml-2 text-xs text-muted-foreground">(kein Pool)</span>
+                            }
                               </TableCell>
                               <TableCell className={`text-right tabular-nums ${contribution >= 0 ? 'text-success' : 'text-destructive'}`}>
                                 {formatCurrency(contribution)}
@@ -529,21 +529,21 @@ export default function WaiterCashUp() {
                               {isAdmin && <TableCell className="text-right tabular-nums text-muted-foreground">
                                 {avgData ? `${avgData.avgTipPercent.toFixed(1)}%` : '—'}
                               </TableCell>}
-                            </TableRow>
-                          ];
-                        })}
+                            </TableRow>];
+
+                      })}
                       </TableBody>
                     </Table>
                     </div>
                   </div>
-                )}
+              }
               </CardContent>
             </Card>
             </div>
 
             {/* Waiter List */}
-            {waiterShifts.length > 0 && (
-              <Card>
+            {waiterShifts.length > 0 &&
+        <Card>
                 <CardHeader>
                   <CardTitle>Abgerechnete Kellner</CardTitle>
                 </CardHeader>
@@ -566,16 +566,16 @@ export default function WaiterCashUp() {
                       </TableHeader>
                       <TableBody>
                         {waiterShifts.map((shift) => {
-                          const expected = calculateExpected(shift);
-                          return (
-                            <TableRow key={shift.id}>
+                    const expected = calculateExpected(shift);
+                    return (
+                      <TableRow key={shift.id}>
                               <TableCell className="font-medium">
                                 {shift.waiter_name}
-                                {shift.second_waiter_name && (
-                                  <span className="text-muted-foreground text-sm ml-1">
+                                {shift.second_waiter_name &&
+                          <span className="text-muted-foreground text-sm ml-1">
                                     + {shift.second_waiter_name}
                                   </span>
-                                )}
+                          }
                               </TableCell>
                               <TableCell className="text-right tabular-nums">{formatCurrency(shift.pos_sales)}</TableCell>
                               <TableCell className="text-right tabular-nums">{formatCurrency(shift.kassiert_brutto)}</TableCell>
@@ -586,34 +586,34 @@ export default function WaiterCashUp() {
                               <TableCell className="text-right tabular-nums">{formatCurrency(shift.cash_handed_in)}</TableCell>
                               
                               <TableCell>
-                                {!locked && (
-                                <div className="flex gap-1">
+                                {!locked &&
+                          <div className="flex gap-1">
                                   <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => handleEditWaiter(shift)}
-                                  >
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditWaiter(shift)}>
+
                                     <Pencil className="w-4 h-4" />
                                   </Button>
                                   <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => handleDeleteWaiter(shift.id)}
-                                  >
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteWaiter(shift.id)}>
+
                                     <Trash2 className="w-4 h-4 text-destructive" />
                                   </Button>
                                 </div>
-                                )}
+                          }
                               </TableCell>
-                            </TableRow>
-                          );
-                        })}
+                            </TableRow>);
+
+                  })}
                       </TableBody>
                     </Table>
                   </div>
                 </CardContent>
               </Card>
-            )}
+        }
           </div>}
       </div>
     </AppLayout>;
