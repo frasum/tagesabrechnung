@@ -20,6 +20,7 @@ interface Session {
   spicery_transactions?: number;
   card_total_gl?: number;
   guest_count?: number;
+  notes?: string;
 }
 
 interface WaiterShift {
@@ -145,21 +146,24 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
     y += 10;
   }
 
-  // ========== FLAT SUMMARY TABLE (Excel-style) ==========
+  // ========== TWO-COLUMN LAYOUT ==========
   const terminalTotal = (data.session.terminal_1_total || 0) + (data.session.terminal_2_total || 0);
   const bargeldMitHilf = data.totals.bargeld;
   const totalHilfMahl = data.totals.totalHilfMahl;
-  const bargeldOhneHilf = bargeldMitHilf - totalHilfMahl;
 
-  const tableWidth = pageWidth - 2 * margin;
-  const tableMarginLeft = margin;
+  const gap = 4;
+  const leftColWidth = (pageWidth - 2 * margin - gap) * 0.45;
+  const rightColWidth = (pageWidth - 2 * margin - gap) * 0.55;
+  const leftX = margin;
+  const rightX = margin + leftColWidth + gap;
+  const columnsStartY = y;
 
   const sectionHeader = (title: string): any[] => [
     { content: title, colSpan: 2, styles: { fillColor: [241, 245, 249] as [number, number, number], fontStyle: 'bold' as const, fontSize: 8, textColor: [51, 65, 85] as [number, number, number] } },
   ];
 
+  // ===== LEFT COLUMN: Summary =====
   const summaryRows: any[][] = [
-    // — Umsatz —
     sectionHeader('Umsatz'),
     ['POS-Umsatz', formatCurrency(data.session.pos_total || 0)],
     ...((data.session.guest_count ?? 0) > 0 ? [[
@@ -167,16 +171,13 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
       `⌀ ${formatCurrency(((data.session.pos_total || 0) - (data.session.takeaway_total || 0)) / data.session.guest_count!)} / Gast`
     ]] : []),
 
-    // — Kartenzahlung —
     sectionHeader('Kartenzahlung'),
     ['KK (Terminal)', formatCurrency(terminalTotal)],
 
-    // — Take Away —
     sectionHeader('Take Away'),
     [l('ordersmart_revenue', 'SoUse'), formatCurrency(data.session.ordersmart_revenue || 0)],
     [l('wolt_revenue', 'Wolt'), formatCurrency(data.session.wolt_revenue || 0)],
 
-    // — Gutscheine & Abzüge —
     sectionHeader('Gutscheine & Abzüge'),
     ['Gutscheine EL', formatCurrency(data.session.vouchers_redeemed || 0)],
     ...(isHidden('finedine_vouchers') ? [] : [[l('finedine_vouchers', 'FineDine'), formatCurrency(data.session.finedine_vouchers || 0)]]),
@@ -188,111 +189,60 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
     ...((data.totals.previousDeficit ?? 0) < 0 ? [['Fehlbetrag Vortag', formatCurrency(data.totals.previousDeficit!)]] : []),
     ['Bar Ausgaben', formatCurrency(data.totals.totalExpenses)],
 
-    // — Ergebnis —
     sectionHeader('Ergebnis'),
     ...(data.totals.bargeldRaw !== undefined ? [[
       { content: 'Tages-Bargeld', styles: { fontStyle: 'bold' as const, textColor: data.totals.bargeldRaw >= 0 ? [22, 163, 74] as [number, number, number] : [220, 38, 38] as [number, number, number] } },
       { content: formatCurrency(data.totals.bargeldRaw), styles: { fontStyle: 'bold' as const, halign: 'right' as const, textColor: data.totals.bargeldRaw >= 0 ? [22, 163, 74] as [number, number, number] : [220, 38, 38] as [number, number, number] } },
     ]] : []),
     [l('hilf_mahl', 'HilfMahl'), formatCurrency(totalHilfMahl)],
+    [
+      { content: 'Differenz zum Wechselgeldbestand', styles: { fontStyle: 'bold', fontSize: 9, fillColor: [255, 255, 255] as [number, number, number], lineWidth: 0.5, lineColor: [0, 0, 0] as [number, number, number] } },
+      { content: formatCurrency(bargeldMitHilf), styles: { fontStyle: 'bold', fontSize: 9, fillColor: [255, 255, 255] as [number, number, number], halign: 'right', lineWidth: 0.5, lineColor: [0, 0, 0] as [number, number, number] } },
+    ],
   ];
 
-  // Bargeld row with highlight — renamed for clarity
-  summaryRows.push([
-    { content: 'Differenz zum Wechselgeldbestand', styles: { fontStyle: 'bold', fontSize: 9, fillColor: [255, 255, 255] as [number, number, number], lineWidth: 0.5, lineColor: [0, 0, 0] as [number, number, number] } },
-    { content: formatCurrency(bargeldMitHilf), styles: { fontStyle: 'bold', fontSize: 9, fillColor: [255, 255, 255] as [number, number, number], halign: 'right', lineWidth: 0.5, lineColor: [0, 0, 0] as [number, number, number] } },
-  ]);
-
   autoTable(doc, {
-    startY: y,
-    margin: { left: tableMarginLeft, right: tableMarginLeft },
+    startY: columnsStartY,
+    margin: { left: leftX, right: pageWidth - leftX - leftColWidth },
     body: summaryRows,
     theme: 'plain',
     bodyStyles: { fontSize: 7, cellPadding: { top: 0.5, bottom: 0.5, left: 2, right: 2 } },
     columnStyles: { 1: { halign: 'right' as const } },
-    tableWidth: tableWidth,
+    tableWidth: leftColWidth,
   });
 
-  // ========== "ohne hilfmahl" below the Bargeld row ==========
-  const tableEndY = (doc as any).lastAutoTable.finalY;
-  const totalHilfMahl2 = data.totals.totalHilfMahl;
-  const bargeldOhneHilf2 = bargeldMitHilf - totalHilfMahl2;
+  let leftEndY = (doc as any).lastAutoTable.finalY;
 
-  y = tableEndY + 2;
-
-  if (Math.abs(totalHilfMahl2) >= 0.01) {
+  // "ohne hilfmahl" below the summary table (only if HilfMahl != 0)
+  if (Math.abs(totalHilfMahl) >= 0.01) {
+    leftEndY += 2;
     doc.setFontSize(7);
     doc.setFont('helvetica', 'bold');
-    doc.text('ohne hilfmahl', tableMarginLeft + 2, y);
-    doc.text(formatCurrency(bargeldOhneHilf2), tableMarginLeft + tableWidth - 2, y, { align: 'right' });
-    y += 4;
+    doc.text('ohne hilfmahl', leftX + 2, leftEndY);
+    doc.text(formatCurrency(bargeldMitHilf - totalHilfMahl), leftX + leftColWidth - 2, leftEndY, { align: 'right' });
+    leftEndY += 4;
   }
 
-  // Kassenbestand row (highlighted)
+  // Kassenbestand row (highlighted, left column)
   if (data.totals.remainingCash !== undefined) {
+    leftEndY += 1;
     const rc = data.totals.remainingCash;
     const fillColor: [number, number, number] = rc >= 2000 ? [220, 252, 231] : [254, 226, 226];
     doc.setFillColor(...fillColor);
-    doc.rect(tableMarginLeft, y - 3, tableWidth, 6, 'F');
+    doc.rect(leftX, leftEndY - 3, leftColWidth, 6, 'F');
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(0);
-    doc.text('Wechselgeldbestand', tableMarginLeft + 2, y);
-    doc.text(formatCurrency(rc), tableMarginLeft + tableWidth - 2, y, { align: 'right' });
-    y += 6;
+    doc.text('Wechselgeldbestand', leftX + 2, leftEndY);
+    doc.text(formatCurrency(rc), leftX + leftColWidth - 2, leftEndY, { align: 'right' });
+    leftEndY += 6;
   }
 
-  // ========== AUSGABEN (if any) ==========
-  if (data.expenses.length > 0) {
-    autoTable(doc, {
-      startY: y,
-      margin: { left: tableMarginLeft, right: tableMarginLeft },
-      head: [['Ausgaben', 'Betrag']],
-      body: [
-        ...data.expenses.map(e => [e.description, formatCurrency(e.amount)]),
-        ['Summe', formatCurrency(data.totals.totalExpenses)],
-      ],
-      theme: 'plain',
-      headStyles: { fillColor: [241, 245, 249] as [number, number, number], fontSize: 7, fontStyle: 'bold' as const, textColor: [51, 65, 85] as [number, number, number] },
-      bodyStyles: { fontSize: 7, cellPadding: { top: 0.5, bottom: 0.5, left: 2, right: 2 } },
-      columnStyles: { 1: { halign: 'right' as const } },
-      tableWidth: tableWidth,
-      didParseCell: (cell) => {
-        if (cell.section === 'body' && cell.row.index === data.expenses.length) {
-          cell.cell.styles.fontStyle = 'bold';
-        }
-      },
-    });
-    y = (doc as any).lastAutoTable.finalY + 2;
-  }
+  // ===== RIGHT COLUMN: Kellner-Details, Tips, Ausgaben, Vorschuss, Notizen =====
+  let rightEndY = columnsStartY;
 
-  // ========== VORSCHUSS (if any) ==========
-  if (data.advances && data.advances.length > 0) {
-    autoTable(doc, {
-      startY: y,
-      margin: { left: tableMarginLeft, right: tableMarginLeft },
-      head: [['Vorschuss', 'Betrag']],
-      body: [
-        ...data.advances.map(a => [a.staff_name, formatCurrency(a.amount)]),
-        ['Summe', formatCurrency(data.totals.totalAdvances ?? 0)],
-      ],
-      theme: 'plain',
-      headStyles: { fillColor: [241, 245, 249] as [number, number, number], fontSize: 7, fontStyle: 'bold' as const, textColor: [51, 65, 85] as [number, number, number] },
-      bodyStyles: { fontSize: 7, cellPadding: { top: 0.5, bottom: 0.5, left: 2, right: 2 } },
-      columnStyles: { 1: { halign: 'right' as const } },
-      tableWidth: tableWidth,
-      didParseCell: (cell) => {
-        if (cell.section === 'body' && cell.row.index === data.advances!.length) {
-          cell.cell.styles.fontStyle = 'bold';
-        }
-      },
-    });
-    y = (doc as any).lastAutoTable.finalY + 2;
-  }
-
-  // ========== KELLNER-DETAILS TABLE ==========
+  // Kellner-Details
   if (data.waiterShifts.length > 0) {
-    // Calculate tip per waiter share
     const poolParticipants = data.waiterShifts.reduce((count, w) => {
       if (!w.participates_in_pool) return count;
       return count + (w.second_waiter_name ? 2 : 1);
@@ -328,41 +278,107 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
     });
 
     autoTable(doc, {
-      startY: y,
-      margin: { left: tableMarginLeft, right: tableMarginLeft },
+      startY: columnsStartY,
+      margin: { left: rightX, right: margin },
       head: [['Kellner', 'Umsatz', 'Abgabe', 'Geänd.', 'TG', 'TG %']],
       body: waiterRows,
       theme: 'plain',
       headStyles: { fillColor: [241, 245, 249] as [number, number, number], fontSize: 7, fontStyle: 'bold' as const, textColor: [51, 65, 85] as [number, number, number] },
       bodyStyles: { fontSize: 7, cellPadding: { top: 0.5, bottom: 0.5, left: 2, right: 2 } },
       columnStyles: { 1: { halign: 'right' as const }, 2: { halign: 'center' as const }, 3: { halign: 'center' as const }, 4: { halign: 'right' as const }, 5: { halign: 'right' as const } },
-      tableWidth: tableWidth,
+      tableWidth: rightColWidth,
     });
-    y = (doc as any).lastAutoTable.finalY + 2;
+    rightEndY = (doc as any).lastAutoTable.finalY;
 
     // Trinkgeld-Aufschlüsselung
     const totalTipAll = data.totals.totalWaiterTip + data.totals.totalKitchenTip;
     const totalTipPercent = data.totals.kellnerUmsatz > 0
       ? (totalTipAll / data.totals.kellnerUmsatz) * 100
       : 0;
-    y += 2;
+    rightEndY += 4;
     doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Kellner-Pool: ${formatCurrency(data.totals.totalWaiterTip)}  ·  Küchen-Pool: ${formatCurrency(data.totals.totalKitchenTip)}`, tableMarginLeft + 2, y);
-    y += 3;
+    doc.text(`Kellner-Pool: ${formatCurrency(data.totals.totalWaiterTip)}  ·  Küchen-Pool: ${formatCurrency(data.totals.totalKitchenTip)}`, rightX + 2, rightEndY);
+    rightEndY += 3;
     doc.setFont('helvetica', 'bold');
     doc.text(
       `Ø Trinkgeld: ${formatCurrency(totalTipAll)} von ${formatCurrency(data.totals.kellnerUmsatz)} Umsatz = ${totalTipPercent.toFixed(1).replace('.', ',')}%`,
-      tableMarginLeft + 2, y
+      rightX + 2, rightEndY
     );
+    rightEndY += 4;
   }
+
+  // Ausgaben (right column)
+  if (data.expenses.length > 0) {
+    autoTable(doc, {
+      startY: rightEndY + 2,
+      margin: { left: rightX, right: margin },
+      head: [['Ausgaben', 'Betrag']],
+      body: [
+        ...data.expenses.map(e => [e.description, formatCurrency(e.amount)]),
+        ['Summe', formatCurrency(data.totals.totalExpenses)],
+      ],
+      theme: 'plain',
+      headStyles: { fillColor: [241, 245, 249] as [number, number, number], fontSize: 7, fontStyle: 'bold' as const, textColor: [51, 65, 85] as [number, number, number] },
+      bodyStyles: { fontSize: 7, cellPadding: { top: 0.5, bottom: 0.5, left: 2, right: 2 } },
+      columnStyles: { 1: { halign: 'right' as const } },
+      tableWidth: rightColWidth,
+      didParseCell: (cell) => {
+        if (cell.section === 'body' && cell.row.index === data.expenses.length) {
+          cell.cell.styles.fontStyle = 'bold';
+        }
+      },
+    });
+    rightEndY = (doc as any).lastAutoTable.finalY;
+  }
+
+  // Vorschuss (right column)
+  if (data.advances && data.advances.length > 0) {
+    autoTable(doc, {
+      startY: rightEndY + 2,
+      margin: { left: rightX, right: margin },
+      head: [['Vorschuss', 'Betrag']],
+      body: [
+        ...data.advances.map(a => [a.staff_name, formatCurrency(a.amount)]),
+        ['Summe', formatCurrency(data.totals.totalAdvances ?? 0)],
+      ],
+      theme: 'plain',
+      headStyles: { fillColor: [241, 245, 249] as [number, number, number], fontSize: 7, fontStyle: 'bold' as const, textColor: [51, 65, 85] as [number, number, number] },
+      bodyStyles: { fontSize: 7, cellPadding: { top: 0.5, bottom: 0.5, left: 2, right: 2 } },
+      columnStyles: { 1: { halign: 'right' as const } },
+      tableWidth: rightColWidth,
+      didParseCell: (cell) => {
+        if (cell.section === 'body' && cell.row.index === data.advances!.length) {
+          cell.cell.styles.fontStyle = 'bold';
+        }
+      },
+    });
+    rightEndY = (doc as any).lastAutoTable.finalY;
+  }
+
+  // Notizen (right column)
+  if (data.session && (data.session as any).notes) {
+    rightEndY += 4;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(51, 65, 85);
+    doc.text('Notizen', rightX + 2, rightEndY);
+    rightEndY += 3;
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0);
+    const noteLines = doc.splitTextToSize((data.session as any).notes, rightColWidth - 4);
+    doc.text(noteLines, rightX + 2, rightEndY);
+    rightEndY += noteLines.length * 3;
+  }
+
+  // ===== Merge Y positions from both columns =====
+  y = Math.max(leftEndY, rightEndY) + 4;
 
   // ========== KONTROLL-ABSCHNITT (zum Ausschneiden) ==========
   if (data.totals.remainingCash !== undefined) {
-    y += 6;
     const rc = data.totals.remainingCash;
     
-    // Check if we need a new page for the control section (need ~45mm)
     const pageHeight = doc.internal.pageSize.getHeight();
     if (y + 45 > pageHeight - 10) {
       doc.addPage();
@@ -376,14 +392,12 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
     doc.setLineDashPattern([], 0);
     y += 8;
 
-    // "Wechselgeldbestand" label
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(80);
     doc.text('Wechselgeldbestand', pageWidth / 2, y, { align: 'center' });
     y += 10;
 
-    // Amount in large font, colored
     doc.setFontSize(24);
     doc.setFont('helvetica', 'bold');
     if (rc >= 2000) {
@@ -394,7 +408,6 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
     doc.text(formatCurrency(rc), pageWidth / 2, y, { align: 'center' });
     y += 10;
 
-    // Creator name
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(60);
@@ -403,7 +416,6 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
       y += 5;
     }
 
-    // Date
     const dateStrControl = format(new Date(data.session.session_date), "EEEE, d. MMMM yyyy", { locale: de });
     doc.text(`Datum: ${dateStrControl}`, pageWidth / 2, y, { align: 'center' });
     doc.setTextColor(0);
