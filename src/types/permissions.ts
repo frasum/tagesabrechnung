@@ -8,7 +8,7 @@ export interface PermissionConfig {
 
 // Navigation items with required permission levels
 export const NAV_PERMISSIONS: Record<string, PermissionConfig> = {
-  '': { label: 'Kellner Abrechnung', description: 'Abrechnungen einsehen', minLevel: 'staff' },
+  '': { label: 'Mitarbeiter Abrechnung', description: 'Abrechnungen einsehen', minLevel: 'staff' },
   'manager': { label: 'Manager Dashboard', description: 'Dashboard verwalten', minLevel: 'manager' },
   'kitchen': { label: 'Küchen Trinkgeld', description: 'Küchen-Trinkgeld verteilen', minLevel: 'manager' },
   'summary': { label: 'Tagesabrechnung', description: 'Tagesabschluss durchführen', minLevel: 'manager' },
@@ -16,14 +16,14 @@ export const NAV_PERMISSIONS: Record<string, PermissionConfig> = {
   'history': { label: 'Verlauf', description: 'Vergangene Abrechnungen', minLevel: 'manager' },
   'cash-balance': { label: 'Bargeldbestand', description: 'Bargeld verwalten', minLevel: 'manager' },
   
-  'qr-poster': { label: 'QR-Poster', description: 'Kellner Self-Service Poster', minLevel: 'manager' },
+  'qr-poster': { label: 'QR-Poster', description: 'Mitarbeiter Self-Service Poster', minLevel: 'manager' },
   'staff': { label: 'Mitarbeiter', description: 'Mitarbeiter verwalten', minLevel: 'admin' },
   'permissions': { label: 'Berechtigungen', description: 'Navigationszugriff verwalten', minLevel: 'admin' },
 };
 
 // Manager-configurable navigation items (excludes staff-only and admin-only)
 export const MANAGER_NAV_ITEMS = [
-  { path: '', label: 'Kellnerabrechnung' },
+  { path: '', label: 'Mitarbeiterabrechnung' },
   { path: 'kitchen', label: 'Küchen Trinkgeld' },
   { path: 'summary', label: 'Tagesabrechnung' },
   { path: 'statistics', label: 'Statistiken' },

@@ -231,10 +231,10 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
     leftEndY += 8;
   }
 
-  // ===== RIGHT COLUMN: Kellner-Details, Tips, Ausgaben, Vorschuss, Notizen =====
+  // ===== RIGHT COLUMN: Mitarbeiter-Details, Tips, Ausgaben, Vorschuss, Notizen =====
   let rightEndY = columnsStartY;
 
-  // Kellner-Details
+  // Mitarbeiter-Details
   if (data.waiterShifts.length > 0) {
     const poolParticipants = data.waiterShifts.reduce((count, w) => {
       if (!w.participates_in_pool) return count;

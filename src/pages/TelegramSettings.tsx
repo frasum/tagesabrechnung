@@ -20,7 +20,7 @@ const metricToggles = [
   { key: 'show_cash_balance', label: 'Wechselgeldbestand' },
   { key: 'show_cash_details', label: 'Bargeld-Details' },
   { key: 'show_created_by', label: 'Erstellt von' },
-  { key: 'show_waiters', label: 'Kellner-Details' },
+  { key: 'show_waiters', label: 'Mitarbeiter-Details' },
   { key: 'show_kitchen', label: 'Küche-Details' },
   { key: 'show_pdf_export_notification', label: 'PDF-Export Benachrichtigung' },
 ] as const;

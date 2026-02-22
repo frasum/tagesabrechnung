@@ -977,7 +977,7 @@ export default function DailySummary() {
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-lg">
           <ClipboardList className="w-5 h-5" />
-          Kellner-Status
+          Mitarbeiter-Status
         </CardTitle>
       </CardHeader>
       <CardContent>

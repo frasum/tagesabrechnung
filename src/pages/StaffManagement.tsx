@@ -254,7 +254,7 @@ export default function StaffManagement() {
                   <div>
                     <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
                       <UtensilsCrossed className="w-5 h-5 text-primary" />
-                      Kellner ({group.waiters.length})
+                      Mitarbeiter ({group.waiters.length})
                     </h3>
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                       {group.waiters.map(staff => (
@@ -288,7 +288,7 @@ export default function StaffManagement() {
                   <div>
                     <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
                       <UtensilsCrossed className="w-5 h-5 text-primary" />
-                      Kellner ({groupedByRestaurant.noRestaurant.waiters.length})
+                      Mitarbeiter ({groupedByRestaurant.noRestaurant.waiters.length})
                     </h3>
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                       {groupedByRestaurant.noRestaurant.waiters.map(staff => (
@@ -322,7 +322,7 @@ export default function StaffManagement() {
               <Button variant="outline" className="w-full justify-between gap-2">
                 <span className="flex items-center gap-2">
                   <Trophy className="w-4 h-4 text-primary" />
-                  Trinkgeld Ranking ({rankings.length} Kellner)
+                  Trinkgeld Ranking ({rankings.length} Mitarbeiter)
                 </span>
                 <ChevronDown className={`w-4 h-4 transition-transform ${rankingOpen ? 'rotate-180' : ''}`} />
               </Button>
