@@ -167,8 +167,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
     sectionHeader('Umsatz'),
     ['POS-Umsatz', formatCurrency(data.session.pos_total || 0)],
     ...((data.session.guest_count ?? 0) > 0 ? [[
-      `Gäste: ${data.session.guest_count}`,
-      `⌀ ${formatCurrency(((data.session.pos_total || 0) - (data.session.takeaway_total || 0)) / data.session.guest_count!)} / Gast`
+      { content: `Gäste: ${data.session.guest_count}  ·  ⌀ ${formatCurrency(((data.session.pos_total || 0) - (data.session.takeaway_total || 0)) / data.session.guest_count!)} / Gast`, colSpan: 2, styles: { fontSize: 6.5 } },
     ]] : []),
 
     sectionHeader('Kartenzahlung'),
@@ -206,7 +205,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
     margin: { left: leftX, right: pageWidth - leftX - leftColWidth },
     body: summaryRows,
     theme: 'plain',
-    bodyStyles: { fontSize: 7, cellPadding: { top: 0.5, bottom: 0.5, left: 2, right: 2 } },
+    bodyStyles: { fontSize: 7, cellPadding: { top: 0.5, bottom: 0.5, left: 2, right: 2 }, overflow: 'ellipsize' },
     columnStyles: { 1: { halign: 'right' as const } },
     tableWidth: leftColWidth,
   });
