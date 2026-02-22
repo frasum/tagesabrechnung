@@ -1,68 +1,45 @@
 
 
-## PDF-Layout: Zwei-Spalten-Anordnung
+## Fix: Text-Ueberlappung im Zwei-Spalten-PDF
 
-### Idee
+### Problem
 
-Analog zur Web-Ansicht (ExcelLayout) werden die Daten im PDF nebeneinander angeordnet statt untereinander:
+Die Gaeste-Zeile (`# 44,79 EUR / Gast`) im linken Spaltenbereich ueberlappt mit den Kellner-Namen (Joy, Pon, etc.) in der rechten Spalte. Der Text ist zu lang fuer die 45%-Spaltenbreite und laeuft visuell in die rechte Spalte hinein.
 
-```text
-+---------------------------+---------------------------+
-| LINKE SPALTE              | RECHTE SPALTE             |
-+---------------------------+---------------------------+
-| Umsatz                    | Kellner-Details           |
-|   POS-Umsatz    1.234 EUR |   Name  Umsatz  TG  TG%  |
-|   Gaeste: 45    oe 27 EUR |   ...                     |
-|                           |                           |
-| Kartenzahlung             | Trinkgeld-Aufschluesselung|
-|   KK (Terminal)   800 EUR |   Kellner-TG    xxx EUR   |
-|                           |   Kuechen-TG    xxx EUR   |
-| Take Away                 |                           |
-|   SoUse           100 EUR | Ausgaben (falls vorhanden)|
-|   Wolt             50 EUR |   Beschreibung  Betrag    |
-|                           |   ...                     |
-| Gutscheine & Abzuege      |                           |
-|   Gutscheine EL     0 EUR | Vorschuss (falls vorh.)   |
-|   ...                     |   Name          Betrag    |
-|                           |                           |
-| Ergebnis                  | Notizen                   |
-|   Tages-Bargeld   535 EUR |   Freitext...             |
-|   HilfMahl          0 EUR |                           |
-|   Differenz...    535 EUR |                           |
-|   Wechselgeldbestand      |                           |
-+---------------------------+---------------------------+
+### Ursache
+
+Die Gaeste-Zeile hat zwei separate Informationen in zwei Zellen:
+- Zelle 1: `Gaeste: 45`
+- Zelle 2: `oe 44,79 EUR / Gast`
+
+Die rechte Zelle wird nicht abgeschnitten, da `autoTable` den Text bei `theme: 'plain'` ohne Begrenzung rendert. Zusaetzlich fehlt `overflow: 'ellipsize'` oder aehnliches Clipping.
+
+### Loesung
+
+1. **Gaeste-Zeile kompakter gestalten**: Beide Infos in eine Zeile mit `colSpan: 2` zusammenfassen, z.B. `Gaeste: 45  oe 44,79 EUR` -- dadurch nutzt die Zeile die volle Spaltenbreite und der Text wird nicht abgeschnitten.
+
+2. **Overflow-Schutz hinzufuegen**: In den `bodyStyles` der linken Spalte `overflow: 'ellipsize'` setzen, damit kein Text aus der Tabelle herauslaeuft.
+
+### Betroffene Datei
+
+| Datei | Zeilen | Aenderung |
+|---|---|---|
+| `src/utils/pdfExport.ts` | 169-172 | Gaeste-Zeile mit `colSpan: 2` und kombiniertem Text |
+| `src/utils/pdfExport.ts` | 209 | `overflow: 'ellipsize'` zu `bodyStyles` hinzufuegen |
+
+### Technische Details
+
+Gaeste-Zeile aendern von:
+```
+['Gaeste: 45', 'oe 44,79 EUR / Gast']
+```
+zu:
+```
+[{ content: 'Gaeste: 45  ·  oe 44,79 EUR / Gast', colSpan: 2, styles: { fontSize: 6.5 } }]
 ```
 
-### Vorteile
-
-- Kompakteres Layout, mehr Informationen auf einen Blick
-- Konsistent mit der Web-Ansicht
-- Bessere Nutzung der Seitenbreite (A4 bietet genug Platz)
-
-### Aenderungen im Detail
-
-#### Linke Spalte (ca. 45% Breite)
-Zusammenfassung mit Sektions-Headern (wie gerade implementiert):
-- Umsatz, Kartenzahlung, Take Away, Gutscheine & Abzuege, Ergebnis
-- Wechselgeldbestand-Zeile am Ende
-
-#### Rechte Spalte (ca. 55% Breite)
-- Kellner-Details-Tabelle
-- Trinkgeld-Aufschluesselung
-- Ausgaben-Tabelle (falls vorhanden)
-- Vorschuss-Tabelle (falls vorhanden)
-- Notizen (falls vorhanden)
-
-### Technische Umsetzung
-
-| Datei | Aenderung |
-|---|---|
-| `src/utils/pdfExport.ts` | Zeilen ~148-400: Layout-Umbau auf zwei parallele Spalten |
-
-- Seitenbreite wird in zwei Haelften geteilt: `leftColWidth = tableWidth * 0.45`, `rightColWidth = tableWidth * 0.55`
-- Linke Spalte: `autoTable` mit `margin.left = margin`, `tableWidth = leftColWidth`
-- Rechte Spalte: `autoTable` mit `margin.left = margin + leftColWidth + gap`, `tableWidth = rightColWidth`
-- Beide Spalten starten auf gleicher Y-Position (`startY`)
-- Nach beiden Spalten wird `y = Math.max(leftEndY, rightEndY)` gesetzt fuer nachfolgende Inhalte (Abschnitt zum Ausschneiden)
-- Die bestehenden Sektions-Header und Formatierungen bleiben erhalten
+Und in den bodyStyles:
+```
+bodyStyles: { fontSize: 7, cellPadding: ..., overflow: 'ellipsize' }
+```
 
