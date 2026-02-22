@@ -101,7 +101,7 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
   // ========== HEADER - centered, compact ==========
   const dateStr = format(new Date(data.session.session_date), "EEEE, d. MMMM", { locale: de });
   const headerText = data.restaurantName ? `${data.restaurantName}  ·  ${dateStr}` : dateStr;
-  doc.setFontSize(18);
+  doc.setFontSize(27);
   doc.setFont('helvetica', 'bold');
   doc.text(headerText, pageWidth / 2, y, { align: 'center' });
 
