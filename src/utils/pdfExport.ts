@@ -246,9 +246,6 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
       const isTeam = !!shift.second_waiter_name;
       const posSales = (shift.pos_sales || 0) / (isTeam ? 2 : 1);
       const waiterPoolShare = shift.participates_in_pool ? tipPerShare : 0;
-      const tipPercent = posSales > 0 && shift.participates_in_pool
-        ? (waiterPoolShare / posSales) * 100
-        : null;
 
       const submittedTime = shift.submitted_at
         ? format(new Date(shift.submitted_at), 'HH:mm', { locale: de })
@@ -258,13 +255,12 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
         ? format(new Date(shift.updated_at), 'HH:mm', { locale: de })
         : '---';
 
-      const tipStr = tipPercent !== null ? tipPercent.toFixed(1).replace('.', ',') + '%' : '---';
       const tipEuro = shift.participates_in_pool ? formatCurrency(waiterPoolShare) : '---';
 
-      const row = [shift.waiter_name, formatCurrency(posSales), submittedTime, updatedTime, tipEuro, tipStr];
+      const row = [shift.waiter_name, formatCurrency(posSales), submittedTime, updatedTime, tipEuro];
 
       if (isTeam) {
-        const row2 = [shift.second_waiter_name, formatCurrency(posSales), submittedTime, updatedTime, tipEuro, tipStr];
+        const row2 = [shift.second_waiter_name, formatCurrency(posSales), submittedTime, updatedTime, tipEuro];
         return [row, row2];
       }
       return [row];
@@ -273,12 +269,12 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
     autoTable(doc, {
       startY: columnsStartY,
       margin: { left: rightX, right: margin },
-      head: [['Kellner', 'Umsatz', 'Abgabe', 'Geänd.', 'TG', 'TG %']],
+      head: [['Kellner', 'Umsatz', 'Abgabe', 'Geänd.', 'TG']],
       body: waiterRows,
       theme: 'plain',
       headStyles: { fillColor: [241, 245, 249] as [number, number, number], fontSize: 7, fontStyle: 'bold' as const, textColor: [51, 65, 85] as [number, number, number] },
       bodyStyles: { fontSize: 7, cellPadding: { top: 0.5, bottom: 0.5, left: 2, right: 2 } },
-      columnStyles: { 1: { halign: 'right' as const }, 2: { halign: 'center' as const }, 3: { halign: 'center' as const }, 4: { halign: 'right' as const }, 5: { halign: 'right' as const } },
+      columnStyles: { 1: { halign: 'right' as const }, 2: { halign: 'center' as const }, 3: { halign: 'center' as const }, 4: { halign: 'right' as const } },
       tableWidth: rightColWidth,
     });
     rightEndY = (doc as any).lastAutoTable.finalY;
