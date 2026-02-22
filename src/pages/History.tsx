@@ -254,7 +254,7 @@ export default function History() {
                           const avg = ((session.pos_total || 0) - takeaway) / guestCount;
                           return (
                             <div>
-                                  <div>{guestCount} Gäste</div>
+                                  <div>{guestCount}</div>
                                   <div className="text-xs text-muted-foreground">Ø {formatCurrency(avg)}</div>
                                 </div>);
 
