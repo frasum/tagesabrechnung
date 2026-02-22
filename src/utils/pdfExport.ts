@@ -189,8 +189,8 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
     ]] : []),
     [l('hilf_mahl', 'HilfMahl'), formatCurrency(totalHilfMahl)],
     [
-      { content: 'Differenz zum Wechselgeldbestand', styles: { fontStyle: 'bold', fontSize: 8, fillColor: [255, 255, 255] as [number, number, number], lineWidth: 0.5, lineColor: [0, 0, 0] as [number, number, number], cellPadding: { top: 2, bottom: 2, left: 2, right: 2 } } },
-      { content: formatCurrency(bargeldMitHilf), styles: { fontStyle: 'bold', fontSize: 8, fillColor: [255, 255, 255] as [number, number, number], halign: 'right', lineWidth: 0.5, lineColor: [0, 0, 0] as [number, number, number], cellPadding: { top: 2, bottom: 2, left: 2, right: 2 } } },
+      { content: 'Differenz zum Wechselgeldbestand', styles: { fontStyle: 'bold', fontSize: 10, fillColor: [255, 255, 255] as [number, number, number], lineWidth: 0.5, lineColor: [0, 0, 0] as [number, number, number], cellPadding: { top: 3, bottom: 3, left: 2, right: 2 } } },
+      { content: formatCurrency(bargeldMitHilf), styles: { fontStyle: 'bold', fontSize: 10, fillColor: [255, 255, 255] as [number, number, number], halign: 'right', lineWidth: 0.5, lineColor: [0, 0, 0] as [number, number, number], cellPadding: { top: 3, bottom: 3, left: 2, right: 2 } } },
     ],
   ];
 
@@ -222,13 +222,13 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
     const rc = data.totals.remainingCash;
     const fillColor: [number, number, number] = rc >= 2000 ? [220, 252, 231] : [254, 226, 226];
     doc.setFillColor(...fillColor);
-    doc.rect(leftX, leftEndY - 3, leftColWidth, 6, 'F');
-    doc.setFontSize(8);
+    doc.rect(leftX, leftEndY - 4, leftColWidth, 8, 'F');
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(0);
     doc.text('Wechselgeldbestand', leftX + 2, leftEndY);
     doc.text(formatCurrency(rc), leftX + leftColWidth - 2, leftEndY, { align: 'right' });
-    leftEndY += 6;
+    leftEndY += 8;
   }
 
   // ===== RIGHT COLUMN: Kellner-Details, Tips, Ausgaben, Vorschuss, Notizen =====
