@@ -275,7 +275,7 @@ export default function WaiterCashUp() {
                     ) : (
                       <>
                         <User className="w-5 h-5" />
-                        Neuen Kellner hinzufügen
+                        Mitarbeiter hinzufügen
                       </>
                     )}
                   </CardTitle>
