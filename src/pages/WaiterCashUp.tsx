@@ -440,7 +440,7 @@ export default function WaiterCashUp() {
                     <div className="grid grid-cols-2 gap-3">
                       <StatCard label="Trinkgeld ohne Küche" value={totalPool} icon={<Users className="w-5 h-5" />} variant={totalPool >= 0 ? 'success' : 'error'} />
                       <StatCard label={`Pro Mitarbeiter (${waiterShareCount})`} value={tipPerWaiter} icon={<User className="w-5 h-5" />} variant={tipPerWaiter >= 0 ? 'success' : 'error'} />
-                      <StatCard label="Küche" value={totalKitchenTip} icon={<Users className="w-5 h-5" />} variant="success" />
+                      
                       <StatCard label="Trinkgeld %" value={`${tipPercentage.toFixed(1)} %`} icon={<Percent className="w-5 h-5" />} variant="success" />
                     </div>
 
