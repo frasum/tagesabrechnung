@@ -564,7 +564,7 @@ export default function WaiterCashUp() {
                           {!isFieldHidden('card_total_gl') && <TableHead className="text-right">{getLabel('card_total_gl')}</TableHead>}
                           {!isFieldHidden('hilf_mahl') && <TableHead className="text-right">{getLabel('hilf_mahl')}</TableHead>}
                           {!isFieldHidden('open_invoices') && <TableHead className="text-right">{getLabel('open_invoices')}</TableHead>}
-                          <TableHead className="text-right">Erwartet</TableHead>
+                          
                           <TableHead className="text-right">{getLabel('cash_handed_in')}</TableHead>
                           
                           <TableHead></TableHead>
@@ -588,7 +588,7 @@ export default function WaiterCashUp() {
                               {!isFieldHidden('card_total_gl') && <TableCell className="text-right tabular-nums">{formatCurrency(shift.card_total)}</TableCell>}
                               {!isFieldHidden('hilf_mahl') && <TableCell className="text-right tabular-nums">{formatCurrency(shift.hilf_mahl)}</TableCell>}
                               {!isFieldHidden('open_invoices') && <TableCell className="text-right tabular-nums">{formatCurrency(shift.open_invoices)}</TableCell>}
-                              <TableCell className="text-right tabular-nums">{formatCurrency(expected)}</TableCell>
+                              
                               <TableCell className="text-right tabular-nums">{formatCurrency(shift.cash_handed_in)}</TableCell>
                               
                               <TableCell>
