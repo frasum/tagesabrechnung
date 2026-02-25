@@ -451,7 +451,7 @@ export default function WaiterCashUp() {
                         <TableRow>
                           <TableHead>Name</TableHead>
                           <TableHead className="text-right">Beitrag</TableHead>
-                          <TableHead className="text-right">Anteil</TableHead>
+                          
                           {isAdmin && <TableHead className="text-right">TG %</TableHead>}
                           {isAdmin && <TableHead className="text-right">Ø TG %</TableHead>}
                         </TableRow>
@@ -481,9 +481,7 @@ export default function WaiterCashUp() {
                                 <TableCell className={`text-right tabular-nums ${halfContribution >= 0 ? 'text-success' : 'text-destructive'}`}>
                                   {formatCurrency(halfContribution)}
                                 </TableCell>
-                                <TableCell className="text-right tabular-nums text-success">
-                                  {shift.participates_in_pool ? formatCurrency(shiftTipShare) : <span className="text-muted-foreground">—</span>}
-                                </TableCell>
+                                
                                 {isAdmin && <TableCell className="text-right tabular-nums">
                                   {shift.participates_in_pool ? `${currentTipPercent.toFixed(1)}%` : '—'}
                                 </TableCell>}
@@ -501,9 +499,7 @@ export default function WaiterCashUp() {
                                 <TableCell className={`text-right tabular-nums ${halfContribution >= 0 ? 'text-success' : 'text-destructive'}`}>
                                   {formatCurrency(halfContribution)}
                                 </TableCell>
-                                <TableCell className="text-right tabular-nums text-success">
-                                  {shift.participates_in_pool ? formatCurrency(shiftTipShare) : <span className="text-muted-foreground">—</span>}
-                                </TableCell>
+                                
                                 {isAdmin && <TableCell className="text-right tabular-nums">
                                   {shift.participates_in_pool ? `${currentTipPercent.toFixed(1)}%` : '—'}
                                 </TableCell>}
@@ -526,9 +522,7 @@ export default function WaiterCashUp() {
                               <TableCell className={`text-right tabular-nums ${contribution >= 0 ? 'text-success' : 'text-destructive'}`}>
                                 {formatCurrency(contribution)}
                               </TableCell>
-                              <TableCell className="text-right tabular-nums text-success">
-                                {shift.participates_in_pool ? formatCurrency(shiftTipShare) : <span className="text-muted-foreground">—</span>}
-                              </TableCell>
+                              
                               {isAdmin && <TableCell className="text-right tabular-nums">
                                 {shift.participates_in_pool ? `${currentTipPercent.toFixed(1)}%` : '—'}
                               </TableCell>}
