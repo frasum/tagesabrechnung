@@ -1,44 +1,47 @@
 
 
-# Lieferplattformen Pie Chart: Doppelzählung beheben
+# Legende der Lieferplattformen erweitern
 
-## Problem
-`takeaway_total` enthält bereits OrderSmart und Wolt. Der Pie Chart zeigt aber `takeaway_total` als "VECTRON Takeaway" und zusätzlich OrderSmart und Wolt separat -- das ist eine Doppelzählung.
+## Änderungen in `src/pages/Statistics.tsx`
 
-## Lösung
+### 1. Prozentangaben in Klammern hinzufügen
+Jede Plattform in der Legende bekommt den Prozentanteil in Klammern neben dem Betrag.
 
-In `src/hooks/useStatistics.ts` (Zeile 175-179): Den VECTRON-Takeaway-Anteil korrekt berechnen, indem OrderSmart und Wolt abgezogen werden.
+### 2. Gesamt-Takeaway-Summe anzeigen
+Unter der Legende eine Zeile mit dem Gesamtumsatz aller Lieferplattformen.
 
-```text
-Vorher:
-  takeaway_total           = 4.002,10 €  (enthält alles)
-  ordersmart_revenue       =   692,02 €
-  wolt_revenue             = 2.762,90 €
-  SUMME                    = 7.457,02 €  (doppelt gezählt!)
+### Datei: `src/pages/Statistics.tsx`, Zeilen 399-415
 
-Nachher:
-  vectron_takeaway         =   547,18 €  (takeaway_total - ordersmart - wolt)
-  ordersmart_revenue       =   692,02 €
-  wolt_revenue             = 2.762,90 €
-  SUMME                    = 4.002,10 €  (korrekt)
+Berechnung der Gesamtsumme und Prozentanteile:
+
+```tsx
+{/* Legend */}
+{deliveryBreakdown.length > 0 && (
+  <div className="space-y-3 mt-4">
+    <div className="flex flex-wrap justify-center gap-4">
+      {deliveryBreakdown.map((entry, index) => {
+        const total = deliveryBreakdown.reduce((sum, d) => sum + d.value, 0);
+        const percent = total > 0 ? ((entry.value / total) * 100).toFixed(0) : '0';
+        return (
+          <div key={entry.name} className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+            <span className="text-sm text-muted-foreground">{entry.name}</span>
+            <span className="text-sm font-medium tabular-nums">
+              {formatCurrency(entry.value)} ({percent}%)
+            </span>
+          </div>
+        );
+      })}
+    </div>
+    <div className="text-center border-t pt-2">
+      <span className="text-sm text-muted-foreground">Gesamt Takeaway: </span>
+      <span className="text-sm font-bold tabular-nums">
+        {formatCurrency(deliveryBreakdown.reduce((sum, d) => sum + d.value, 0))}
+      </span>
+    </div>
+  </div>
+)}
 ```
 
-### Datei: `src/hooks/useStatistics.ts`
-
-Zeile 175-179 anpassen:
-
-```typescript
-const totalTakeaway = (sessions || []).reduce((sum, s) => sum + (s.takeaway_total || 0), 0);
-const totalOrdersmart = (sessions || []).reduce((sum, s) => sum + (s.ordersmart_revenue || 0), 0);
-const totalWolt = (sessions || []).reduce((sum, s) => sum + (s.wolt_revenue || 0), 0);
-const vectronTakeaway = totalTakeaway - totalOrdersmart - totalWolt;
-
-const deliveryBreakdown: DeliveryBreakdown[] = [
-  { name: 'takeaway_total', value: Math.max(0, vectronTakeaway) },
-  { name: 'ordersmart_revenue', value: totalOrdersmart },
-  { name: 'wolt_revenue', value: totalWolt },
-].filter(d => d.value > 0);
-```
-
-Keine weiteren Dateien betroffen -- das Label "VECTRON Takeaway" kommt aus `useLabels` und ist bereits korrekt.
+Keine weiteren Dateien betroffen.
 
