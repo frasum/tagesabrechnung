@@ -203,6 +203,12 @@ export default function WaiterCashUp() {
     return shift.cash_handed_in - expected - shift.kitchen_tip;
   };
 
+  // Calculate total tip before kitchen deduction (for TG% display)
+  const calculateTotalTipBeforeKitchen = (shift: typeof waiterShifts[0]) => {
+    const expected = calculateExpected(shift);
+    return (shift.cash_handed_in || 0) - expected;
+  };
+
   // Calculate pool totals (team shifts count as 2 shares, only if participates_in_pool)
   const waiterShareCount = waiterShifts.reduce((count, shift) => {
     if (!shift.participates_in_pool) return count;
@@ -455,10 +461,10 @@ export default function WaiterCashUp() {
                         const contribution = calculateContribution(shift);
                         const shiftTipShare = shift.participates_in_pool ? tipPerWaiter : 0;
                         const isTeam = !!shift.second_waiter_name;
-                        const personalSalesShare = shift.pos_sales || 0;
-                        const currentTipPercent = personalSalesShare > 0 ?
-                        shiftTipShare / personalSalesShare * 100 :
-                        0;
+                        // TG% = total tip before kitchen / pos_sales (same for both waiters in team shifts)
+                        const totalTipBeforeKitchen = calculateTotalTipBeforeKitchen(shift);
+                        const posSales = shift.pos_sales || 0;
+                        const currentTipPercent = posSales > 0 ? (totalTipBeforeKitchen / posSales) * 100 : 0;
 
                         if (isTeam) {
                           const halfContribution = contribution / 2;

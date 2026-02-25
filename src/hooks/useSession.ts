@@ -455,44 +455,34 @@ export function useWaiterTipAverages(restaurantId: string | null) {
         const sessionShifts = shiftsBySession[sessionId];
         if (sessionShifts.length === 0) continue;
 
-        // Calculate session pool (same logic as in WaiterCashUp)
-        const sessionPool = sessionShifts.reduce((sum, shift) => {
-          const expected = (shift.pos_sales || 0) + (shift.hilf_mahl || 0) - (shift.open_invoices || 0) - (shift.card_total || 0);
-          const contribution = (shift.cash_handed_in || 0) - expected - (shift.kitchen_tip || 0);
-          return sum + contribution;
-        }, 0);
+        // Calculate tip per shift (total tip before kitchen deduction)
+        // For team shifts, both waiters get the same full tip % value
 
-        // Count all waiter shares (team shifts count as 2, only if participates_in_pool)
-        const totalWaiterShares = sessionShifts.reduce((count, shift) => {
-          if (!shift.participates_in_pool) return count;
-          return count + (shift.second_waiter_name ? 2 : 1);
-        }, 0);
-        const sharePerWaiter = totalWaiterShares > 0 ? sessionPool / totalWaiterShares : 0;
-
-        // Aggregate per waiter (including second waiters, only if participates_in_pool)
         for (const shift of sessionShifts) {
           // Skip waiters who don't participate in pool
           if (!shift.participates_in_pool) continue;
+
+          const posSales = shift.pos_sales || 0;
+          const expected = (shift.pos_sales || 0) + (shift.hilf_mahl || 0) - (shift.open_invoices || 0) - (shift.card_total || 0);
+          const totalTip = (shift.cash_handed_in || 0) - expected; // before kitchen deduction
           
           // Primary waiter
           const name = shift.waiter_name;
           if (!waiterAverages[name]) {
             waiterAverages[name] = { totalPoolShare: 0, totalSales: 0, shiftsCount: 0 };
           }
-          waiterAverages[name].totalPoolShare += sharePerWaiter;
-          // For team shifts, use full sales as base for tip % calculation
-          const salesShare = shift.pos_sales || 0;
-          waiterAverages[name].totalSales += salesShare;
+          waiterAverages[name].totalPoolShare += totalTip;
+          waiterAverages[name].totalSales += posSales;
           waiterAverages[name].shiftsCount += 1;
 
-          // Second waiter (if exists)
+          // Second waiter (if exists) — gets the same full shift values
           if (shift.second_waiter_name) {
             const secondName = shift.second_waiter_name;
             if (!waiterAverages[secondName]) {
               waiterAverages[secondName] = { totalPoolShare: 0, totalSales: 0, shiftsCount: 0 };
             }
-            waiterAverages[secondName].totalPoolShare += sharePerWaiter;
-            waiterAverages[secondName].totalSales += salesShare;
+            waiterAverages[secondName].totalPoolShare += totalTip;
+            waiterAverages[secondName].totalSales += posSales;
             waiterAverages[secondName].shiftsCount += 1;
           }
         }

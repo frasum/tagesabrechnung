@@ -87,10 +87,10 @@ export default function WaiterMobile() {
     return formData.pos_sales * 0.02;
   }, [formData.pos_sales]);
 
-  // Calculate current tip (rough estimate)
+  // Calculate current tip (total tip before kitchen deduction)
   const currentTip = useMemo(() => {
-    return Math.max(0, formData.cash_handed_in - expectedCash - kitchenTip);
-  }, [formData.cash_handed_in, expectedCash, kitchenTip]);
+    return Math.max(0, formData.cash_handed_in - expectedCash);
+  }, [formData.cash_handed_in, expectedCash]);
 
   // Calculate current tip percent
   const currentTipPercent = useMemo(() => {
