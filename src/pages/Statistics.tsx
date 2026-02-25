@@ -366,19 +366,19 @@ export default function Statistics() {
                       Keine Lieferplattform-Daten vorhanden
                     </div>
                   ) : (
-                    <div className="h-[280px]">
+                    <div className="h-[320px]">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
                             data={deliveryBreakdown}
                             cx="50%"
                             cy="50%"
-                            innerRadius={60}
-                            outerRadius={100}
+                            innerRadius={55}
+                            outerRadius={90}
                             paddingAngle={2}
                             dataKey="value"
                             label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                            labelLine={false}
+                            labelLine={true}
                           >
                             {deliveryBreakdown.map((entry, index) => (
                               <Cell 
