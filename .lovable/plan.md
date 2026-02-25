@@ -1,75 +1,70 @@
 
 
-# Biometrischer Login (Face ID / Touch ID) via WebAuthn
+# Trinkgeld-Prozent auf Gesamtumsatz beziehen (ohne Küchenabzug)
 
-## Überblick
-Mitarbeiter können nach einer einmaligen Registrierung ihren biometrischen Sensor (Face ID, Touch ID, Fingerprint) nutzen, um sich schnell einzuloggen -- ohne PIN-Eingabe.
+## Was sich ändert
 
-## Nutzer-Ablauf
+Aktuell wird das **TG %** berechnet als Pool-Anteil (nach Küchenabzug) geteilt durch den Umsatz. Der Nutzer möchte stattdessen:
 
-1. **Registrierung (einmalig):** Nach dem normalen Login erscheint ein Button "Face ID aktivieren". Das Gerät wird mit dem Mitarbeiter-Konto verknüpft.
-2. **Login:** Auf der Login-Seite erscheint ein neuer Button "Mit Face ID anmelden". Ein Tap startet die biometrische Prüfung, und der Nutzer ist eingeloggt.
-3. **Verwaltung:** In den Einstellungen kann die biometrische Verknüpfung gelöscht werden.
+1. **TG % = Gesamt-Trinkgeld (vor Küchenabzug) / POS-Umsatz** -- damit man sieht, wie viel Trinkgeld der Mitarbeiter insgesamt erwirtschaftet hat
+2. **Bei Teamschichten (2 Mitarbeiter):** Jeder bekommt denselben TG%-Wert wie ein Solo-Mitarbeiter -- die volle Schicht-Performance wird beiden zugerechnet, damit die Entwicklung vergleichbar bleibt
 
-## Technische Umsetzung
+## Betroffene Dateien und Änderungen
 
-### 1. Neue Datenbank-Tabelle: `webauthn_credentials`
+### 1. `src/pages/WaiterCashUp.tsx` (Tagesansicht -- TG % Spalte)
 
-Speichert die registrierten biometrischen Credentials pro Mitarbeiter/Gerät:
+Aktuelle Berechnung (Zeile 456-461):
+```
+shiftTipShare = tipPerWaiter (Pool-Anteil nach Küche)
+currentTipPercent = shiftTipShare / personalSalesShare * 100
+```
 
-- `id` (UUID, Primary Key)
-- `staff_id` (UUID, FK zu staff)
-- `credential_id` (TEXT, unique) -- Base64-kodierte WebAuthn Credential ID
-- `public_key` (TEXT) -- Base64-kodierter Public Key
-- `counter` (BIGINT) -- Replay-Schutz
-- `device_name` (TEXT, optional) -- z.B. "iPhone von Max"
-- `created_at` (TIMESTAMPTZ)
+Neue Berechnung:
+```
+totalTipBeforeKitchen = cash_handed_in - expected  (ohne Küchenabzug)
+currentTipPercent = totalTipBeforeKitchen / pos_sales * 100
+```
 
-RLS: Nur über Edge Functions zugreifbar (kein direkter Client-Zugriff).
+Bei Teamschichten: Beide Mitarbeiter erhalten denselben `currentTipPercent` (den vollen Schichtwert, nicht halbiert).
 
-### 2. Zwei neue Edge Functions
+### 2. `src/hooks/useWaiterRanking.ts` (Ranking -- Ø TG %)
 
-**`webauthn-register`** -- Registrierung eines neuen Credentials
-- Erwartet: Auth-Token + Challenge-Response vom Browser
-- Validiert die WebAuthn-Attestation serverseitig
-- Speichert Credential in der Datenbank
+Aktuelle Berechnung (Zeile 75-79):
+```
+individualTip = cash_handed_in - expected - kitchen_tip
+```
 
-**`webauthn-authenticate`** -- Login via Biometrie
-- Erwartet: Credential ID + signierte Challenge
-- Verifiziert die Signatur gegen den gespeicherten Public Key
-- Gibt bei Erfolg einen Auth-Token / Session zurück
+Neue Berechnung:
+```
+individualTip = cash_handed_in - expected  (ohne kitchen_tip Abzug)
+```
 
-### 3. Frontend-Änderungen
+Bei Teamschichten: Beide Mitarbeiter bekommen denselben TG%-Wert der vollen Schicht (pos_sales nicht aufteilen, Tip nicht aufteilen).
 
-**Login-Seite (`src/pages/Login.tsx`):**
-- Neuer Button "Mit Face ID anmelden" (nur sichtbar, wenn das Gerät WebAuthn unterstützt UND ein Credential registriert ist)
-- Prüfung via `navigator.credentials.get()` mit `publicKey`-Option
+### 3. `src/hooks/useSession.ts` (`useWaiterTipAverages` -- Ø TG % pro Mitarbeiter)
 
-**Neuer Hook: `src/hooks/useWebAuthn.ts`**
-- `isSupported` -- prüft ob der Browser WebAuthn unterstützt
-- `hasCredential` -- prüft ob für dieses Gerät ein Credential in localStorage hinterlegt ist
-- `register()` -- startet den Registrierungsprozess
-- `authenticate()` -- startet den Login-Prozess
+Aktuelle Berechnung (Zeile 459-461):
+```
+contribution = cash_handed_in - expected - kitchen_tip
+sessionPool = Summe aller contributions
+```
 
-**Registrierungs-UI:**
-- Nach erfolgreichem Login: optionaler Dialog/Banner "Möchten Sie Face ID für schnellen Login aktivieren?"
-- Oder: Button in den Einstellungen / im Profil-Bereich
+Neue Berechnung:
+- `contribution = cash_handed_in - expected` (ohne kitchen_tip)
+- Bei Teamschichten: Jeder Mitarbeiter bekommt den vollen `tipPercent` der Schicht (pos_sales wird nicht geteilt, Trinkgeld wird nicht geteilt)
+- Der Durchschnitt aggregiert diese Werte pro Mitarbeiter über alle Schichten
 
-### 4. Challenge-Handling
+### 4. `src/pages/WaiterMobile.tsx` (Waiter Self-Service)
 
-Challenges werden serverseitig generiert und temporär gespeichert (z.B. in einer `webauthn_challenges`-Tabelle mit kurzer TTL), um Replay-Angriffe zu verhindern.
+Die dortige Berechnung von `currentTip` und `currentTipPercent` zeigt bereits das Trinkgeld vor Küchenabzug -- hier wird nur die Darstellung angepasst, um `kitchenTip` nicht mehr abzuziehen.
 
-### 5. Kompatibilität
+## Zusammenfassung der Logik
 
-- **iPhone (Safari):** Face ID / Touch ID
-- **Android (Chrome):** Fingerprint / Face Unlock
-- **Mac (Safari/Chrome):** Touch ID
-- **Windows (Edge/Chrome):** Windows Hello
-- Geräte ohne biometrische Sensoren sehen den Button nicht
+```text
+Vorher:  TG% = (Bargeld - Soll - Küche) / Umsatz
+Nachher: TG% = (Bargeld - Soll) / Umsatz
 
-## Einschränkungen
-
-- WebAuthn-Credentials sind gerätegebunden -- jedes Gerät muss einzeln registriert werden
-- Erfordert HTTPS (in der PWA bereits gegeben)
-- Die serverseitige Krypto-Verifikation in Edge Functions nutzt die Web Crypto API (in Deno verfügbar)
+Vorher (Team):  Jeder bekommt Pool-Anteil / eigener Umsatzanteil
+Nachher (Team): Jeder bekommt vollen Schicht-TG% (gleiche Berechnung wie Solo)
+```
 
