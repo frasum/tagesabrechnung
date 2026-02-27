@@ -45,12 +45,17 @@ Deno.serve(async (req) => {
     const secret = Deno.env.get("SETTLEMENT_WEBHOOK_SECRET");
     if (!secret) throw new Error("SETTLEMENT_WEBHOOK_SECRET not configured");
 
+    const session = sessionRes.data;
+    const total_revenue = (session.pos_total ?? 0) + (session.terminal_1_total ?? 0) + (session.terminal_2_total ?? 0);
+
     const payload = {
       secret,
       restaurant_name: restaurant.name,
-      session_date: sessionRes.data.session_date,
-      restaurant_id: sessionRes.data.restaurant_id,
-      session: sessionRes.data,
+      session_date: session.session_date,
+      restaurant_id: session.restaurant_id,
+      created_by_name: session.created_by_name,
+      total_revenue,
+      session,
       waiter_shifts: waiterRes.data ?? [],
       kitchen_shifts: kitchenRes.data ?? [],
       advances: advancesRes.data ?? [],
