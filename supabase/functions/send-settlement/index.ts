@@ -33,11 +33,20 @@ Deno.serve(async (req) => {
 
     if (sessionRes.error) throw sessionRes.error;
 
+    // Look up restaurant name
+    const { data: restaurant, error: restError } = await supabase
+      .from("restaurants")
+      .select("name")
+      .eq("id", sessionRes.data.restaurant_id)
+      .single();
+    if (restError) throw restError;
+
     const secret = Deno.env.get("SETTLEMENT_WEBHOOK_SECRET");
     if (!secret) throw new Error("SETTLEMENT_WEBHOOK_SECRET not configured");
 
     const payload = {
       secret,
+      restaurant_name: restaurant.name,
       restaurant_id: sessionRes.data.restaurant_id,
       session: sessionRes.data,
       waiter_shifts: waiterRes.data ?? [],
