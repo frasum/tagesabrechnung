@@ -25,10 +25,11 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const [sessionRes, waiterRes, kitchenRes] = await Promise.all([
+    const [sessionRes, waiterRes, kitchenRes, advancesRes] = await Promise.all([
       supabase.from("sessions").select("*").eq("id", session_id).single(),
       supabase.from("waiter_shifts").select("*").eq("session_id", session_id),
       supabase.from("kitchen_shifts").select("*").eq("session_id", session_id),
+      supabase.from("advances").select("*").eq("session_id", session_id),
     ]);
 
     if (sessionRes.error) throw sessionRes.error;
@@ -52,6 +53,7 @@ Deno.serve(async (req) => {
       session: sessionRes.data,
       waiter_shifts: waiterRes.data ?? [],
       kitchen_shifts: kitchenRes.data ?? [],
+      advances: advancesRes.data ?? [],
     };
 
     const webhookRes = await fetch(
