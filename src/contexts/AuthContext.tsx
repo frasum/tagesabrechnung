@@ -278,6 +278,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (name: string, pinCode: string): Promise<boolean> => {
     try {
+      console.log('🔐 Login attempt for:', name, 'URL:', `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/validate-pin`);
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/validate-pin`,
         {
@@ -293,11 +294,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       );
 
+      console.log('🔐 Login response status:', response.status);
+
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('🔐 Login error response:', errorText);
         return false;
       }
 
       const result = await response.json();
+      console.log('🔐 Login result:', { success: result.success, hasUser: !!result.user, error: result.error });
 
       if (!result.success || !result.user) {
         return false;
