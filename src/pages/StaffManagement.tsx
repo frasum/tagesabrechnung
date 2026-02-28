@@ -32,7 +32,7 @@ export default function StaffManagement() {
   const restaurantId = selectedRankingRestaurantId;
   const { showTipRanking, updateShowTipRanking, isUpdating: isUpdatingRanking } = useShowTipRanking(restaurantId);
 
-  const { data: allStaff = [], isLoading } = useStaff();
+  const { data: allStaff = [], isLoading } = useStaff(undefined, { includeLinkedProfiles: true });
   const createMutation = useCreateStaff();
   const updateMutation = useUpdateStaff();
   const deleteMutation = useDeleteStaff();

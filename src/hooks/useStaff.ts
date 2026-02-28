@@ -59,9 +59,10 @@ export interface StaffInput {
   restaurant_ids?: string[];
 }
 
-export function useStaff(role?: StaffRole) {
+export function useStaff(role?: StaffRole, options?: { includeLinkedProfiles?: boolean }) {
+  const includeLinkedProfiles = options?.includeLinkedProfiles ?? false;
   return useQuery({
-    queryKey: ['staff', role],
+    queryKey: ['staff', role, includeLinkedProfiles],
     queryFn: async () => {
       // Query staff table (without profile join due to RLS restrictions)
       let query = supabase
@@ -86,39 +87,39 @@ export function useStaff(role?: StaffRole) {
       const { data: staffData, error } = await query;
       if (error) throw error;
       
-      // Fetch linked profiles via edge function (bypasses RLS)
-      // This returns ALL linked profiles indexed by staff_id
+      // Fetch linked profiles only when requested (e.g. on Staff Management page)
       let linkedProfilesMap: Record<string, LinkedProfile[]> = {};
-      try {
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-link-account?action=get-all-linked`,
-          {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-            },
-          }
-        );
-        if (response.ok) {
-          const profiles = await response.json();
-          // Group by staff_id for quick lookup
-          for (const p of profiles) {
-            if (p.staff_id) {
-              if (!linkedProfilesMap[p.staff_id]) {
-                linkedProfilesMap[p.staff_id] = [];
+      if (includeLinkedProfiles) {
+        try {
+          const response = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-link-account?action=get-all-linked`,
+            {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+              },
+            }
+          );
+          if (response.ok) {
+            const profiles = await response.json();
+            for (const p of profiles) {
+              if (p.staff_id) {
+                if (!linkedProfilesMap[p.staff_id]) {
+                  linkedProfilesMap[p.staff_id] = [];
+                }
+                linkedProfilesMap[p.staff_id].push({
+                  id: p.id,
+                  user_id: p.user_id,
+                  email: p.email,
+                  full_name: p.full_name,
+                  avatar_url: p.avatar_url,
+                });
               }
-              linkedProfilesMap[p.staff_id].push({
-                id: p.id,
-                user_id: p.user_id,
-                email: p.email,
-                full_name: p.full_name,
-                avatar_url: p.avatar_url,
-              });
             }
           }
+        } catch (e) {
+          console.error('Failed to fetch linked profiles:', e);
         }
-      } catch (e) {
-        console.error('Failed to fetch linked profiles:', e);
       }
       
       // Fetch user roles for all staff

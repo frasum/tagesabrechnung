@@ -29,7 +29,7 @@ interface ComparisonResult {
 async function fetchPeriodStats(startDate: Date, endDate: Date, restaurantId: string): Promise<StatsSummary> {
   const { data: sessions, error: sessionsError } = await supabase
     .from('sessions')
-    .select('*')
+    .select('id, session_date, ordersmart_revenue, wolt_revenue, takeaway_total')
     .eq('restaurant_id', restaurantId)
     .gte('session_date', format(startDate, 'yyyy-MM-dd'))
     .lte('session_date', format(endDate, 'yyyy-MM-dd'));
@@ -42,8 +42,8 @@ async function fetchPeriodStats(startDate: Date, endDate: Date, restaurantId: st
 
   if (sessionIds.length > 0) {
     const [shiftsResult, expResult] = await Promise.all([
-      supabase.from('waiter_shifts').select('*').in('session_id', sessionIds),
-      supabase.from('expenses').select('*').in('session_id', sessionIds),
+      supabase.from('waiter_shifts').select('session_id, pos_sales, kassiert_brutto, hilf_mahl, open_invoices, card_total, cash_handed_in, kitchen_tip').in('session_id', sessionIds),
+      supabase.from('expenses').select('session_id, amount').in('session_id', sessionIds),
     ]);
     waiterShifts = shiftsResult.data || [];
     expenses = expResult.data || [];
