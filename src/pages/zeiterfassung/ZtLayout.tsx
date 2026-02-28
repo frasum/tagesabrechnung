@@ -8,7 +8,7 @@ const tabs = [
   { label: "Wochenplan", path: "" },
   { label: "Zusammenfassung", path: "zusammenfassung" },
   { label: "Buchhaltung", path: "buchhaltung" },
-  // { label: "Perioden", path: "perioden" },
+  { label: "Perioden", path: "perioden" },
 ];
 
 export default function ZtLayout() {

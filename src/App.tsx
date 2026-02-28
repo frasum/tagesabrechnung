@@ -34,6 +34,7 @@ const ZtLayout = lazy(() => import("./pages/zeiterfassung/ZtLayout"));
 const ZtWochenplan = lazy(() => import("./pages/zeiterfassung/ZtWochenplan"));
 const ZtZusammenfassung = lazy(() => import("./pages/zeiterfassung/ZtZusammenfassung"));
 const ZtBuchhaltung = lazy(() => import("./pages/zeiterfassung/ZtBuchhaltung"));
+const ZtPerioden = lazy(() => import("./pages/zeiterfassung/ZtPerioden"));
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -68,6 +69,7 @@ function RestaurantRoutes() {
             <Route index element={<ZtWochenplan />} />
             <Route path="zusammenfassung" element={<ZtZusammenfassung />} />
             <Route path="buchhaltung" element={<ZtBuchhaltung />} />
+            <Route path="perioden" element={<ZtPerioden />} />
           </Route>
         </Routes>
       </DateProvider>
