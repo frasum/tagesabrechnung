@@ -177,7 +177,7 @@
   /* ── Shared table utilities ── */
   .wochenplan-table,
   .buchhaltung-table {
-    --zebra-bg: hsl(var(--muted) / 0.35);
+    --zebra-bg: hsl(var(--muted) / 0.55);
     --sunday-bg: hsl(var(--destructive) / 0.06);
     --sunday-header-bg: hsl(var(--destructive) / 0.08);
     --totals-bg: hsl(var(--primary) / 0.04);
