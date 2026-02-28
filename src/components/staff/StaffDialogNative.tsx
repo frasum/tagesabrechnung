@@ -102,7 +102,21 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
     e.preventDefault();
     if (!name.trim()) return;
 
-    // Save staff data
+    // Update permission level FIRST (before staff save closes the dialog and triggers refetch)
+    if (staff && permissionLevel !== currentRole && user?.id) {
+      try {
+        await updateRoleMutation.mutateAsync({
+          staffId: staff.id,
+          permissionLevel,
+          callerStaffId: user.id,
+        });
+      } catch {
+        // Error toast is handled by the mutation's onError
+        return;
+      }
+    }
+
+    // Then save staff data (this closes the dialog and triggers the staff list refetch)
     onSave({
       name: name.trim(),
       role,
@@ -114,15 +128,6 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       nickname: nickname.trim() || undefined,
       perso_nr: persoNr ? Number(persoNr) : undefined,
     });
-
-    // Update permission level for existing staff
-    if (staff && permissionLevel !== currentRole && user?.id) {
-      updateRoleMutation.mutate({
-        staffId: staff.id,
-        permissionLevel,
-        callerStaffId: user.id,
-      });
-    }
   };
 
   const handleLink = () => {
