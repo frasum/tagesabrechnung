@@ -105,6 +105,8 @@ export function useStaff(role?: StaffRole, options: UseStaffOptions = {}) {
         parallelFetches.push(
           (async () => {
             try {
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 8000);
               const response = await fetch(
                 `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-link-account?action=get-all-linked`,
                 {
@@ -112,8 +114,10 @@ export function useStaff(role?: StaffRole, options: UseStaffOptions = {}) {
                   headers: {
                     'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
                   },
+                  signal: controller.signal,
                 }
               );
+              clearTimeout(timeoutId);
               if (response.ok) {
                 const profiles = await response.json();
                 for (const p of profiles) {
