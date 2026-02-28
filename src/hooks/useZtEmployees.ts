@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 export type ZtEmployee = {
   id: string;
   perso_nr: number;
+  name: string;
   first_name: string;
   last_name: string;
   nickname: string | null;
@@ -20,7 +21,7 @@ export function useZtEmployees(restaurantId: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("staff_restaurants")
-        .select("zt_department, staff_id, staff!inner(id, perso_nr, first_name, last_name, nickname, is_active)")
+        .select("zt_department, staff_id, staff!inner(id, perso_nr, name, first_name, last_name, nickname, is_active)")
         .eq("restaurant_id", restaurantId)
         .not("zt_department", "is", null);
       if (error) throw error;
@@ -30,6 +31,7 @@ export function useZtEmployees(restaurantId: string) {
         .map((row: any) => ({
           id: row.staff.id,
           perso_nr: row.staff.perso_nr ?? 0,
+          name: row.staff.name ?? "",
           first_name: row.staff.first_name ?? "",
           last_name: row.staff.last_name ?? "",
           nickname: row.staff.nickname,

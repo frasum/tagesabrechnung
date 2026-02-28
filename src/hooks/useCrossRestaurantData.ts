@@ -104,7 +104,7 @@ export function useCrossRestaurantData(
     queryFn: async () => {
       const { data, error } = await supabase
         .from("staff_restaurants")
-        .select("zt_department, staff_id, restaurant_id, staff!inner(id, perso_nr, first_name, last_name, nickname, is_active)")
+        .select("zt_department, staff_id, restaurant_id, staff!inner(id, perso_nr, name, first_name, last_name, nickname, is_active)")
         .not("zt_department", "is", null);
       if (error) throw error;
       return data as any[];
@@ -130,6 +130,7 @@ export function useCrossRestaurantData(
         empMap.set(key, {
           id: empId,
           perso_nr: row.staff.perso_nr ?? 0,
+          name: row.staff.name ?? "",
           first_name: row.staff.first_name ?? "",
           last_name: row.staff.last_name ?? "",
           nickname: row.staff.nickname,

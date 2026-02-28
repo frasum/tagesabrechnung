@@ -480,7 +480,7 @@ export default function Wochenplan() {
                       <td className="p-2 sticky left-0 z-10 font-medium border-r border-border/30 bg-background">
                         <div className="flex items-center gap-1.5">
                           <div className={`w-0.5 h-4 rounded-full ${deptColor} opacity-60`}></div>
-                          <span className="truncate">{emp.nickname || emp.first_name}</span>
+                          <span className="truncate">{emp.nickname || emp.first_name || emp.name}</span>
                         </div>
                       </td>
                       {weekDays.map((day, dayIdx) => {
