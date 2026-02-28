@@ -1,22 +1,25 @@
 
 
-## Plan: Settlement-Webhook (Zeiterfassung) entfernen
+## Plan: Stammdaten-Felder zum Mitarbeiter-Dialog hinzufügen
 
-### Betroffene Dateien
+Die Felder `first_name`, `last_name`, `nickname` und `perso_nr` existieren bereits in der `staff`-Tabelle. Sie müssen nur im Dialog und im `StaffInput`-Interface ergänzt werden.
 
-**1. Edge Function löschen**
-- `supabase/functions/send-settlement/index.ts` löschen
+### Änderungen
 
-**2. Config bereinigen** (`supabase/config.toml`)
-- Eintrag `[functions.send-settlement]` entfernen
+1. **`src/hooks/useStaff.ts`**
+   - `Staff`-Interface: `first_name`, `last_name`, `nickname`, `perso_nr` hinzufügen (alle optional)
+   - `StaffInput`-Interface: dieselben 4 Felder hinzufügen (alle optional)
 
-**3. Client-Code bereinigen** (`src/pages/DailySummary.tsx`)
-- `settlementSentRef` (Zeile 403) entfernen
-- Settlement-Block Zeilen 425–441 entfernen (der `send-settlement` invoke-Aufruf)
-- `session` aus den `useCallback`-Dependencies entfernen (Zeile 443)
+2. **`src/components/staff/StaffDialogNative.tsx`**
+   - 4 neue State-Variablen: `firstName`, `lastName`, `nickname`, `persoNr`
+   - Initialisierung im `useEffect` aus `staff.first_name` etc.
+   - Neue Eingabefelder nach dem bestehenden "Name"-Feld einfügen:
+     - Nachname (text)
+     - Vorname (text)
+     - Spitzname (text)
+     - Personalnummer (number)
+   - `handleSubmit`: Die 4 neuen Felder an `onSave` übergeben
 
-### Nicht betroffen
-- `notify-pdf-export` (Telegram PDF-Benachrichtigung) — bleibt
-- `send-telegram-summary` (Tagesbericht) — bleibt
-- Datenbankspalte `last_settlement_sent_at` — kann bestehen bleiben, keine Breaking Changes
+### Keine Datenbankänderungen nötig
+Alle Spalten existieren bereits in der `staff`-Tabelle.
 
