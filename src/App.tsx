@@ -31,6 +31,7 @@ const ConfirmLoginPage = lazy(() => import("./pages/ConfirmLoginPage").then(m =>
 const PermissionManagement = lazy(() => import("./pages/PermissionManagement"));
 const RestaurantSelect = lazy(() => import("./pages/RestaurantSelect"));
 const TelegramSettings = lazy(() => import("./pages/TelegramSettings"));
+const ZtLayout = lazy(() => import("./components/zeiterfassung/ZtLayout"));
 const ZtDashboard = lazy(() => import("./pages/zeiterfassung/ZtDashboard"));
 const Wochenplan = lazy(() => import("./pages/zeiterfassung/Wochenplan"));
 const Zusammenfassung = lazy(() => import("./pages/zeiterfassung/Zusammenfassung"));
@@ -68,11 +69,13 @@ function RestaurantRoutes() {
             <Route path="qr-poster" element={<ProtectedRoute requiredLevel="manager"><WaiterQRPoster /></ProtectedRoute>} />
             
             {/* Zeiterfassung routes */}
-            <Route path="zeiterfassung" element={<ProtectedRoute requiredLevel="manager"><ZtDashboard /></ProtectedRoute>} />
-            <Route path="zeiterfassung/wochenplan" element={<ProtectedRoute requiredLevel="manager"><Wochenplan /></ProtectedRoute>} />
-            <Route path="zeiterfassung/zusammenfassung" element={<ProtectedRoute requiredLevel="manager"><Zusammenfassung /></ProtectedRoute>} />
-            <Route path="zeiterfassung/buchhaltung" element={<ProtectedRoute requiredLevel="manager"><ZtBuchhaltung /></ProtectedRoute>} />
-            <Route path="zeiterfassung/perioden" element={<ProtectedRoute requiredLevel="manager"><Perioden /></ProtectedRoute>} />
+            <Route path="zeiterfassung" element={<ZtLayout />}>
+              <Route index element={<ZtDashboard />} />
+              <Route path="wochenplan" element={<Wochenplan />} />
+              <Route path="zusammenfassung" element={<Zusammenfassung />} />
+              <Route path="buchhaltung" element={<ZtBuchhaltung />} />
+              <Route path="perioden" element={<Perioden />} />
+            </Route>
           </Routes>
         </ZtProvider>
       </DateProvider>
