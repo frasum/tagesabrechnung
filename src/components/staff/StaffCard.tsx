@@ -1,4 +1,4 @@
-import { Pencil, Trash2, ChefHat, UtensilsCrossed, Store, Smartphone, Shield, ShieldCheck, ShieldAlert, Trophy } from 'lucide-react';
+import { Pencil, Trash2, ChefHat, UtensilsCrossed, Store, Smartphone, Shield, ShieldCheck, ShieldAlert, Trophy, AlertTriangle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,9 @@ export function StaffCard({ staff, onEdit, onDelete, rankingData }: StaffCardPro
   const restaurantNames = staff.staff_restaurants
     ?.map(sr => sr.restaurants?.name)
     .filter(Boolean) ?? [];
+
+  // Missing name data warning
+  const missingNameData = !staff.first_name || !staff.last_name;
 
   // OAuth link status
   const isLinked = !!staff.linked_profile;
@@ -52,6 +55,21 @@ export function StaffCard({ staff, onEdit, onDelete, rankingData }: StaffCardPro
                 <h3 className="font-semibold text-foreground truncate">{staff.name}</h3>
                 {!staff.is_active && (
                   <Badge variant="secondary" className="text-xs">Inaktiv</Badge>
+                )}
+                {missingNameData && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge className="text-xs font-normal gap-1 bg-orange-100 text-orange-700 border-orange-200 hover:bg-orange-100">
+                          <AlertTriangle className="w-3 h-3" />
+                          Name fehlt
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{!staff.first_name && !staff.last_name ? 'Vor- und Nachname fehlen' : !staff.first_name ? 'Vorname fehlt' : 'Nachname fehlt'}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 )}
                 {rankingData && (staff.role === 'waiter' || staff.role === 'both') && (
                   <TooltipProvider>
