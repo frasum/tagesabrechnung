@@ -163,7 +163,7 @@ export default function ZtZusammenfassung() {
                   <tr className="border-t hover:bg-muted/30">
                     <td className="p-2 font-medium sticky left-0 bg-background z-10">
                       <span className="text-xs text-muted-foreground mr-1">{emp.perso_nr}</span>
-                      {emp.nickname ? `${emp.nickname} - ` : ""}{emp.first_name} {emp.last_name}
+                      {emp.nickname ? `${emp.nickname} - ` : ""}{[emp.first_name, emp.last_name].filter(Boolean).join(" ") || emp.name}
                     </td>
                     {weeks?.map((w) => {
                       const h = getWeeklyHours(emp.id, w.week_number, emp.department);

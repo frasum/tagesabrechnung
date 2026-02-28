@@ -19,8 +19,8 @@ interface BuchhaltungRowProps {
 export default function BuchhaltungRow({ emp, totals, note, shifts, isEven, isLocked, onUpsertNote }: BuchhaltungRowProps) {
   const rowBg = isEven ? "bg-muted/30" : "";
 
-  // Build display name: "Vorname Nachname (Spitzname · Personalnummer)"
-  const nameParts = [emp.first_name, emp.last_name].filter(Boolean).join(" ");
+  // Build display name: "Vorname Nachname (Spitzname · Personalnummer)" with fallback to legacy name
+  const nameParts = [emp.first_name, emp.last_name].filter(Boolean).join(" ") || emp.name;
   const metaParts: string[] = [];
   if (emp.nickname) metaParts.push(emp.nickname);
   if (emp.perso_nr && emp.perso_nr > 0) metaParts.push(String(emp.perso_nr));
