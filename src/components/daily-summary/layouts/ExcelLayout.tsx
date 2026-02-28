@@ -206,7 +206,7 @@ export function ExcelLayout({
                   {new Intl.NumberFormat('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(
                   (ordersmartInTakeaway
                     ? formData.takeaway_total
-                    : (formData.takeaway_total + formData.ordersmart_revenue + formData.wolt_revenue)
+                    : (formData.takeaway_total + formData.ordersmart_revenue)
                   ) / formData.pos_total * 100
                 )} %
                 </span>
