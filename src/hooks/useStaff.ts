@@ -59,9 +59,18 @@ export interface StaffInput {
   perso_nr?: number;
 }
 
-export function useStaff(role?: StaffRole) {
+export interface UseStaffOptions {
+  /** Load linked OAuth profiles (expensive edge function call). Default: false */
+  includeProfiles?: boolean;
+  /** Load permission levels from user_roles. Default: false */
+  includeRoles?: boolean;
+}
+
+export function useStaff(role?: StaffRole, options: UseStaffOptions = {}) {
+  const { includeProfiles = false, includeRoles = false } = options;
+
   return useQuery({
-    queryKey: ['staff', role],
+    queryKey: ['staff', role, { includeProfiles, includeRoles }],
     queryFn: async () => {
       // Query staff table (without profile join due to RLS restrictions)
       let query = supabase
@@ -85,58 +94,71 @@ export function useStaff(role?: StaffRole) {
 
       const { data: staffData, error } = await query;
       if (error) throw error;
-      
-      // Fetch linked profiles via edge function (bypasses RLS)
-      // This returns ALL linked profiles indexed by staff_id
+
+      // Only fetch profiles and roles when explicitly requested
       let linkedProfilesMap: Record<string, LinkedProfile[]> = {};
-      try {
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-link-account?action=get-all-linked`,
-          {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-            },
-          }
-        );
-        if (response.ok) {
-          const profiles = await response.json();
-          // Group by staff_id for quick lookup
-          for (const p of profiles) {
-            if (p.staff_id) {
-              if (!linkedProfilesMap[p.staff_id]) {
-                linkedProfilesMap[p.staff_id] = [];
-              }
-              linkedProfilesMap[p.staff_id].push({
-                id: p.id,
-                user_id: p.user_id,
-                email: p.email,
-                full_name: p.full_name,
-                avatar_url: p.avatar_url,
-              });
-            }
-          }
-        }
-      } catch (e) {
-        console.error('Failed to fetch linked profiles:', e);
-      }
-      
-      // Fetch user roles for all staff
       let rolesMap: Record<string, PermissionLevel> = {};
-      try {
-        const { data: rolesData } = await supabase
-          .from('user_roles')
-          .select('staff_id, permission_level');
-        if (rolesData) {
-          for (const r of rolesData) {
-            rolesMap[r.staff_id] = r.permission_level as PermissionLevel;
-          }
-        }
-      } catch (e) {
-        console.error('Failed to fetch user roles:', e);
+
+      const parallelFetches: Promise<void>[] = [];
+
+      if (includeProfiles) {
+        parallelFetches.push(
+          (async () => {
+            try {
+              const response = await fetch(
+                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-link-account?action=get-all-linked`,
+                {
+                  method: 'GET',
+                  headers: {
+                    'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+                  },
+                }
+              );
+              if (response.ok) {
+                const profiles = await response.json();
+                for (const p of profiles) {
+                  if (p.staff_id) {
+                    if (!linkedProfilesMap[p.staff_id]) {
+                      linkedProfilesMap[p.staff_id] = [];
+                    }
+                    linkedProfilesMap[p.staff_id].push({
+                      id: p.id,
+                      user_id: p.user_id,
+                      email: p.email,
+                      full_name: p.full_name,
+                      avatar_url: p.avatar_url,
+                    });
+                  }
+                }
+              }
+            } catch (e) {
+              console.error('Failed to fetch linked profiles:', e);
+            }
+          })()
+        );
       }
 
-      // Merge linked_profiles and permission_level into staff data
+      if (includeRoles) {
+        parallelFetches.push(
+          (async () => {
+            try {
+              const { data: rolesData } = await supabase
+                .from('user_roles')
+                .select('staff_id, permission_level');
+              if (rolesData) {
+                for (const r of rolesData) {
+                  rolesMap[r.staff_id] = r.permission_level as PermissionLevel;
+                }
+              }
+            } catch (e) {
+              console.error('Failed to fetch user roles:', e);
+            }
+          })()
+        );
+      }
+
+      await Promise.all(parallelFetches);
+
       return (staffData || []).map((staff: any) => {
         const profiles = linkedProfilesMap[staff.id] || [];
         return {

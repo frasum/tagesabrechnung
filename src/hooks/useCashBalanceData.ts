@@ -53,8 +53,8 @@ export function useCashBalanceData(restaurantId: string | null) {
         chunks.push(sessionIds.slice(i, i + chunkSize));
       }
 
-      // 2-4. Load waiter_shifts, expenses, advances in parallel per chunk
-      const [allShifts, allExpenses, allAdvances] = await Promise.all([
+      // 2-5. Load waiter_shifts, expenses, advances AND register_transfers in parallel
+      const [allShifts, allExpenses, allAdvances, transfersResult] = await Promise.all([
         Promise.all(chunks.map(chunk =>
           supabase.from('waiter_shifts').select('session_id, open_invoices').in('session_id', chunk).limit(10000)
         )).then(results => results.flatMap(r => { if (r.error) throw r.error; return r.data || []; })),
@@ -64,16 +64,15 @@ export function useCashBalanceData(restaurantId: string | null) {
         Promise.all(chunks.map(chunk =>
           supabase.from('advances').select('session_id, amount').in('session_id', chunk).limit(10000)
         )).then(results => results.flatMap(r => { if (r.error) throw r.error; return r.data || []; })),
+        supabase
+          .from('register_transfers')
+          .select('transfer_date, amount, direction')
+          .eq('restaurant_id', restaurantId)
+          .limit(10000),
       ]);
 
-      // 5. Register transfers laden
-      const { data: transfers, error: transfersError } = await supabase
-        .from('register_transfers')
-        .select('transfer_date, amount, direction')
-        .eq('restaurant_id', restaurantId)
-        .limit(10000);
-
-      if (transfersError) throw transfersError;
+      const transfers = transfersResult.data;
+      if (transfersResult.error) throw transfersResult.error;
 
       // 6. Build a unified date map (sessions + transfer-only days)
       const sessionMap = new Map<string, typeof sessions[0]>();
