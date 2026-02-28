@@ -51,8 +51,11 @@
     --sidebar-accent-foreground: 30 15% 95%;
     --sidebar-border: 220 20% 25%;
     --sidebar-ring: 35 90% 55%;
-  }
 
+    --dept-kueche: var(--warning);
+    --dept-gl: var(--primary);
+    --dept-service: var(--success);
+  }
   .dark {
     --background: 220 25% 8%;
     --foreground: 30 15% 95%;
@@ -170,4 +173,94 @@
   .zt-total-row {
     @apply font-semibold bg-muted/50;
   }
+
+  /* ── Wochenplan table utilities ── */
+  .wochenplan-table {
+    --zebra-bg: hsl(var(--muted) / 0.35);
+    --sunday-bg: hsl(var(--destructive) / 0.06);
+    --sunday-header-bg: hsl(var(--destructive) / 0.08);
+    --totals-bg: hsl(var(--primary) / 0.04);
+    --totals-header-bg: hsl(var(--primary) / 0.08);
+    --inactive-opacity: 0.25;
+  }
+
+  /* Zebra striping */
+  .wochenplan-table .zebra-even td {
+    background-color: var(--zebra-bg);
+  }
+
+  /* Sunday / holiday columns override zebra */
+  .wochenplan-table .sunday-col {
+    background-color: var(--sunday-bg) !important;
+  }
+  .wochenplan-table th.sunday-col {
+    background-color: var(--sunday-header-bg) !important;
+  }
+
+  /* Totals columns */
+  .wochenplan-table .totals-col {
+    background-color: var(--totals-bg);
+  }
+  .wochenplan-table th.totals-col {
+    background-color: var(--totals-header-bg);
+  }
+  .wochenplan-table .zebra-even .totals-col {
+    background-color: color-mix(in srgb, var(--totals-bg), var(--zebra-bg) 50%);
+  }
+
+  /* Day separator */
+  .day-separator {
+    border-left: 2px solid hsl(var(--border)) !important;
+  }
+
+  /* Inactive day cells */
+  .inactive-day {
+    opacity: var(--inactive-opacity);
+    pointer-events: none;
+  }
+
+  /* Sticky name column */
+  .sticky-name {
+    position: sticky;
+    left: 0;
+    z-index: 10;
+    background-color: hsl(var(--background));
+    box-shadow: 2px 0 4px -1px hsl(var(--foreground) / 0.06);
+  }
+  .wochenplan-table thead .sticky-name {
+    z-index: 30;
+    background-color: hsl(var(--muted));
+  }
+  .wochenplan-table .zebra-even .sticky-name {
+    background-color: hsl(var(--muted) / 0.35);
+  }
+
+  /* Department header row */
+  .dept-header-row td {
+    padding: 0;
+  }
+
+  /* Transparent time inputs */
+  .time-input-clean {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .time-input-clean:hover {
+    border-color: hsl(var(--border)) !important;
+  }
+  .time-input-clean:focus {
+    border-color: hsl(var(--ring)) !important;
+    background: hsl(var(--background)) !important;
+    box-shadow: 0 0 0 1px hsl(var(--ring) / 0.3) !important;
+  }
+  .time-input-clean[data-has-value="true"] {
+    color: hsl(var(--foreground));
+  }
+  .time-input-clean[data-has-value="false"] {
+    color: hsl(var(--muted-foreground) / 0.4);
+  }
+
 }
