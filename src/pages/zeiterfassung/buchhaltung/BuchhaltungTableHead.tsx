@@ -1,0 +1,32 @@
+export default function BuchhaltungTableHead() {
+  return (
+    <>
+      <colgroup>
+        <col className="w-[320px]" />
+        <col className="w-[75px]" />
+        <col className="w-[75px]" />
+        <col className="w-[75px]" />
+        <col className="w-[60px]" />
+        <col className="w-[55px]" />
+        <col className="w-[45px]" />
+        <col className="w-[40px]" />
+        <col className="w-[85px]" />
+        <col className="min-w-[180px]" />
+      </colgroup>
+      <thead>
+        <tr className="bg-muted sticky top-0 z-10">
+          <th className="text-left px-2 py-2.5 font-semibold text-xs uppercase text-muted-foreground">Mitarbeiter</th>
+          <th className="text-center px-2 py-2.5 font-semibold text-xs uppercase text-muted-foreground border-l border-border">Gesamt</th>
+          <th className="text-center px-2 py-2.5 font-semibold text-xs uppercase text-muted-foreground">Schichten</th>
+          <th className="text-center px-2 py-2.5 font-semibold text-xs uppercase text-muted-foreground">So/Fei</th>
+          <th className="text-center px-2 py-2.5 font-semibold text-xs uppercase text-muted-foreground">20–24</th>
+          <th className="text-center px-2 py-2.5 font-semibold text-xs uppercase text-muted-foreground">24–x</th>
+          <th className="text-center px-2 py-2.5 font-semibold text-xs uppercase text-muted-foreground border-l border-border">U</th>
+          <th className="text-center px-2 py-2.5 font-semibold text-xs uppercase text-muted-foreground">K</th>
+          <th className="text-center px-2 py-2.5 font-semibold text-xs text-muted-foreground border-l border-border">Vorschuss</th>
+          <th className="text-left px-2 py-2.5 font-semibold text-xs text-muted-foreground">Besonderheiten</th>
+        </tr>
+      </thead>
+    </>
+  );
+}
