@@ -4,6 +4,7 @@ import { formatHours, DEPARTMENT_ORDER, countVacationDays, countSickDays, getSic
 
 interface Employee {
   id: string;
+  name: string;
   perso_nr: number | null;
   first_name: string | null;
   last_name: string | null;
@@ -80,7 +81,7 @@ export function exportBuchhaltungPdf(
     const sickText = sickRanges.length > 0 ? `K: ${formatSickRanges(sickRanges).join(", ")}` : "";
     const besText = [note?.besonderheiten, sickText].filter(Boolean).join(" | ");
 
-    const nameParts = [emp.first_name, emp.last_name].filter(Boolean).join(" ");
+    const nameParts = [emp.first_name, emp.last_name].filter(Boolean).join(" ") || emp.name;
     const metaParts: string[] = [];
     if (emp.nickname) metaParts.push(emp.nickname);
     if (emp.perso_nr && emp.perso_nr > 0) metaParts.push(String(emp.perso_nr));

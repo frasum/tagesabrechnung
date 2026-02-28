@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type RestaurantEmployee = {
   id: string;
+  name: string;
   perso_nr: number | null;
   first_name: string | null;
   last_name: string | null;
@@ -16,13 +17,14 @@ export function useRestaurantEmployees(restaurantId: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("staff_restaurants")
-        .select("zt_department, staff_id, staff!inner(id, perso_nr, first_name, last_name, nickname)")
+        .select("zt_department, staff_id, staff!inner(id, name, perso_nr, first_name, last_name, nickname)")
         .eq("restaurant_id", restaurantId)
         .not("zt_department", "is", null);
       if (error) throw error;
 
       return (data as any[]).map((row: any) => ({
         id: row.staff.id,
+        name: row.staff.name,
         perso_nr: row.staff.perso_nr,
         first_name: row.staff.first_name,
         last_name: row.staff.last_name,
