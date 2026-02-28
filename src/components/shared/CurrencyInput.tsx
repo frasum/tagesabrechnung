@@ -21,9 +21,10 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
     }, [value, isFocused]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      // Allow typing freely - only filter invalid characters
       const rawValue = e.target.value.replace(/[^0-9.,]/g, '');
       setDisplayValue(rawValue);
+      const numValue = parseFloat(rawValue.replace(',', '.')) || 0;
+      onChange(numValue);
     };
 
     const handleFocus = () => {
