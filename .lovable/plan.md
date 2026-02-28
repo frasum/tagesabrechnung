@@ -1,48 +1,36 @@
 
 
-## Stammdaten aus Zeiterfassung importieren
+## Wochenplan UI an Zeiterfassung-Projekt angleichen
 
 ### Problem
-Die Mitarbeiterdaten (Vorname, Nachname, Spitzname, Personalnummer) sind im Zeiterfassung-Projekt (separate Datenbank `uahvcjqufmnsmnnoydsa`) vollstaendig gepflegt, aber in diesem Projekt (`hncirnpdfwglagjniapy`) fehlen sie bei den meisten Mitarbeitern.
+Das Wochenplan-UI in diesem Projekt verwendet einfache Tailwind-Klassen, waehrend das Zeiterfassung-Projekt ein ausgefeiltes CSS-Utility-System fuer die Tabelle hat (Zebra-Striping, transparente Input-Felder, Sonntags-/Feiertags-Spaltenfarben, Totals-Spalten-Hintergrund, Sticky-Column-Schatten).
 
-Die Zeiterfassung-DB hat:
-- `employees` Tabelle mit `first_name`, `last_name`, `nickname`, `perso_nr`
-- `staff_mapping` Tabelle mit `tagesabrechnung_name` → `employee_id` (Zuordnung zum hiesigen `staff.name`)
+### Aenderungen
 
-### Loesung: Einmalige Edge Function fuer den Import
+**1. CSS-Utilities hinzufuegen (`src/index.css`)**
 
-Eine Edge Function `sync-staff-from-zt` erstellen, die:
+Die folgenden Wochenplan-spezifischen CSS-Klassen aus dem Zeiterfassung-Projekt uebernehmen:
+- `wochenplan-table` Zebra-Striping (`zebra-even`) mit korrekten Hintergrundfarben
+- `sticky-name` mit Box-Shadow fuer die fixierte Namensspalte
+- `day-separator` mit 2px Border zwischen Tagen
+- `sunday-col` mit roetlichem Hintergrund fuer Sonntage/Feiertage
+- `totals-col` und `totals-header` mit blaeulichem Hintergrund
+- `inactive-day` fuer Tage ausserhalb der Woche
+- `time-input-clean` fuer transparente Zeitfelder die sich erst bei Hover/Focus zeigen
+- CSS-Variablen `--dept-kueche`, `--dept-gl`, `--dept-service`
 
-1. Per `fetch` die Zeiterfassung-API aufruft (URL + Anon Key sind bekannt)
-2. Alle `employees` laedt
-3. Alle `staff_mapping` Eintraege laedt (enthaelt `tagesabrechnung_name` → `employee_id`)
-4. Fuer jeden Mapping-Eintrag: Den passenden `staff`-Datensatz in dieser DB per `name = tagesabrechnung_name` findet und mit `first_name`, `last_name`, `nickname`, `perso_nr` aktualisiert
-5. Ergebnis zurueckgibt (wie viele aktualisiert, welche nicht gefunden)
+**2. Wochenplan-Komponente aktualisieren (`src/pages/zeiterfassung/Wochenplan.tsx`)**
+
+Klassennamen in der Tabelle anpassen:
+- `<th>` Header: `totals-header` und `sticky-name` Klassen hinzufuegen
+- Department-Header-Row: `dept-header-row` Klasse hinzufuegen
+- Mitarbeiter-Rows: `zebra-even` statt inline `bg-muted/20`
+- Namensspalte: `sticky-name` statt `bg-background`
+- Tagesspalten: `sunday-col`, `day-separator`, `inactive-day` CSS-Klassen statt inline Tailwind
+- Totals-Spalten: `totals-col` Klasse hinzufuegen
+- Time-Inputs: `time-input-clean` Klasse und `data-has-value` Attribut hinzufuegen
 
 ### Technische Details
 
-**Neue Datei: `supabase/functions/sync-staff-from-zt/index.ts`**
-
-```text
-Zeiterfassung-DB (uahvcjqufmnsmnnoydsa)     Dieses Projekt (hncirnpdfwglagjniapy)
-┌─────────────────────┐                      ┌──────────────────┐
-│ employees           │                      │ staff            │
-│  id, first_name,    │──── staff_mapping    │  name,           │
-│  last_name,         │    tagesabrechnung   │  first_name,     │
-│  nickname, perso_nr │    _name ──────────> │  last_name,      │
-└─────────────────────┘                      │  nickname,       │
-                                             │  perso_nr        │
-                                             └──────────────────┘
-```
-
-- Liest von der Zeiterfassung-API (oeffentlich lesbar mit Anon Key)
-- Schreibt per Service-Role-Key in die lokale `staff`-Tabelle
-- Einmaliger Aufruf, kann danach geloescht werden
-
-**Frontend: Button in der Mitarbeiterverwaltung**
-
-Ein temporaerer "Aus Zeiterfassung importieren"-Button, der die Edge Function aufruft und das Ergebnis als Toast anzeigt.
-
-### Keine Datenbank-Aenderungen noetig
-Die Spalten `first_name`, `last_name`, `nickname`, `perso_nr` existieren bereits in der `staff`-Tabelle.
+Die CSS-Klassen verwenden `!important` an gezielten Stellen, um sicherzustellen, dass Zebra-Striping und Sonntags-Highlighting korrekt kaskadieren (z.B. `sunday-col` muss `zebra-even` ueberschreiben).
 
