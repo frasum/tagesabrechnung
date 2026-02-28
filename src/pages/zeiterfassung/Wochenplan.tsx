@@ -430,7 +430,7 @@ export default function Wochenplan() {
           <table className="w-full text-sm wochenplan-table border-collapse">
             <thead className="sticky top-0 z-20">
               <tr className="bg-muted">
-                <th className="text-left p-1.5 font-semibold sticky left-0 bg-muted z-30 min-w-[140px] border-b border-border text-xs">
+                <th className="text-left p-1.5 font-semibold sticky-name min-w-[140px] border-b border-border text-xs">
                   
                 </th>
                 {weekDays.map((day, dayIdx) => {
@@ -440,18 +440,22 @@ export default function Wochenplan() {
                     <th
                       key={day.toISOString()}
                       colSpan={2}
-                      className={`text-center p-1.5 font-semibold min-w-[120px] border-b border-border text-xs ${dayIdx > 0 ? "day-separator" : ""} ${isSunHol ? "!bg-destructive/8" : ""}`}
+                      className={cn(
+                        "text-center p-1.5 font-semibold min-w-[120px] border-b border-border text-xs",
+                        dayIdx > 0 && "day-separator",
+                        isSunHol && "sunday-col"
+                      )}
                     >
                       <span className={isSunHol ? "text-destructive font-bold" : ""}>{format(day, "EE", { locale: de })} {format(day, "dd.MM")}</span>
                     </th>
                   );
                 })}
-                <th className="text-center p-1.5 font-semibold min-w-[50px] border-l-2 border-primary/20 border-b border-border text-xs">Ges</th>
-                <th className="text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs">So/F</th>
-                <th className="text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs">20-24</th>
-                <th className="text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs">24-x</th>
-                <th className="text-center p-1.5 font-semibold min-w-[35px] border-b border-border text-xs">U</th>
-                <th className="text-center p-1.5 font-semibold min-w-[35px] border-b border-border text-xs">K</th>
+                <th className="text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs totals-col day-separator">Ges</th>
+                <th className="text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs totals-col">So/F</th>
+                <th className="text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs totals-col">20-24</th>
+                <th className="text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs totals-col">24-x</th>
+                <th className="text-center p-1.5 font-semibold min-w-[35px] border-b border-border text-xs totals-col">U</th>
+                <th className="text-center p-1.5 font-semibold min-w-[35px] border-b border-border text-xs totals-col">K</th>
               </tr>
             </thead>
             <tbody>
@@ -476,8 +480,8 @@ export default function Wochenplan() {
                         </td>
                       </tr>
                     )}
-                    <tr className={`border-t border-border/50 ${isEvenRow ? "bg-muted/20" : ""}`}>
-                      <td className="p-2 sticky left-0 z-10 font-medium border-r border-border/30 bg-background">
+                    <tr className={cn("border-t border-border/50", isEvenRow && "zebra-even")}>
+                      <td className="p-2 sticky-name font-medium border-r border-border/30">
                         <div className="flex items-center gap-1.5">
                           <div className={`w-0.5 h-4 rounded-full ${deptColor} opacity-60`}></div>
                           <span className="truncate">{emp.nickname || emp.first_name || emp.name}</span>
@@ -488,15 +492,15 @@ export default function Wochenplan() {
                         const isActive = activeDates.has(dateStr);
                         const shift = isActive ? getShift(emp.id, dateStr, emp.department) : undefined;
                         const isSunHol = sundayHolidayDays.has(dateStr);
-                        const sunClass = isSunHol && isActive ? "bg-destructive/5" : "";
-                        const sepClass = dayIdx > 0 ? "border-l border-border/30" : "";
+                        const sunClass = isSunHol && isActive ? "sunday-col" : "";
+                        const sepClass = dayIdx > 0 ? "day-separator" : "";
                         const absenceType = shift?.absence_type as string | null;
                         const startVal = shift?.start_time?.slice(0, 5) ?? "";
                         const endVal = shift?.end_time?.slice(0, 5) ?? "";
                         return (
                           <React.Fragment key={`${emp.id}-${dateStr}`}>
                             {absenceType && isActive ? (
-                              <td colSpan={2} className={`p-0.5 text-center ${sunClass} ${sepClass}`}>
+                              <td colSpan={2} className={cn("p-0.5 text-center", sunClass, sepClass)}>
                                 <button
                                   className={`inline-flex items-center justify-center h-7 w-full rounded text-xs font-bold cursor-pointer ${
                                     absenceType === 'urlaub'
@@ -512,16 +516,17 @@ export default function Wochenplan() {
                               </td>
                             ) : (
                               <>
-                                <td className={`p-0.5 ${!isActive ? "opacity-30" : ""} ${sunClass} ${sepClass}`}>
+                                <td className={cn("p-0.5", !isActive && "inactive-day", sunClass, sepClass)}>
                                   {isActive ? (
                                     <div className="relative flex items-center">
                                      <Input
                                         type="text"
-                                        className="h-7 text-xs px-1 w-[72px] text-center"
+                                         className="h-7 text-xs px-1 w-[72px] time-input-clean"
                                         placeholder=""
                                         data-time-field={`${emp.id}-${dateStr}-start_time`}
                                         data-time-col={`${dateStr}-start_time`}
-                                        value={editingTime[`${emp.id}-${dateStr}-start_time`] ?? startVal}
+                                         data-has-value={!!startVal}
+                                         value={editingTime[`${emp.id}-${dateStr}-start_time`] ?? startVal}
                                         onChange={(e) => {
                                           const key = `${emp.id}-${dateStr}-start_time`;
                                           setEditingTime(prev => ({ ...prev, [key]: e.target.value }));
@@ -578,15 +583,16 @@ export default function Wochenplan() {
                                     </div>
                                   ) : null}
                                 </td>
-                                <td className={`p-0.5 ${!isActive ? "opacity-30" : ""} ${sunClass}`}>
+                                <td className={cn("p-0.5", !isActive && "inactive-day", sunClass)}>
                                   {isActive ? (
                                     <Input
                                       type="text"
-                                      className="h-7 text-xs px-1 w-[72px] text-center"
+                                      className="h-7 text-xs px-1 w-[72px] time-input-clean"
                                       placeholder=""
                                       data-time-field={`${emp.id}-${dateStr}-end_time`}
                                       data-time-col={`${dateStr}-end_time`}
-                                      value={editingTime[`${emp.id}-${dateStr}-end_time`] ?? endVal}
+                                       data-has-value={!!endVal}
+                                       value={editingTime[`${emp.id}-${dateStr}-end_time`] ?? endVal}
                                       onChange={(e) => {
                                         const key = `${emp.id}-${dateStr}-end_time`;
                                         setEditingTime(prev => ({ ...prev, [key]: e.target.value }));
@@ -617,12 +623,12 @@ export default function Wochenplan() {
                           </React.Fragment>
                         );
                       })}
-                      <td className="text-center p-2 font-bold text-sm border-l-2 border-primary/20">{formatHours(totals.gesamt)}</td>
-                      <td className="text-center p-2 text-xs">{totals.soFei > 0 ? formatHours(totals.soFei) : ""}</td>
-                      <td className="text-center p-2 text-xs">{totals.evening > 0 ? formatHours(totals.evening) : ""}</td>
-                      <td className="text-center p-2 text-xs">{totals.night > 0 ? formatHours(totals.night) : ""}</td>
-                      <td className="text-center p-2 text-xs text-green-600 font-medium">{totals.urlaubTage > 0 ? totals.urlaubTage.toFixed(2).replace('.', ',') : ""}</td>
-                      <td className="text-center p-2 text-xs text-red-600 font-medium">{totals.krankTage > 0 ? totals.krankTage : ""}</td>
+                      <td className="text-center p-2 font-bold text-sm totals-col day-separator">{formatHours(totals.gesamt)}</td>
+                      <td className="text-center p-2 text-xs totals-col">{totals.soFei > 0 ? formatHours(totals.soFei) : ""}</td>
+                      <td className="text-center p-2 text-xs totals-col">{totals.evening > 0 ? formatHours(totals.evening) : ""}</td>
+                      <td className="text-center p-2 text-xs totals-col">{totals.night > 0 ? formatHours(totals.night) : ""}</td>
+                      <td className="text-center p-2 text-xs text-green-600 font-medium totals-col">{totals.urlaubTage > 0 ? totals.urlaubTage.toFixed(2).replace('.', ',') : ""}</td>
+                      <td className="text-center p-2 text-xs text-red-600 font-medium totals-col">{totals.krankTage > 0 ? totals.krankTage : ""}</td>
                     </tr>
                   </React.Fragment>
                 );
