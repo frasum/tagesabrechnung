@@ -421,6 +421,7 @@ export default function DailySummary() {
       }
 
       // Send settlement data to external system (fire-and-forget)
+      console.log('handleDownloadPdf – session:', session?.id, 'pdfPreview:', !!pdfPreview);
       if (session?.id) {
         supabase.functions.invoke('send-settlement', {
           body: { session_id: session.id },
