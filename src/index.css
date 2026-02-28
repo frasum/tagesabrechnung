@@ -174,8 +174,9 @@
     @apply font-semibold bg-muted/50;
   }
 
-  /* ── Wochenplan table utilities ── */
-  .wochenplan-table {
+  /* ── Shared table utilities ── */
+  .wochenplan-table,
+  .buchhaltung-table {
     --zebra-bg: hsl(var(--muted) / 0.35);
     --sunday-bg: hsl(var(--destructive) / 0.06);
     --sunday-header-bg: hsl(var(--destructive) / 0.08);
@@ -185,26 +186,32 @@
   }
 
   /* Zebra striping */
-  .wochenplan-table .zebra-even td {
+  .wochenplan-table .zebra-even td,
+  .buchhaltung-table .zebra-even td {
     background-color: var(--zebra-bg);
   }
 
   /* Sunday / holiday columns override zebra */
-  .wochenplan-table .sunday-col {
+  .wochenplan-table .sunday-col,
+  .buchhaltung-table .sunday-col {
     background-color: var(--sunday-bg) !important;
   }
-  .wochenplan-table th.sunday-col {
+  .wochenplan-table th.sunday-col,
+  .buchhaltung-table th.sunday-col {
     background-color: var(--sunday-header-bg) !important;
   }
 
   /* Totals columns */
-  .wochenplan-table .totals-col {
+  .wochenplan-table .totals-col,
+  .buchhaltung-table .totals-col {
     background-color: var(--totals-bg);
   }
-  .wochenplan-table th.totals-col {
+  .wochenplan-table th.totals-col,
+  .buchhaltung-table th.totals-col {
     background-color: var(--totals-header-bg);
   }
-  .wochenplan-table .zebra-even .totals-col {
+  .wochenplan-table .zebra-even .totals-col,
+  .buchhaltung-table .zebra-even .totals-col {
     background-color: color-mix(in srgb, var(--totals-bg), var(--zebra-bg) 50%);
   }
 
@@ -227,11 +234,13 @@
     background-color: hsl(var(--background));
     box-shadow: 2px 0 4px -1px hsl(var(--foreground) / 0.06);
   }
-  .wochenplan-table thead .sticky-name {
+  .wochenplan-table thead .sticky-name,
+  .buchhaltung-table thead .sticky-name {
     z-index: 30;
     background-color: hsl(var(--muted));
   }
-  .wochenplan-table .zebra-even .sticky-name {
+  .wochenplan-table .zebra-even .sticky-name,
+  .buchhaltung-table .zebra-even .sticky-name {
     background-color: hsl(var(--muted) / 0.35);
   }
 

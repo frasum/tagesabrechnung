@@ -15,10 +15,8 @@ interface BuchhaltungRowProps {
 }
 
 export default function BuchhaltungRow({ emp, totals, note, shifts, isEven, onUpsertNote }: BuchhaltungRowProps) {
-  const rowBg = isEven ? "bg-muted/30" : "";
-
   return (
-    <tr className={`border-t border-border/50 hover:bg-primary/5 transition-colors ${rowBg}`}>
+    <tr className={`border-t border-border/50 hover:bg-primary/5 transition-colors ${isEven ? "zebra-even" : ""}`}>
       <td className="px-2 py-1.5 font-medium whitespace-nowrap">
         {emp.first_name || emp.last_name ? `${emp.first_name} ${emp.last_name}`.trim() : emp.name}
         {(emp.nickname || emp.perso_nr) ? (
@@ -27,7 +25,7 @@ export default function BuchhaltungRow({ emp, totals, note, shifts, isEven, onUp
           </span>
         ) : null}
       </td>
-      <td className="text-center px-1 py-1.5 font-semibold tabular-nums bg-primary/5 border-l border-border/40">
+      <td className="text-center px-1 py-1.5 font-semibold tabular-nums totals-col border-l border-border/40">
         {formatHours(totals.gesamt)}
       </td>
       <td className="text-center px-1 py-1.5 tabular-nums">{displayNum(totals.schichten)}</td>

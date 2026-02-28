@@ -122,7 +122,7 @@ export default function ZtBuchhaltung() {
 
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm table-fixed">
+          <table className="w-full text-sm table-fixed buchhaltung-table">
             <BuchhaltungTableHead />
             <tbody>
               {employeesWithShifts.map((emp) => {

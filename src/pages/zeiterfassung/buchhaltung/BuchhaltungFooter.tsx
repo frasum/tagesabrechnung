@@ -11,7 +11,7 @@ export default function BuchhaltungFooter({ grandTotals }: BuchhaltungFooterProp
     <tfoot>
       <tr className="bg-muted/60 border-t-2 border-border font-bold text-sm sticky bottom-0">
         <td className="px-2 py-2.5 uppercase tracking-wide text-muted-foreground">Gesamt</td>
-        <td className="text-center px-1 py-2.5 tabular-nums bg-primary/10 border-l border-border/40">{formatHours(grandTotals.gesamt)}</td>
+        <td className="text-center px-1 py-2.5 tabular-nums totals-col border-l border-border/40">{formatHours(grandTotals.gesamt)}</td>
         <td className="text-center px-1 py-2.5 tabular-nums">{grandTotals.schichten}</td>
         <td className="text-center px-1 py-2.5 tabular-nums">{displayNum(grandTotals.soFei, formatHours)}</td>
         <td className="text-center px-1 py-2.5 tabular-nums">{displayNum(grandTotals.evening, formatHours)}</td>
