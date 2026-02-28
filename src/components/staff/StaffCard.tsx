@@ -29,7 +29,7 @@ export function StaffCard({ staff, onEdit, onDelete, rankingData }: StaffCardPro
   // Permission level badge config
   const permLevel = staff.permission_level || 'staff';
   const permConfig = {
-    staff: { label: 'Mitarbeiter', icon: Shield, className: 'bg-muted text-muted-foreground border-border' },
+    staff: { label: 'Basis', icon: Shield, className: 'bg-muted text-muted-foreground border-border' },
     manager: { label: 'Manager', icon: ShieldCheck, className: 'bg-blue-100 text-blue-700 border-blue-200' },
     admin: { label: 'Admin', icon: ShieldAlert, className: 'bg-amber-100 text-amber-700 border-amber-200' },
   }[permLevel];
