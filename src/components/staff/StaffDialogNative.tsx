@@ -27,6 +27,10 @@ interface StaffDialogProps {
 export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: StaffDialogProps) {
   const { user } = useAuth();
   const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [nickname, setNickname] = useState('');
+  const [persoNr, setPersoNr] = useState('');
   const [role, setRole] = useState<StaffRole>('waiter');
   const [isActive, setIsActive] = useState(true);
   const [pinCode, setPinCode] = useState('');
@@ -57,6 +61,10 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
 
     if (staff) {
       setName(staff.name);
+      setFirstName(staff.first_name ?? '');
+      setLastName(staff.last_name ?? '');
+      setNickname(staff.nickname ?? '');
+      setPersoNr(staff.perso_nr != null ? String(staff.perso_nr) : '');
       setRole(staff.role);
       setIsActive(staff.is_active ?? true);
       setPinCode('');
@@ -64,6 +72,10 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       setPermissionLevel(currentRole || 'staff');
     } else {
       setName('');
+      setFirstName('');
+      setLastName('');
+      setNickname('');
+      setPersoNr('');
       setRole('waiter');
       setIsActive(true);
       setPinCode('');
@@ -95,6 +107,10 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       is_active: isActive,
       pin_code: pinCode.length === 4 ? pinCode : undefined,
       restaurant_ids: selectedRestaurants,
+      first_name: firstName.trim() || undefined,
+      last_name: lastName.trim() || undefined,
+      nickname: nickname.trim() || undefined,
+      perso_nr: persoNr ? Number(persoNr) : undefined,
     });
 
     // Update permission level for existing staff
@@ -146,6 +162,51 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
               placeholder="Max Mustermann"
               required
             />
+          </div>
+
+          {/* Vorname & Nachname */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="staff-firstname">Vorname</Label>
+              <Input
+                id="staff-firstname"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="Vorname"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="staff-lastname">Nachname</Label>
+              <Input
+                id="staff-lastname"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Nachname"
+              />
+            </div>
+          </div>
+
+          {/* Spitzname & Personalnummer */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="staff-nickname">Spitzname</Label>
+              <Input
+                id="staff-nickname"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                placeholder="Spitzname"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="staff-personr">Personalnummer</Label>
+              <Input
+                id="staff-personr"
+                type="number"
+                value={persoNr}
+                onChange={(e) => setPersoNr(e.target.value)}
+                placeholder="z.B. 101"
+              />
+            </div>
           </div>
 
           {/* Role - native select */}

@@ -50,6 +50,12 @@ export function StaffCard({ staff, onEdit, onDelete, rankingData }: StaffCardPro
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="font-semibold text-foreground truncate">{staff.name}</h3>
+                {(staff.first_name || staff.last_name || staff.perso_nr) && (
+                  <span className="text-xs text-muted-foreground truncate">
+                    {[staff.first_name, staff.last_name].filter(Boolean).join(' ')}
+                    {staff.perso_nr != null && ` · #${staff.perso_nr}`}
+                  </span>
+                )}
                 {!staff.is_active && (
                   <Badge variant="secondary" className="text-xs">Inaktiv</Badge>
                 )}

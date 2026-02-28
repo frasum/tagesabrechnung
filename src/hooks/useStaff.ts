@@ -30,6 +30,10 @@ export interface Staff {
   hourly_rate: number | null;
   notes: string | null;
   is_active: boolean | null;
+  first_name: string | null;
+  last_name: string | null;
+  nickname: string | null;
+  perso_nr: number | null;
   created_at: string;
   updated_at: string;
   staff_restaurants?: StaffRestaurant[];
@@ -49,6 +53,10 @@ export interface StaffInput {
   is_active?: boolean;
   pin_code?: string;
   restaurant_ids?: string[];
+  first_name?: string;
+  last_name?: string;
+  nickname?: string;
+  perso_nr?: number;
 }
 
 export function useStaff(role?: StaffRole) {
