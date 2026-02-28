@@ -1,24 +1,32 @@
 
 
-## Plan: Takeaway-Prozent-Formel für YUM anpassen
+## Plan: Alle Webhook-Funktionen entfernen
 
-### Anforderung
-Für YUM soll die Formel `(takeaway_total + ordersmart_revenue) / pos_total * 100` verwendet werden — also ohne Wolt.
+### Betroffene Komponenten
 
-### Aktuelle Logik
-In `ExcelLayout.tsx` wird bei `ordersmartInTakeaway === false` (YUM) derzeit `(takeaway + ordersmart + wolt) / pos * 100` gerechnet.
+1. **Edge Function `send-settlement`** — sendet Abrechnungsdaten an ein externes System
+2. **Edge Function `notify-pdf-export`** — sendet Telegram-Benachrichtigung bei PDF-Export
+3. **Client-Code in `DailySummary.tsx`** — ruft beide Funktionen auf
 
 ### Umsetzung
 
-**Datei: `src/components/daily-summary/layouts/ExcelLayout.tsx`**
-- Die Formel im `else`-Zweig (wenn `ordersmartInTakeaway === false`, also YUM) ändern von:
-  ```
-  (takeaway_total + ordersmart_revenue + wolt_revenue) / pos_total * 100
-  ```
-  zu:
-  ```
-  (takeaway_total + ordersmart_revenue) / pos_total * 100
-  ```
+**1. Edge Functions löschen**
+- `supabase/functions/send-settlement/index.ts` löschen
+- `supabase/functions/notify-pdf-export/index.ts` löschen
 
-Eine Änderung an einer Stelle, eine Datei.
+**2. Config bereinigen** (`supabase/config.toml`)
+- Einträge `[functions.send-settlement]` und `[functions.notify-pdf-export]` entfernen
+
+**3. Client-Code bereinigen** (`src/pages/DailySummary.tsx`)
+- Zeilen 403 (`settlementSentRef`) entfernen
+- Zeilen 414–441 entfernen (beide `supabase.functions.invoke`-Aufrufe für `notify-pdf-export` und `send-settlement`)
+- `useCallback`-Dependencies entsprechend bereinigen (`settings?.show_pdf_export_notification`, `session` entfernen)
+
+**4. Telegram-Einstellungen: PDF-Toggle entfernen**
+- In `src/pages/TelegramSettings.tsx`: den Eintrag `show_pdf_export_notification` aus `metricToggles` entfernen
+- In `src/hooks/useTelegramSettings.ts`: das Feld aus Interface und Payload entfernen
+
+### Nicht betroffen
+- Die `send-telegram-summary` Edge Function (Tagesbericht) ist kein Webhook, sondern sendet direkt an die Telegram API — bleibt bestehen
+- Die Datenbankspalte `last_settlement_sent_at` in `sessions` kann bestehen bleiben (keine Breaking Changes)
 
