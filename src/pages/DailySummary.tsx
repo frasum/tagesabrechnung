@@ -400,6 +400,32 @@ export default function DailySummary() {
     setPdfPreviewOpen(true);
   };
 
+  const triggerSettlement = useCallback(() => {
+    // Send Telegram notification if enabled (fire-and-forget)
+    if (settings?.show_pdf_export_notification !== false) {
+      supabase.functions.invoke('notify-pdf-export', {
+        body: {
+          date: format(selectedDate, 'yyyy-MM-dd'),
+          restaurant_name: restaurantName,
+          exported_by: user?.name,
+        },
+      }).catch((err) => console.error('Telegram notify failed:', err));
+    }
+
+    // Send settlement data to external system (fire-and-forget)
+    if (session?.id) {
+      supabase.functions.invoke('send-settlement', {
+        body: { session_id: session.id },
+      }).then(({ error }) => {
+        if (error) {
+          console.error('Settlement webhook failed:', error);
+        } else {
+          toast({ title: 'Abrechnung übermittelt', description: 'Die Daten wurden erfolgreich an die Zeiterfassung gesendet.' });
+        }
+      }).catch((err) => console.error('Settlement webhook failed:', err));
+    }
+  }, [selectedDate, restaurantName, user?.name, settings?.show_pdf_export_notification, session, toast]);
+
   const handleDownloadPdf = useCallback(() => {
     if (pdfPreview) {
       const link = document.createElement('a');
@@ -409,32 +435,13 @@ export default function DailySummary() {
       link.click();
       document.body.removeChild(link);
 
-      // Send Telegram notification if enabled (fire-and-forget)
-      if (settings?.show_pdf_export_notification !== false) {
-        supabase.functions.invoke('notify-pdf-export', {
-          body: {
-            date: format(selectedDate, 'yyyy-MM-dd'),
-            restaurant_name: restaurantName,
-            exported_by: user?.name,
-          },
-        }).catch((err) => console.error('Telegram notify failed:', err));
-      }
-
-      // Send settlement data to external system (fire-and-forget)
-      console.log('handleDownloadPdf – session:', session?.id, 'pdfPreview:', !!pdfPreview);
-      if (session?.id) {
-        supabase.functions.invoke('send-settlement', {
-          body: { session_id: session.id },
-        }).then(({ error }) => {
-          if (error) {
-            console.error('Settlement webhook failed:', error);
-          } else {
-            toast({ title: 'Abrechnung übermittelt', description: 'Die Daten wurden erfolgreich an die Zeiterfassung gesendet.' });
-          }
-        }).catch((err) => console.error('Settlement webhook failed:', err));
-      }
+      triggerSettlement();
     }
-  }, [pdfPreview, selectedDate, restaurantName, user?.name, settings?.show_pdf_export_notification, session, toast]);
+  }, [pdfPreview, triggerSettlement]);
+
+  const handlePrintPdf = useCallback(() => {
+    triggerSettlement();
+  }, [triggerSettlement]);
 
   const handleClosePdfPreview = useCallback(() => {
     if (pdfPreview?.blobUrl) {
@@ -1172,7 +1179,7 @@ export default function DailySummary() {
             </DialogTitle>
           </DialogHeader>
           <div className="flex-1 p-4 min-h-0">
-            {pdfPreview && <PdfPreview blobUrl={pdfPreview.blobUrl} fileName={pdfPreview.fileName} className="h-full" />}
+            {pdfPreview && <PdfPreview blobUrl={pdfPreview.blobUrl} fileName={pdfPreview.fileName} className="h-full" onPrint={handlePrintPdf} />}
           </div>
           <DialogFooter className="px-6 py-4 border-t gap-2">
             <Button variant="outline" onClick={handleClosePdfPreview}>
