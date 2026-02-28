@@ -42,7 +42,7 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
   const { data: unlinkedProfiles = [], isLoading: profilesLoading } = useUnlinkedProfiles();
   const { data: linkedProfiles = [], isLoading: linkedProfilesLoading } = useLinkedProfilesForStaff(staff?.id ?? null);
   const linkMutation = useAdminLinkAccount();
-  const { data: currentRole } = useUserRole(staff?.id);
+  const { data: currentRole, isLoading: roleLoading } = useUserRole(staff?.id);
   const updateRoleMutation = useUpdateUserRole();
 
   const didInitRef = useRef(false);
@@ -55,9 +55,11 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
     }
   }, [open]);
 
-  // Initialize form once when dialog opens
+  // Initialize form once when dialog opens (wait for currentRole to load for existing staff)
   useEffect(() => {
     if (!open || didInitRef.current) return;
+    // For existing staff, wait until the role query has finished loading
+    if (staff && roleLoading) return;
 
     if (staff) {
       setName(staff.name);
@@ -84,7 +86,7 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
     }
 
     didInitRef.current = true;
-  }, [open, staff, restaurants, currentRole]);
+  }, [open, staff, restaurants, currentRole, roleLoading]);
 
   const handlePinChange = (value: string) => {
     setPinCode(value.replace(/\D/g, '').slice(0, 4));
