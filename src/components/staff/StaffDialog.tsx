@@ -20,6 +20,10 @@ interface StaffDialogProps {
 
 export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: StaffDialogProps) {
   const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [nickname, setNickname] = useState('');
+  const [persoNr, setPersoNr] = useState('');
   const [role, setRole] = useState<StaffRole>('waiter');
   const [isActive, setIsActive] = useState(true);
   const [pinCode, setPinCode] = useState('');
@@ -35,6 +39,10 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
     if (staff) {
       // Editing existing staff
       setName(staff.name);
+      setFirstName(staff.first_name ?? '');
+      setLastName(staff.last_name ?? '');
+      setNickname(staff.nickname ?? '');
+      setPersoNr(staff.perso_nr ? String(staff.perso_nr) : '');
       setRole(staff.role);
       setIsActive(staff.is_active ?? true);
       setPinCode('');
@@ -42,6 +50,10 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
     } else {
       // Creating new staff - start with empty selection
       setName('');
+      setFirstName('');
+      setLastName('');
+      setNickname('');
+      setPersoNr('');
       setRole('waiter');
       setIsActive(true);
       setPinCode('');
@@ -68,6 +80,10 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
 
     onSave({
       name: name.trim(),
+      first_name: firstName.trim() || undefined,
+      last_name: lastName.trim() || undefined,
+      nickname: nickname.trim() || undefined,
+      perso_nr: persoNr ? parseInt(persoNr, 10) : undefined,
       role,
       is_active: isActive,
       pin_code: pinCode.length === 4 ? pinCode : undefined,
@@ -86,7 +102,7 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Name *</Label>
+            <Label htmlFor="name">Anzeigename *</Label>
             <Input
               id="name"
               value={name}
@@ -94,6 +110,49 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
               placeholder="Max Mustermann"
               required
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="firstName">Vorname</Label>
+              <Input
+                id="firstName"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="Max"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Nachname</Label>
+              <Input
+                id="lastName"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Mustermann"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="nickname">Spitzname</Label>
+              <Input
+                id="nickname"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                placeholder="Maxi"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="persoNr">Perso-Nr.</Label>
+              <Input
+                id="persoNr"
+                type="number"
+                value={persoNr}
+                onChange={(e) => setPersoNr(e.target.value)}
+                placeholder="z.B. 42"
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
