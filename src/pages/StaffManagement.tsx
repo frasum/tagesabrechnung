@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Users, Plus, ChefHat, UtensilsCrossed, Search, Trophy, ChevronDown } from 'lucide-react';
+import { Users, Plus, ChefHat, UtensilsCrossed, Search, Trophy, ChevronDown, Download } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -156,10 +158,33 @@ export default function StaffManagement() {
             </p>
           </div>
           
-          <Button onClick={handleOpenNew} className="gap-2">
-            <Plus className="w-4 h-4" />
-            Neuer Mitarbeiter
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={async () => {
+                const toastId = toast.loading('Importiere Stammdaten aus Zeiterfassung...');
+                try {
+                  const { data, error } = await supabase.functions.invoke('sync-staff-from-zt');
+                  if (error) throw error;
+                  toast.success(
+                    `${data.updated} Mitarbeiter aktualisiert` +
+                    (data.notFound > 0 ? `, ${data.notFound} nicht gefunden: ${data.notFoundNames.join(', ')}` : ''),
+                    { id: toastId, duration: 10000 }
+                  );
+                } catch (err: any) {
+                  toast.error(`Import fehlgeschlagen: ${err.message}`, { id: toastId });
+                }
+              }}
+            >
+              <Download className="w-4 h-4" />
+              Aus Zeiterfassung importieren
+            </Button>
+            <Button onClick={handleOpenNew} className="gap-2">
+              <Plus className="w-4 h-4" />
+              Neuer Mitarbeiter
+            </Button>
+          </div>
         </div>
 
         {/* Search and Filter */}
