@@ -94,6 +94,10 @@ export function AppLayout({ children }: AppLayoutProps) {
       
       // Manager with custom permissions - check if path is allowed
       if (isManager && hasCustomPermissions) {
+        // For "Zeiterfassung" sidebar item, show if ANY ZT sub-area is allowed
+        if (item.path === 'zeiterfassung') {
+          return managerPaths.some(p => p.startsWith('zeiterfassung'));
+        }
         return managerPaths.includes(item.path);
       }
       

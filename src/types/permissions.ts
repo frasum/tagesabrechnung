@@ -15,8 +15,15 @@ export const NAV_PERMISSIONS: Record<string, PermissionConfig> = {
   'statistics': { label: 'Statistiken', description: 'Statistiken einsehen', minLevel: 'manager' },
   'history': { label: 'Verlauf', description: 'Vergangene Abrechnungen', minLevel: 'manager' },
   'cash-balance': { label: 'Bargeldbestand', description: 'Bargeld verwalten', minLevel: 'manager' },
-  
   'qr-poster': { label: 'QR-Poster', description: 'Mitarbeiter Self-Service Poster', minLevel: 'manager' },
+  
+  // Zeiterfassung sub-areas
+  'zeiterfassung': { label: 'ZT Übersicht', description: 'Zeiterfassung Dashboard', minLevel: 'manager' },
+  'zeiterfassung/wochenplan': { label: 'ZT Wochenplan', description: 'Schichtplanung verwalten', minLevel: 'manager' },
+  'zeiterfassung/zusammenfassung': { label: 'ZT Zusammenfassung', description: 'Stunden-Zusammenfassung', minLevel: 'manager' },
+  'zeiterfassung/buchhaltung': { label: 'ZT Buchhaltung', description: 'Lohn-Buchhaltung', minLevel: 'manager' },
+  'zeiterfassung/perioden': { label: 'ZT Perioden', description: 'Abrechnungsperioden verwalten', minLevel: 'manager' },
+
   'staff': { label: 'Mitarbeiter', description: 'Mitarbeiter verwalten', minLevel: 'admin' },
   'permissions': { label: 'Berechtigungen', description: 'Navigationszugriff verwalten', minLevel: 'admin' },
 };
@@ -29,8 +36,12 @@ export const MANAGER_NAV_ITEMS = [
   { path: 'statistics', label: 'Statistiken' },
   { path: 'history', label: 'Verlauf' },
   { path: 'cash-balance', label: 'Bargeldbestand' },
-  
   { path: 'qr-poster', label: 'QR-Poster' },
+  { path: 'zeiterfassung', label: 'ZT Übersicht' },
+  { path: 'zeiterfassung/wochenplan', label: 'ZT Wochenplan' },
+  { path: 'zeiterfassung/zusammenfassung', label: 'ZT Zusammenfassung' },
+  { path: 'zeiterfassung/buchhaltung', label: 'ZT Buchhaltung' },
+  { path: 'zeiterfassung/perioden', label: 'ZT Perioden' },
 ];
 
 // Permission level hierarchy (higher index = more permissions)
@@ -64,10 +75,10 @@ export const PERMISSION_LEVEL_INFO: Record<PermissionLevel, { label: string; des
   },
   manager: {
     label: 'Manager',
-    description: 'Dashboard, Statistiken, Trinkgeld-Verteilung',
+    description: 'Dashboard, Statistiken, Trinkgeld-Verteilung, Zeiterfassung',
   },
   admin: {
     label: 'Admin',
-    description: 'Vollzugriff inkl. Mitarbeiterverwaltung',
+    description: 'Vollzugriff inkl. Mitarbeiterverwaltung & Zeiterfassung',
   },
 };
