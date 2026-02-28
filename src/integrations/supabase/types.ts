@@ -144,6 +144,27 @@ export type Database = {
           },
         ]
       }
+      bavarian_holidays: {
+        Row: {
+          created_at: string
+          holiday_date: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          holiday_date: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          holiday_date?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       card_transactions: {
         Row: {
           amount: number
@@ -172,6 +193,41 @@ export type Database = {
             columns: ["waiter_shift_id"]
             isOneToOne: false
             referencedRelation: "waiter_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_revenue: {
+        Row: {
+          created_at: string
+          id: string
+          restaurant_id: string
+          revenue_date: string
+          total_revenue: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          restaurant_id: string
+          revenue_date: string
+          total_revenue?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          restaurant_id?: string
+          revenue_date?: string
+          total_revenue?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_revenue_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
         ]
@@ -316,6 +372,54 @@ export type Database = {
           },
         ]
       }
+      payroll_notes: {
+        Row: {
+          besonderheiten: string | null
+          created_at: string
+          employee_id: string
+          id: string
+          period_id: string
+          updated_at: string
+          urlaub_tage: number
+          vorschuss: number
+        }
+        Insert: {
+          besonderheiten?: string | null
+          created_at?: string
+          employee_id: string
+          id?: string
+          period_id: string
+          updated_at?: string
+          urlaub_tage?: number
+          vorschuss?: number
+        }
+        Update: {
+          besonderheiten?: string | null
+          created_at?: string
+          employee_id?: string
+          id?: string
+          period_id?: string
+          updated_at?: string
+          urlaub_tage?: number
+          vorschuss?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_notes_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_notes_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "scheduling_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -434,6 +538,44 @@ export type Database = {
           slug?: string
         }
         Relationships: []
+      }
+      scheduling_periods: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          label: string
+          restaurant_id: string | null
+          start_date: string
+          status: Database["public"]["Enums"]["period_status"]
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          label: string
+          restaurant_id?: string | null
+          start_date: string
+          status?: Database["public"]["Enums"]["period_status"]
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          label?: string
+          restaurant_id?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["period_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduling_periods_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sessions: {
         Row: {
@@ -568,31 +710,43 @@ export type Database = {
       staff: {
         Row: {
           created_at: string
+          first_name: string | null
           hourly_rate: number | null
           id: string
           is_active: boolean | null
+          last_name: string | null
           name: string
+          nickname: string | null
           notes: string | null
+          perso_nr: number | null
           role: Database["public"]["Enums"]["staff_role"]
           updated_at: string
         }
         Insert: {
           created_at?: string
+          first_name?: string | null
           hourly_rate?: number | null
           id?: string
           is_active?: boolean | null
+          last_name?: string | null
           name: string
+          nickname?: string | null
           notes?: string | null
+          perso_nr?: number | null
           role: Database["public"]["Enums"]["staff_role"]
           updated_at?: string
         }
         Update: {
           created_at?: string
+          first_name?: string | null
           hourly_rate?: number | null
           id?: string
           is_active?: boolean | null
+          last_name?: string | null
           name?: string
+          nickname?: string | null
           notes?: string | null
+          perso_nr?: number | null
           role?: Database["public"]["Enums"]["staff_role"]
           updated_at?: string
         }
@@ -636,18 +790,24 @@ export type Database = {
           id: string
           restaurant_id: string
           staff_id: string
+          zt_department: Database["public"]["Enums"]["zt_department"] | null
+          zt_hourly_rate: number | null
         }
         Insert: {
           created_at?: string
           id?: string
           restaurant_id: string
           staff_id: string
+          zt_department?: Database["public"]["Enums"]["zt_department"] | null
+          zt_hourly_rate?: number | null
         }
         Update: {
           created_at?: string
           id?: string
           restaurant_id?: string
           staff_id?: string
+          zt_department?: Database["public"]["Enums"]["zt_department"] | null
+          zt_hourly_rate?: number | null
         }
         Relationships: [
           {
@@ -896,6 +1056,110 @@ export type Database = {
           },
         ]
       }
+      weeks: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          period_id: string
+          start_date: string
+          week_number: number
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          period_id: string
+          start_date: string
+          week_number: number
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          period_id?: string
+          start_date?: string
+          week_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weeks_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "scheduling_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      zt_shifts: {
+        Row: {
+          absence_type: string | null
+          created_at: string
+          department: string | null
+          employee_id: string
+          end_time: string | null
+          evening_hours: number
+          id: string
+          is_holiday: boolean
+          night_hours: number
+          shift_date: string
+          start_time: string | null
+          sunday_holiday_hours: number
+          total_hours: number
+          updated_at: string
+          week_id: string
+        }
+        Insert: {
+          absence_type?: string | null
+          created_at?: string
+          department?: string | null
+          employee_id: string
+          end_time?: string | null
+          evening_hours?: number
+          id?: string
+          is_holiday?: boolean
+          night_hours?: number
+          shift_date: string
+          start_time?: string | null
+          sunday_holiday_hours?: number
+          total_hours?: number
+          updated_at?: string
+          week_id: string
+        }
+        Update: {
+          absence_type?: string | null
+          created_at?: string
+          department?: string | null
+          employee_id?: string
+          end_time?: string | null
+          evening_hours?: number
+          id?: string
+          is_holiday?: boolean
+          night_hours?: number
+          shift_date?: string
+          start_time?: string | null
+          sunday_holiday_hours?: number
+          total_hours?: number
+          updated_at?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zt_shifts_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zt_shifts_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -915,7 +1179,9 @@ export type Database = {
     }
     Enums: {
       app_permission_level: "staff" | "manager" | "admin"
+      period_status: "open" | "locked"
       staff_role: "waiter" | "kitchen" | "both"
+      zt_department: "Küche" | "GL" | "Service"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1044,7 +1310,9 @@ export const Constants = {
   public: {
     Enums: {
       app_permission_level: ["staff", "manager", "admin"],
+      period_status: ["open", "locked"],
       staff_role: ["waiter", "kitchen", "both"],
+      zt_department: ["Küche", "GL", "Service"],
     },
   },
 } as const
