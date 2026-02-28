@@ -1091,6 +1091,7 @@ export default function DailySummary() {
       updatedByName={session?.updated_by_name || undefined}
       guestCount={formData.guest_count}
       onGuestCountChange={(v) => updateField('guest_count', v)}
+      ordersmartInTakeaway={restaurant?.ordersmart_in_takeaway ?? false}
     />
   );
 

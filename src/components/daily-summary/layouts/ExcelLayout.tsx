@@ -71,6 +71,7 @@ interface ExcelLayoutProps {
   updatedByName?: string;
   guestCount?: number;
   onGuestCountChange?: (value: number) => void;
+  ordersmartInTakeaway?: boolean;
 }
 
 export function ExcelLayout({
@@ -105,7 +106,8 @@ export function ExcelLayout({
   createdByName,
   updatedByName,
   guestCount = 0,
-  onGuestCountChange
+  onGuestCountChange,
+  ordersmartInTakeaway = false
 }: ExcelLayoutProps) {
   const getLabel = gl || ((key: LabelKey) => key);
   const isFieldHidden = ifh || (() => false);
@@ -202,7 +204,10 @@ export function ExcelLayout({
               {formData.pos_total > 0 &&
               <span className="text-xs text-muted-foreground tabular-nums">
                   {new Intl.NumberFormat('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(
-                  (formData.takeaway_total + formData.ordersmart_revenue + formData.wolt_revenue) / formData.pos_total * 100
+                  (ordersmartInTakeaway
+                    ? formData.takeaway_total
+                    : (formData.takeaway_total + formData.ordersmart_revenue + formData.wolt_revenue)
+                  ) / formData.pos_total * 100
                 )} %
                 </span>
               }
