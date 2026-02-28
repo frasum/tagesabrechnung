@@ -1,5 +1,6 @@
 export interface EmployeeWithDepartment {
   id: string;
+  name: string;
   first_name: string;
   last_name: string;
   nickname: string | null;
