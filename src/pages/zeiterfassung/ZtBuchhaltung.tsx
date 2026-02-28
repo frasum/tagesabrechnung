@@ -4,11 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
 import { useRestaurant } from "@/hooks/useRestaurant";
 import { useRestaurantEmployees } from "@/hooks/useRestaurantEmployees";
 import { useZt } from "@/contexts/ZtContext";
 import { DEPARTMENT_ORDER } from "@/lib/shiftCalculations";
 import { getEmployeeTotals } from "./buchhaltung/utils";
+import { exportBuchhaltungPdf } from "@/lib/exportBuchhaltungPdf";
 import BuchhaltungTableHead from "./buchhaltung/BuchhaltungTableHead";
 import BuchhaltungDeptHeader from "./buchhaltung/BuchhaltungDeptHeader";
 import BuchhaltungRow from "./buchhaltung/BuchhaltungRow";
@@ -114,18 +117,33 @@ export default function ZtBuchhaltung() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3 flex-wrap">
-        <h1 className="text-2xl font-bold">Buchhaltung</h1>
-        <Select value={selectedPeriodId} onValueChange={setSelectedPeriodId}>
-          <SelectTrigger className="w-[200px] h-8 text-xs">
-            <SelectValue placeholder="Periode wählen" />
-          </SelectTrigger>
-          <SelectContent>
-            {periods?.map((p) => (
-              <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-3 flex-wrap">
+          <h1 className="text-2xl font-bold">Buchhaltung</h1>
+          <Select value={selectedPeriodId} onValueChange={setSelectedPeriodId}>
+            <SelectTrigger className="w-[200px] h-8 text-xs">
+              <SelectValue placeholder="Periode wählen" />
+            </SelectTrigger>
+            <SelectContent>
+              {periods?.map((p) => (
+                <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={!selectedPeriodId || !employeesWithShifts.length}
+          onClick={() => {
+            const period = periods?.find(p => p.id === selectedPeriodId);
+            if (!period) return;
+            exportBuchhaltungPdf(period.label, employeesWithShifts, shifts ?? [], payrollNotes ?? []);
+            toast.success("PDF wurde erstellt");
+          }}
+        >
+          <Download className="mr-1 h-4 w-4" /> PDF Export
+        </Button>
       </div>
 
       <Card className="overflow-hidden">
