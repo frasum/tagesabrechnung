@@ -146,4 +146,28 @@
   .currency-input {
     @apply text-right tabular-nums;
   }
+
+  /* Zeiterfassung department colors */
+  .dept-kueche {
+    background-color: hsl(var(--warning) / 0.15);
+    border-color: hsl(var(--warning) / 0.3);
+  }
+
+  .dept-gl {
+    background-color: hsl(var(--primary) / 0.15);
+    border-color: hsl(var(--primary) / 0.3);
+  }
+
+  .dept-service {
+    background-color: hsl(var(--success) / 0.15);
+    border-color: hsl(var(--success) / 0.3);
+  }
+
+  .zt-shift-cell {
+    @apply text-xs tabular-nums text-center px-1 py-0.5;
+  }
+
+  .zt-total-row {
+    @apply font-semibold bg-muted/50;
+  }
 }

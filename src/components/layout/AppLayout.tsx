@@ -16,7 +16,8 @@ import {
   QrCode,
   ChevronDown,
   LucideIcon,
-  Send
+  Send,
+  Clock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -52,6 +53,7 @@ const allNavItems: NavItem[] = [
   { path: 'history', label: 'Verlauf', icon: History, minLevel: 'manager' },
   { path: 'cash-balance', label: 'Bargeldbestand', icon: Wallet, minLevel: 'manager' },
   { path: 'qr-poster', label: 'QR-Poster', icon: QrCode, minLevel: 'manager' },
+  { path: 'zeiterfassung', label: 'Zeiterfassung', icon: Clock, minLevel: 'manager' },
 ];
 
 export function AppLayout({ children }: AppLayoutProps) {

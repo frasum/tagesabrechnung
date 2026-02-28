@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { RestaurantProvider } from "@/contexts/RestaurantContext";
+import { ZtProvider } from "@/contexts/ZtContext";
 import { DateProvider } from "@/contexts/DateContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { SessionLockScreen } from "@/components/auth/SessionLockScreen";
@@ -30,6 +31,11 @@ const ConfirmLoginPage = lazy(() => import("./pages/ConfirmLoginPage").then(m =>
 const PermissionManagement = lazy(() => import("./pages/PermissionManagement"));
 const RestaurantSelect = lazy(() => import("./pages/RestaurantSelect"));
 const TelegramSettings = lazy(() => import("./pages/TelegramSettings"));
+const ZtDashboard = lazy(() => import("./pages/zeiterfassung/ZtDashboard"));
+const Wochenplan = lazy(() => import("./pages/zeiterfassung/Wochenplan"));
+const Zusammenfassung = lazy(() => import("./pages/zeiterfassung/Zusammenfassung"));
+const ZtBuchhaltung = lazy(() => import("./pages/zeiterfassung/ZtBuchhaltung"));
+const Perioden = lazy(() => import("./pages/zeiterfassung/Perioden"));
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -50,17 +56,25 @@ function RestaurantRoutes() {
   return (
     <RestaurantProvider>
       <DateProvider>
-        <Routes>
-          <Route index element={<ProtectedRoute requiredLevel="manager"><WaiterCashUp /></ProtectedRoute>} />
-          <Route path="waiter" element={<ProtectedRoute><WaiterMobile /></ProtectedRoute>} />
-          <Route path="summary" element={<ProtectedRoute requiredLevel="manager"><DailySummary /></ProtectedRoute>} />
-          <Route path="kitchen" element={<ProtectedRoute requiredLevel="manager"><KitchenTipSplit /></ProtectedRoute>} />
-          <Route path="statistics" element={<ProtectedRoute requiredLevel="manager"><Statistics /></ProtectedRoute>} />
-          <Route path="history" element={<ProtectedRoute requiredLevel="manager"><History /></ProtectedRoute>} />
-          <Route path="cash-balance" element={<ProtectedRoute requiredLevel="manager"><CashBalance /></ProtectedRoute>} />
-          
-          <Route path="qr-poster" element={<ProtectedRoute requiredLevel="manager"><WaiterQRPoster /></ProtectedRoute>} />
-        </Routes>
+        <ZtProvider>
+          <Routes>
+            <Route index element={<ProtectedRoute requiredLevel="manager"><WaiterCashUp /></ProtectedRoute>} />
+            <Route path="waiter" element={<ProtectedRoute><WaiterMobile /></ProtectedRoute>} />
+            <Route path="summary" element={<ProtectedRoute requiredLevel="manager"><DailySummary /></ProtectedRoute>} />
+            <Route path="kitchen" element={<ProtectedRoute requiredLevel="manager"><KitchenTipSplit /></ProtectedRoute>} />
+            <Route path="statistics" element={<ProtectedRoute requiredLevel="manager"><Statistics /></ProtectedRoute>} />
+            <Route path="history" element={<ProtectedRoute requiredLevel="manager"><History /></ProtectedRoute>} />
+            <Route path="cash-balance" element={<ProtectedRoute requiredLevel="manager"><CashBalance /></ProtectedRoute>} />
+            <Route path="qr-poster" element={<ProtectedRoute requiredLevel="manager"><WaiterQRPoster /></ProtectedRoute>} />
+            
+            {/* Zeiterfassung routes */}
+            <Route path="zeiterfassung" element={<ProtectedRoute requiredLevel="manager"><ZtDashboard /></ProtectedRoute>} />
+            <Route path="zeiterfassung/wochenplan" element={<ProtectedRoute requiredLevel="manager"><Wochenplan /></ProtectedRoute>} />
+            <Route path="zeiterfassung/zusammenfassung" element={<ProtectedRoute requiredLevel="manager"><Zusammenfassung /></ProtectedRoute>} />
+            <Route path="zeiterfassung/buchhaltung" element={<ProtectedRoute requiredLevel="manager"><ZtBuchhaltung /></ProtectedRoute>} />
+            <Route path="zeiterfassung/perioden" element={<ProtectedRoute requiredLevel="manager"><Perioden /></ProtectedRoute>} />
+          </Routes>
+        </ZtProvider>
       </DateProvider>
     </RestaurantProvider>
   );
