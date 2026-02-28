@@ -26,6 +26,10 @@ export type PermissionLevel = 'staff' | 'manager' | 'admin';
 export interface Staff {
   id: string;
   name: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  nickname?: string | null;
+  perso_nr?: number | null;
   role: StaffRole;
   hourly_rate: number | null;
   notes: string | null;
@@ -43,6 +47,10 @@ export interface Staff {
 
 export interface StaffInput {
   name: string;
+  first_name?: string;
+  last_name?: string;
+  nickname?: string;
+  perso_nr?: number;
   role: StaffRole;
   hourly_rate?: number;
   notes?: string;
