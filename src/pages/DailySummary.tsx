@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { format, isToday, isYesterday } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -400,6 +400,8 @@ export default function DailySummary() {
     setPdfPreviewOpen(true);
   };
 
+  const settlementSentRef = useRef<string | null>(null);
+
   const handleDownloadPdf = useCallback(() => {
     if (pdfPreview) {
       const link = document.createElement('a');
@@ -420,18 +422,22 @@ export default function DailySummary() {
         }).catch((err) => console.error('Telegram notify failed:', err));
       }
 
-      // Send settlement data to external system (fire-and-forget)
-      console.log('handleDownloadPdf – session:', session?.id, 'pdfPreview:', !!pdfPreview);
-      if (session?.id) {
+      // Send settlement data (deduplicated client-side per session)
+      if (session?.id && settlementSentRef.current !== session.id) {
+        settlementSentRef.current = session.id;
         supabase.functions.invoke('send-settlement', {
           body: { session_id: session.id },
         }).then(({ error }) => {
           if (error) {
             console.error('Settlement webhook failed:', error);
+            settlementSentRef.current = null; // allow retry
           } else {
             toast({ title: 'Abrechnung übermittelt', description: 'Die Daten wurden erfolgreich an die Zeiterfassung gesendet.' });
           }
-        }).catch((err) => console.error('Settlement webhook failed:', err));
+        }).catch((err) => {
+          console.error('Settlement webhook failed:', err);
+          settlementSentRef.current = null;
+        });
       }
     }
   }, [pdfPreview, selectedDate, restaurantName, user?.name, settings?.show_pdf_export_notification, session, toast]);

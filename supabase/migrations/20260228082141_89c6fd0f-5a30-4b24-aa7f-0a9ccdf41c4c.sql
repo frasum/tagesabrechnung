@@ -1,0 +1,1 @@
+ALTER TABLE public.sessions ADD COLUMN last_settlement_sent_at timestamptz DEFAULT NULL;

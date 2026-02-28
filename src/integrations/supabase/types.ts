@@ -445,6 +445,7 @@ export type Database = {
           guest_count: number | null
           id: string
           is_finalized: boolean | null
+          last_settlement_sent_at: string | null
           notes: string | null
           ordersmart_revenue: number | null
           pos_total: number | null
@@ -472,6 +473,7 @@ export type Database = {
           guest_count?: number | null
           id?: string
           is_finalized?: boolean | null
+          last_settlement_sent_at?: string | null
           notes?: string | null
           ordersmart_revenue?: number | null
           pos_total?: number | null
@@ -499,6 +501,7 @@ export type Database = {
           guest_count?: number | null
           id?: string
           is_finalized?: boolean | null
+          last_settlement_sent_at?: string | null
           notes?: string | null
           ordersmart_revenue?: number | null
           pos_total?: number | null

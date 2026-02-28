@@ -6,6 +6,8 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const DEDUP_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -24,6 +26,25 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+
+    // --- Deduplication check ---
+    const { data: sessionCheck, error: checkError } = await supabase
+      .from("sessions")
+      .select("last_settlement_sent_at")
+      .eq("id", session_id)
+      .single();
+
+    if (checkError) throw checkError;
+
+    if (sessionCheck?.last_settlement_sent_at) {
+      const lastSent = new Date(sessionCheck.last_settlement_sent_at).getTime();
+      if (Date.now() - lastSent < DEDUP_WINDOW_MS) {
+        return new Response(
+          JSON.stringify({ success: true, skipped: true, reason: "recently_sent" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
 
     const [sessionRes, waiterRes, kitchenRes, advancesRes] = await Promise.all([
       supabase.from("sessions").select("*").eq("id", session_id).single(),
@@ -96,6 +117,12 @@ Deno.serve(async (req) => {
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // --- Mark as sent ---
+    await supabase
+      .from("sessions")
+      .update({ last_settlement_sent_at: new Date().toISOString() })
+      .eq("id", session_id);
 
     return new Response(
       JSON.stringify({ success: true, webhook_status: webhookRes.status }),
