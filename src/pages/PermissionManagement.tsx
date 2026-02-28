@@ -31,7 +31,7 @@ function useAllUserRoles() {
 export default function PermissionManagement() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { data: staffList = [], isLoading: staffLoading } = useStaff();
+  const { data: staffList = [], isLoading: staffLoading } = useStaff(undefined, { includeRoles: true });
   const { data: allPermissions = {}, isLoading: permissionsLoading } = useAllManagerNavPermissions();
   const { data: userRoles = [], isLoading: rolesLoading } = useAllUserRoles();
   const savePermissions = useSaveManagerNavPermissions();
