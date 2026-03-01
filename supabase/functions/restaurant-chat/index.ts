@@ -49,10 +49,12 @@ Deno.serve(async (req) => {
         .select("id, session_date, restaurant_id, pos_total, terminal_1_total, terminal_2_total, ordersmart_revenue, wolt_revenue, guest_count, vouchers_sold, vouchers_redeemed, finedine_vouchers, einladung, sonstige_einnahme, notes, created_by_name")
         .in("restaurant_id", restaurant_ids)
         .gte("session_date", sinceStr)
-        .order("session_date", { ascending: false }),
+        .order("session_date", { ascending: false })
+        .limit(5000),
       supabase
         .from("staff")
-        .select("name, role, is_active, participates_in_pool"),
+        .select("name, role, is_active, participates_in_pool")
+        .limit(5000),
       supabase
         .from("restaurants")
         .select("id, name, slug")
@@ -73,19 +75,23 @@ Deno.serve(async (req) => {
         supabase
           .from("waiter_shifts")
           .select("session_id, waiter_name, pos_sales, kassiert_brutto, differenz, kitchen_tip, hours_worked")
-          .in("session_id", sessionIds),
+          .in("session_id", sessionIds)
+          .limit(5000),
         supabase
           .from("kitchen_shifts")
           .select("session_id, staff_name, hours_worked")
-          .in("session_id", sessionIds),
+          .in("session_id", sessionIds)
+          .limit(5000),
         supabase
           .from("expenses")
           .select("session_id, amount, description")
-          .in("session_id", sessionIds),
+          .in("session_id", sessionIds)
+          .limit(5000),
         supabase
           .from("advances")
           .select("session_id, amount, staff_name")
-          .in("session_id", sessionIds),
+          .in("session_id", sessionIds)
+          .limit(5000),
       ]);
       waiterShifts = wsRes.data || [];
       kitchenShifts = ksRes.data || [];
@@ -99,6 +105,45 @@ Deno.serve(async (req) => {
       restaurantMap[r.id] = r.name;
     });
 
+    // Build monthly aggregation
+    const monthlyAgg: Record<string, Record<string, number>> = {};
+    sessions.forEach((s: any) => {
+      const month = s.session_date.slice(0, 7);
+      const restaurant = restaurantMap[s.restaurant_id] || "?";
+      const key = `${month}|${restaurant}`;
+      if (!monthlyAgg[key]) {
+        monthlyAgg[key] = { pos_total: 0, kreditkarten: 0, ordersmart: 0, wolt: 0, gutscheine_vk: 0, gutscheine_einl: 0, finedine: 0, einladung: 0, sonstige_einnahme: 0, gaeste: 0, sessions_count: 0 };
+      }
+      const a = monthlyAgg[key];
+      a.pos_total += s.pos_total || 0;
+      a.kreditkarten += (s.terminal_1_total || 0) + (s.terminal_2_total || 0);
+      a.ordersmart += s.ordersmart_revenue || 0;
+      a.wolt += s.wolt_revenue || 0;
+      a.gutscheine_vk += s.vouchers_sold || 0;
+      a.gutscheine_einl += s.vouchers_redeemed || 0;
+      a.finedine += s.finedine_vouchers || 0;
+      a.einladung += s.einladung || 0;
+      a.sonstige_einnahme += s.sonstige_einnahme || 0;
+      a.gaeste += s.guest_count || 0;
+      a.sessions_count += 1;
+    });
+
+    // Aggregate expenses and advances per month
+    const expBySession: Record<string, number> = {};
+    expenses.forEach((e: any) => { expBySession[e.session_id] = (expBySession[e.session_id] || 0) + (e.amount || 0); });
+    const advBySession: Record<string, number> = {};
+    advances.forEach((a: any) => { advBySession[a.session_id] = (advBySession[a.session_id] || 0) + (a.amount || 0); });
+
+    const monthlyExpAdv: Record<string, { ausgaben: number; vorschuesse: number }> = {};
+    sessions.forEach((s: any) => {
+      const month = s.session_date.slice(0, 7);
+      const restaurant = restaurantMap[s.restaurant_id] || "?";
+      const key = `${month}|${restaurant}`;
+      if (!monthlyExpAdv[key]) monthlyExpAdv[key] = { ausgaben: 0, vorschuesse: 0 };
+      monthlyExpAdv[key].ausgaben += expBySession[s.id] || 0;
+      monthlyExpAdv[key].vorschuesse += advBySession[s.id] || 0;
+    });
+
     // Build context string
     const contextParts: string[] = [];
 
@@ -107,7 +152,20 @@ Deno.serve(async (req) => {
       contextParts.push(`${r.name} (${r.slug})`);
     });
 
-    contextParts.push("\n=== SESSIONS (letzte 90 Tage) ===");
+    // Monthly summary BEFORE raw data
+    contextParts.push("\n=== MONATLICHE ZUSAMMENFASSUNG (voraggregiert, korrekte Summen) ===");
+    contextParts.push("Monat | Restaurant | Tage | Umsatz | Kreditkarten | OrderSmart | Wolt | Gutschein-VK | Gutschein-Einl | FineDine | Einladung | SoEinnahme | Gäste | Ausgaben | Vorschüsse");
+    const sortedKeys = Object.keys(monthlyAgg).sort();
+    for (const key of sortedKeys) {
+      const [month, restaurant] = key.split("|");
+      const a = monthlyAgg[key];
+      const ea = monthlyExpAdv[key] || { ausgaben: 0, vorschuesse: 0 };
+      contextParts.push(
+        `${month} | ${restaurant} | ${a.sessions_count} | ${a.pos_total}€ | ${a.kreditkarten}€ | ${a.ordersmart}€ | ${a.wolt}€ | ${a.gutscheine_vk}€ | ${a.gutscheine_einl}€ | ${a.finedine}€ | ${a.einladung}€ | ${a.sonstige_einnahme}€ | ${a.gaeste} | ${ea.ausgaben}€ | ${ea.vorschuesse}€`
+      );
+    }
+
+    contextParts.push("\n=== SESSIONS (letzte 90 Tage, Rohdaten) ===");
     contextParts.push("Datum | Restaurant | Kassen-Umsatz | Kreditkarten | OrderSmart | Wolt | Gutschein-VK | Gutschein-Einl | FineDine-Gutscheine | Einladung | SoEinnahme | Gäste | Notizen");
     sessions.forEach((s: any) => {
       const cards = (s.terminal_1_total || 0) + (s.terminal_2_total || 0);
@@ -174,6 +232,7 @@ Du hast Zugriff auf die folgenden echten Daten der letzten 90 Tage:
 ${dataContext}
 
 Wichtige Regeln:
+- Die MONATLICHE ZUSAMMENFASSUNG enthält voraggregierte, korrekte Summen. Verwende IMMER diese Summen wenn nach Monats-Totalen gefragt wird, anstatt selbst aus den Rohdaten zu rechnen.
 - Formatiere Geldbeträge immer als Euro (z.B. 1.234,56 €)
 - Nutze Markdown-Tabellen wenn es sinnvoll ist
 - Antworte präzise und basierend auf den Daten
