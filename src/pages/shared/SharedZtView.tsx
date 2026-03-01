@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -9,9 +9,15 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, FileDown, FileSpreadsheet, AlertCircle } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Toaster as Sonner } from "@/components/ui/sonner";
-import { format, parseISO, eachDayOfInterval, startOfWeek, endOfWeek } from "date-fns";
+import { format, parseISO, eachDayOfInterval, startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
 import { de } from "date-fns/locale";
 import {
   formatHours, DEPARTMENT_ORDER, getDepartmentBgClass,
@@ -162,6 +168,9 @@ export default function SharedZtView() {
               periodLabel={period.label}
               selectedWeekId={selectedWeekId}
               onSelectWeek={setSelectedWeekId}
+              isLocked={period.status === "locked"}
+              token={token!}
+              onShiftsChanged={() => queryClient.invalidateQueries({ queryKey: ["shared-zt", token] })}
             />
           </TabsContent>
 
@@ -191,8 +200,40 @@ export default function SharedZtView() {
   );
 }
 
-// ========== Wochenplan Tab ==========
-function WochenplanTab({ weeks, shifts, employees, holidays, periodLabel, selectedWeekId, onSelectWeek }: {
+function formatTimeInput(value: string): string {
+  if (!value.trim()) return "";
+  if (/^\d{1,2}$/.test(value)) return value.padStart(2, "0") + ":00";
+  if (/^\d{4}$/.test(value)) return value.slice(0, 2) + ":" + value.slice(2);
+  const m = value.match(/^(\d{1,2}):(\d{1,2})$/);
+  if (m) return m[1].padStart(2, "0") + ":" + m[2].padEnd(2, "0");
+  return value;
+}
+
+function handleTimeKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+  if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); return; }
+  if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) return;
+  const el = e.currentTarget;
+  if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+    const atEdge = e.key === "ArrowLeft" ? el.selectionStart === 0 : el.selectionEnd === el.value.length;
+    if (!atEdge) return;
+  }
+  e.preventDefault();
+  const allFields = Array.from(document.querySelectorAll<HTMLInputElement>('[data-time-field]'));
+  const idx = allFields.indexOf(el);
+  if (idx === -1) return;
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    const col = el.dataset.timeCol;
+    const sameCol = allFields.filter(f => f.dataset.timeCol === col);
+    const colIdx = sameCol.indexOf(el);
+    const nextColIdx = e.key === "ArrowDown" ? colIdx + 1 : colIdx - 1;
+    if (nextColIdx >= 0 && nextColIdx < sameCol.length) { sameCol[nextColIdx].focus(); sameCol[nextColIdx].select(); }
+    return;
+  }
+  const target = e.key === "ArrowRight" ? idx + 1 : idx - 1;
+  if (target >= 0 && target < allFields.length) { allFields[target].focus(); allFields[target].select(); }
+}
+
+function WochenplanTab({ weeks, shifts, employees, holidays, periodLabel, selectedWeekId, onSelectWeek, isLocked, token, onShiftsChanged }: {
   weeks: SharedData["weeks"];
   shifts: Shift[];
   employees: SharedData["employees"];
@@ -200,7 +241,16 @@ function WochenplanTab({ weeks, shifts, employees, holidays, periodLabel, select
   periodLabel: string;
   selectedWeekId: string;
   onSelectWeek: (id: string) => void;
+  isLocked: boolean;
+  token: string;
+  onShiftsChanged: () => void;
 }) {
+  const [editingTime, setEditingTime] = useState<Record<string, string>>({});
+  const [absenceDialog, setAbsenceDialog] = useState<{
+    open: boolean; employeeId: string; employeeName: string; absenceType: 'urlaub' | 'krank';
+    startDate: Date; endDate: Date | undefined; department: string;
+  }>({ open: false, employeeId: "", employeeName: "", absenceType: "urlaub", startDate: new Date(), endDate: undefined, department: "" });
+
   const selectedWeek = weeks.find(w => w.id === selectedWeekId);
   const weekDays = selectedWeek
     ? eachDayOfInterval({
@@ -214,7 +264,77 @@ function WochenplanTab({ weeks, shifts, employees, holidays, periodLabel, select
 
   const weekShifts = shifts.filter(s => s.week_id === selectedWeekId);
   const allPeriodShifts = shifts;
-  const weekIds = weeks.map(w => w.id);
+
+  const upsertShift = useMutation({
+    mutationFn: async (params: {
+      employee_id: string; week_id: string; shift_date: string;
+      start_time: string | null; end_time: string | null;
+      absence_type?: string | null; department?: string; field?: string;
+    }) => {
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/shared-zt-data?token=${token}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+          body: JSON.stringify({ action: "upsert_shift", ...params }),
+        }
+      );
+      if (!res.ok) { const err = await res.json(); throw new Error(err.error || "Fehler"); }
+    },
+    onSuccess: () => onShiftsChanged(),
+    onError: () => toast.error("Fehler beim Speichern"),
+  });
+
+  const getShift = useCallback(
+    (employeeId: string, date: string, department?: string) =>
+      weekShifts.find(s => s.employee_id === employeeId && s.shift_date === date && (!department || s.department === department)),
+    [weekShifts]
+  );
+
+  const handleTimeChange = (employeeId: string, date: string, field: "start_time" | "end_time", value: string, department?: string) => {
+    upsertShift.mutate({
+      employee_id: employeeId, week_id: selectedWeekId, shift_date: date,
+      start_time: field === "start_time" ? (value || null) : null,
+      end_time: field === "end_time" ? (value || null) : null,
+      department: department ?? "", field,
+    });
+  };
+
+  const openAbsenceDialog = (employeeId: string, date: string, absenceType: 'urlaub' | 'krank', department?: string) => {
+    const emp = employees.find(e => e.id === employeeId);
+    setAbsenceDialog({
+      open: true, employeeId,
+      employeeName: emp ? ([emp.first_name, emp.last_name].filter(Boolean).join(" ") || emp.name) : "",
+      absenceType, startDate: parseISO(date), endDate: undefined, department: department ?? "",
+    });
+  };
+
+  const handleAbsenceRange = () => {
+    const { employeeId, absenceType, startDate, endDate, department } = absenceDialog;
+    const rangeEnd = endDate || startDate;
+    const days = eachDayOfInterval({ start: startDate, end: rangeEnd });
+    let skipped = 0;
+    for (const day of days) {
+      const dateStr = format(day, "yyyy-MM-dd");
+      const week = weeks.find(w => isWithinInterval(day, { start: parseISO(w.start_date), end: parseISO(w.end_date) }));
+      if (!week) { skipped++; continue; }
+      upsertShift.mutate({
+        employee_id: employeeId, week_id: week.id, shift_date: dateStr,
+        start_time: null, end_time: null, absence_type: absenceType, department,
+      });
+    }
+    if (skipped > 0) toast.warning(`${skipped} Tag(e) lagen außerhalb der Periode.`);
+    toast.success(`${absenceType === 'urlaub' ? 'Urlaub' : 'Krank'} für ${days.length - skipped} Tag(e) eingetragen.`);
+    setAbsenceDialog(prev => ({ ...prev, open: false }));
+  };
+
+  const handleAbsenceToggle = (employeeId: string, date: string, absenceType: string | null, department?: string) => {
+    upsertShift.mutate({
+      employee_id: employeeId, week_id: selectedWeekId, shift_date: date,
+      start_time: null, end_time: null, absence_type: absenceType, department: department ?? "",
+    });
+  };
 
   return (
     <div className="space-y-3">
@@ -242,7 +362,7 @@ function WochenplanTab({ weeks, shifts, employees, holidays, periodLabel, select
             <thead>
               <tr className="bg-muted">
                 <th className="text-left p-1.5 font-semibold min-w-[140px] border-b text-xs" />
-                {weekDays.map((day, i) => {
+                {weekDays.map((day) => {
                   const dateStr = format(day, "yyyy-MM-dd");
                   const isHol = holidays.has(dateStr);
                   const isSun = isSunday(day);
@@ -260,7 +380,7 @@ function WochenplanTab({ weeks, shifts, employees, holidays, periodLabel, select
               {employees.map(emp => {
                 const empWeekShifts = weekShifts.filter(s => s.employee_id === emp.id && s.department === emp.department);
                 const weekTotal = empWeekShifts.reduce((sum, s) => sum + Number(s.total_hours), 0);
-                if (weekTotal === 0 && !empWeekShifts.some(s => s.absence_type)) return null;
+                const hasContent = weekTotal > 0 || empWeekShifts.some(s => s.absence_type);
 
                 return (
                   <tr key={`${emp.id}-${emp.department}`} className="border-t hover:bg-muted/30">
@@ -270,20 +390,95 @@ function WochenplanTab({ weeks, shifts, employees, holidays, periodLabel, select
                     {weekDays.map(day => {
                       const dateStr = format(day, "yyyy-MM-dd");
                       const shift = empWeekShifts.find(s => s.shift_date === dateStr);
-                      if (!activeDates.has(dateStr)) return <td key={dateStr} colSpan={2} className="opacity-40" />;
-                      if (shift?.absence_type) {
+                      const isActive = activeDates.has(dateStr);
+                      if (!isActive) return <td key={dateStr} colSpan={2} className="opacity-40" />;
+
+                      const absenceType = shift?.absence_type as string | null;
+                      const startVal = shift?.start_time?.slice(0, 5) ?? "";
+                      const endVal = shift?.end_time?.slice(0, 5) ?? "";
+
+                      if (absenceType) {
                         return (
-                          <td key={dateStr} colSpan={2} className="text-center text-xs p-1">
-                            <Badge variant="outline" className="text-[10px]">
-                              {shift.absence_type === "urlaub" ? "U" : "K"}
-                            </Badge>
+                          <td key={dateStr} colSpan={2} className="p-0.5 text-center">
+                            <button
+                              className={`inline-flex items-center justify-center h-7 w-full rounded text-xs font-bold cursor-pointer ${
+                                absenceType === 'urlaub'
+                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                  : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                              }`}
+                              onClick={() => !isLocked && handleAbsenceToggle(emp.id, dateStr, null, emp.department)}
+                              disabled={isLocked}
+                              title={absenceType === 'urlaub' ? 'Urlaub — klicken zum Entfernen' : 'Krank — klicken zum Entfernen'}
+                            >
+                              {absenceType === 'urlaub' ? 'U' : 'K'}
+                            </button>
                           </td>
                         );
                       }
+
                       return (
                         <React.Fragment key={dateStr}>
-                          <td className="text-center text-xs p-0.5 text-muted-foreground">{shift?.start_time?.slice(0, 5) || ""}</td>
-                          <td className="text-center text-xs p-0.5 text-muted-foreground">{shift?.end_time?.slice(0, 5) || ""}</td>
+                          <td className="p-0.5">
+                            <div className="relative flex items-center">
+                              <Input
+                                type="text"
+                                className="h-7 text-xs px-1 w-[72px] text-center time-input-clean"
+                                placeholder=""
+                                data-time-field={`${emp.id}-${dateStr}-start_time`}
+                                data-time-col={`${dateStr}-start_time`}
+                                value={editingTime[`${emp.id}-${dateStr}-start_time`] ?? startVal}
+                                onChange={(e) => setEditingTime(prev => ({ ...prev, [`${emp.id}-${dateStr}-start_time`]: e.target.value }))}
+                                onBlur={(e) => {
+                                  const key = `${emp.id}-${dateStr}-start_time`;
+                                  const raw = e.target.value;
+                                  const formatted = formatTimeInput(raw);
+                                  if (formatted) handleTimeChange(emp.id, dateStr, "start_time", formatted, emp.department);
+                                  else if (!raw.trim() && startVal) handleTimeChange(emp.id, dateStr, "start_time", "", emp.department);
+                                  setEditingTime(prev => { const next = { ...prev }; delete next[key]; return next; });
+                                }}
+                                onKeyDown={handleTimeKeyDown}
+                                onFocus={(e) => e.target.select()}
+                                disabled={isLocked}
+                              />
+                              {!isLocked && !startVal && !endVal && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <button className="absolute -right-1 top-0 h-7 w-5 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors text-xs" tabIndex={-1}>⋮</button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent>
+                                    <DropdownMenuItem onClick={() => openAbsenceDialog(emp.id, dateStr, 'urlaub', emp.department)}>
+                                      <span className="text-green-600 font-bold mr-2">U</span> Urlaub
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => openAbsenceDialog(emp.id, dateStr, 'krank', emp.department)}>
+                                      <span className="text-red-600 font-bold mr-2">K</span> Krank
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-0.5">
+                            <Input
+                              type="text"
+                              className="h-7 text-xs px-1 w-[72px] text-center time-input-clean"
+                              placeholder=""
+                              data-time-field={`${emp.id}-${dateStr}-end_time`}
+                              data-time-col={`${dateStr}-end_time`}
+                              value={editingTime[`${emp.id}-${dateStr}-end_time`] ?? endVal}
+                              onChange={(e) => setEditingTime(prev => ({ ...prev, [`${emp.id}-${dateStr}-end_time`]: e.target.value }))}
+                              onBlur={(e) => {
+                                const key = `${emp.id}-${dateStr}-end_time`;
+                                const raw = e.target.value;
+                                const formatted = formatTimeInput(raw);
+                                if (formatted) handleTimeChange(emp.id, dateStr, "end_time", formatted, emp.department);
+                                else if (!raw.trim() && endVal) handleTimeChange(emp.id, dateStr, "end_time", "", emp.department);
+                                setEditingTime(prev => { const next = { ...prev }; delete next[key]; return next; });
+                              }}
+                              onKeyDown={handleTimeKeyDown}
+                              onFocus={(e) => e.target.select()}
+                              disabled={isLocked}
+                            />
+                          </td>
                         </React.Fragment>
                       );
                     })}
@@ -295,6 +490,49 @@ function WochenplanTab({ weeks, shifts, employees, holidays, periodLabel, select
           </table>
         </div>
       )}
+
+      <Dialog open={absenceDialog.open} onOpenChange={(open) => setAbsenceDialog(prev => ({ ...prev, open }))}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>{absenceDialog.absenceType === 'urlaub' ? 'Urlaub' : 'Krankheit'} eintragen</DialogTitle>
+            <DialogDescription>{absenceDialog.employeeName}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Von</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className={cn("w-full justify-start text-left font-normal")}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {format(absenceDialog.startDate, "dd.MM.yyyy", { locale: de })}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={absenceDialog.startDate} onSelect={(d) => d && setAbsenceDialog(prev => ({ ...prev, startDate: d }))} locale={de} className="p-3 pointer-events-auto" />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Bis <span className="text-muted-foreground font-normal">(optional)</span></label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !absenceDialog.endDate && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {absenceDialog.endDate ? format(absenceDialog.endDate, "dd.MM.yyyy", { locale: de }) : "Kein Enddatum (nur 1 Tag)"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={absenceDialog.endDate} onSelect={(d) => setAbsenceDialog(prev => ({ ...prev, endDate: d || undefined }))} locale={de} disabled={(d) => d < absenceDialog.startDate} className="p-3 pointer-events-auto" />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAbsenceDialog(prev => ({ ...prev, open: false }))}>Abbrechen</Button>
+            <Button onClick={handleAbsenceRange}>Eintragen</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
