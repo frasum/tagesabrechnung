@@ -52,7 +52,7 @@ export function useWebAuthn() {
     try {
       // 1. Get registration options from server
       const optionsRes = await fetch(
-        `${SUPABASE_URL}/functions/v1/webauthn-register?staff_id=${staffId}`,
+        `${SUPABASE_URL}/functions/v1/webauthn-register?staff_id=${staffId}&origin=${encodeURIComponent(window.location.origin)}`,
         {
           headers: { 'Authorization': `Bearer ${SUPABASE_KEY}` },
         }
@@ -139,9 +139,11 @@ export function useWebAuthn() {
       const storedCredentialId = localStorage.getItem(WEBAUTHN_CREDENTIAL_KEY);
 
       // 1. Get challenge from server
-      const params = storedCredentialId ? `?credential_id=${encodeURIComponent(storedCredentialId)}` : '';
+      const params = new URLSearchParams();
+      if (storedCredentialId) params.set('credential_id', storedCredentialId);
+      params.set('origin', window.location.origin);
       const challengeRes = await fetch(
-        `${SUPABASE_URL}/functions/v1/webauthn-authenticate${params}`,
+        `${SUPABASE_URL}/functions/v1/webauthn-authenticate?${params.toString()}`,
         {
           headers: { 'Authorization': `Bearer ${SUPABASE_KEY}` },
         }

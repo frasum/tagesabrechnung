@@ -114,7 +114,17 @@ Deno.serve(async (req) => {
         .delete()
         .lt("expires_at", new Date().toISOString());
 
-      const rpId = url.hostname === "localhost" ? "localhost" : url.hostname;
+      const originParam = url.searchParams.get("origin");
+      let rpId: string;
+      if (originParam) {
+        try {
+          rpId = new URL(originParam).hostname;
+        } catch {
+          rpId = url.hostname;
+        }
+      } else {
+        rpId = url.hostname === "localhost" ? "localhost" : url.hostname;
+      }
 
       const options: Record<string, unknown> = {
         challenge,

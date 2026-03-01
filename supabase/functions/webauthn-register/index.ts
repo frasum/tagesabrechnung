@@ -88,7 +88,18 @@ Deno.serve(async (req) => {
         .lt("expires_at", new Date().toISOString());
 
       // Build WebAuthn creation options
-      const rpId = url.hostname === "localhost" ? "localhost" : url.hostname;
+      // Use the app's origin hostname for RP ID, not the edge function hostname
+      const originParam = url.searchParams.get("origin");
+      let rpId: string;
+      if (originParam) {
+        try {
+          rpId = new URL(originParam).hostname;
+        } catch {
+          rpId = url.hostname;
+        }
+      } else {
+        rpId = url.hostname === "localhost" ? "localhost" : url.hostname;
+      }
 
       return new Response(
         JSON.stringify({
