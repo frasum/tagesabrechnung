@@ -5,26 +5,76 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+async function verifyAdmin(req: Request) {
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return { error: 'Missing authorization header', status: 401 };
+  }
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+  // Create user-scoped client to verify JWT
+  const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+
+  const { data: { user }, error } = await userClient.auth.getUser();
+  if (error || !user) {
+    return { error: 'Invalid authentication token', status: 401 };
+  }
+
+  // Create admin client for service-role operations
+  const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: { persistSession: false },
+  });
+
+  // Resolve staff_id from profile
+  const { data: profile } = await adminClient
+    .from('profiles')
+    .select('staff_id')
+    .eq('user_id', user.id)
+    .single();
+
+  if (!profile?.staff_id) {
+    return { error: 'No staff profile linked', status: 403 };
+  }
+
+  // Verify admin permission
+  const { data: permission } = await adminClient.rpc('get_staff_permission', {
+    p_staff_id: profile.staff_id,
+  });
+
+  if (permission !== 'admin') {
+    return { error: 'Admin privileges required', status: 403 };
+  }
+
+  return { adminClient, staffId: profile.staff_id };
+}
+
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Create admin client with service role key
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      { auth: { persistSession: false } }
-    );
+    // ALL operations require admin auth
+    const auth = await verifyAdmin(req);
+    if ('error' in auth) {
+      return new Response(
+        JSON.stringify({ error: auth.error }),
+        { status: auth.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { adminClient: supabaseAdmin } = auth;
 
     // GET: Return profiles based on query param
     if (req.method === 'GET') {
       const url = new URL(req.url);
       const action = url.searchParams.get('action');
 
-      // Return all linked profiles (for useStaff hook)
       if (action === 'get-all-linked') {
         const { data, error } = await supabaseAdmin
           .from('profiles')
@@ -46,7 +96,6 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Return linked profiles for a specific staff member
       if (action === 'get-linked-for-staff') {
         const staffId = url.searchParams.get('staff_id');
         if (!staffId) {
@@ -76,7 +125,7 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Default: Return unlinked profiles (for linking UI)
+      // Default: Return unlinked profiles
       const { data, error } = await supabaseAdmin
         .from('profiles')
         .select('id, user_id, email, full_name, avatar_url, staff_id')
@@ -107,7 +156,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Fetch the profile to check current state
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('id, staff_id, email')
@@ -121,7 +169,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // If linking (staff_id provided), check if staff exists
     if (staff_id) {
       const { data: staff, error: staffError } = await supabaseAdmin
         .from('staff')
@@ -135,12 +182,8 @@ Deno.serve(async (req) => {
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-
-      // NOTE: Multiple OAuth accounts per staff member are now allowed
-      // The previous restriction has been removed to support Google + Apple logins
     }
 
-    // Update the profile with the new staff_id (or null to unlink)
     const { error: updateError } = await supabaseAdmin
       .from('profiles')
       .update({ staff_id: staff_id ?? null })

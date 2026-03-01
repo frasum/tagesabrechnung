@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getAuthToken } from '@/lib/authToken';
 
 interface AllPermissions {
   [staffId: string]: string[];
@@ -56,7 +57,7 @@ export function useManagerNavPermissions(staffId: string | undefined) {
       return data.paths || [];
     },
     enabled: !!staffId,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -65,16 +66,17 @@ export function useSaveManagerNavPermissions() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ staffId, paths, callerStaffId }: { staffId: string; paths: string[]; callerStaffId: string }) => {
+    mutationFn: async ({ staffId, paths }: { staffId: string; paths: string[]; callerStaffId?: string }) => {
+      const token = await getAuthToken();
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-nav-permissions`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            'Authorization': `Bearer ${token}`,
           },
-          body: JSON.stringify({ staff_id: staffId, paths, caller_staff_id: callerStaffId }),
+          body: JSON.stringify({ staff_id: staffId, paths }),
         }
       );
 

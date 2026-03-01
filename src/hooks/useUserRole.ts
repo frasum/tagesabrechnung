@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import type { PermissionLevel } from '@/types/permissions';
+import { getAuthToken } from '@/lib/authToken';
 
 interface UserRoleResponse {
   staff_id: string;
@@ -35,7 +36,7 @@ export function useUserRole(staffId: string | undefined) {
       return data.permission_level;
     },
     enabled: !!staffId,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -46,19 +47,19 @@ export function useUpdateUserRole() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ staffId, permissionLevel, callerStaffId }: { staffId: string; permissionLevel: PermissionLevel; callerStaffId: string }) => {
+    mutationFn: async ({ staffId, permissionLevel }: { staffId: string; permissionLevel: PermissionLevel; callerStaffId?: string }) => {
+      const token = await getAuthToken();
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-user-role`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            'Authorization': `Bearer ${token}`,
           },
           body: JSON.stringify({
             staff_id: staffId,
             permission_level: permissionLevel,
-            caller_staff_id: callerStaffId,
           }),
         }
       );

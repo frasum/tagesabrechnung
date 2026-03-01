@@ -12,76 +12,95 @@ interface UpdatePinRequest {
 }
 
 Deno.serve(async (req: Request) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    // Only allow POST
     if (req.method !== "POST") {
       return new Response(
         JSON.stringify({ success: false, error: "Method not allowed" }),
-        {
-          status: 405,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Verify caller via Supabase Auth
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Missing authorization header" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: { user }, error: authError } = await userClient.auth.getUser();
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Invalid authentication token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create admin client
+    const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    // Resolve caller's staff_id and verify admin permission
+    const { data: callerProfile } = await supabase
+      .from("profiles")
+      .select("staff_id")
+      .eq("user_id", user.id)
+      .single();
+
+    if (!callerProfile?.staff_id) {
+      return new Response(
+        JSON.stringify({ success: false, error: "No staff profile linked" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { data: callerPermission } = await supabase.rpc("get_staff_permission", {
+      p_staff_id: callerProfile.staff_id,
+    });
+
+    if (callerPermission !== "admin" && callerPermission !== "manager") {
+      return new Response(
+        JSON.stringify({ success: false, error: "Insufficient permissions" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const body: UpdatePinRequest = await req.json();
 
-    // Validate input
     if (!body.staff_id || !body.pin_code) {
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Missing staff_id or pin_code",
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        JSON.stringify({ success: false, error: "Missing staff_id or pin_code" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Validate PIN format (should be 4 digits)
     const pin_code = body.pin_code.toString().trim();
     if (!/^\d{4}$/.test(pin_code)) {
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: "PIN muss 4 Ziffern haben",
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        JSON.stringify({ success: false, error: "PIN muss 4 Ziffern haben" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Validate UUID format for staff_id
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(body.staff_id)) {
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Invalid staff_id format",
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        JSON.stringify({ success: false, error: "Invalid staff_id format" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Create Supabase client with service role (backend-only)
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") || "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
-    );
-
-    // Verify staff exists
     const { data: staffData, error: staffError } = await supabase
       .from("staff")
       .select("id")
@@ -90,18 +109,11 @@ Deno.serve(async (req: Request) => {
 
     if (staffError || !staffData) {
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Staff member not found",
-        }),
-        {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        JSON.stringify({ success: false, error: "Staff member not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Upsert PIN in the protected staff_pins table
     const { error: pinError } = await supabase
       .from("staff_pins")
       .upsert(
@@ -116,36 +128,20 @@ Deno.serve(async (req: Request) => {
     if (pinError) {
       console.error("Error updating PIN:", pinError);
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Failed to update PIN",
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        JSON.stringify({ success: false, error: "Failed to update PIN" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     return new Response(
       JSON.stringify({ success: true }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Error updating PIN:", error);
-
     return new Response(
-      JSON.stringify({
-        success: false,
-        error: "Internal server error",
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      JSON.stringify({ success: false, error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

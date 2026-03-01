@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { getAuthToken } from '@/lib/authToken';
 
 export interface LinkedProfile {
   id: string;
@@ -19,13 +20,13 @@ export function useUnlinkedProfiles() {
   return useQuery({
     queryKey: ['profiles', 'unlinked'],
     queryFn: async () => {
-      // Use Edge Function with service role to bypass RLS
+      const token = await getAuthToken();
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-link-account`,
         {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
         }
@@ -43,19 +44,19 @@ export function useUnlinkedProfiles() {
 
 /**
  * Fetch OAuth profiles that are linked to a specific staff member.
- * Used to show all OAuth accounts for a staff member in the dialog.
  */
 export function useLinkedProfilesForStaff(staffId: string | null) {
   return useQuery({
     queryKey: ['profiles', 'linked', staffId],
     enabled: !!staffId,
     queryFn: async () => {
+      const token = await getAuthToken();
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-link-account?action=get-linked-for-staff&staff_id=${staffId}`,
         {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
         }
@@ -73,7 +74,6 @@ export function useLinkedProfilesForStaff(staffId: string | null) {
 
 /**
  * Link or unlink an OAuth profile to a staff member via Edge Function.
- * This bypasses RLS since profiles can only be updated by their own users.
  */
 export function useAdminLinkAccount() {
   const queryClient = useQueryClient();
@@ -88,13 +88,14 @@ export function useAdminLinkAccount() {
       profile_id: string;
       action: 'link' | 'unlink';
     }) => {
+      const token = await getAuthToken();
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-link-account`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            'Authorization': `Bearer ${token}`,
           },
           body: JSON.stringify({
             staff_id: action === 'link' ? staff_id : null,

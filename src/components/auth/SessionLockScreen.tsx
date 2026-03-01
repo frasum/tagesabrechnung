@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Lock, LogOut, Loader2, Smartphone, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { getAuthToken } from '@/lib/authToken';
 
 export function SessionLockScreen() {
   const { user, unlockSession, logout } = useAuth();
@@ -108,13 +109,14 @@ export function SessionLockScreen() {
     setError('');
 
     try {
+      const token = await getAuthToken();
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-login-confirmation`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            'Authorization': `Bearer ${token}`,
           },
           body: JSON.stringify({
             staff_id: user.staffId,

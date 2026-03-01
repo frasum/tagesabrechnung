@@ -19,29 +19,52 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { staff_id } = await req.json();
-
-    if (!staff_id) {
+    // Verify caller via Supabase Auth
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
       return new Response(
-        JSON.stringify({ error: "staff_id required" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        JSON.stringify({ error: "Missing authorization header" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Create a new login confirmation
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: { user }, error: authError } = await userClient.auth.getUser();
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Invalid authentication token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    // Resolve caller's staff_id from their profile
+    const { data: callerProfile } = await supabaseAdmin
+      .from("profiles")
+      .select("staff_id")
+      .eq("user_id", user.id)
+      .single();
+
+    if (!callerProfile?.staff_id) {
+      return new Response(
+        JSON.stringify({ error: "No staff profile linked" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Use the authenticated user's own staff_id (not from request body)
+    const staff_id = callerProfile.staff_id;
+
     const { data, error } = await supabaseAdmin
       .from("login_confirmations")
-      .insert({
-        staff_id,
-      })
+      .insert({ staff_id })
       .select("token, expires_at")
       .single();
 
@@ -49,10 +72,7 @@ Deno.serve(async (req) => {
       console.error("Error creating login confirmation:", error);
       return new Response(
         JSON.stringify({ error: "Failed to create confirmation" }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -61,9 +81,7 @@ Deno.serve(async (req) => {
         token: data.token,
         expiresAt: data.expires_at,
       }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Error:", error);

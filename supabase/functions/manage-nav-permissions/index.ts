@@ -17,8 +17,8 @@ Deno.serve(async (req) => {
 
     const url = new URL(req.url);
 
+    // GET: Read permissions - keep accessible for navigation filtering
     if (req.method === 'GET') {
-      // Get permissions for a specific staff member or all managers
       const staffId = url.searchParams.get('staff_id');
 
       if (staffId) {
@@ -34,14 +34,12 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Get all manager permissions (for admin view)
       const { data, error } = await supabase
         .from('manager_nav_permissions')
         .select('staff_id, nav_path');
 
       if (error) throw error;
 
-      // Group by staff_id
       const grouped: Record<string, string[]> = {};
       for (const row of data || []) {
         if (!grouped[row.staff_id]) {
@@ -55,25 +53,54 @@ Deno.serve(async (req) => {
       });
     }
 
+    // POST: Update permissions - REQUIRES AUTH
     if (req.method === 'POST') {
-      const body = await req.json();
-      const { staff_id, paths, caller_staff_id } = body;
-
-      // Verify caller is admin
-      if (!caller_staff_id) {
+      const authHeader = req.headers.get('Authorization');
+      if (!authHeader?.startsWith('Bearer ')) {
         return new Response(
-          JSON.stringify({ error: 'Missing caller_staff_id' }),
+          JSON.stringify({ error: 'Missing authorization header' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const userClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
+        global: { headers: { Authorization: authHeader } },
+      });
+
+      const { data: { user }, error: authError } = await userClient.auth.getUser();
+      if (authError || !user) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid authentication token' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Resolve caller's staff_id from profile
+      const { data: callerProfile } = await supabase
+        .from('profiles')
+        .select('staff_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!callerProfile?.staff_id) {
+        return new Response(
+          JSON.stringify({ error: 'No staff profile linked to your account' }),
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      const { data: callerPermission } = await supabase.rpc('get_staff_permission', { p_staff_id: caller_staff_id });
+      const { data: callerPermission } = await supabase.rpc('get_staff_permission', { 
+        p_staff_id: callerProfile.staff_id 
+      });
       if (callerPermission !== 'admin') {
         return new Response(
           JSON.stringify({ error: 'Insufficient permissions. Admin role required.' }),
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+
+      const body = await req.json();
+      const { staff_id, paths } = body;
 
       if (!staff_id || !Array.isArray(paths)) {
         return new Response(
@@ -82,7 +109,6 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Delete existing permissions for this staff member
       const { error: deleteError } = await supabase
         .from('manager_nav_permissions')
         .delete()
@@ -90,7 +116,6 @@ Deno.serve(async (req) => {
 
       if (deleteError) throw deleteError;
 
-      // Insert new permissions if any paths provided
       if (paths.length > 0) {
         const rows = paths.map(nav_path => ({ staff_id, nav_path }));
         const { error: insertError } = await supabase
