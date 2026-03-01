@@ -42,6 +42,7 @@ export interface WaiterShift {
   session_id: string;
   waiter_name: string;
   second_waiter_name: string | null;
+  additional_waiters: string[];
   pos_sales: number;
   kassiert_brutto: number;
   card_total: number;

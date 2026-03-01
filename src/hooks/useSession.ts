@@ -144,6 +144,7 @@ export function useCreateWaiterShift() {
       const normalizedShift = {
         ...shift,
         second_waiter_name: shift.second_waiter_name === 'none' ? null : shift.second_waiter_name,
+        additional_waiters: shift.additional_waiters || [],
         participates_in_pool: shift.participates_in_pool ?? true,
         submitted_at: now.toISOString(),
         shift_start: shiftStart,
@@ -499,15 +500,15 @@ export function useWaiterTipAverages(restaurantId: string | null) {
           waiterAverages[name].totalSales += posSales;
           waiterAverages[name].shiftsCount += 1;
 
-          // Second waiter (if exists) — gets the same full shift values
-          if (shift.second_waiter_name) {
-            const secondName = shift.second_waiter_name;
-            if (!waiterAverages[secondName]) {
-              waiterAverages[secondName] = { totalPoolShare: 0, totalSales: 0, shiftsCount: 0 };
+          // Additional waiters — each gets the same full shift values
+          const additionalWaiters: string[] = (shift as any).additional_waiters || [];
+          for (const additionalName of additionalWaiters) {
+            if (!waiterAverages[additionalName]) {
+              waiterAverages[additionalName] = { totalPoolShare: 0, totalSales: 0, shiftsCount: 0 };
             }
-            waiterAverages[secondName].totalPoolShare += totalTip;
-            waiterAverages[secondName].totalSales += posSales;
-            waiterAverages[secondName].shiftsCount += 1;
+            waiterAverages[additionalName].totalPoolShare += totalTip;
+            waiterAverages[additionalName].totalSales += posSales;
+            waiterAverages[additionalName].shiftsCount += 1;
           }
         }
       }

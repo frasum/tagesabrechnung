@@ -911,6 +911,7 @@ export type Database = {
       }
       waiter_shifts: {
         Row: {
+          additional_waiters: string[]
           card_total: number | null
           cash_handed_in: number | null
           created_at: string
@@ -932,6 +933,7 @@ export type Database = {
           waiter_name: string
         }
         Insert: {
+          additional_waiters?: string[]
           card_total?: number | null
           cash_handed_in?: number | null
           created_at?: string
@@ -953,6 +955,7 @@ export type Database = {
           waiter_name: string
         }
         Update: {
+          additional_waiters?: string[]
           card_total?: number | null
           cash_handed_in?: number | null
           created_at?: string

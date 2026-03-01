@@ -163,7 +163,7 @@ Deno.serve(async (req) => {
       if (settings.show_waiters) {
         const { data: shifts } = await supabase
           .from("waiter_shifts")
-          .select("waiter_name, second_waiter_name, pos_sales, submitted_at")
+          .select("waiter_name, second_waiter_name, additional_waiters, pos_sales, submitted_at")
           .eq("session_id", session.id)
           .order("pos_sales", { ascending: false });
 
@@ -175,9 +175,12 @@ Deno.serve(async (req) => {
             const time = s.submitted_at
               ? new Date(s.submitted_at).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" })
               : "ausstehend";
-            lines.push(`  • ${s.waiter_name}: ${formatEur(sales)} (Abgabe: ${time})`);
-            if (s.second_waiter_name) {
-              lines.push(`  • ${s.second_waiter_name}: ${formatEur(sales)} (Abgabe: ${time})`);
+            const additionalWaiters: string[] = (s as any).additional_waiters || [];
+            const teamSize = 1 + additionalWaiters.length;
+            const salesPerPerson = teamSize > 1 ? sales / teamSize : sales;
+            lines.push(`  • ${s.waiter_name}: ${formatEur(salesPerPerson)} (Abgabe: ${time})`);
+            for (const name of additionalWaiters) {
+              lines.push(`  • ${name}: ${formatEur(salesPerPerson)} (Abgabe: ${time})`);
             }
           }
         }

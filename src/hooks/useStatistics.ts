@@ -97,7 +97,7 @@ export function useStatistics(timeRange: TimeRange = 'month', customRange?: Cust
 
       if (sessionIds.length > 0) {
         const [shiftsResult, expResult, kitchenResult] = await Promise.all([
-          supabase.from('waiter_shifts').select('session_id, waiter_name, pos_sales, kassiert_brutto, card_total, hilf_mahl, open_invoices, cash_handed_in, differenz, kitchen_tip, participates_in_pool, second_waiter_name').in('session_id', sessionIds),
+          supabase.from('waiter_shifts').select('session_id, waiter_name, pos_sales, kassiert_brutto, card_total, hilf_mahl, open_invoices, cash_handed_in, differenz, kitchen_tip, participates_in_pool, second_waiter_name, additional_waiters').in('session_id', sessionIds),
           supabase.from('expenses').select('session_id, amount').in('session_id', sessionIds),
           supabase.from('kitchen_shifts').select('session_id, staff_name, hours_worked').in('session_id', sessionIds),
         ]);
@@ -212,16 +212,23 @@ export function useStatistics(timeRange: TimeRange = 'month', customRange?: Cust
           sessionPool += contribution;
         });
         
-        // Distribute equally among all waiters in this session
-        const sharePerWaiter = sessionPool / sessionShifts.length;
+        // Distribute equally among all waiters in this session (counting team members)
+        let totalShares = 0;
+        sessionShifts.forEach((shift: any) => {
+          const additionalCount = (shift.additional_waiters?.length || 0);
+          totalShares += 1 + additionalCount;
+        });
+        const sharePerWaiter = totalShares > 0 ? sessionPool / totalShares : 0;
         
         sessionShifts.forEach((shift: any) => {
-          const name = shift.waiter_name;
-          if (!waiterTipMap[name]) {
-            waiterTipMap[name] = { totalPoolShare: 0, shiftsCount: 0 };
-          }
-          waiterTipMap[name].totalPoolShare += sharePerWaiter;
-          waiterTipMap[name].shiftsCount += 1;
+          const allMembers = [shift.waiter_name, ...(shift.additional_waiters || [])];
+          allMembers.forEach((name: string) => {
+            if (!waiterTipMap[name]) {
+              waiterTipMap[name] = { totalPoolShare: 0, shiftsCount: 0 };
+            }
+            waiterTipMap[name].totalPoolShare += sharePerWaiter;
+            waiterTipMap[name].shiftsCount += 1;
+          });
         });
       });
 

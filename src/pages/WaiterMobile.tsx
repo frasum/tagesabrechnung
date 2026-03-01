@@ -136,6 +136,7 @@ export default function WaiterMobile() {
           session_id: sessionId,
           waiter_name: staffName,
           second_waiter_name: secondWaiterName === 'none' ? null : secondWaiterName,
+          additional_waiters: [],
           participates_in_pool: true,
           ...formData,
         });

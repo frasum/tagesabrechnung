@@ -37,6 +37,7 @@ interface WaiterShift {
   updated_at?: string | null;
   participates_in_pool?: boolean;
   second_waiter_name?: string | null;
+  additional_waiters?: string[];
 }
 
 interface KitchenShift {
@@ -238,13 +239,15 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
   if (data.waiterShifts.length > 0) {
     const poolParticipants = data.waiterShifts.reduce((count, w) => {
       if (!w.participates_in_pool) return count;
-      return count + (w.second_waiter_name ? 2 : 1);
+      const additionalCount = (w.additional_waiters?.length || 0);
+      return count + 1 + additionalCount;
     }, 0);
     const tipPerShare = poolParticipants > 0 ? data.totals.totalWaiterTip / poolParticipants : 0;
 
     const waiterRows = data.waiterShifts.flatMap(shift => {
-      const isTeam = !!shift.second_waiter_name;
-      const posSales = (shift.pos_sales || 0) / (isTeam ? 2 : 1);
+      const additionalWaiters = shift.additional_waiters || [];
+      const teamSize = 1 + additionalWaiters.length;
+      const posSales = (shift.pos_sales || 0) / teamSize;
       const waiterPoolShare = shift.participates_in_pool ? tipPerShare : 0;
 
       const submittedTime = shift.submitted_at
@@ -257,13 +260,8 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
 
       const tipEuro = shift.participates_in_pool ? formatCurrency(waiterPoolShare) : '---';
 
-      const row = [shift.waiter_name, formatCurrency(posSales), submittedTime, updatedTime, tipEuro];
-
-      if (isTeam) {
-        const row2 = [shift.second_waiter_name, formatCurrency(posSales), submittedTime, updatedTime, tipEuro];
-        return [row, row2];
-      }
-      return [row];
+      const allMembers = [shift.waiter_name, ...additionalWaiters];
+      return allMembers.map(name => [name, formatCurrency(posSales), submittedTime, updatedTime, tipEuro]);
     });
 
     autoTable(doc, {

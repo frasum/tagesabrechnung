@@ -42,6 +42,7 @@ export function useUpdateWaiterShiftWithAudit() {
       const normalizedUpdates: Record<string, unknown> = {
         ...updates,
         second_waiter_name: updates.second_waiter_name === 'none' ? null : updates.second_waiter_name,
+        additional_waiters: (updates as any).additional_waiters || [],
         submitted_at: now.toISOString(),
         shift_end: shiftEnd,
         hours_worked: Math.round(hoursWorked * 100) / 100,

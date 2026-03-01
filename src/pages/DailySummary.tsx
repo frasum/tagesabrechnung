@@ -247,7 +247,8 @@ export default function DailySummary() {
   // Count shares correctly: team shifts count as 2, non-participating shifts don't count
   const waiterShareCount = waiterShifts.reduce((count, w) => {
     if (!w.participates_in_pool) return count;
-    return count + (w.second_waiter_name ? 2 : 1);
+    const additionalCount = ((w as any).additional_waiters?.length || 0);
+    return count + 1 + additionalCount;
   }, 0);
   const tipPerWaiter = waiterShareCount > 0 ? waiterTipPool / waiterShareCount : 0;
   
@@ -357,6 +358,7 @@ export default function DailySummary() {
         updated_at: (w as any).updated_at ?? null,
         participates_in_pool: w.participates_in_pool ?? true,
         second_waiter_name: w.second_waiter_name ?? null,
+        additional_waiters: (w as any).additional_waiters || [],
       })),
       kitchenShifts: kitchenShifts.map(k => ({
         staff_name: k.staff_name,
@@ -985,8 +987,9 @@ export default function DailySummary() {
           {waiterShifts.flatMap((shift) => {
             const submittedAt = formatSubmittedAt((shift as any).submitted_at);
             const hasData = (shift.pos_sales || 0) > 0 || (shift.cash_handed_in || 0) > 0;
-            const isTeam = !!shift.second_waiter_name;
-            const posSales = (shift.pos_sales || 0) / (isTeam ? 2 : 1);
+            const additionalWaiters: string[] = (shift as any).additional_waiters || [];
+            const teamSize = 1 + additionalWaiters.length;
+            const posSales = (shift.pos_sales || 0) / teamSize;
             const poolShare = shift.participates_in_pool ? tipPerWaiter : 0;
             const tipPct = posSales > 0 && shift.participates_in_pool
               ? ((poolShare / posSales) * 100).toFixed(1).replace('.', ',') + '%'
@@ -1024,13 +1027,8 @@ export default function DailySummary() {
               </div>
             );
 
-            if (isTeam) {
-              return [
-                renderRow(shift.waiter_name, shift.id + '-1'),
-                renderRow(shift.second_waiter_name!, shift.id + '-2'),
-              ];
-            }
-            return [renderRow(shift.waiter_name, shift.id)];
+            const allMembers = [shift.waiter_name, ...additionalWaiters];
+            return allMembers.map((name, idx) => renderRow(name, `${shift.id}-${idx}`));
           })}
         </div>
       </CardContent>

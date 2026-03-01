@@ -10,7 +10,7 @@ import { DateSelector } from '@/components/shared/DateSelector';
 import { CurrencyInput } from '@/components/shared/CurrencyInput';
 import { StatCard } from '@/components/shared/StatCard';
 import { StaffSelect } from '@/components/shared/StaffSelect';
-import { SecondWaiterSelect } from '@/components/shared/SecondWaiterSelect';
+import { TeamWaiterSelect } from '@/components/shared/TeamWaiterSelect';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -39,7 +39,7 @@ export default function WaiterCashUp() {
   const [newHilfMahl, setNewHilfMahl] = useState(0);
   const [newOpenInvoices, setNewOpenInvoices] = useState(0);
   const [newCashHandedIn, setNewCashHandedIn] = useState(0);
-  const [newSecondWaiterName, setNewSecondWaiterName] = useState('none');
+  const [newAdditionalWaiters, setNewAdditionalWaiters] = useState<string[]>([]);
   const [newParticipatesInPool, setNewParticipatesInPool] = useState(true);
   const [editingShiftId, setEditingShiftId] = useState<string | null>(null);
 
@@ -77,7 +77,7 @@ export default function WaiterCashUp() {
   };
   const resetForm = () => {
     setNewWaiterName('');
-    setNewSecondWaiterName('none');
+    setNewAdditionalWaiters([]);
     setNewParticipatesInPool(true);
     setNewPosSales(0);
     setNewKassiertBrutto(0);
@@ -91,7 +91,7 @@ export default function WaiterCashUp() {
   const handleEditWaiter = (shift: WaiterShift) => {
     setEditingShiftId(shift.id);
     setNewWaiterName(shift.waiter_name);
-    setNewSecondWaiterName(shift.second_waiter_name || 'none');
+    setNewAdditionalWaiters(shift.additional_waiters || []);
     setNewParticipatesInPool(shift.participates_in_pool ?? true);
     setNewPosSales(shift.pos_sales || 0);
     setNewKassiertBrutto(shift.kassiert_brutto || 0);
@@ -115,11 +115,11 @@ export default function WaiterCashUp() {
       return;
     }
 
-    // Validate: second waiter cannot be the same as primary waiter
-    if (newSecondWaiterName !== 'none' && newSecondWaiterName === newWaiterName.trim()) {
+    // Validate: additional waiters cannot include the primary waiter
+    if (newAdditionalWaiters.includes(newWaiterName.trim())) {
       toast({
         title: 'Fehler',
-        description: 'Der zweite Mitarbeiter kann nicht die gleiche Person sein.',
+        description: 'Ein Teammitglied kann nicht die gleiche Person wie der Hauptmitarbeiter sein.',
         variant: 'destructive'
       });
       return;
@@ -133,7 +133,8 @@ export default function WaiterCashUp() {
           sessionId: session.id,
           restaurantId: restaurantId!,
           waiter_name: newWaiterName.trim(),
-          second_waiter_name: newSecondWaiterName,
+          second_waiter_name: newAdditionalWaiters.length > 0 ? newAdditionalWaiters[0] : null,
+          additional_waiters: newAdditionalWaiters,
           participates_in_pool: newParticipatesInPool,
           pos_sales: newPosSales,
           kassiert_brutto: newKassiertBrutto,
@@ -151,7 +152,8 @@ export default function WaiterCashUp() {
         await createWaiterShift.mutateAsync({
           session_id: session.id,
           waiter_name: newWaiterName.trim(),
-          second_waiter_name: newSecondWaiterName,
+          second_waiter_name: newAdditionalWaiters.length > 0 ? newAdditionalWaiters[0] : null,
+          additional_waiters: newAdditionalWaiters,
           participates_in_pool: newParticipatesInPool,
           pos_sales: newPosSales,
           kassiert_brutto: newKassiertBrutto,
@@ -212,7 +214,8 @@ export default function WaiterCashUp() {
   // Calculate pool totals (team shifts count as 2 shares, only if participates_in_pool)
   const waiterShareCount = waiterShifts.reduce((count, shift) => {
     if (!shift.participates_in_pool) return count;
-    return count + (shift.second_waiter_name ? 2 : 1);
+    const additionalCount = (shift.additional_waiters?.length || 0);
+    return count + 1 + additionalCount;
   }, 0);
   const totalPool = waiterShifts.reduce((sum, shift) => sum + calculateContribution(shift), 0);
   const tipPerWaiter = waiterShareCount > 0 ? totalPool / waiterShareCount : 0;
@@ -293,7 +296,7 @@ export default function WaiterCashUp() {
                       const participates = checked === true;
                       setNewParticipatesInPool(participates);
                       if (!participates) {
-                        setNewSecondWaiterName('none');
+                        setNewAdditionalWaiters([]);
                       }
                     }} />
 
@@ -311,12 +314,11 @@ export default function WaiterCashUp() {
 
                 {newParticipatesInPool &&
               <div>
-                    <Label>Zweiter Mitarbeiter (optional)</Label>
-                    <SecondWaiterSelect
-                  value={newSecondWaiterName}
-                  onValueChange={setNewSecondWaiterName}
+                    <Label>Team-Mitglieder (optional)</Label>
+                    <TeamWaiterSelect
+                  value={newAdditionalWaiters}
+                  onValueChange={setNewAdditionalWaiters}
                   excludeWaiter={newWaiterName}
-                  placeholder="Keiner (Einzelschicht)"
                   restaurantId={restaurantId} />
 
                   </div>
@@ -458,78 +460,40 @@ export default function WaiterCashUp() {
                       <TableBody>
                         {waiterShifts.flatMap((shift) => {
                         const contribution = calculateContribution(shift);
-                        const shiftTipShare = shift.participates_in_pool ? tipPerWaiter : 0;
-                        const isTeam = !!shift.second_waiter_name;
-                        // TG% = total tip before kitchen / pos_sales (same for both waiters in team shifts)
+                        const additionalWaiters = shift.additional_waiters || [];
+                        const teamSize = 1 + additionalWaiters.length;
+                        const isTeam = teamSize > 1;
+                        // TG% = total tip before kitchen / pos_sales (same for all waiters in team shifts)
                         const totalTipBeforeKitchen = calculateTotalTipBeforeKitchen(shift);
                         const posSales = shift.pos_sales || 0;
                         const currentTipPercent = posSales > 0 ? (totalTipBeforeKitchen / posSales) * 100 : 0;
+                        const perPersonContribution = contribution / teamSize;
 
-                        if (isTeam) {
-                          const halfContribution = contribution / 2;
-                          const avgData1 = waiterTipAverages[shift.waiter_name];
-                          const avgData2 = waiterTipAverages[shift.second_waiter_name!];
-                          return [
-                          <TableRow key={`${shift.id}-1`}>
+                        // All team members (primary + additional)
+                        const allMembers = [shift.waiter_name, ...additionalWaiters];
+
+                        return allMembers.map((name, idx) => {
+                          const avgData = waiterTipAverages[name];
+                          return (
+                          <TableRow key={`${shift.id}-${idx}`}>
                                 <TableCell className="font-medium">
-                                  {shift.waiter_name}
+                                  {name}
                                   {!shift.participates_in_pool &&
                               <span className="ml-2 text-xs text-muted-foreground">(kein Pool)</span>
                               }
                                 </TableCell>
-                                <TableCell className={`text-right tabular-nums ${halfContribution >= 0 ? 'text-success' : 'text-destructive'}`}>
-                                  {formatCurrency(halfContribution)}
+                                <TableCell className={`text-right tabular-nums ${perPersonContribution >= 0 ? 'text-success' : 'text-destructive'}`}>
+                                  {formatCurrency(perPersonContribution)}
                                 </TableCell>
                                 
                                 {isAdmin && <TableCell className="text-right tabular-nums">
                                   {shift.participates_in_pool ? `${currentTipPercent.toFixed(1)}%` : '—'}
                                 </TableCell>}
                                 {isAdmin && <TableCell className="text-right tabular-nums text-muted-foreground">
-                                  {avgData1 ? `${avgData1.avgTipPercent.toFixed(1)}%` : '—'}
+                                  {avgData ? `${avgData.avgTipPercent.toFixed(1)}%` : '—'}
                                 </TableCell>}
-                              </TableRow>,
-                          <TableRow key={`${shift.id}-2`}>
-                                <TableCell className="font-medium">
-                                  {shift.second_waiter_name}
-                                  {!shift.participates_in_pool &&
-                              <span className="ml-2 text-xs text-muted-foreground">(kein Pool)</span>
-                              }
-                                </TableCell>
-                                <TableCell className={`text-right tabular-nums ${halfContribution >= 0 ? 'text-success' : 'text-destructive'}`}>
-                                  {formatCurrency(halfContribution)}
-                                </TableCell>
-                                
-                                {isAdmin && <TableCell className="text-right tabular-nums">
-                                  {shift.participates_in_pool ? `${currentTipPercent.toFixed(1)}%` : '—'}
-                                </TableCell>}
-                                {isAdmin && <TableCell className="text-right tabular-nums text-muted-foreground">
-                                  {avgData2 ? `${avgData2.avgTipPercent.toFixed(1)}%` : '—'}
-                                </TableCell>}
-                              </TableRow>];
-
-                        }
-
-                        const avgData = waiterTipAverages[shift.waiter_name];
-                        return [
-                        <TableRow key={shift.id}>
-                              <TableCell className="font-medium">
-                                {shift.waiter_name}
-                                {!shift.participates_in_pool &&
-                            <span className="ml-2 text-xs text-muted-foreground">(kein Pool)</span>
-                            }
-                              </TableCell>
-                              <TableCell className={`text-right tabular-nums ${contribution >= 0 ? 'text-success' : 'text-destructive'}`}>
-                                {formatCurrency(contribution)}
-                              </TableCell>
-                              
-                              {isAdmin && <TableCell className="text-right tabular-nums">
-                                {shift.participates_in_pool ? `${currentTipPercent.toFixed(1)}%` : '—'}
-                              </TableCell>}
-                              {isAdmin && <TableCell className="text-right tabular-nums text-muted-foreground">
-                                {avgData ? `${avgData.avgTipPercent.toFixed(1)}%` : '—'}
-                              </TableCell>}
-                            </TableRow>];
-
+                              </TableRow>);
+                        });
                       })}
                       </TableBody>
                     </Table>
@@ -570,9 +534,9 @@ export default function WaiterCashUp() {
                       <TableRow key={shift.id}>
                               <TableCell className="font-medium">
                                 {shift.waiter_name}
-                                {shift.second_waiter_name &&
+                                {(shift.additional_waiters?.length > 0) &&
                           <span className="text-muted-foreground text-sm ml-1">
-                                    + {shift.second_waiter_name}
+                                    + {shift.additional_waiters.join(', ')}
                                   </span>
                           }
                               </TableCell>

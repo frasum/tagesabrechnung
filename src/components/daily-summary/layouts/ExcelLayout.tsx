@@ -20,6 +20,7 @@ interface WaiterShiftData {
   pos_sales: number | null;
   submitted_at?: string | null;
   second_waiter_name?: string | null;
+  additional_waiters?: string[];
   participates_in_pool?: boolean;
 }
 
