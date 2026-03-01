@@ -1,31 +1,22 @@
 
 
-## Problem: Küchenschicht wird nicht in Zeiterfassung übernommen
+## Problem: Küchenschicht wird in falsche Zeiterfassung geschrieben
 
-Die Sync-Funktion `syncKitchenShiftToZt` sucht den Mitarbeiter über `staff_restaurants` mit `zt_department = 'Küche'`. Wenn der Küchenmitarbeiter aber keine Zuordnung in `staff_restaurants` mit genau dieser Abteilung hat (z.B. gar kein Eintrag in `staff_restaurants` für dieses Restaurant, oder `zt_department` ist `null`/anders), wird er nicht gefunden und der Sync bricht still ab.
+Die Funktion `findWeekForDate` in `syncWaiterToZt.ts` sucht eine Woche (`weeks`-Tabelle) nur nach Datum, ohne das Restaurant zu berücksichtigen. Da mehrere Restaurants eigene Perioden und Wochen haben, wird bei Datumsüberlappung die falsche Woche gefunden.
+
+**Beweis aus der Datenbank:**
+- SUMIT's Küchenschicht ist für Restaurant `a1710390` (korrekte Woche: `944b58ee`)
+- Die Schicht wurde aber in Woche `1a41c986` geschrieben, die zu Restaurant `3065f458` gehört
 
 ### Lösung
 
-Die `findStaffByName`-Funktion in `syncWaiterToZt.ts` erweitern, sodass sie bei Küchenmitarbeitern als Fallback auch ohne exakte `zt_department`-Übereinstimmung sucht. Konkret:
-
 | Datei | Änderung |
 |---|---|
-| `src/lib/syncWaiterToZt.ts` | `findStaffByName`: Wenn die Suche mit `zt_department = 'Küche'` kein Ergebnis liefert, Fallback-Suche nur nach `restaurant_id` und Name durchführen. Falls gefunden, wird der Eintrag trotzdem für den Sync verwendet. |
+| `src/lib/syncWaiterToZt.ts` | `findWeekForDate` um Parameter `restaurantId` erweitern. Die Abfrage filtert über `weeks` → `scheduling_periods.restaurant_id`, sodass nur Wochen des richtigen Restaurants gefunden werden. |
 
-### Alternative (robusterer Ansatz)
+Alle Aufrufer (`syncWaiterShiftToZt`, `syncKitchenShiftToZt`) übergeben bereits `restaurantId` — es muss nur an `findWeekForDate` weitergereicht werden.
 
-Statt Fallback: Beim Hinzufügen eines Küchenmitarbeiters auf der KitchenTipSplit-Seite direkt die `staff.id` mitgeben (statt nur den Namen), und in `syncKitchenShiftToZt` die `employee_id` direkt verwenden. Dazu:
+### Zusätzlich: Bestehenden falschen Eintrag korrigieren
 
-| Datei | Änderung |
-|---|---|
-| `src/lib/syncWaiterToZt.ts` | `findStaffByName`: Fallback ohne `zt_department`-Filter hinzufügen, wenn erster Versuch fehlschlägt. |
-
-```text
-findStaffByName("Max", restaurantId, "Küche")
-  → 1. Versuch: staff_restaurants WHERE zt_department = 'Küche' → kein Treffer
-  → 2. Versuch: staff_restaurants WHERE restaurant_id = X (ohne dept-Filter) → Treffer
-  → return staff_id
-```
-
-Damit werden auch Mitarbeiter synchronisiert, die zwar der Küche zugeordnet sind (`staff.role = 'kitchen'`), aber in `staff_restaurants` kein explizites `zt_department = 'Küche'` gesetzt haben.
+Der falsche zt_shifts-Eintrag (id `b4958213`, employee `0cbe9b9b`, week `1a41c986`) muss gelöscht und in der richtigen Woche (`944b58ee`) neu angelegt werden. Das kann durch erneutes Hinzufügen von SUMIT auf der Küchen-Trinkgeld-Seite geschehen (nach dem Fix), oder per manueller Korrektur in der Zeiterfassung.
 
