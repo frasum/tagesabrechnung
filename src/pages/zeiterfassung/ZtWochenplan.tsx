@@ -419,7 +419,7 @@ export default function ZtWochenplan() {
                           </td>
                         </tr>
                       )}
-                      <tr className={`border-t border-border/50 ${isEvenRow ? "zebra-even" : ""} ${totals.gesamt === 0 && totals.urlaubTage === 0 && totals.krankTage === 0 ? "empty-row" : ""}`}>
+                      <tr className={`border-t border-border/50 ${isEvenRow ? "zebra-even" : ""}`}>
                         <td className="sticky-name p-2 sticky left-0 z-10 font-medium border-r border-border/30">
                           <div className="flex items-center gap-1.5">
                             <div className={`w-0.5 h-4 rounded-full ${deptColor} opacity-60`}></div>
@@ -562,12 +562,12 @@ export default function ZtWochenplan() {
                             </React.Fragment>
                           );
                         })}
-                        <td className={`totals-col text-center p-2 border-l-2 border-primary/20 ${totals.gesamt > 0 ? "font-bold text-sm" : "text-xs text-muted-foreground"}`}>{formatHours(totals.gesamt)}</td>
+                        <td className={`text-center p-2 border-l-2 border-primary/20 bg-primary/5 ${totals.gesamt > 0 ? "font-bold text-sm" : "text-xs text-muted-foreground"}`}>{formatHours(totals.gesamt)}</td>
                         <td className="totals-col text-center p-2 text-xs">{totals.soFei > 0 ? formatHours(totals.soFei) : ""}</td>
                         <td className="totals-col text-center p-2 text-xs">{totals.evening > 0 ? formatHours(totals.evening) : ""}</td>
                         <td className="totals-col text-center p-2 text-xs">{totals.night > 0 ? formatHours(totals.night) : ""}</td>
-                        <td className="totals-col text-center p-2 text-xs text-green-600 font-medium">{totals.urlaubTage > 0 ? totals.urlaubTage.toFixed(2).replace('.', ',') : ""}</td>
-                        <td className="totals-col text-center p-2 text-xs text-red-600 font-medium">{totals.krankTage > 0 ? totals.krankTage : ""}</td>
+                        <td className="totals-col text-center p-2 text-xs text-success font-medium">{totals.urlaubTage > 0 ? totals.urlaubTage.toFixed(2).replace('.', ',') : ""}</td>
+                        <td className="totals-col text-center p-2 text-xs text-destructive font-medium">{totals.krankTage > 0 ? totals.krankTage : ""}</td>
                       </tr>
                     </React.Fragment>
                   );
