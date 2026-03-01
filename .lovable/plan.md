@@ -1,56 +1,26 @@
 
 
-## Zeitfenster-basierte Filterung fur den Kassenbestand
+## Paginierung für die History-Seite
 
-### Problem
-`useCashBalanceData` ladt alle Sessions seit Beginn. Das Deficit-Chaining (negative Tageswerte werden auf Folgetage ubertragen) erfordert aber historische Daten fur korrekte Berechnungen.
+### Änderungen
 
-### Losung: Zwei-Phasen-Ansatz
+**1. `src/hooks/useSession.ts` — `useSessionHistory` erweitern**
+- Neuen Parameter `page` (default 0) hinzufügen
+- Query mit `.range(page * 30, (page + 1) * 30 - 1)` statt `.limit(30)`
+- Zusätzlich `count: 'exact'` in der Query für Gesamtanzahl
+- Rückgabewert: `{ sessions, totalCount }`
+- QueryKey enthält `page` für Cache-Trennung
 
-**Phase 1 -- DB-Funktion** fur die Vorab-Berechnung des CarryOvers vor dem Zeitfenster:
-- Neue Datenbank-Funktion `compute_carry_over(p_restaurant_id, p_before_date)` die in SQL die Tag-fur-Tag-Simulation durchfuhrt und den letzten CarryOver-Wert zuruckgibt
-- Dadurch muss der Client nur noch die detaillierten Sessions innerhalb des Zeitfensters laden
-
-**Phase 2 -- Hook-Anpassung** in `useCashBalanceData`:
-- Neuer optionaler Parameter `fromDate?: string` (Standard: 6 Monate zuruck)
-- Sessions-Query bekommt `.gte('session_date', fromDate)` Filter
-- Transfers-Query ebenso gefiltert
-- CarryOver-Startwert kommt aus der DB-Funktion statt aus `initialDeficit`
-- QueryKey enthalt `fromDate` fur korrekte Cache-Trennung
-
-**Phase 3 -- Consumer-Anpassungen**:
-- `CashBalance.tsx`: Berechnet `fromDate` als 6 Monate vor dem altesten verfugbaren Monat (oder heutigem Datum). Keine UI-Anderung notig, da die Monatsauswahl nur geladene Daten zeigt
-- `History.tsx`: Ubergibt ebenfalls ein 6-Monats-Fenster
-- `useRemainingCash.ts` und `usePreviousDayDeficit.ts`: Brauchen nur Daten bis zum aktuellen Datum -- das 6-Monats-Fenster reicht vollig
+**2. `src/pages/History.tsx` — Paginierungs-UI**
+- `page` State (default 0) hinzufügen
+- `totalCount` aus dem Hook auslesen, `totalPages` berechnen
+- Unter der Tabelle Paginierung-Buttons mit Vor/Zurück und Seitenzahlen anzeigen (shadcn Pagination-Komponenten sind bereits vorhanden)
+- `totalSessions` aus `totalCount` statt `sessions.length` berechnen (für die Statistik-Karte oben)
 
 ### Betroffene Dateien
 
-| Datei | Anderung |
+| Datei | Änderung |
 |---|---|
-| **Migration (SQL)** | Neue Funktion `compute_carry_over` |
-| `src/hooks/useCashBalanceData.ts` | `fromDate`-Parameter, DB-Funktionsaufruf, gefilterte Queries |
-| `src/pages/CashBalance.tsx` | `fromDate` berechnen und ubergeben |
-| `src/pages/History.tsx` | `fromDate` ubergeben |
-| `src/hooks/useRemainingCash.ts` | Keine Anderung notig (nutzt selben Cache) |
-| `src/hooks/usePreviousDayDeficit.ts` | Keine Anderung notig |
-
-### DB-Funktion (Konzept)
-
-```sql
-CREATE OR REPLACE FUNCTION compute_carry_over(
-  p_restaurant_id uuid,
-  p_before_date date
-) RETURNS numeric AS $$
-  -- Iteriert uber alle Sessions vor p_before_date
-  -- Berechnet rawBargeld + transferEffect pro Tag
-  -- Tracked carryOver (negative bargeld-Werte)
-  -- Gibt den letzten carryOver-Wert zuruck
-$$
-```
-
-### Skalierungseffekt
-
-- Vorher: ~730 Sessions/Jahr x alle Jahre = unbegrenzt wachsend
-- Nachher: max ~180 Sessions (6 Monate) + 1 leichtgewichtiger DB-Funktionsaufruf
-- Die DB-Funktion lauft serverseitig und ist auch bei tausenden Sessions schnell
+| `src/hooks/useSession.ts` | `useSessionHistory` mit `page`-Parameter und `count: 'exact'` |
+| `src/pages/History.tsx` | Page-State, Paginierungs-UI unter Tabelle |
 
