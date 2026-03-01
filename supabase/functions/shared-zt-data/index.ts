@@ -97,24 +97,36 @@ Deno.serve(async (req) => {
           });
         }
 
-        // Check period is not locked
-        if (period.status === "locked") {
-          return new Response(JSON.stringify({ error: "Periode ist gesperrt" }), {
-            status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        // Check period is not locked — find the period for this week
+        // The week might belong to any of the matching periods
+        const { data: weekRow } = await supabase
+          .from("weeks")
+          .select("id, period_id")
+          .eq("id", week_id)
+          .maybeSingle();
+
+        if (!weekRow) {
+          return new Response(JSON.stringify({ error: "Woche nicht gefunden" }), {
+            status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
 
-        // Verify week belongs to this period
-        const { data: week } = await supabase
-          .from("weeks")
-          .select("id")
-          .eq("id", week_id)
-          .eq("period_id", period.id)
+        // Verify the week's period has the same date range as the token period
+        const { data: weekPeriod } = await supabase
+          .from("scheduling_periods")
+          .select("*")
+          .eq("id", weekRow.period_id)
           .maybeSingle();
 
-        if (!week) {
-          return new Response(JSON.stringify({ error: "Woche gehört nicht zu dieser Periode" }), {
+        if (!weekPeriod || weekPeriod.start_date !== period.start_date || weekPeriod.end_date !== period.end_date || !weekPeriod.share_token) {
+          return new Response(JSON.stringify({ error: "Woche gehört nicht zu einer freigegebenen Periode" }), {
             status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        if (weekPeriod.status === "locked") {
+          return new Response(JSON.stringify({ error: "Periode ist gesperrt" }), {
+            status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
 
@@ -176,7 +188,8 @@ Deno.serve(async (req) => {
       }
 
       // ---- upsert_note (default / backward compatible) ----
-      const { employee_id, field, value } = body;
+      // For notes, we need to find the correct period for the employee's restaurant
+      const { employee_id, field, value, period_id: requestedPeriodId } = body;
 
       if (!employee_id || !field) {
         return new Response(JSON.stringify({ error: "Fehlende Parameter" }), {
@@ -192,11 +205,14 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Use requested period_id if provided, otherwise fall back to anchor period
+      const targetPeriodId = requestedPeriodId || period.id;
+
       const { data: existingNote } = await supabase
         .from("payroll_notes")
         .select("id")
         .eq("employee_id", employee_id)
-        .eq("period_id", period.id)
+        .eq("period_id", targetPeriodId)
         .maybeSingle();
 
       if (existingNote) {
@@ -208,7 +224,7 @@ Deno.serve(async (req) => {
       } else {
         const { error } = await supabase.from("payroll_notes").insert({
           employee_id,
-          period_id: period.id,
+          period_id: targetPeriodId,
           [field]: value,
         });
         if (error) throw error;
@@ -219,37 +235,83 @@ Deno.serve(async (req) => {
       });
     }
 
-    // GET: return all data
-    const restaurantId = period.restaurant_id;
+    // GET: return all data across matching periods
+    const anchorRestaurantId = period.restaurant_id;
+
+    // Find all periods with same date range that also have a share_token
+    const { data: allMatchingPeriods } = await supabase
+      .from("scheduling_periods")
+      .select("*, restaurants!scheduling_periods_restaurant_id_fkey(id, name)")
+      .eq("start_date", period.start_date)
+      .eq("end_date", period.end_date)
+      .not("share_token", "is", null);
+
+    const matchingPeriods = (allMatchingPeriods ?? [period]).map((p: any) => ({
+      id: p.id,
+      restaurant_id: p.restaurant_id,
+      restaurant_name: p.restaurants?.name ?? "Unbekannt",
+      status: p.status,
+    }));
+
+    const allPeriodIds = matchingPeriods.map((p: any) => p.id);
+    const allRestaurantIds = [...new Set(matchingPeriods.map((p: any) => p.restaurant_id).filter(Boolean))];
+
+    // Build period_id -> restaurant_id mapping
+    const periodToRestaurant: Record<string, string> = {};
+    for (const p of matchingPeriods) {
+      if (p.restaurant_id) periodToRestaurant[p.id] = p.restaurant_id;
+    }
 
     const { data: weeks } = await supabase
       .from("weeks")
       .select("*")
-      .eq("period_id", period.id)
+      .in("period_id", allPeriodIds)
       .order("week_number");
 
     const weekIds = (weeks ?? []).map((w: any) => w.id);
+
+    // Build week_id -> restaurant_id mapping (via period)
+    const weekToRestaurant: Record<string, string> = {};
+    for (const w of weeks ?? []) {
+      weekToRestaurant[w.id] = periodToRestaurant[w.period_id] ?? "";
+    }
+
+    // Build weekNumberToAllIds
+    const weekNumberToAllIds: Record<number, string[]> = {};
+    for (const w of weeks ?? []) {
+      (weekNumberToAllIds[w.week_number] ??= []).push(w.id);
+    }
+
+    // Deduplicate weeks by week_number (take first)
+    const seenWeekNumbers = new Set<number>();
+    const deduplicatedWeeks = (weeks ?? []).filter((w: any) => {
+      if (seenWeekNumbers.has(w.week_number)) return false;
+      seenWeekNumbers.add(w.week_number);
+      return true;
+    });
 
     const [shiftsRes, employeesRes, notesRes, advancesRes, holidaysRes] =
       await Promise.all([
         weekIds.length > 0
           ? supabase.from("zt_shifts").select("*").in("week_id", weekIds)
           : { data: [], error: null },
-        supabase
-          .from("staff_restaurants")
-          .select(
-            "zt_department, staff_id, staff!inner(id, name, perso_nr, first_name, last_name, nickname)"
-          )
-          .eq("restaurant_id", restaurantId)
-          .not("zt_department", "is", null),
+        allRestaurantIds.length > 0
+          ? supabase
+              .from("staff_restaurants")
+              .select(
+                "zt_department, staff_id, restaurant_id, staff!inner(id, name, perso_nr, first_name, last_name, nickname)"
+              )
+              .in("restaurant_id", allRestaurantIds)
+              .not("zt_department", "is", null)
+          : { data: [], error: null },
         supabase
           .from("payroll_notes")
           .select("*")
-          .eq("period_id", period.id),
+          .in("period_id", allPeriodIds),
         supabase
           .from("advances")
-          .select("*, sessions!inner(session_date)")
-          .eq("sessions.restaurant_id", restaurantId)
+          .select("*, sessions!inner(session_date, restaurant_id)")
+          .in("sessions.restaurant_id", allRestaurantIds)
           .gte("sessions.session_date", period.start_date)
           .lte("sessions.session_date", period.end_date),
         supabase
@@ -265,12 +327,14 @@ Deno.serve(async (req) => {
       last_name: row.staff.last_name,
       nickname: row.staff.nickname,
       department: row.zt_department,
+      restaurant_id: row.restaurant_id,
     }));
 
     const advances = (advancesRes.data as any[] ?? []).map((d: any) => ({
       staff_name: d.staff_name,
       amount: d.amount,
       date: d.sessions.session_date,
+      restaurant_id: d.sessions.restaurant_id,
     }));
 
     return new Response(
@@ -281,13 +345,17 @@ Deno.serve(async (req) => {
           start_date: period.start_date,
           end_date: period.end_date,
           status: period.status,
+          restaurant_id: anchorRestaurantId,
         },
-        weeks: weeks ?? [],
+        weeks: deduplicatedWeeks,
         shifts: shiftsRes.data ?? [],
         employees,
         payrollNotes: notesRes.data ?? [],
         advances,
         holidays: holidaysRes.data ?? [],
+        matchingPeriods,
+        weekNumberToAllIds,
+        weekToRestaurant,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

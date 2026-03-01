@@ -36,14 +36,24 @@ import BuchhaltungTableHead from "@/pages/zeiterfassung/buchhaltung/BuchhaltungT
 import BuchhaltungDeptHeader from "@/pages/zeiterfassung/buchhaltung/BuchhaltungDeptHeader";
 import BuchhaltungFooter from "@/pages/zeiterfassung/buchhaltung/BuchhaltungFooter";
 
+type MatchingPeriod = {
+  id: string;
+  restaurant_id: string;
+  restaurant_name: string;
+  status: string;
+};
+
 type SharedData = {
-  period: { id: string; label: string; start_date: string; end_date: string; status: string };
+  period: { id: string; label: string; start_date: string; end_date: string; status: string; restaurant_id: string };
   weeks: { id: string; period_id: string; week_number: number; start_date: string; end_date: string }[];
   shifts: Shift[];
-  employees: { id: string; name: string; perso_nr: number | null; first_name: string | null; last_name: string | null; nickname: string | null; department: string }[];
+  employees: { id: string; name: string; perso_nr: number | null; first_name: string | null; last_name: string | null; nickname: string | null; department: string; restaurant_id?: string }[];
   payrollNotes: PayrollNote[];
-  advances: AdvanceEntry[];
+  advances: AdvanceEntry[] & { restaurant_id?: string }[];
   holidays: { holiday_date: string; name: string }[];
+  matchingPeriods?: MatchingPeriod[];
+  weekNumberToAllIds?: Record<number, string[]>;
+  weekToRestaurant?: Record<string, string>;
 };
 
 export default function SharedZtView() {
@@ -51,6 +61,7 @@ export default function SharedZtView() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("wochenplan");
   const [selectedWeekId, setSelectedWeekId] = useState<string>("");
+  const [selectedRestaurant, setSelectedRestaurant] = useState<string | "all">("initial");
 
   const { data, isLoading, error } = useQuery<SharedData>({
     queryKey: ["shared-zt", token],
@@ -99,6 +110,81 @@ export default function SharedZtView() {
     onError: () => toast.error("Fehler beim Speichern"),
   });
 
+  // Destructure before hooks to avoid hooks-after-return issues
+  const period = data?.period;
+  const weeks = data?.weeks ?? [];
+  const shifts = data?.shifts ?? [];
+  const employees = data?.employees ?? [];
+  const payrollNotes = data?.payrollNotes ?? [];
+  const advances = data?.advances ?? [];
+  const holidays = data?.holidays ?? [];
+  const matchingPeriods = data?.matchingPeriods;
+  const weekNumberToAllIds = data?.weekNumberToAllIds;
+  const weekToRestaurant = data?.weekToRestaurant;
+  const holidayMap = useMemo(() => new Map((holidays ?? []).map(h => [h.holiday_date, h.name])), [holidays]);
+  const hasMultipleRestaurants = (matchingPeriods?.length ?? 0) > 1;
+
+  const effectiveRestaurant = selectedRestaurant === "initial" ? (period?.restaurant_id || "all") : selectedRestaurant;
+
+  const filteredEmployees = useMemo(() => {
+    if (!hasMultipleRestaurants || effectiveRestaurant === "all") {
+      const seen = new Set<string>();
+      return employees.filter(e => {
+        const key = `${e.id}-${e.department}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+    return employees.filter(e => e.restaurant_id === effectiveRestaurant);
+  }, [employees, effectiveRestaurant, hasMultipleRestaurants]);
+
+  const filteredShifts = useMemo(() => {
+    if (!hasMultipleRestaurants || effectiveRestaurant === "all") return shifts;
+    if (!weekToRestaurant) return shifts;
+    return shifts.filter(s => weekToRestaurant[s.week_id] === effectiveRestaurant);
+  }, [shifts, effectiveRestaurant, hasMultipleRestaurants, weekToRestaurant]);
+
+  const effectiveWeekNumberToAllIds = effectiveRestaurant === "all" ? weekNumberToAllIds : undefined;
+
+  const filteredAdvances = useMemo(() => {
+    if (!hasMultipleRestaurants || effectiveRestaurant === "all") return advances;
+    return advances.filter((a: any) => a.restaurant_id === effectiveRestaurant);
+  }, [advances, effectiveRestaurant, hasMultipleRestaurants]);
+
+  const filteredPayrollNotes = useMemo(() => {
+    if (!hasMultipleRestaurants || effectiveRestaurant === "all") return payrollNotes;
+    const periodIds = matchingPeriods?.filter(p => p.restaurant_id === effectiveRestaurant).map(p => p.id) ?? [];
+    return payrollNotes.filter(n => periodIds.includes(n.period_id));
+  }, [payrollNotes, effectiveRestaurant, hasMultipleRestaurants, matchingPeriods]);
+
+  const effectiveStatus = useMemo(() => {
+    if (!period) return "open";
+    if (!hasMultipleRestaurants) return period.status;
+    if (effectiveRestaurant === "all") {
+      return matchingPeriods?.some(p => p.status === "locked") ? "locked" : "open";
+    }
+    const mp = matchingPeriods?.find(p => p.restaurant_id === effectiveRestaurant);
+    return mp?.status ?? period.status;
+  }, [effectiveRestaurant, matchingPeriods, hasMultipleRestaurants, period]);
+
+  const sortedEmployees = useMemo(() => [...filteredEmployees].sort((a, b) => {
+    const aIdx = DEPARTMENT_ORDER.indexOf(a.department as any);
+    const bIdx = DEPARTMENT_ORDER.indexOf(b.department as any);
+    if (aIdx !== bIdx) return aIdx - bIdx;
+    const nameA = (a.nickname || a.first_name || "").toLowerCase();
+    const nameB = (b.nickname || b.first_name || "").toLowerCase();
+    return nameA.localeCompare(nameB, "de");
+  }), [filteredEmployees]);
+
+  const employeesWithShifts = useMemo(() => sortedEmployees.filter((emp) =>
+    filteredShifts.some((s) => s.employee_id === emp.id && s.department === emp.department && (Number(s.total_hours) > 0 || !!s.absence_type))
+  ), [sortedEmployees, filteredShifts]);
+
+  const restaurantLabel = effectiveRestaurant === "all"
+    ? "Alle Restaurants"
+    : matchingPeriods?.find(p => p.restaurant_id === effectiveRestaurant)?.restaurant_name ?? "";
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -107,7 +193,7 @@ export default function SharedZtView() {
     );
   }
 
-  if (error || !data) {
+  if (error || !data || !period) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4">
         <Sonner />
@@ -120,22 +206,6 @@ export default function SharedZtView() {
     );
   }
 
-  const { period, weeks, shifts, employees, payrollNotes, advances, holidays } = data;
-  const holidayMap = new Map(holidays.map(h => [h.holiday_date, h.name]));
-
-  const sortedEmployees = [...employees].sort((a, b) => {
-    const aIdx = DEPARTMENT_ORDER.indexOf(a.department as any);
-    const bIdx = DEPARTMENT_ORDER.indexOf(b.department as any);
-    if (aIdx !== bIdx) return aIdx - bIdx;
-    const nameA = (a.nickname || a.first_name || "").toLowerCase();
-    const nameB = (b.nickname || b.first_name || "").toLowerCase();
-    return nameA.localeCompare(nameB, "de");
-  });
-
-  const employeesWithShifts = sortedEmployees.filter((emp) =>
-    shifts.some((s) => s.employee_id === emp.id && s.department === emp.department && (Number(s.total_hours) > 0 || !!s.absence_type))
-  );
-
   return (
     <div className="min-h-screen bg-background">
       <Sonner />
@@ -147,10 +217,34 @@ export default function SharedZtView() {
               {format(parseISO(period.start_date), "dd.MM.yyyy", { locale: de })} — {format(parseISO(period.end_date), "dd.MM.yyyy", { locale: de })}
             </p>
           </div>
-          <Badge variant={period.status === "open" ? "default" : "secondary"}>
-            {period.status === "open" ? "Offen" : "Gesperrt"}
+          <Badge variant={effectiveStatus === "open" ? "default" : "secondary"}>
+            {effectiveStatus === "open" ? "Offen" : "Gesperrt"}
           </Badge>
         </div>
+
+        {hasMultipleRestaurants && (
+          <div className="flex gap-1 flex-wrap">
+            {matchingPeriods!.map(mp => (
+              <Button
+                key={mp.restaurant_id}
+                variant={effectiveRestaurant === mp.restaurant_id ? "default" : "outline"}
+                size="sm"
+                className="h-8 text-xs"
+                onClick={() => setSelectedRestaurant(mp.restaurant_id)}
+              >
+                {mp.restaurant_name}
+              </Button>
+            ))}
+            <Button
+              variant={effectiveRestaurant === "all" ? "default" : "outline"}
+              size="sm"
+              className="h-8 text-xs"
+              onClick={() => setSelectedRestaurant("all")}
+            >
+              Alle
+            </Button>
+          </div>
+        )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-3">
@@ -162,36 +256,39 @@ export default function SharedZtView() {
           <TabsContent value="wochenplan">
             <WochenplanTab
               weeks={weeks}
-              shifts={shifts}
+              shifts={filteredShifts}
               employees={sortedEmployees}
               holidays={holidayMap}
-              periodLabel={period.label}
+              periodLabel={`${period.label} — ${restaurantLabel}`}
               selectedWeekId={selectedWeekId}
               onSelectWeek={setSelectedWeekId}
-              isLocked={period.status === "locked"}
+              isLocked={effectiveStatus === "locked"}
               token={token!}
               onShiftsChanged={() => queryClient.invalidateQueries({ queryKey: ["shared-zt", token] })}
+              weekNumberToAllIds={effectiveWeekNumberToAllIds}
             />
           </TabsContent>
 
           <TabsContent value="zusammenfassung">
             <ZusammenfassungTab
               weeks={weeks}
-              shifts={shifts}
+              shifts={filteredShifts}
               employees={employeesWithShifts}
-              periodLabel={period.label}
+              periodLabel={`${period.label} — ${restaurantLabel}`}
+              weekNumberToAllIds={effectiveWeekNumberToAllIds}
             />
           </TabsContent>
 
           <TabsContent value="buchhaltung">
             <BuchhaltungTab
-              shifts={shifts}
+              shifts={filteredShifts}
               employees={employeesWithShifts}
-              payrollNotes={payrollNotes}
-              advances={advances}
-              periodLabel={period.label}
-              isLocked={period.status === "locked"}
+              payrollNotes={filteredPayrollNotes}
+              advances={filteredAdvances}
+              periodLabel={`${period.label} — ${restaurantLabel}`}
+              isLocked={effectiveStatus === "locked"}
               onUpsertNote={(p) => upsertNote.mutate(p)}
+              weekNumberToAllIds={effectiveWeekNumberToAllIds}
             />
           </TabsContent>
         </Tabs>
@@ -233,7 +330,7 @@ function handleTimeKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
   if (target >= 0 && target < allFields.length) { allFields[target].focus(); allFields[target].select(); }
 }
 
-function WochenplanTab({ weeks, shifts, employees, holidays, periodLabel, selectedWeekId, onSelectWeek, isLocked, token, onShiftsChanged }: {
+function WochenplanTab({ weeks, shifts, employees, holidays, periodLabel, selectedWeekId, onSelectWeek, isLocked, token, onShiftsChanged, weekNumberToAllIds }: {
   weeks: SharedData["weeks"];
   shifts: Shift[];
   employees: SharedData["employees"];
@@ -244,6 +341,7 @@ function WochenplanTab({ weeks, shifts, employees, holidays, periodLabel, select
   isLocked: boolean;
   token: string;
   onShiftsChanged: () => void;
+  weekNumberToAllIds?: Record<number, string[]>;
 }) {
   const [editingTime, setEditingTime] = useState<Record<string, string>>({});
   const [absenceDialog, setAbsenceDialog] = useState<{
@@ -271,7 +369,12 @@ function WochenplanTab({ weeks, shifts, employees, holidays, periodLabel, select
     ? new Set(eachDayOfInterval({ start: parseISO(selectedWeek.start_date), end: parseISO(selectedWeek.end_date) }).map(d => format(d, "yyyy-MM-dd")))
     : new Set<string>();
 
-  const weekShifts = shifts.filter(s => s.week_id === selectedWeekId);
+  // In cumulated mode, include shifts from all week IDs for this week_number
+  const selectedWeekNumber = selectedWeek?.week_number;
+  const allWeekIdsForSelected = selectedWeekNumber != null && weekNumberToAllIds
+    ? weekNumberToAllIds[selectedWeekNumber] ?? [selectedWeekId]
+    : [selectedWeekId];
+  const weekShifts = shifts.filter(s => allWeekIdsForSelected.includes(s.week_id));
   const allPeriodShifts = shifts;
 
   const upsertShift = useMutation({
@@ -572,14 +675,17 @@ function WochenplanTab({ weeks, shifts, employees, holidays, periodLabel, select
 }
 
 // ========== Zusammenfassung Tab ==========
-function ZusammenfassungTab({ weeks, shifts, employees, periodLabel }: {
+function ZusammenfassungTab({ weeks, shifts, employees, periodLabel, weekNumberToAllIds }: {
   weeks: SharedData["weeks"];
   shifts: Shift[];
   employees: SharedData["employees"];
   periodLabel: string;
+  weekNumberToAllIds?: Record<number, string[]>;
 }) {
   const getWeeklyHours = (empId: string, weekNumber: number, department?: string) => {
-    const wIds = weeks.filter(w => w.week_number === weekNumber).map(w => w.id);
+    const wIds = weekNumberToAllIds
+      ? (weekNumberToAllIds[weekNumber] ?? weeks.filter(w => w.week_number === weekNumber).map(w => w.id))
+      : weeks.filter(w => w.week_number === weekNumber).map(w => w.id);
     return shifts.filter(s => s.employee_id === empId && wIds.includes(s.week_id) && (!department || s.department === department))
       .reduce((sum, s) => sum + Number(s.total_hours), 0);
   };
@@ -666,7 +772,7 @@ function ZusammenfassungTab({ weeks, shifts, employees, periodLabel }: {
 }
 
 // ========== Buchhaltung Tab ==========
-function BuchhaltungTab({ shifts, employees, payrollNotes, advances, periodLabel, isLocked, onUpsertNote }: {
+function BuchhaltungTab({ shifts, employees, payrollNotes, advances, periodLabel, isLocked, onUpsertNote, weekNumberToAllIds }: {
   shifts: Shift[];
   employees: SharedData["employees"];
   payrollNotes: PayrollNote[];
@@ -674,6 +780,7 @@ function BuchhaltungTab({ shifts, employees, payrollNotes, advances, periodLabel
   periodLabel: string;
   isLocked: boolean;
   onUpsertNote: (p: { employee_id: string; field: string; value: any }) => void;
+  weekNumberToAllIds?: Record<number, string[]>;
 }) {
   const advancesByName = useMemo(() => {
     const map: Record<string, AdvanceEntry[]> = {};
