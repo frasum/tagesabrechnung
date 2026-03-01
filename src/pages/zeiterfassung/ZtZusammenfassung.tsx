@@ -11,6 +11,8 @@ import { FileDown, FileSpreadsheet } from "lucide-react";
 import { exportZusammenfassungPdf } from "@/lib/exportZusammenfassungPdf";
 import { exportZusammenfassungExcel } from "@/lib/exportZusammenfassungExcel";
 import { useCumulatedZtData } from "@/hooks/useCumulatedZtData";
+import { useAuth } from "@/contexts/AuthContext";
+import ShiftTimeOverride from "@/components/zeiterfassung/ShiftTimeOverride";
 
 type Shift = {
   id: string;
@@ -32,6 +34,7 @@ export default function ZtZusammenfassung() {
   const { selectedPeriodId, setSelectedPeriodId, periods, weeks: contextWeeks } = useZt();
   const { data: restaurantEmployees } = useRestaurantEmployees(restaurantId);
   const [cumulated, setCumulated] = useState(false);
+  const { hasPermission } = useAuth();
 
   const selectedPeriod = periods?.find(p => p.id === selectedPeriodId);
   const cumData = useCumulatedZtData(cumulated, selectedPeriod);
@@ -274,6 +277,15 @@ export default function ZtZusammenfassung() {
           </tfoot>
         </table>
       </div>
+
+      {hasPermission('admin') && selectedPeriod && (
+        <ShiftTimeOverride
+          employeesWithShifts={employeesWithShifts}
+          weekIds={weekIds}
+          periodStartDate={selectedPeriod.start_date}
+          periodEndDate={selectedPeriod.end_date}
+        />
+      )}
     </div>
   );
 }
