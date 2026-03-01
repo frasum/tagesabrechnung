@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,17 +17,25 @@ import BuchhaltungTableHead from "./buchhaltung/BuchhaltungTableHead";
 import BuchhaltungDeptHeader from "./buchhaltung/BuchhaltungDeptHeader";
 import BuchhaltungRow from "./buchhaltung/BuchhaltungRow";
 import BuchhaltungFooter from "./buchhaltung/BuchhaltungFooter";
+import { useCumulatedZtData } from "@/hooks/useCumulatedZtData";
 import type { Shift, PayrollNote, AdvanceEntry } from "./buchhaltung/types";
 
 export default function ZtBuchhaltung() {
   const queryClient = useQueryClient();
   const { restaurantId } = useRestaurant();
   const { selectedPeriodId, setSelectedPeriodId, periods, weeks, isPeriodLocked } = useZt();
-  const { data: employees } = useRestaurantEmployees(restaurantId);
+  const { data: restaurantEmployees } = useRestaurantEmployees(restaurantId);
+  const [cumulated, setCumulated] = useState(false);
 
-  const weekIds = weeks?.map(w => w.id) ?? [];
+  const selectedPeriod = periods?.find(p => p.id === selectedPeriodId);
+  const cumData = useCumulatedZtData(cumulated, selectedPeriod);
 
-  const { data: shifts } = useQuery({
+  const employees = cumulated ? cumData.employees : restaurantEmployees;
+  const weekIds = cumulated
+    ? (cumData.allWeekIds ?? [])
+    : (weeks?.map(w => w.id) ?? []);
+
+  const { data: singleShifts } = useQuery({
     queryKey: ["zt-buchhaltung-shifts", weekIds],
     queryFn: async () => {
       if (!weekIds.length) return [];
@@ -38,10 +46,12 @@ export default function ZtBuchhaltung() {
       if (error) throw error;
       return data as Shift[];
     },
-    enabled: weekIds.length > 0,
+    enabled: !cumulated && weekIds.length > 0,
   });
 
-  const { data: payrollNotes } = useQuery({
+  const shifts = cumulated ? (cumData.shifts as Shift[] | undefined) : singleShifts;
+
+  const { data: singlePayrollNotes } = useQuery({
     queryKey: ["payroll-notes", selectedPeriodId],
     queryFn: async () => {
       if (!selectedPeriodId) return [];
@@ -52,12 +62,12 @@ export default function ZtBuchhaltung() {
       if (error) throw error;
       return data as PayrollNote[];
     },
-    enabled: !!selectedPeriodId,
+    enabled: !cumulated && !!selectedPeriodId,
   });
 
-  const selectedPeriod = periods?.find(p => p.id === selectedPeriodId);
+  const payrollNotes = cumulated ? (cumData.payrollNotes as PayrollNote[] | undefined) : singlePayrollNotes;
 
-  const { data: advances } = useQuery({
+  const { data: singleAdvances } = useQuery({
     queryKey: ["buchhaltung-advances", restaurantId, selectedPeriodId],
     queryFn: async () => {
       if (!selectedPeriod || !restaurantId) return [];
@@ -74,8 +84,10 @@ export default function ZtBuchhaltung() {
         date: d.sessions.session_date as string,
       })) as AdvanceEntry[];
     },
-    enabled: !!selectedPeriod && !!restaurantId,
+    enabled: !cumulated && !!selectedPeriod && !!restaurantId,
   });
+
+  const advances = cumulated ? (cumData.advances as AdvanceEntry[] | undefined) : singleAdvances;
 
   const advancesByName = useMemo(() => {
     const map: Record<string, AdvanceEntry[]> = {};
@@ -105,7 +117,12 @@ export default function ZtBuchhaltung() {
         if (error) throw error;
       }
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["payroll-notes", selectedPeriodId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payroll-notes", selectedPeriodId] });
+      if (cumulated) {
+        queryClient.invalidateQueries({ queryKey: ["cumulated-payroll-notes"] });
+      }
+    },
     onError: () => toast.error("Fehler beim Speichern"),
   });
 
@@ -161,6 +178,13 @@ export default function ZtBuchhaltung() {
               ))}
             </SelectContent>
           </Select>
+          <Button
+            variant={cumulated ? "default" : "outline"}
+            size="sm"
+            onClick={() => setCumulated(c => !c)}
+          >
+            Kumuliert
+          </Button>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -168,9 +192,8 @@ export default function ZtBuchhaltung() {
             size="sm"
             disabled={!selectedPeriodId || !employeesWithShifts.length}
             onClick={() => {
-              const period = periods?.find(p => p.id === selectedPeriodId);
-              if (!period) return;
-              exportBuchhaltungPdf(period.label, employeesWithShifts, shifts ?? [], payrollNotes ?? []);
+              if (!selectedPeriod) return;
+              exportBuchhaltungPdf(selectedPeriod.label + (cumulated ? " (Kumuliert)" : ""), employeesWithShifts, shifts ?? [], payrollNotes ?? []);
               toast.success("PDF wurde erstellt");
             }}
           >
@@ -181,9 +204,8 @@ export default function ZtBuchhaltung() {
             size="sm"
             disabled={!selectedPeriodId || !employeesWithShifts.length}
             onClick={() => {
-              const period = periods?.find(p => p.id === selectedPeriodId);
-              if (!period) return;
-              exportBuchhaltungExcel(period.label, employeesWithShifts, shifts ?? [], payrollNotes ?? []);
+              if (!selectedPeriod) return;
+              exportBuchhaltungExcel(selectedPeriod.label + (cumulated ? " (Kumuliert)" : ""), employeesWithShifts, shifts ?? [], payrollNotes ?? []);
               toast.success("Excel wurde erstellt");
             }}
           >

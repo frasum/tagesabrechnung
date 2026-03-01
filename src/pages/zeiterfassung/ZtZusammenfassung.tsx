@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { FileDown, FileSpreadsheet } from "lucide-react";
 import { exportZusammenfassungPdf } from "@/lib/exportZusammenfassungPdf";
 import { exportZusammenfassungExcel } from "@/lib/exportZusammenfassungExcel";
+import { useCumulatedZtData } from "@/hooks/useCumulatedZtData";
 
 type Shift = {
   id: string;
@@ -28,12 +29,22 @@ type Shift = {
 
 export default function ZtZusammenfassung() {
   const { restaurantId } = useRestaurant();
-  const { selectedPeriodId, setSelectedPeriodId, periods, weeks } = useZt();
-  const { data: employees } = useRestaurantEmployees(restaurantId);
+  const { selectedPeriodId, setSelectedPeriodId, periods, weeks: contextWeeks } = useZt();
+  const { data: restaurantEmployees } = useRestaurantEmployees(restaurantId);
+  const [cumulated, setCumulated] = useState(false);
+
+  const selectedPeriod = periods?.find(p => p.id === selectedPeriodId);
+  const cumData = useCumulatedZtData(cumulated, selectedPeriod);
+
+  const employees = cumulated ? cumData.employees : restaurantEmployees;
+  const weeks = cumulated ? cumData.weeks : contextWeeks;
 
   // Load all shifts for all weeks of the selected period
-  const weekIds = weeks?.map(w => w.id) ?? [];
-  const { data: shifts } = useQuery({
+  const weekIds = cumulated
+    ? (cumData.allWeekIds ?? [])
+    : (contextWeeks?.map(w => w.id) ?? []);
+
+  const { data: singleShifts } = useQuery({
     queryKey: ["zt-summary-shifts", weekIds],
     queryFn: async () => {
       if (!weekIds.length) return [];
@@ -44,14 +55,19 @@ export default function ZtZusammenfassung() {
       if (error) throw error;
       return data as Shift[];
     },
-    enabled: weekIds.length > 0,
+    enabled: !cumulated && weekIds.length > 0,
   });
 
-  // Build a map: weekNumber -> weekIds (for cross-restaurant compatibility later)
-  const weekNumberToIds: Record<number, string[]> = {};
-  weeks?.forEach(w => {
-    (weekNumberToIds[w.week_number] ??= []).push(w.id);
-  });
+  const shifts = cumulated ? (cumData.shifts as Shift[] | undefined) : singleShifts;
+
+  // Build a map: weekNumber -> weekIds
+  const weekNumberToIds: Record<number, string[]> = cumulated
+    ? cumData.weekNumberToAllIds
+    : (() => {
+        const map: Record<number, string[]> = {};
+        weeks?.forEach(w => { (map[w.week_number] ??= []).push(w.id); });
+        return map;
+      })();
 
   const sortedEmployees = employees
     ? [...employees].sort((a, b) => {
@@ -108,7 +124,11 @@ export default function ZtZusammenfassung() {
   })();
 
   const getWeeklyHours = (empId: string, weekNumber: number, department?: string) => {
+    // In cumulated mode, shifts are loaded for ALL weeks across restaurants
+    // We filter by week_number via the weekNumberToIds mapping
     const wIds = weekNumberToIds[weekNumber] ?? [];
+    // But in cumulated mode, multiple weeks with same week_number exist across periods
+    // The shifts are loaded with ALL week IDs, so we need to find all shifts matching any of those week IDs
     const weekShifts = shifts?.filter((s) => s.employee_id === empId && wIds.includes(s.week_id) && (!department || s.department === department)) ?? [];
     return weekShifts.reduce((sum, s) => sum + Number(s.total_hours), 0);
   };
@@ -128,6 +148,13 @@ export default function ZtZusammenfassung() {
               ))}
             </SelectContent>
           </Select>
+          <Button
+            variant={cumulated ? "default" : "outline"}
+            size="sm"
+            onClick={() => setCumulated(c => !c)}
+          >
+            Kumuliert
+          </Button>
         </div>
 
         <div className="flex items-center gap-2">
@@ -136,9 +163,8 @@ export default function ZtZusammenfassung() {
             size="sm"
             disabled={!employeesWithShifts.length}
             onClick={() => {
-              const selectedPeriod = periods?.find(p => p.id === selectedPeriodId);
               if (selectedPeriod && weeks && shifts) {
-                exportZusammenfassungPdf(selectedPeriod.label, employeesWithShifts, weeks, shifts);
+                exportZusammenfassungPdf(selectedPeriod.label + (cumulated ? " (Kumuliert)" : ""), employeesWithShifts, weeks, shifts);
               }
             }}
           >
@@ -151,9 +177,8 @@ export default function ZtZusammenfassung() {
             size="sm"
             disabled={!employeesWithShifts.length}
             onClick={() => {
-              const selectedPeriod = periods?.find(p => p.id === selectedPeriodId);
               if (selectedPeriod && weeks && shifts) {
-                exportZusammenfassungExcel(selectedPeriod.label, employeesWithShifts, weeks, shifts);
+                exportZusammenfassungExcel(selectedPeriod.label + (cumulated ? " (Kumuliert)" : ""), employeesWithShifts, weeks, shifts);
               }
             }}
           >
