@@ -546,6 +546,8 @@ export type Database = {
           id: string
           label: string
           restaurant_id: string | null
+          share_token: string | null
+          shared_at: string | null
           start_date: string
           status: Database["public"]["Enums"]["period_status"]
         }
@@ -555,6 +557,8 @@ export type Database = {
           id?: string
           label: string
           restaurant_id?: string | null
+          share_token?: string | null
+          shared_at?: string | null
           start_date: string
           status?: Database["public"]["Enums"]["period_status"]
         }
@@ -564,6 +568,8 @@ export type Database = {
           id?: string
           label?: string
           restaurant_id?: string | null
+          share_token?: string | null
+          shared_at?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["period_status"]
         }
