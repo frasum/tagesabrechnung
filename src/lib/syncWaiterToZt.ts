@@ -27,16 +27,27 @@ async function findWeekForDate(date: string): Promise<string | null> {
 }
 
 async function findStaffByName(name: string, restaurantId: string, department: 'Küche' | 'GL' | 'Service' = 'Service'): Promise<string | null> {
-  // Match by staff.name via staff_restaurants for the given restaurant
+  // 1. Try exact department match
   const { data } = await supabase
     .from('staff_restaurants')
     .select('staff_id, staff!inner(id, name)')
     .eq('restaurant_id', restaurantId)
     .eq('zt_department', department);
 
-  if (!data) return null;
-  const match = data.find((sr: any) => sr.staff?.name === name);
-  return match?.staff_id ?? null;
+  if (data) {
+    const match = data.find((sr: any) => sr.staff?.name === name);
+    if (match?.staff_id) return match.staff_id;
+  }
+
+  // 2. Fallback: search without department filter (covers cases where zt_department is null/different)
+  const { data: fallbackData } = await supabase
+    .from('staff_restaurants')
+    .select('staff_id, staff!inner(id, name)')
+    .eq('restaurant_id', restaurantId);
+
+  if (!fallbackData) return null;
+  const fallbackMatch = fallbackData.find((sr: any) => sr.staff?.name === name);
+  return fallbackMatch?.staff_id ?? null;
 }
 
 async function isHoliday(date: string): Promise<boolean> {
