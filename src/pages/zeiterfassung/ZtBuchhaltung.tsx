@@ -5,13 +5,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
+import { Download, FileSpreadsheet } from "lucide-react";
 import { useRestaurant } from "@/hooks/useRestaurant";
 import { useRestaurantEmployees } from "@/hooks/useRestaurantEmployees";
 import { useZt } from "@/contexts/ZtContext";
 import { DEPARTMENT_ORDER } from "@/lib/shiftCalculations";
 import { getEmployeeTotals } from "./buchhaltung/utils";
 import { exportBuchhaltungPdf } from "@/lib/exportBuchhaltungPdf";
+import { exportBuchhaltungExcel } from "@/lib/exportBuchhaltungExcel";
 import BuchhaltungTableHead from "./buchhaltung/BuchhaltungTableHead";
 import BuchhaltungDeptHeader from "./buchhaltung/BuchhaltungDeptHeader";
 import BuchhaltungRow from "./buchhaltung/BuchhaltungRow";
@@ -161,19 +162,34 @@ export default function ZtBuchhaltung() {
             </SelectContent>
           </Select>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={!selectedPeriodId || !employeesWithShifts.length}
-          onClick={() => {
-            const period = periods?.find(p => p.id === selectedPeriodId);
-            if (!period) return;
-            exportBuchhaltungPdf(period.label, employeesWithShifts, shifts ?? [], payrollNotes ?? []);
-            toast.success("PDF wurde erstellt");
-          }}
-        >
-          <Download className="mr-1 h-4 w-4" /> PDF Export
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!selectedPeriodId || !employeesWithShifts.length}
+            onClick={() => {
+              const period = periods?.find(p => p.id === selectedPeriodId);
+              if (!period) return;
+              exportBuchhaltungPdf(period.label, employeesWithShifts, shifts ?? [], payrollNotes ?? []);
+              toast.success("PDF wurde erstellt");
+            }}
+          >
+            <Download className="mr-1 h-4 w-4" /> PDF
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!selectedPeriodId || !employeesWithShifts.length}
+            onClick={() => {
+              const period = periods?.find(p => p.id === selectedPeriodId);
+              if (!period) return;
+              exportBuchhaltungExcel(period.label, employeesWithShifts, shifts ?? [], payrollNotes ?? []);
+              toast.success("Excel wurde erstellt");
+            }}
+          >
+            <FileSpreadsheet className="mr-1 h-4 w-4" /> Excel
+          </Button>
+        </div>
       </div>
 
       <Card className="overflow-hidden">
