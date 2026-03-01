@@ -1,16 +1,23 @@
 
 
-## Auto-Scroll zum heutigen Tag im Wochenplan
+## Aktuelle Woche sofort öffnen
 
-### Änderungen
+### Problem
+Beim Öffnen der Zeiterfassung gibt es eine Kaskade von asynchronen Abfragen:
+1. Perioden laden → Periode auto-wählen
+2. Wochen laden (abhängig von gewählter Periode) → Woche auto-wählen
+
+Diese Kaskade verursacht eine spürbare Verzögerung, bis die aktuelle Woche angezeigt wird.
+
+### Lösung
 
 | Datei | Änderung |
 |---|---|
-| `src/pages/zeiterfassung/ZtWochenplan.tsx` | 1. `useRef` für den scrollbaren Container (`div.overflow-x-auto`) hinzufügen. 2. Dem heutigen Tag-Header ein `data-today`-Attribut oder eine Ref zuweisen. 3. Per `useEffect` nach dem Rendern der Tabelle zum heutigen Tag scrollen (`scrollIntoView` oder `scrollLeft` berechnen), damit die aktuelle Tagesspalte sichtbar ist. |
+| `src/contexts/ZtContext.tsx` | Wochen für alle Perioden gleichzeitig mit den Perioden laden (nicht erst nach Perioden-Auswahl). So können Periode UND Woche sofort auto-gewählt werden, ohne auf eine zweite Abfrage warten zu müssen. |
 
 ### Detail
-- `useRef<HTMLDivElement>` auf den äußeren `<div className="overflow-x-auto ...">` setzen
-- Dem `<th>` des heutigen Tages ein `ref` oder `data-date={dateStr}` geben
-- `useEffect` mit Abhängigkeit auf `selectedWeekId` und `weekDays`: nach Render das Element mit dem heutigen Datum per `querySelector` finden und `scrollIntoView({ inline: "center", behavior: "smooth" })` aufrufen
-- Nur scrollen wenn der heutige Tag in der aktuellen Woche enthalten ist
+- Die `weeks`-Query nicht mehr von `selectedPeriodId` abhängig machen, sondern alle Wochen für alle Perioden des Restaurants in einer einzigen Abfrage laden (gefiltert über die Period-IDs)
+- Die Wochen-Daten dann im Context nach `selectedPeriodId` filtern, sodass `weeks` weiterhin nur die Wochen der gewählten Periode enthält
+- Dadurch sind beim ersten Render beide Datensätze gleichzeitig verfügbar und Periode + Woche können im selben Render-Zyklus auto-gewählt werden
+- Die Auto-Select-Effects so anpassen, dass Periode und Woche in einem Schritt gesetzt werden können
 
