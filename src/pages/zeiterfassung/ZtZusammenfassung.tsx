@@ -153,7 +153,7 @@ export default function ZtZusammenfassung() {
             size="sm"
             onClick={() => setCumulated(c => !c)}
           >
-            Kumuliert
+            Alle Restaurants
           </Button>
         </div>
 

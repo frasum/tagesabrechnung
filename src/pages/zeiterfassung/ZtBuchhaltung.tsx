@@ -183,7 +183,7 @@ export default function ZtBuchhaltung() {
             size="sm"
             onClick={() => setCumulated(c => !c)}
           >
-            Kumuliert
+            Alle Restaurants
           </Button>
         </div>
         <div className="flex items-center gap-2">
