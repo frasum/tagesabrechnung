@@ -364,6 +364,40 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
 
   // Kontroll-Abschnitt entfernt – eine Seite reicht
 
+  // ===== Prominenter Wechselgeldbestand unter Trennlinie =====
+  if (data.totals.remainingCash !== undefined) {
+    const rc = data.totals.remainingCash;
+    const cutLineY = y + 6;
+    // Gestrichelte Trennlinie (Schnittlinie) über gesamte Seitenbreite
+    doc.setDrawColor(120);
+    doc.setLineWidth(0.5);
+    doc.setLineDashPattern([3, 2], 0);
+    doc.line(margin, cutLineY, pageWidth - margin, cutLineY);
+    doc.setLineDashPattern([], 0); // Reset
+
+    // Farbiger Hintergrund-Block
+    const boxY = cutLineY + 4;
+    const boxH = 14;
+    const fillColor: [number, number, number] = rc >= 2000 ? [220, 252, 231] : [254, 226, 226];
+    doc.setFillColor(...fillColor);
+    doc.roundedRect(margin, boxY, pageWidth - 2 * margin, boxH, 2, 2, 'F');
+
+    // Zentrierter Text
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0);
+    doc.text(
+      `Wechselgeldbestand: ${formatCurrency(rc)}`,
+      pageWidth / 2,
+      boxY + boxH / 2 + 2,
+      { align: 'center' }
+    );
+
+    y = boxY + boxH + 4;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+  }
+
   // ========== Footer with page numbers ==========
   const pageCount = doc.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
