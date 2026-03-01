@@ -94,6 +94,10 @@ export function AppLayout({ children }: AppLayoutProps) {
       
       // Manager with custom permissions - check if path is allowed
       if (isManager && hasCustomPermissions) {
+        // For zeiterfassung: show if any sub-path is permitted
+        if (item.path === 'zeiterfassung') {
+          return managerPaths.some(p => p.startsWith('zeiterfassung'));
+        }
         return managerPaths.includes(item.path);
       }
       

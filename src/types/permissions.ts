@@ -17,7 +17,10 @@ export const NAV_PERMISSIONS: Record<string, PermissionConfig> = {
   'cash-balance': { label: 'Bargeldbestand', description: 'Bargeld verwalten', minLevel: 'manager' },
   
   'qr-poster': { label: 'QR-Poster', description: 'Mitarbeiter Self-Service Poster', minLevel: 'manager' },
-  'zeiterfassung': { label: 'Zeiterfassung', description: 'Arbeitszeiten verwalten', minLevel: 'manager' },
+  'zeiterfassung': { label: 'ZE – Wochenplan', description: 'Wochenplan einsehen/bearbeiten', minLevel: 'manager' },
+  'zeiterfassung/zusammenfassung': { label: 'ZE – Zusammenfassung', description: 'Zusammenfassung einsehen', minLevel: 'manager' },
+  'zeiterfassung/buchhaltung': { label: 'ZE – Buchhaltung', description: 'Buchhaltungsexport', minLevel: 'manager' },
+  'zeiterfassung/perioden': { label: 'ZE – Perioden', description: 'Perioden verwalten', minLevel: 'manager' },
   'staff': { label: 'Mitarbeiter', description: 'Mitarbeiter verwalten', minLevel: 'admin' },
   'permissions': { label: 'Berechtigungen', description: 'Navigationszugriff verwalten', minLevel: 'admin' },
 };
@@ -32,7 +35,10 @@ export const MANAGER_NAV_ITEMS = [
   { path: 'cash-balance', label: 'Bargeldbestand' },
   
   { path: 'qr-poster', label: 'QR-Poster' },
-  { path: 'zeiterfassung', label: 'Zeiterfassung' },
+  { path: 'zeiterfassung', label: 'ZE – Wochenplan' },
+  { path: 'zeiterfassung/zusammenfassung', label: 'ZE – Zusammenfassung' },
+  { path: 'zeiterfassung/buchhaltung', label: 'ZE – Buchhaltung' },
+  { path: 'zeiterfassung/perioden', label: 'ZE – Perioden' },
 ];
 
 // Permission level hierarchy (higher index = more permissions)
