@@ -35,6 +35,7 @@ const ZtWochenplan = lazy(() => import("./pages/zeiterfassung/ZtWochenplan"));
 const ZtZusammenfassung = lazy(() => import("./pages/zeiterfassung/ZtZusammenfassung"));
 const ZtBuchhaltung = lazy(() => import("./pages/zeiterfassung/ZtBuchhaltung"));
 const ZtPerioden = lazy(() => import("./pages/zeiterfassung/ZtPerioden"));
+const RestaurantChat = lazy(() => import("./pages/RestaurantChat"));
 const SharedZtView = lazy(() => import("./pages/shared/SharedZtView"));
 const PayrollPortal = lazy(() => import("./pages/shared/PayrollPortal"));
 
@@ -73,6 +74,7 @@ function RestaurantRoutes() {
             <Route path="buchhaltung" element={<ZtBuchhaltung />} />
             <Route path="perioden" element={<ZtPerioden />} />
           </Route>
+          <Route path="chat" element={<ProtectedRoute requiredLevel="admin"><RestaurantChat /></ProtectedRoute>} />
         </Routes>
       </DateProvider>
     </RestaurantProvider>
