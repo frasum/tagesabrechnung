@@ -113,6 +113,10 @@ export default function Login() {
       const parsed = JSON.parse(stored);
       parsed.role = role === 'gl' ? 'waiter' : role; // GL maps to waiter for routing
       parsed.activeRole = role; // Keep the precise selection
+      // Service/Küche = nur Staff-Berechtigung, GL = Manager behalten
+      if (role !== 'gl') {
+        parsed.permissionLevel = 'staff';
+      }
       localStorage.setItem('spicery_auth_user', JSON.stringify(parsed));
     }
     setPendingRoleSelection(null);
