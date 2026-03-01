@@ -1095,7 +1095,7 @@ export type Database = {
         Row: {
           absence_type: string | null
           created_at: string
-          department: string | null
+          department: string
           employee_id: string
           end_time: string | null
           evening_hours: number
@@ -1112,7 +1112,7 @@ export type Database = {
         Insert: {
           absence_type?: string | null
           created_at?: string
-          department?: string | null
+          department?: string
           employee_id: string
           end_time?: string | null
           evening_hours?: number
@@ -1129,7 +1129,7 @@ export type Database = {
         Update: {
           absence_type?: string | null
           created_at?: string
-          department?: string | null
+          department?: string
           employee_id?: string
           end_time?: string | null
           evening_hours?: number

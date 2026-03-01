@@ -210,7 +210,7 @@ export default function ZtWochenplan() {
         evening_hours: hours.eveningHours,
         night_hours: hours.nightHours,
         absence_type: params.absence_type ?? null,
-        department: params.department ?? null,
+        department: params.department ?? '',
       }, { onConflict: "employee_id,shift_date,department" });
 
       if (error) throw error;
