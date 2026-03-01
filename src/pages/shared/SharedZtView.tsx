@@ -20,7 +20,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { format, parseISO, eachDayOfInterval, startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
 import { de } from "date-fns/locale";
 import {
-  formatHours, DEPARTMENT_ORDER, getDepartmentBgClass,
+  formatHours, DEPARTMENT_ORDER, getDepartmentBgClass, getDepartmentColorClass,
   countVacationDays, countSickDays, isSunday,
   getSickDateRanges, getVacationDateRanges, formatSickRanges,
 } from "@/lib/shiftCalculations";
@@ -251,6 +251,15 @@ function WochenplanTab({ weeks, shifts, employees, holidays, periodLabel, select
     startDate: Date; endDate: Date | undefined; department: string;
   }>({ open: false, employeeId: "", employeeName: "", absenceType: "urlaub", startDate: new Date(), endDate: undefined, department: "" });
 
+  const sortedEmployees = useMemo(() => [...employees].sort((a, b) => {
+    const aIdx = DEPARTMENT_ORDER.indexOf(a.department as any);
+    const bIdx = DEPARTMENT_ORDER.indexOf(b.department as any);
+    if (aIdx !== bIdx) return aIdx - bIdx;
+    const nameA = (a.nickname || a.first_name || "").toLowerCase();
+    const nameB = (b.nickname || b.first_name || "").toLowerCase();
+    return nameA.localeCompare(nameB, "de");
+  }), [employees]);
+
   const selectedWeek = weeks.find(w => w.id === selectedWeekId);
   const weekDays = selectedWeek
     ? eachDayOfInterval({
@@ -377,115 +386,140 @@ function WochenplanTab({ weeks, shifts, employees, holidays, periodLabel, select
               </tr>
             </thead>
             <tbody>
-              {employees.map(emp => {
-                const empWeekShifts = weekShifts.filter(s => s.employee_id === emp.id && s.department === emp.department);
-                const weekTotal = empWeekShifts.reduce((sum, s) => sum + Number(s.total_hours), 0);
-                const hasContent = weekTotal > 0 || empWeekShifts.some(s => s.absence_type);
+              {(() => {
+                let lastDept = "";
+                let zebraIdx = 0;
+                return sortedEmployees.map(emp => {
+                  const empWeekShifts = weekShifts.filter(s => s.employee_id === emp.id && s.department === emp.department);
+                  const weekTotal = empWeekShifts.reduce((sum, s) => sum + Number(s.total_hours), 0);
+                  const showDeptHeader = emp.department !== lastDept;
+                  if (showDeptHeader) {
+                    lastDept = emp.department;
+                    zebraIdx = 0;
+                  }
+                  const isEven = zebraIdx % 2 === 1;
+                  zebraIdx++;
 
-                return (
-                  <tr key={`${emp.id}-${emp.department}`} className="border-t hover:bg-muted/30">
-                    <td className="p-1.5 font-medium text-xs whitespace-nowrap">
-                      {emp.nickname || emp.first_name || emp.name}
-                    </td>
-                    {weekDays.map(day => {
-                      const dateStr = format(day, "yyyy-MM-dd");
-                      const shift = empWeekShifts.find(s => s.shift_date === dateStr);
-                      const isActive = activeDates.has(dateStr);
-                      if (!isActive) return <td key={dateStr} colSpan={2} className="opacity-40" />;
+                  const deptColor = emp.department === "Küche" ? "hsl(15 80% 50%)" : emp.department === "GL" ? "hsl(220 60% 50%)" : "hsl(145 60% 40%)";
 
-                      const absenceType = shift?.absence_type as string | null;
-                      const startVal = shift?.start_time?.slice(0, 5) ?? "";
-                      const endVal = shift?.end_time?.slice(0, 5) ?? "";
-
-                      if (absenceType) {
-                        return (
-                          <td key={dateStr} colSpan={2} className="p-0.5 text-center">
-                            <button
-                              className={`inline-flex items-center justify-center h-7 w-full rounded text-xs font-bold cursor-pointer ${
-                                absenceType === 'urlaub'
-                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                  : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                              }`}
-                              onClick={() => !isLocked && handleAbsenceToggle(emp.id, dateStr, null, emp.department)}
-                              disabled={isLocked}
-                              title={absenceType === 'urlaub' ? 'Urlaub — klicken zum Entfernen' : 'Krank — klicken zum Entfernen'}
-                            >
-                              {absenceType === 'urlaub' ? 'U' : 'K'}
-                            </button>
+                  return (
+                    <React.Fragment key={`${emp.id}-${emp.department}`}>
+                      {showDeptHeader && (
+                        <tr className={`dept-header-row ${getDepartmentBgClass(emp.department)}`}>
+                          <td
+                            colSpan={weekDays.length * 2 + 2}
+                            className="px-2 py-1 text-xs font-bold tracking-wide border-l-4"
+                            style={{ borderLeftColor: deptColor }}
+                          >
+                            {emp.department}
                           </td>
-                        );
-                      }
+                        </tr>
+                      )}
+                      <tr className={`border-t hover:bg-muted/30 ${isEven ? "bg-muted/20" : ""}`}>
+                        <td className="p-1.5 font-medium text-xs whitespace-nowrap border-l-2" style={{ borderLeftColor: deptColor }}>
+                          {emp.nickname || emp.first_name || emp.name}
+                        </td>
+                        {weekDays.map(day => {
+                          const dateStr = format(day, "yyyy-MM-dd");
+                          const shift = empWeekShifts.find(s => s.shift_date === dateStr);
+                          const isActive = activeDates.has(dateStr);
+                          if (!isActive) return <td key={dateStr} colSpan={2} className="opacity-40" />;
 
-                      return (
-                        <React.Fragment key={dateStr}>
-                          <td className="p-0.5">
-                            <div className="relative flex items-center">
-                              <Input
-                                type="text"
-                                className="h-7 text-xs px-1 w-[72px] text-center time-input-clean"
-                                placeholder=""
-                                data-time-field={`${emp.id}-${dateStr}-start_time`}
-                                data-time-col={`${dateStr}-start_time`}
-                                value={editingTime[`${emp.id}-${dateStr}-start_time`] ?? startVal}
-                                onChange={(e) => setEditingTime(prev => ({ ...prev, [`${emp.id}-${dateStr}-start_time`]: e.target.value }))}
-                                onBlur={(e) => {
-                                  const key = `${emp.id}-${dateStr}-start_time`;
-                                  const raw = e.target.value;
-                                  const formatted = formatTimeInput(raw);
-                                  if (formatted) handleTimeChange(emp.id, dateStr, "start_time", formatted, emp.department);
-                                  else if (!raw.trim() && startVal) handleTimeChange(emp.id, dateStr, "start_time", "", emp.department);
-                                  setEditingTime(prev => { const next = { ...prev }; delete next[key]; return next; });
-                                }}
-                                onKeyDown={handleTimeKeyDown}
-                                onFocus={(e) => e.target.select()}
-                                disabled={isLocked}
-                              />
-                              {!isLocked && !startVal && !endVal && (
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <button className="absolute -right-1 top-0 h-7 w-5 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors text-xs" tabIndex={-1}>⋮</button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent>
-                                    <DropdownMenuItem onClick={() => openAbsenceDialog(emp.id, dateStr, 'urlaub', emp.department)}>
-                                      <span className="text-green-600 font-bold mr-2">U</span> Urlaub
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => openAbsenceDialog(emp.id, dateStr, 'krank', emp.department)}>
-                                      <span className="text-red-600 font-bold mr-2">K</span> Krank
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-0.5">
-                            <Input
-                              type="text"
-                              className="h-7 text-xs px-1 w-[72px] text-center time-input-clean"
-                              placeholder=""
-                              data-time-field={`${emp.id}-${dateStr}-end_time`}
-                              data-time-col={`${dateStr}-end_time`}
-                              value={editingTime[`${emp.id}-${dateStr}-end_time`] ?? endVal}
-                              onChange={(e) => setEditingTime(prev => ({ ...prev, [`${emp.id}-${dateStr}-end_time`]: e.target.value }))}
-                              onBlur={(e) => {
-                                const key = `${emp.id}-${dateStr}-end_time`;
-                                const raw = e.target.value;
-                                const formatted = formatTimeInput(raw);
-                                if (formatted) handleTimeChange(emp.id, dateStr, "end_time", formatted, emp.department);
-                                else if (!raw.trim() && endVal) handleTimeChange(emp.id, dateStr, "end_time", "", emp.department);
-                                setEditingTime(prev => { const next = { ...prev }; delete next[key]; return next; });
-                              }}
-                              onKeyDown={handleTimeKeyDown}
-                              onFocus={(e) => e.target.select()}
-                              disabled={isLocked}
-                            />
-                          </td>
-                        </React.Fragment>
-                      );
-                    })}
-                    <td className="text-center p-1.5 font-medium text-xs">{weekTotal > 0 ? formatHours(weekTotal) : ""}</td>
-                  </tr>
-                );
-              })}
+                          const absenceType = shift?.absence_type as string | null;
+                          const startVal = shift?.start_time?.slice(0, 5) ?? "";
+                          const endVal = shift?.end_time?.slice(0, 5) ?? "";
+
+                          if (absenceType) {
+                            return (
+                              <td key={dateStr} colSpan={2} className="p-0.5 text-center">
+                                <button
+                                  className={`inline-flex items-center justify-center h-7 w-full rounded text-xs font-bold cursor-pointer ${
+                                    absenceType === 'urlaub'
+                                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                      : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                  }`}
+                                  onClick={() => !isLocked && handleAbsenceToggle(emp.id, dateStr, null, emp.department)}
+                                  disabled={isLocked}
+                                  title={absenceType === 'urlaub' ? 'Urlaub — klicken zum Entfernen' : 'Krank — klicken zum Entfernen'}
+                                >
+                                  {absenceType === 'urlaub' ? 'U' : 'K'}
+                                </button>
+                              </td>
+                            );
+                          }
+
+                          return (
+                            <React.Fragment key={dateStr}>
+                              <td className="p-0.5">
+                                <div className="relative flex items-center">
+                                  <Input
+                                    type="text"
+                                    className="h-7 text-xs px-1 w-[72px] text-center time-input-clean"
+                                    placeholder=""
+                                    data-time-field={`${emp.id}-${dateStr}-start_time`}
+                                    data-time-col={`${dateStr}-start_time`}
+                                    value={editingTime[`${emp.id}-${dateStr}-start_time`] ?? startVal}
+                                    onChange={(e) => setEditingTime(prev => ({ ...prev, [`${emp.id}-${dateStr}-start_time`]: e.target.value }))}
+                                    onBlur={(e) => {
+                                      const key = `${emp.id}-${dateStr}-start_time`;
+                                      const raw = e.target.value;
+                                      const formatted = formatTimeInput(raw);
+                                      if (formatted) handleTimeChange(emp.id, dateStr, "start_time", formatted, emp.department);
+                                      else if (!raw.trim() && startVal) handleTimeChange(emp.id, dateStr, "start_time", "", emp.department);
+                                      setEditingTime(prev => { const next = { ...prev }; delete next[key]; return next; });
+                                    }}
+                                    onKeyDown={handleTimeKeyDown}
+                                    onFocus={(e) => e.target.select()}
+                                    disabled={isLocked}
+                                  />
+                                  {!isLocked && !startVal && !endVal && (
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <button className="absolute -right-1 top-0 h-7 w-5 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors text-xs" tabIndex={-1}>⋮</button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent>
+                                        <DropdownMenuItem onClick={() => openAbsenceDialog(emp.id, dateStr, 'urlaub', emp.department)}>
+                                          <span className="text-green-600 font-bold mr-2">U</span> Urlaub
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => openAbsenceDialog(emp.id, dateStr, 'krank', emp.department)}>
+                                          <span className="text-red-600 font-bold mr-2">K</span> Krank
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="p-0.5">
+                                <Input
+                                  type="text"
+                                  className="h-7 text-xs px-1 w-[72px] text-center time-input-clean"
+                                  placeholder=""
+                                  data-time-field={`${emp.id}-${dateStr}-end_time`}
+                                  data-time-col={`${dateStr}-end_time`}
+                                  value={editingTime[`${emp.id}-${dateStr}-end_time`] ?? endVal}
+                                  onChange={(e) => setEditingTime(prev => ({ ...prev, [`${emp.id}-${dateStr}-end_time`]: e.target.value }))}
+                                  onBlur={(e) => {
+                                    const key = `${emp.id}-${dateStr}-end_time`;
+                                    const raw = e.target.value;
+                                    const formatted = formatTimeInput(raw);
+                                    if (formatted) handleTimeChange(emp.id, dateStr, "end_time", formatted, emp.department);
+                                    else if (!raw.trim() && endVal) handleTimeChange(emp.id, dateStr, "end_time", "", emp.department);
+                                    setEditingTime(prev => { const next = { ...prev }; delete next[key]; return next; });
+                                  }}
+                                  onKeyDown={handleTimeKeyDown}
+                                  onFocus={(e) => e.target.select()}
+                                  disabled={isLocked}
+                                />
+                              </td>
+                            </React.Fragment>
+                          );
+                        })}
+                        <td className="text-center p-1.5 font-medium text-xs">{weekTotal > 0 ? formatHours(weekTotal) : ""}</td>
+                      </tr>
+                    </React.Fragment>
+                  );
+                });
+              })()}
             </tbody>
           </table>
         </div>
