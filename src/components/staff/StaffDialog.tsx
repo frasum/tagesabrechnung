@@ -26,7 +26,6 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
   const [name, setName] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [nickname, setNickname] = useState('');
   const [persoNr, setPersoNr] = useState('');
   const [role, setRole] = useState<StaffRole>('waiter');
   const [isActive, setIsActive] = useState(true);
@@ -45,7 +44,6 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       setName(staff.name);
       setFirstName(staff.first_name ?? '');
       setLastName(staff.last_name ?? '');
-      setNickname(staff.nickname ?? '');
       setPersoNr(staff.perso_nr ? String(staff.perso_nr) : '');
       setRole(staff.role);
       setIsActive(staff.is_active ?? true);
@@ -60,7 +58,6 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       setName('');
       setFirstName('');
       setLastName('');
-      setNickname('');
       setPersoNr('');
       setRole('waiter');
       setIsActive(true);
@@ -103,7 +100,6 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       name: name.trim(),
       first_name: firstName.trim() || undefined,
       last_name: lastName.trim() || undefined,
-      nickname: nickname.trim() || undefined,
       perso_nr: persoNr ? parseInt(persoNr, 10) : undefined,
       role,
       is_active: isActive,
@@ -126,12 +122,12 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Anzeigename *</Label>
+            <Label htmlFor="name">Spitzname *</Label>
             <Input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Max Mustermann"
+              placeholder="Maxi"
               required
             />
           </div>
@@ -157,26 +153,15 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="nickname">Spitzname</Label>
-              <Input
-                id="nickname"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                placeholder="Maxi"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="persoNr">Perso-Nr.</Label>
-              <Input
-                id="persoNr"
-                type="number"
-                value={persoNr}
-                onChange={(e) => setPersoNr(e.target.value)}
-                placeholder="z.B. 42"
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="persoNr">Perso-Nr.</Label>
+            <Input
+              id="persoNr"
+              type="number"
+              value={persoNr}
+              onChange={(e) => setPersoNr(e.target.value)}
+              placeholder="z.B. 42"
+            />
           </div>
 
           <div className="space-y-2">
