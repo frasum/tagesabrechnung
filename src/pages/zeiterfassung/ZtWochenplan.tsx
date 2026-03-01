@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -89,6 +89,7 @@ export default function ZtWochenplan() {
   const { restaurantId } = useRestaurant();
   const { selectedPeriodId, setSelectedPeriodId, selectedWeekId, setSelectedWeekId, periods, weeks, isPeriodLocked } = useZt();
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [editingTime, setEditingTime] = useState<Record<string, string>>({});
   const [absenceDialog, setAbsenceDialog] = useState<{
     open: boolean;
@@ -148,6 +149,22 @@ export default function ZtWochenplan() {
           .map((d) => format(d, "yyyy-MM-dd"))
       )
     : new Set<string>();
+
+  // Auto-scroll to today's column
+  useEffect(() => {
+    if (!weekDays.length || !scrollContainerRef.current) return;
+    const todayStr = format(new Date(), "yyyy-MM-dd");
+    // Only scroll if today is in this week
+    if (!weekDays.some(d => format(d, "yyyy-MM-dd") === todayStr)) return;
+    // Small delay to ensure DOM is rendered
+    const timer = setTimeout(() => {
+      const el = scrollContainerRef.current?.querySelector(`[data-date="${todayStr}"]`);
+      if (el) {
+        el.scrollIntoView({ inline: "center", behavior: "smooth" });
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [selectedWeekId, weekDays]);
 
   const sortedEmployees = employees
     ? [...employees].sort((a, b) => {
@@ -372,7 +389,7 @@ export default function ZtWochenplan() {
         let empIndexInDept = 0;
 
         return (
-          <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 border rounded-lg shadow-sm">
+          <div ref={scrollContainerRef} className="overflow-x-auto overflow-y-auto flex-1 min-h-0 border rounded-lg shadow-sm">
             <table className="w-full text-sm wochenplan-table border-collapse">
               <thead className="sticky top-0 z-20">
                 <tr className="bg-muted">
@@ -384,6 +401,7 @@ export default function ZtWochenplan() {
                       <th
                         key={day.toISOString()}
                         colSpan={2}
+                        data-date={dateStr}
                         className={`text-center p-1.5 font-semibold min-w-[120px] border-b border-border text-xs ${dayIdx > 0 ? "day-separator" : ""} ${holidayDays.has(dateStr) ? "sunday-col" : ""} ${!activeDates.has(dateStr) ? "inactive-day" : ""}`}
                       >
                         <span className={`${holidayDays.has(dateStr) ? "text-destructive font-bold" : ""} ${!activeDates.has(dateStr) ? "text-muted-foreground" : ""}`}>{format(day, "EE", { locale: de })} {format(day, "dd.MM")}</span>
