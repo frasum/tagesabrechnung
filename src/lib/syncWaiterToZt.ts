@@ -74,15 +74,16 @@ async function upsertZtShift(params: {
   // --- Conflict check: does a shift exist in another dept/week? ---
   const { data: allShiftsOnDay } = await supabase
     .from('zt_shifts')
-    .select('id, department, week_id')
+    .select('id, department, week_id, start_time, absence_type, total_hours')
     .eq('employee_id', params.employeeId)
     .eq('shift_date', params.shiftDate);
 
   const hasConflict = allShiftsOnDay?.some(s =>
-    s.week_id !== params.weekId
+    s.week_id !== params.weekId &&
+    (s.start_time || s.absence_type || (s.total_hours ?? 0) > 0)
   );
   if (hasConflict) {
-    const conflicting = allShiftsOnDay?.find(s => s.week_id !== params.weekId);
+    const conflicting = allShiftsOnDay?.find(s => s.week_id !== params.weekId && (s.start_time || s.absence_type || (s.total_hours ?? 0) > 0));
     console.warn(`Sync übersprungen: ${params.employeeId} hat am ${params.shiftDate} bereits eine Schicht in Abt. ${conflicting?.department}`);
     return;
   }

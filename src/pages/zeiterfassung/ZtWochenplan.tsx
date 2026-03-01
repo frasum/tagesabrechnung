@@ -187,7 +187,7 @@ export default function ZtWochenplan() {
     queryFn: async () => {
       const { data } = await supabase
         .from("zt_shifts")
-        .select("employee_id, shift_date, department, week_id")
+        .select("employee_id, shift_date, department, week_id, start_time, end_time, total_hours, absence_type")
         .in("employee_id", employeeIds)
         .in("shift_date", dateStrings);
       return data ?? [];
@@ -200,7 +200,8 @@ export default function ZtWochenplan() {
       return globalShifts?.find(s =>
         s.employee_id === empId &&
         s.shift_date === date &&
-        s.week_id !== selectedWeekId
+        s.week_id !== selectedWeekId &&
+        (s.start_time || s.absence_type || (s.total_hours ?? 0) > 0)
       ) ?? null;
     },
     [globalShifts, selectedWeekId]
@@ -221,16 +222,16 @@ export default function ZtWochenplan() {
       // --- Conflict check: does a shift exist for this employee on this date in another dept/week? ---
       const { data: allShiftsOnDay } = await supabase
         .from("zt_shifts")
-        .select("id, department, week_id")
+        .select("id, department, week_id, start_time, absence_type, total_hours")
         .eq("employee_id", params.employee_id)
         .eq("shift_date", params.shift_date);
 
-      const currentDept = params.department ?? '';
       const hasConflict = allShiftsOnDay?.some(s =>
-        s.week_id !== params.week_id
+        s.week_id !== params.week_id &&
+        (s.start_time || s.absence_type || (s.total_hours ?? 0) > 0)
       );
       if (hasConflict) {
-        const conflicting = allShiftsOnDay?.find(s => s.week_id !== params.week_id);
+        const conflicting = allShiftsOnDay?.find(s => s.week_id !== params.week_id && (s.start_time || s.absence_type || (s.total_hours ?? 0) > 0));
         throw new Error(`Schicht existiert bereits am ${params.shift_date} in Abt. ${conflicting?.department || '?'} (anderes Restaurant)`);
       }
 

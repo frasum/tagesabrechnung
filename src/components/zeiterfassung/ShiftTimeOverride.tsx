@@ -268,11 +268,12 @@ export default function ShiftTimeOverride({
           // Conflict check: shift in another dept/week?
           const { data: allShiftsOnDay } = await supabase
             .from("zt_shifts")
-            .select("id, department, week_id")
+            .select("id, department, week_id, start_time, absence_type, total_hours")
             .eq("employee_id", emp.id)
             .eq("shift_date", date);
           const hasConflict = allShiftsOnDay?.some(s =>
-            s.week_id !== week.id
+            s.week_id !== week.id &&
+            (s.start_time || s.absence_type || (s.total_hours ?? 0) > 0)
           );
           if (hasConflict) { skipped++; continue; }
 
@@ -388,11 +389,12 @@ export default function ShiftTimeOverride({
           // Conflict check: shift in another dept/week?
           const { data: allShiftsOnDay } = await supabase
             .from("zt_shifts")
-            .select("id, department, week_id")
+            .select("id, department, week_id, start_time, absence_type, total_hours")
             .eq("employee_id", emp.id)
             .eq("shift_date", date);
           const hasConflict = allShiftsOnDay?.some(s =>
-            s.week_id !== week.id
+            s.week_id !== week.id &&
+            (s.start_time || s.absence_type || (s.total_hours ?? 0) > 0)
           );
           if (hasConflict) { skipped++; continue; }
 
