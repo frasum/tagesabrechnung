@@ -36,7 +36,7 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
   const [roleGl, setRoleGl] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [pinCode, setPinCode] = useState('');
-  const [selectedRestaurants, setSelectedRestaurants] = useState<string[]>([]);
+  const [restaurantDepts, setRestaurantDepts] = useState<Record<string, Set<string>>>({});
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [permissionLevel, setPermissionLevel] = useState<PermissionLevel>('staff');
 
@@ -72,7 +72,13 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       setRoleGl(flags.gl);
       setIsActive(staff.is_active ?? true);
       setPinCode('');
-      setSelectedRestaurants(staff.staff_restaurants?.map((sr) => sr.restaurant_id) ?? []);
+      // Build restaurantDepts from existing staff_restaurants
+      const depts: Record<string, Set<string>> = {};
+      for (const sr of staff.staff_restaurants ?? []) {
+        if (!depts[sr.restaurant_id]) depts[sr.restaurant_id] = new Set();
+        if (sr.zt_department) depts[sr.restaurant_id].add(sr.zt_department);
+      }
+      setRestaurantDepts(depts);
       setPermissionLevel(currentRole || 'staff');
     } else {
       setName('');
@@ -84,7 +90,10 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       setRoleGl(false);
       setIsActive(true);
       setPinCode('');
-      setSelectedRestaurants(restaurants.map((r) => r.id));
+      // For new staff, select all restaurants with no departments yet
+      const depts: Record<string, Set<string>> = {};
+      restaurants.forEach((r) => { depts[r.id] = new Set(); });
+      setRestaurantDepts(depts);
       setPermissionLevel('staff');
     }
 
@@ -96,10 +105,32 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
   };
 
   const toggleRestaurant = (id: string) => {
-    setSelectedRestaurants((prev) =>
-      prev.includes(id) ? prev.filter((rid) => rid !== id) : [...prev, id]
-    );
+    setRestaurantDepts((prev) => {
+      const next = { ...prev };
+      if (next[id]) {
+        delete next[id];
+      } else {
+        next[id] = new Set();
+      }
+      return next;
+    });
   };
+
+  const toggleDept = (restaurantId: string, dept: string) => {
+    setRestaurantDepts((prev) => {
+      const next = { ...prev };
+      const depts = new Set(next[restaurantId] ?? []);
+      if (depts.has(dept)) {
+        depts.delete(dept);
+      } else {
+        depts.add(dept);
+      }
+      next[restaurantId] = depts;
+      return next;
+    });
+  };
+
+  const selectedRestaurantIds = Object.keys(restaurantDepts);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -107,6 +138,13 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
     if (!roleService && !roleKitchen && !roleGl) return;
 
     const role = rolesToEnum(roleService, roleKitchen, roleGl);
+
+    // Build restaurant_assignments from restaurantDepts
+    const restaurant_assignments = Object.entries(restaurantDepts).flatMap(([rid, depts]) =>
+      depts.size > 0
+        ? Array.from(depts).map((dept) => ({ restaurant_id: rid, zt_department: dept }))
+        : [{ restaurant_id: rid, zt_department: null }]
+    );
 
     // Save staff data
     onSave({
@@ -117,7 +155,7 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       role,
       is_active: isActive,
       pin_code: pinCode.length === 4 ? pinCode : undefined,
-      restaurant_ids: selectedRestaurants,
+      restaurant_assignments,
     });
 
     // Update permission level for existing staff
@@ -244,7 +282,7 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
             )}
           </div>
 
-          {/* Restaurants - native checkboxes */}
+          {/* Restaurants with department checkboxes */}
           <div className="space-y-3">
             <Label className="text-base font-semibold flex items-center gap-2">
               <Store className="w-4 h-4 text-primary" />
@@ -252,34 +290,53 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
             </Label>
             <div className="grid gap-2">
               {restaurants.map((restaurant) => {
-                const isSelected = selectedRestaurants.includes(restaurant.id);
+                const isSelected = restaurant.id in restaurantDepts;
+                const depts = restaurantDepts[restaurant.id] ?? new Set();
                 return (
-                  <label
+                  <div
                     key={restaurant.id}
                     className={`
-                      flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer
-                      transition-all duration-200
+                      rounded-lg border-2 transition-all duration-200
                       ${isSelected
                         ? 'border-primary bg-primary/10 shadow-sm'
                         : 'border-muted hover:border-muted-foreground/30 hover:bg-muted/50'
                       }
                     `}
                   >
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => toggleRestaurant(restaurant.id)}
-                      className="h-4 w-4 rounded border-input text-primary focus:ring-primary"
-                    />
-                    <span className={`font-medium ${isSelected ? 'text-primary' : 'text-foreground'}`}>
-                      {restaurant.name}
-                    </span>
-                    {isSelected && <div className="ml-auto w-2 h-2 rounded-full bg-primary" />}
-                  </label>
+                    <label className="flex items-center gap-3 p-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleRestaurant(restaurant.id)}
+                        className="h-4 w-4 rounded border-input text-primary focus:ring-primary"
+                      />
+                      <span className={`font-medium ${isSelected ? 'text-primary' : 'text-foreground'}`}>
+                        {restaurant.name}
+                      </span>
+                      {isSelected && <div className="ml-auto w-2 h-2 rounded-full bg-primary" />}
+                    </label>
+                    {isSelected && (
+                      <div className="flex flex-wrap gap-4 px-3 pb-3 pl-10">
+                        {(['Service', 'Küche', 'GL'] as const).map((dept) => (
+                          <label key={dept} className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={depts.has(dept)}
+                              onChange={() => toggleDept(restaurant.id, dept)}
+                              className="h-3.5 w-3.5 rounded border-input text-primary focus:ring-primary"
+                            />
+                            <span className={`text-sm ${depts.has(dept) ? 'font-medium text-primary' : 'text-muted-foreground'}`}>
+                              {dept}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
-            {selectedRestaurants.length === 0 && (
+            {selectedRestaurantIds.length === 0 && (
               <p className="text-sm text-destructive bg-destructive/10 p-2 rounded-md flex items-center gap-2">
                 <span className="text-lg">⚠️</span>
                 Mindestens ein Restaurant muss ausgewählt werden
@@ -500,7 +557,7 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Abbrechen
             </Button>
-            <Button type="submit" disabled={isLoading || !name.trim() || selectedRestaurants.length === 0}>
+            <Button type="submit" disabled={isLoading || !name.trim() || selectedRestaurantIds.length === 0}>
               {isLoading ? 'Speichern...' : 'Speichern'}
             </Button>
           </DialogFooter>
