@@ -157,10 +157,10 @@
 
   /* Wochenplan table styles */
   .wochenplan-table .zebra-even > td {
-    @apply bg-muted/55;
+    @apply bg-muted/70;
   }
   .wochenplan-table .zebra-even > td.sticky-name {
-    @apply bg-muted/70;
+    @apply bg-muted/85;
   }
   .wochenplan-table .sunday-col {
     @apply bg-destructive/5;
