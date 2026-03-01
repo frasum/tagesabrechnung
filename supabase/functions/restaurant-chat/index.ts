@@ -144,6 +144,36 @@ Deno.serve(async (req) => {
       monthlyExpAdv[key].vorschuesse += advBySession[s.id] || 0;
     });
 
+    // Aggregate waiter tips per month per waiter per restaurant
+    const sessionMonthRestaurant: Record<string, { month: string; restaurant: string }> = {};
+    sessions.forEach((s: any) => {
+      sessionMonthRestaurant[s.id] = { month: s.session_date.slice(0, 7), restaurant: restaurantMap[s.restaurant_id] || "?" };
+    });
+
+    const waiterTipAgg: Record<string, Record<string, number>> = {}; // key: month|restaurant, value: { waiterName: totalTip }
+    const waiterHoursAgg: Record<string, Record<string, number>> = {};
+    const kitchenHoursAgg: Record<string, Record<string, number>> = {};
+    const kitchenTipAgg: Record<string, number> = {}; // key: month|restaurant
+
+    waiterShifts.forEach((ws: any) => {
+      const info = sessionMonthRestaurant[ws.session_id];
+      if (!info) return;
+      const key = `${info.month}|${info.restaurant}`;
+      if (!waiterTipAgg[key]) waiterTipAgg[key] = {};
+      if (!waiterHoursAgg[key]) waiterHoursAgg[key] = {};
+      waiterTipAgg[key][ws.waiter_name] = (waiterTipAgg[key][ws.waiter_name] || 0) + (ws.differenz || 0);
+      waiterHoursAgg[key][ws.waiter_name] = (waiterHoursAgg[key][ws.waiter_name] || 0) + (ws.hours_worked || 0);
+      kitchenTipAgg[key] = (kitchenTipAgg[key] || 0) + (ws.kitchen_tip || 0);
+    });
+
+    kitchenShifts.forEach((ks: any) => {
+      const info = sessionMonthRestaurant[ks.session_id];
+      if (!info) return;
+      const key = `${info.month}|${info.restaurant}`;
+      if (!kitchenHoursAgg[key]) kitchenHoursAgg[key] = {};
+      kitchenHoursAgg[key][ks.staff_name] = (kitchenHoursAgg[key][ks.staff_name] || 0) + (ks.hours_worked || 0);
+    });
+
     // Build context string
     const contextParts: string[] = [];
 
@@ -154,15 +184,41 @@ Deno.serve(async (req) => {
 
     // Monthly summary BEFORE raw data
     contextParts.push("\n=== MONATLICHE ZUSAMMENFASSUNG (voraggregiert, korrekte Summen) ===");
-    contextParts.push("Monat | Restaurant | Tage | Umsatz | Kreditkarten | OrderSmart | Wolt | Gutschein-VK | Gutschein-Einl | FineDine | Einladung | SoEinnahme | Gäste | Ausgaben | Vorschüsse");
+    contextParts.push("Monat | Restaurant | Tage | Umsatz | Kreditkarten | OrderSmart | Wolt | Gutschein-VK | Gutschein-Einl | FineDine | Einladung | SoEinnahme | Gäste | Ausgaben | Vorschüsse | Küchen-TG-Gesamt");
     const sortedKeys = Object.keys(monthlyAgg).sort();
     for (const key of sortedKeys) {
       const [month, restaurant] = key.split("|");
       const a = monthlyAgg[key];
       const ea = monthlyExpAdv[key] || { ausgaben: 0, vorschuesse: 0 };
+      const kt = kitchenTipAgg[key] || 0;
       contextParts.push(
-        `${month} | ${restaurant} | ${a.sessions_count} | ${a.pos_total}€ | ${a.kreditkarten}€ | ${a.ordersmart}€ | ${a.wolt}€ | ${a.gutscheine_vk}€ | ${a.gutscheine_einl}€ | ${a.finedine}€ | ${a.einladung}€ | ${a.sonstige_einnahme}€ | ${a.gaeste} | ${ea.ausgaben}€ | ${ea.vorschuesse}€`
+        `${month} | ${restaurant} | ${a.sessions_count} | ${a.pos_total}€ | ${a.kreditkarten}€ | ${a.ordersmart}€ | ${a.wolt}€ | ${a.gutscheine_vk}€ | ${a.gutscheine_einl}€ | ${a.finedine}€ | ${a.einladung}€ | ${a.sonstige_einnahme}€ | ${a.gaeste} | ${ea.ausgaben}€ | ${ea.vorschuesse}€ | ${kt}€`
       );
+    }
+
+    // Waiter tip ranking per month per restaurant
+    contextParts.push("\n=== MONATLICHES KELLNER-TRINKGELD RANKING (voraggregiert) ===");
+    contextParts.push("Monat | Restaurant | Kellner | Trinkgeld (Pool-Anteil) | Stunden");
+    for (const key of sortedKeys) {
+      const [month, restaurant] = key.split("|");
+      const tips = waiterTipAgg[key] || {};
+      const hours = waiterHoursAgg[key] || {};
+      const sorted = Object.entries(tips).sort((a, b) => b[1] - a[1]);
+      for (const [name, tip] of sorted) {
+        contextParts.push(`${month} | ${restaurant} | ${name} | ${tip}€ | ${hours[name] || 0}h`);
+      }
+    }
+
+    // Kitchen hours per month per restaurant
+    contextParts.push("\n=== MONATLICHE KÜCHEN-STUNDEN (voraggregiert) ===");
+    contextParts.push("Monat | Restaurant | Mitarbeiter | Stunden");
+    for (const key of sortedKeys) {
+      const [month, restaurant] = key.split("|");
+      const hours = kitchenHoursAgg[key] || {};
+      const sorted = Object.entries(hours).sort((a, b) => b[1] - a[1]);
+      for (const [name, h] of sorted) {
+        contextParts.push(`${month} | ${restaurant} | ${name} | ${h}h`);
+      }
     }
 
     contextParts.push("\n=== SESSIONS (letzte 90 Tage, Rohdaten) ===");
@@ -232,7 +288,7 @@ Du hast Zugriff auf die folgenden echten Daten der letzten 90 Tage:
 ${dataContext}
 
 Wichtige Regeln:
-- Die MONATLICHE ZUSAMMENFASSUNG enthält voraggregierte, korrekte Summen. Verwende IMMER diese Summen wenn nach Monats-Totalen gefragt wird, anstatt selbst aus den Rohdaten zu rechnen.
+- Die MONATLICHE ZUSAMMENFASSUNG, das KELLNER-TRINKGELD RANKING und die KÜCHEN-STUNDEN enthalten voraggregierte, korrekte Summen. Verwende IMMER diese Summen wenn nach Monats-Totalen, Rankings oder Stunden-Summen gefragt wird, anstatt selbst aus den Rohdaten zu rechnen.
 - Formatiere Geldbeträge immer als Euro (z.B. 1.234,56 €)
 - Nutze Markdown-Tabellen wenn es sinnvoll ist
 - Antworte präzise und basierend auf den Daten
