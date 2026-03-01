@@ -512,52 +512,6 @@ export default function Statistics() {
             {/* Monthly Tip Breakdown */}
             <MonthlyTipBreakdown />
 
-            {/* Expenses & Delivery Trend */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Receipt className="w-5 h-5" />
-                  Ausgaben & Lieferungen
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[250px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis 
-                        dataKey="dateFormatted" 
-                        className="text-xs fill-muted-foreground"
-                        tick={{ fontSize: 12 }}
-                      />
-                      <YAxis 
-                        className="text-xs fill-muted-foreground"
-                        tick={{ fontSize: 12 }}
-                        tickFormatter={formatShortCurrency}
-                      />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Legend />
-                      <Line 
-                        type="monotone" 
-                        dataKey="deliveryRevenue" 
-                        name="Lieferumsatz"
-                        stroke="hsl(var(--chart-5))" 
-                        strokeWidth={2}
-                        dot={{ fill: 'hsl(var(--chart-5))' }}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="expenses" 
-                        name="Ausgaben"
-                        stroke="hsl(var(--destructive))" 
-                        strokeWidth={2}
-                        dot={{ fill: 'hsl(var(--destructive))' }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
 
             {/* Summary Table */}
             <Card>
