@@ -1,32 +1,36 @@
 
 
-## Analyse: Warum Lam am 26.2. blockiert ist
-
-### Datenlage
-Lam hat am 26.02. in der Spicery **zwei** Einträge (gleiche `week_id`):
-- **Service**: 16:00–23:45 (7.75h) — vom Kellner-Sync automatisch erstellt
-- **GL**: leer (0h, keine Zeiten) — leere Zeile
-
-Die Konflikt-Logik prüft `s.department !== dept || s.week_id !== selectedWeekId`. Wenn man die GL-Zeile betrachtet, findet sie den Service-Eintrag mit anderem Department → Konflikt. Und umgekehrt.
+## Fix: Leere Schichten sollen keinen Konflikt auslösen
 
 ### Problem
-Lam ist innerhalb desselben Restaurants (Spicery) sowohl GL als auch Service zugewiesen. Das ist gewollt — der Unique Constraint erlaubt `(employee_id, shift_date, department)`. Die Konfliktprüfung blockiert aber **alles**, auch innerhalb desselben Restaurants.
+Die `getConflict`-Funktion in `ZtWochenplan.tsx` prüft nur `week_id`, aber nicht ob die gefundene Schicht tatsächlich Daten enthält. Leere Einträge (ohne `start_time`/`end_time`, 0 Stunden) blockieren fälschlicherweise die Bearbeitung.
 
 ### Lösung
-Die Konfliktprüfung soll nur greifen, wenn die Schicht in einem **anderen Restaurant** (= anderer `week_id`) existiert. Innerhalb desselben Restaurants (gleiche `week_id`) sind mehrere Departments erlaubt.
+Die Konfliktprüfung erweitern: Nur Schichten mit tatsächlichen Zeiten oder Abwesenheitstyp als Konflikt werten.
 
-### Änderung in `src/pages/zeiterfassung/ZtWochenplan.tsx`
+### Änderungen
 
-**`getConflict`-Funktion anpassen:**
+**1. `src/pages/zeiterfassung/ZtWochenplan.tsx`**
+
+- `globalShifts`-Query: Zusätzlich `start_time`, `end_time`, `total_hours`, `absence_type` laden
+- `getConflict`: Nur matchen wenn die fremde Schicht nicht leer ist (`start_time` vorhanden ODER `absence_type` vorhanden ODER `total_hours > 0`)
+- `upsertShift`-Validierung: Gleiche Bedingung anwenden
+
 ```typescript
-// ALT (blockiert auch innerhalb des gleichen Restaurants):
-(s.department !== dept || s.week_id !== selectedWeekId)
-
-// NEU (blockiert nur bei anderem Restaurant):
-s.week_id !== selectedWeekId
+// Conflict nur wenn die fremde Schicht tatsächlich Daten hat
+const getConflict = (empId, date, dept) => {
+  return globalShifts?.find(s =>
+    s.employee_id === empId &&
+    s.shift_date === date &&
+    s.week_id !== selectedWeekId &&
+    (s.start_time || s.absence_type || s.total_hours > 0)
+  ) ?? null;
+};
 ```
 
-So kann ein Mitarbeiter am selben Tag in mehreren Departments desselben Restaurants arbeiten (GL + Service), wird aber blockiert wenn er in einem anderen Restaurant bereits eingetragen ist.
+**2. `src/lib/syncWaiterToZt.ts`** und **`src/components/zeiterfassung/ShiftTimeOverride.tsx`**
+- Gleiche Bedingung: Leere Schichten in anderen Restaurants nicht als Konflikt werten
 
-**Gleiche Anpassung in `upsertShift`-Mutation** (Validierung vor dem Speichern) und in `syncWaiterToZt.ts` / `ShiftTimeOverride.tsx`.
+### Ergebnis
+Chefin kann am 26.2. und 28.2. in der Spicery bearbeitet werden, da die YUM-Einträge leer sind. Sobald in YUM tatsächlich Zeiten eingetragen werden, greift der Konflikt wieder.
 
