@@ -534,12 +534,19 @@ export default function WaiterCashUp() {
                     return (
                       <TableRow key={shift.id}>
                               <TableCell className="font-medium">
-                                {shift.waiter_name}
-                                {(shift.additional_waiters?.length > 0) &&
-                          <span className="text-muted-foreground text-sm ml-1">
-                                    + {shift.additional_waiters.join(', ')}
+                                <div className="flex items-center gap-2">
+                                  <span>
+                                    {shift.waiter_name}
+                                    {(shift.additional_waiters?.length > 0) &&
+                                      <span className="text-muted-foreground text-sm ml-1">
+                                        + {shift.additional_waiters.join(', ')}
+                                      </span>
+                                    }
                                   </span>
-                          }
+                                  <Badge variant={shift.participates_in_pool ? "default" : "secondary"} className="text-[10px] px-1.5 py-0">
+                                    {shift.participates_in_pool ? "Pool" : "Kein Pool"}
+                                  </Badge>
+                                </div>
                               </TableCell>
                               <TableCell className="text-right tabular-nums">{formatCurrency(shift.pos_sales)}</TableCell>
                               <TableCell className="text-right tabular-nums">{formatCurrency(shift.kassiert_brutto)}</TableCell>
