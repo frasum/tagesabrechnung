@@ -116,34 +116,45 @@ Deno.serve(async (req) => {
       );
     });
 
+    // Build session info map with date + restaurant
+    const sessionInfoMap: Record<string, { date: string; restaurant: string }> = {};
+    sessions.forEach((s: any) => {
+      sessionInfoMap[s.id] = { date: s.session_date, restaurant: restaurantMap[s.restaurant_id] || "?" };
+    });
+
     contextParts.push("\n=== KELLNER-SCHICHTEN ===");
-    contextParts.push("Session-Datum | Name | POS-Umsatz | Kassiert | Differenz | Küchen-TG | Stunden");
-    const sessionDateMap: Record<string, string> = {};
-    sessions.forEach((s: any) => { sessionDateMap[s.id] = s.session_date; });
+    contextParts.push("Session-Datum | Restaurant | Name | POS-Umsatz | Kassiert | Differenz | Küchen-TG | Stunden");
     waiterShifts.forEach((ws: any) => {
+      const info = sessionInfoMap[ws.session_id] || { date: "?", restaurant: "?" };
       contextParts.push(
-        `${sessionDateMap[ws.session_id] || "?"} | ${ws.waiter_name} | ${ws.pos_sales || 0}€ | ${ws.kassiert_brutto || 0}€ | ${ws.differenz || 0}€ | ${ws.kitchen_tip || 0}€ | ${ws.hours_worked || "-"}h`
+        `${info.date} | ${info.restaurant} | ${ws.waiter_name} | ${ws.pos_sales || 0}€ | ${ws.kassiert_brutto || 0}€ | ${ws.differenz || 0}€ | ${ws.kitchen_tip || 0}€ | ${ws.hours_worked || "-"}h`
       );
     });
 
     contextParts.push("\n=== KÜCHEN-SCHICHTEN ===");
+    contextParts.push("Session-Datum | Restaurant | Name | Stunden");
     kitchenShifts.forEach((ks: any) => {
+      const info = sessionInfoMap[ks.session_id] || { date: "?", restaurant: "?" };
       contextParts.push(
-        `${sessionDateMap[ks.session_id] || "?"} | ${ks.staff_name} | ${ks.hours_worked || 0}h`
+        `${info.date} | ${info.restaurant} | ${ks.staff_name} | ${ks.hours_worked || 0}h`
       );
     });
 
     contextParts.push("\n=== AUSGABEN ===");
+    contextParts.push("Session-Datum | Restaurant | Betrag | Beschreibung");
     expenses.forEach((e: any) => {
+      const info = sessionInfoMap[e.session_id] || { date: "?", restaurant: "?" };
       contextParts.push(
-        `${sessionDateMap[e.session_id] || "?"} | ${e.amount}€ | ${e.description}`
+        `${info.date} | ${info.restaurant} | ${e.amount}€ | ${e.description}`
       );
     });
 
     contextParts.push("\n=== VORSCHÜSSE ===");
+    contextParts.push("Session-Datum | Restaurant | Name | Betrag");
     advances.forEach((a: any) => {
+      const info = sessionInfoMap[a.session_id] || { date: "?", restaurant: "?" };
       contextParts.push(
-        `${sessionDateMap[a.session_id] || "?"} | ${a.staff_name} | ${a.amount}€`
+        `${info.date} | ${info.restaurant} | ${a.staff_name} | ${a.amount}€`
       );
     });
 
@@ -167,6 +178,7 @@ Wichtige Regeln:
 - Nutze Markdown-Tabellen wenn es sinnvoll ist
 - Antworte präzise und basierend auf den Daten
 - Wenn Daten nicht vorhanden sind, sage das klar
+- Wenn mehrere Restaurants vorhanden sind, gliedere deine Antwort immer nach Restaurant
 - Heute ist ${new Date().toISOString().split("T")[0]}`;
 
     // Call AI Gateway
