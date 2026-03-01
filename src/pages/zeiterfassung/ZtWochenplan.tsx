@@ -364,6 +364,11 @@ export default function ZtWochenplan() {
             .filter((day) => isSunday(day) || holidays?.has(format(day, "yyyy-MM-dd")))
             .map((day) => format(day, "yyyy-MM-dd"))
         );
+        const holidayDays = new Set(
+          weekDays
+            .filter((day) => holidays?.has(format(day, "yyyy-MM-dd")))
+            .map((day) => format(day, "yyyy-MM-dd"))
+        );
         let empIndexInDept = 0;
 
         return (
@@ -379,9 +384,9 @@ export default function ZtWochenplan() {
                       <th
                         key={day.toISOString()}
                         colSpan={2}
-                        className={`text-center p-1.5 font-semibold min-w-[120px] border-b border-border text-xs ${dayIdx > 0 ? "day-separator" : ""} ${isSunHol ? "sunday-col" : ""} ${!activeDates.has(dateStr) ? "inactive-day" : ""}`}
+                        className={`text-center p-1.5 font-semibold min-w-[120px] border-b border-border text-xs ${dayIdx > 0 ? "day-separator" : ""} ${holidayDays.has(dateStr) ? "sunday-col" : ""} ${!activeDates.has(dateStr) ? "inactive-day" : ""}`}
                       >
-                        <span className={`${isSunHol ? "text-destructive font-bold" : ""} ${!activeDates.has(dateStr) ? "text-muted-foreground" : ""}`}>{format(day, "EE", { locale: de })} {format(day, "dd.MM")}</span>
+                        <span className={`${holidayDays.has(dateStr) ? "text-destructive font-bold" : ""} ${!activeDates.has(dateStr) ? "text-muted-foreground" : ""}`}>{format(day, "EE", { locale: de })} {format(day, "dd.MM")}</span>
                       </th>
                     );
                   })}
@@ -431,7 +436,8 @@ export default function ZtWochenplan() {
                           const isActive = activeDates.has(dateStr);
                           const shift = isActive ? getShift(emp.id, dateStr, emp.department) : undefined;
                           const isSunHol = sundayHolidayDays.has(dateStr);
-                          const sunClass = isSunHol && isActive ? "sunday-col" : "";
+                          const isHoliday = holidayDays.has(dateStr);
+                          const sunClass = isHoliday && isActive ? "sunday-col" : "";
                           const sepClass = dayIdx > 0 ? "day-separator" : "";
                           const absenceType = shift?.absence_type as string | null;
                           const startVal = shift?.start_time?.slice(0, 5) ?? "";
