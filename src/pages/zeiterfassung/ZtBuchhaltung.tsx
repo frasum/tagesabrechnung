@@ -16,7 +16,7 @@ import BuchhaltungTableHead from "./buchhaltung/BuchhaltungTableHead";
 import BuchhaltungDeptHeader from "./buchhaltung/BuchhaltungDeptHeader";
 import BuchhaltungRow from "./buchhaltung/BuchhaltungRow";
 import BuchhaltungFooter from "./buchhaltung/BuchhaltungFooter";
-import type { Shift, PayrollNote } from "./buchhaltung/types";
+import type { Shift, PayrollNote, AdvanceEntry } from "./buchhaltung/types";
 
 export default function ZtBuchhaltung() {
   const queryClient = useQueryClient();
@@ -53,6 +53,36 @@ export default function ZtBuchhaltung() {
     },
     enabled: !!selectedPeriodId,
   });
+
+  const selectedPeriod = periods?.find(p => p.id === selectedPeriodId);
+
+  const { data: advances } = useQuery({
+    queryKey: ["buchhaltung-advances", restaurantId, selectedPeriodId],
+    queryFn: async () => {
+      if (!selectedPeriod || !restaurantId) return [];
+      const { data, error } = await supabase
+        .from("advances")
+        .select("*, sessions!inner(session_date)")
+        .eq("sessions.restaurant_id", restaurantId)
+        .gte("sessions.session_date", selectedPeriod.start_date)
+        .lte("sessions.session_date", selectedPeriod.end_date);
+      if (error) throw error;
+      return (data as any[]).map(d => ({
+        staff_name: d.staff_name as string,
+        amount: d.amount as number,
+        date: d.sessions.session_date as string,
+      })) as AdvanceEntry[];
+    },
+    enabled: !!selectedPeriod && !!restaurantId,
+  });
+
+  const advancesByName = useMemo(() => {
+    const map: Record<string, AdvanceEntry[]> = {};
+    advances?.forEach(a => {
+      (map[a.staff_name] ??= []).push(a);
+    });
+    return map;
+  }, [advances]);
 
   const upsertNote = useMutation({
     mutationFn: async (note: { employee_id: string; field: string; value: any }) => {
@@ -169,6 +199,7 @@ export default function ZtBuchhaltung() {
                       totals={totals}
                       note={note as PayrollNote | undefined}
                       shifts={empShifts}
+                      advances={advancesByName[emp.name] ?? []}
                       isEven={isEven}
                       isLocked={isPeriodLocked}
                       onUpsertNote={(params) => upsertNote.mutate(params)}

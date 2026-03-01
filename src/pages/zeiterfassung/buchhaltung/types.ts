@@ -30,3 +30,9 @@ export interface PayrollNote {
   urlaub_tage: number;
   besonderheiten: string | null;
 }
+
+export interface AdvanceEntry {
+  staff_name: string;
+  amount: number;
+  date: string;
+}

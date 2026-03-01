@@ -3,23 +3,34 @@ import { Textarea } from "@/components/ui/textarea";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { formatHours, getSickDateRanges, formatSickRanges } from "@/lib/shiftCalculations";
 import { displayNum } from "./utils";
-import type { EmployeeTotals, PayrollNote, Shift } from "./types";
+import type { EmployeeTotals, PayrollNote, Shift, AdvanceEntry } from "./types";
 import type { RestaurantEmployee } from "@/hooks/useRestaurantEmployees";
+import { format, parseISO } from "date-fns";
 
 interface BuchhaltungRowProps {
   emp: RestaurantEmployee;
   totals: EmployeeTotals;
   note: PayrollNote | undefined;
   shifts: Shift[];
+  advances: AdvanceEntry[];
   isEven: boolean;
   isLocked?: boolean;
   onUpsertNote: (params: { employee_id: string; field: string; value: any }) => void;
 }
 
-export default function BuchhaltungRow({ emp, totals, note, shifts, isEven, isLocked, onUpsertNote }: BuchhaltungRowProps) {
+export default function BuchhaltungRow({ emp, totals, note, shifts, advances, isEven, isLocked, onUpsertNote }: BuchhaltungRowProps) {
   const rowBg = isEven ? "bg-muted/30" : "";
 
-  // Build display name: "Vorname Nachname (Spitzname · Personalnummer)" with fallback to legacy name
+  // Auto-computed advance values
+  const advanceSum = advances.reduce((s, a) => s + a.amount, 0);
+  const advanceText = advances
+    .map(a => `Vorschuss ${format(parseISO(a.date), "dd.MM.")}: ${a.amount.toFixed(2).replace(".", ",")} €`)
+    .join("; ");
+
+  const vorschussValue = advanceSum > 0 ? advanceSum : (note?.vorschuss ?? 0);
+  const besonderheitenValue = [advanceText, note?.besonderheiten].filter(Boolean).join(" | ");
+
+  // Build display name
   const nameParts = [emp.first_name, emp.last_name].filter(Boolean).join(" ") || emp.name;
   const metaParts: string[] = [];
   if (emp.nickname) metaParts.push(emp.nickname);
@@ -52,15 +63,15 @@ export default function BuchhaltungRow({ emp, totals, note, shifts, isEven, isLo
           type="text"
           inputMode="numeric"
           className="time-input-clean h-7 text-xs w-[65px] mx-auto text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-          defaultValue={note?.vorschuss ?? 0}
-          disabled={isLocked}
+          defaultValue={vorschussValue}
+          disabled={isLocked || advanceSum > 0}
           onBlur={(e) => onUpsertNote({ employee_id: emp.id, field: "vorschuss", value: Number(e.target.value) })}
         />
       </td>
       <td className="p-1">
         <Textarea
           className="time-input-clean text-xs min-h-[28px] h-7 resize-none"
-          defaultValue={note?.besonderheiten ?? ""}
+          defaultValue={besonderheitenValue}
           disabled={isLocked}
           onBlur={(e) => onUpsertNote({ employee_id: emp.id, field: "besonderheiten", value: e.target.value })}
         />
