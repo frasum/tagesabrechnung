@@ -70,6 +70,12 @@ export function ZtProvider({ children }: { children: React.ReactNode }) {
     enabled: !!selectedPeriodId,
   });
 
+  // Reset when restaurant changes
+  useEffect(() => {
+    setSelectedPeriodId("");
+    setSelectedWeekId("");
+  }, [restaurantId]);
+
   // Auto-select current period
   useEffect(() => {
     if (!periods?.length || selectedPeriodId) return;
