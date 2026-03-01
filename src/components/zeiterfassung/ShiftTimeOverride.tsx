@@ -482,7 +482,7 @@ export default function ShiftTimeOverride({
             <Separator />
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Bestehende Schichten überschreiben</p>
-              <div className="space-y-2 max-h-60 overflow-y-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {uniqueEmployees.map((emp) => (
                   <div key={emp.id} className="flex items-center gap-2">
                     <Checkbox
@@ -520,7 +520,7 @@ export default function ShiftTimeOverride({
               <p className="text-xs text-muted-foreground">
                 Erzeugt fehlende Mo–Fr Einträge mit 17:00–01:00 für die gesamte Periode. Feiertage werden übersprungen.
               </p>
-              <div className="space-y-2 max-h-60 overflow-y-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {uniqueAllEmployees.map((emp) => (
                   <div key={emp.id} className="flex items-center gap-2">
                     <Checkbox
@@ -558,7 +558,7 @@ export default function ShiftTimeOverride({
               <p className="text-xs text-muted-foreground">
                 Erzeugt/überschreibt Einträge mit 17:00–01:00 für jeden Tag der Periode (inkl. Wochenende).
               </p>
-              <div className="space-y-2 max-h-60 overflow-y-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {uniqueDailyEmployees.map((emp) => (
                   <div key={emp.id} className="flex items-center gap-2">
                     <Checkbox
