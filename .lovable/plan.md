@@ -1,22 +1,21 @@
 
 
-## Problem: Küchenschicht wird in falsche Zeiterfassung geschrieben
+## Plan: "Am Pool beteiligt"-Checkbox entfernen
 
-Die Funktion `findWeekForDate` in `syncWaiterToZt.ts` sucht eine Woche (`weeks`-Tabelle) nur nach Datum, ohne das Restaurant zu berücksichtigen. Da mehrere Restaurants eigene Perioden und Wochen haben, wird bei Datumsüberlappung die falsche Woche gefunden.
+Der Pool-Status wird bereits in den Stammdaten des Mitarbeiters festgelegt (`participates_in_pool`). Die Checkbox auf der Abrechnungsseite ist daher redundant und soll entfernt werden.
 
-**Beweis aus der Datenbank:**
-- SUMIT's Küchenschicht ist für Restaurant `a1710390` (korrekte Woche: `944b58ee`)
-- Die Schicht wurde aber in Woche `1a41c986` geschrieben, die zu Restaurant `3065f458` gehört
+### Änderung in `src/pages/WaiterCashUp.tsx`
 
-### Lösung
+1. **Checkbox + Label entfernen** (Zeilen 293–308): Die gesamte Checkbox-UI im CardHeader entfernen.
 
-| Datei | Änderung |
-|---|---|
-| `src/lib/syncWaiterToZt.ts` | `findWeekForDate` um Parameter `restaurantId` erweitern. Die Abfrage filtert über `weeks` → `scheduling_periods.restaurant_id`, sodass nur Wochen des richtigen Restaurants gefunden werden. |
+2. **State beibehalten**: `newParticipatesInPool` bleibt als interne Variable, wird aber ausschließlich automatisch gesetzt:
+   - Beim Auswählen eines Mitarbeiters (Zeile 318–321, bereits vorhanden)
+   - Beim Bearbeiten einer bestehenden Schicht (Zeile 97, bereits vorhanden)
+   - Beim Zurücksetzen (Zeile 83, bereits vorhanden)
 
-Alle Aufrufer (`syncWaiterShiftToZt`, `syncKitchenShiftToZt`) übergeben bereits `restaurantId` — es muss nur an `findWeekForDate` weitergereicht werden.
+3. **Team-Mitglieder-Bereich**: Die bedingte Anzeige `{newParticipatesInPool && ...}` bleibt bestehen, damit bei Nicht-Pool-Mitarbeitern keine Team-Auswahl erscheint.
 
-### Zusätzlich: Bestehenden falschen Eintrag korrigieren
+4. **Speicherlogik**: `participates_in_pool: newParticipatesInPool` wird weiterhin in die DB geschrieben (Zeilen 140, 159), da der Wert dort für die Trinkgeldberechnung gebraucht wird.
 
-Der falsche zt_shifts-Eintrag (id `b4958213`, employee `0cbe9b9b`, week `1a41c986`) muss gelöscht und in der richtigen Woche (`944b58ee`) neu angelegt werden. Das kann durch erneutes Hinzufügen von SUMIT auf der Küchen-Trinkgeld-Seite geschehen (nach dem Fix), oder per manueller Korrektur in der Zeiterfassung.
+Einzige sichtbare Änderung: Die Checkbox verschwindet aus dem Formular-Header.
 
