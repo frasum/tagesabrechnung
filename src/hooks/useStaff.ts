@@ -55,7 +55,7 @@ export interface StaffInput {
   name: string;
   first_name?: string;
   last_name?: string;
-  nickname?: string;
+  
   perso_nr?: number;
   role: StaffRole;
   hourly_rate?: number;
