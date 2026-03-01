@@ -281,7 +281,7 @@ export default function ZtZusammenfassung() {
       {hasPermission('admin') && selectedPeriod && (
         <ShiftTimeOverride
           employeesWithShifts={employeesWithShifts}
-          allEmployees={sortedEmployees}
+          allEmployees={sortedEmployees.filter(e => [e.name, e.first_name, e.nickname].some(n => n?.toLowerCase().includes("peter")))}
           weekIds={weekIds}
           weeks={weeks ?? []}
           periodStartDate={selectedPeriod.start_date}
