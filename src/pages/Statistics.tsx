@@ -83,12 +83,13 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-type StatsMode = 'single' | 'all' | 'compare';
+// statsMode: restaurant ID for single, 'all' for cumulated, 'compare' for comparison
+type StatsMode = string; // restaurant id | 'all' | 'compare'
 
 export default function Statistics() {
   const [timeRange, setTimeRange] = useState<TimeRange>('month');
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
-  const [statsMode, setStatsMode] = useState<StatsMode>('single');
+  const [statsMode, setStatsMode] = useState<StatsMode>('current'); // 'current' = use context restaurant
   
   const customRange = timeRange === 'custom' && customDateRange?.from && customDateRange?.to
     ? { from: customDateRange.from, to: customDateRange.to }
@@ -98,18 +99,24 @@ export default function Statistics() {
   const { data: allRestaurants } = useRestaurants();
   const allRestaurantIds = useMemo(() => allRestaurants?.map(r => r.id) ?? [], [allRestaurants]);
 
-  // Determine query parameters based on mode
-  const isMultiMode = statsMode !== 'single';
+  // Resolve the effective single restaurant ID
+  const selectedRestaurantId = statsMode === 'current' 
+    ? restaurantId 
+    : (statsMode !== 'all' && statsMode !== 'compare') 
+      ? statsMode 
+      : undefined;
+
+  const isMultiMode = statsMode === 'all' || statsMode === 'compare';
   const multiReady = isMultiMode && allRestaurantIds.length > 1;
 
   const { data, isLoading: statsLoading } = useStatistics(
     timeRange, customRange,
-    isMultiMode ? undefined : restaurantId,
+    isMultiMode ? undefined : (selectedRestaurantId || restaurantId),
     multiReady ? allRestaurantIds : undefined
   );
   const { data: comparisonData, isLoading: comparisonLoading } = useStatisticsComparison(
     timeRange, customRange,
-    isMultiMode ? undefined : restaurantId,
+    isMultiMode ? undefined : (selectedRestaurantId || restaurantId),
     multiReady ? allRestaurantIds : undefined
   );
 
@@ -188,12 +195,14 @@ export default function Statistics() {
           
           <div className="flex flex-col sm:flex-row gap-3">
             {allRestaurants && allRestaurants.length > 1 && (
-              <Tabs value={statsMode} onValueChange={(v) => setStatsMode(v as StatsMode)}>
+              <Tabs value={statsMode === 'current' ? (restaurantId || '') : statsMode} onValueChange={(v) => setStatsMode(v)}>
                 <TabsList>
-                  <TabsTrigger value="single" className="gap-1">
-                    <Building2 className="w-4 h-4" />
-                    {restaurantName}
-                  </TabsTrigger>
+                  {allRestaurants.map(r => (
+                    <TabsTrigger key={r.id} value={r.id} className="gap-1">
+                      <Building2 className="w-4 h-4" />
+                      {r.name}
+                    </TabsTrigger>
+                  ))}
                   <TabsTrigger value="all" className="gap-1">
                     Alle
                   </TabsTrigger>
