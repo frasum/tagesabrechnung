@@ -1,31 +1,20 @@
 
 
-## AI-Chat nur fuer Admins
+## Problem
 
-### Aenderungen
+Der Chat zeigt die Antwort ohne Aufschluesselung nach Restaurant, weil die Kellner- und Kuechenschichten im AI-Kontext keine Restaurant-Zuordnung haben. Die Daten zeigen nur `Session-Datum | Name | ...` aber nicht welches Restaurant. Da die AI nicht weiss welche Session zu welchem Restaurant gehoert, kann sie die Antwort nicht nach YUM und Spicery aufteilen.
 
-| Datei | Beschreibung |
+Ausserdem fehlt im System-Prompt die Anweisung, Antworten immer nach Restaurant aufzuschluesseln wenn mehrere vorhanden sind.
+
+## Loesung
+
+| Datei | Aenderung |
 |---|---|
-| `supabase/functions/restaurant-chat/index.ts` | Neue Edge Function: empfaengt Frage + Restaurant-IDs, laedt relevante Daten (Sessions, Schichten, Ausgaben, Kuechenschichten der letzten 90 Tage) aus der DB, sendet alles an Lovable AI Gateway (google/gemini-2.5-flash). Antwort als SSE-Stream. Validiert `caller_staff_id` serverseitig als Admin via `get_staff_permission`. |
-| `supabase/config.toml` | `[functions.restaurant-chat]` mit `verify_jwt = false` eintragen. |
-| `src/pages/RestaurantChat.tsx` | Chat-Seite: Nachrichtenliste, Eingabefeld, Streaming-Antworten, Vorschlags-Chips ("Umsatz diese Woche?", "Wer hat gestern gearbeitet?"). |
-| `src/App.tsx` | Route `/:restaurant/chat` mit `requiredLevel="admin"` hinzufuegen. |
-| `src/components/layout/AppLayout.tsx` | Chat-Link in der Sidebar nur fuer Admins (neben Mitarbeiter/Telegram), mit MessageCircle-Icon. |
+| `supabase/functions/restaurant-chat/index.ts` | 1. Restaurant-Name in alle Datenbereiche (Kellner-Schichten, Kuechen-Schichten, Ausgaben, Vorschuesse) einfuegen, indem `sessionDateMap` zu einer Map erweitert wird die auch den Restaurant-Namen enthaelt. 2. System-Prompt erweitern: "Wenn der User mehrere Restaurants hat, gliedere die Antwort immer nach Restaurant." |
 
-### Sicherheit
+### Details
 
-- Route ist durch `ProtectedRoute requiredLevel="admin"` geschuetzt
-- Edge Function prueft serverseitig via `get_staff_permission(caller_staff_id)` ob der Aufrufer Admin ist
-- Navigation wird nur fuer Admins (`isAdmin`) angezeigt
-
-### Edge Function Datenabfrage
-
-Pro Anfrage werden kompakte Daten der letzten 90 Tage geladen:
-- Sessions (Datum, Restaurant, Umsatz, Kreditkarten, Delivery, Gaestezahl)
-- Waiter Shifts (Name, Umsatz, Trinkgeld)
-- Kitchen Shifts (Name, Stunden)
-- Expenses + Advances (Betrag, Beschreibung)
-- Staff-Liste (aktive Mitarbeiter, Rolle)
-
-System-Prompt auf Deutsch, Zahlen als Euro formatiert, Konversationsverlauf clientseitig.
+1. `sessionDateMap` wird zu `sessionInfoMap` mit `{ date, restaurant }` pro Session-ID
+2. Alle Kontext-Zeilen fuer Schichten/Ausgaben/Vorschuesse bekommen eine Restaurant-Spalte
+3. System-Prompt bekommt die Regel: "Wenn mehrere Restaurants vorhanden sind, gliedere deine Antwort immer nach Restaurant"
 
