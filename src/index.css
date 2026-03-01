@@ -166,7 +166,7 @@
     background-color: hsl(0 70% 95%);
   }
   .wochenplan-table .inactive-day {
-    background-color: hsl(0 60% 96%);
+    background-color: hsl(220 10% 95%);
   }
   .wochenplan-table .day-separator {
     @apply border-l border-border/50;
