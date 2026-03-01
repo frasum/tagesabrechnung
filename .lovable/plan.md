@@ -1,25 +1,22 @@
 
 
-## YUM-Schichtdaten aus Zeiterfassung nachimportieren
+## Problem: Sumit fehlt in der Zeiterfassung
 
-Der erste Import hat nur Spicery-Daten erfasst. Für YUM muss der gleiche einmalige Import wiederholt werden.
+Sumit (SUMIT, perso_nr 109) ist beiden Restaurants (Spicery + YUM) zugewiesen, hat aber bei keinem eine **Abteilung für die Zeiterfassung** (`zt_department`) gesetzt. Die Zeiterfassungs-Ansichten filtern nur Mitarbeiter mit gesetztem `zt_department` — daher taucht Sumit nicht auf.
 
-### Vorgehen
-1. Temporäre Edge Function erstellen (gleiche Logik wie beim Spicery-Import)
-2. Externes Zeiterfassungs-Projekt abfragen: YUM-Mitarbeiter + März-Schichten
-3. Matching über `perso_nr` zu lokalen `staff`-Einträgen
-4. Wochen-Matching über Datumsbereiche zu lokaler YUM-Periode `da8ddfc8` (Feb 26 – Mar 25)
-5. Insert in `zt_shifts`
-6. Edge Function nach Import wieder entfernen
+### Lösung
 
-### Lokale YUM-Daten
-- **Periode**: `da8ddfc8-024e-4b00-83c4-52f327d4b53b` (März 2026)
-- **Restaurant-ID**: `3065f458-6d66-4a5d-a85e-f8ee33bb7351`
-- 22 Mitarbeiter mit `zt_department` zugewiesen (davon einige ohne `perso_nr`: Adisorn, Elison, Kris)
+`zt_department` für Sumit setzen. Laut dem Screenshot gehört Sumit zur **Küche**.
 
-### Änderungen
+### Änderung
 
-| Datei | Änderung |
-|---|---|
-| `supabase/functions/import-zeiterfassung/index.ts` | Temporäre Edge Function für YUM-Import, wird nach Aufruf entfernt |
+Eine Migration, die `zt_department = 'Küche'` für Sumit bei beiden Restaurants setzt:
+
+```sql
+UPDATE staff_restaurants
+SET zt_department = 'Küche'
+WHERE staff_id = '0cbe9b9b-de09-4cb8-b0ee-936d15615a70';
+```
+
+Keine Code-Änderungen nötig.
 
