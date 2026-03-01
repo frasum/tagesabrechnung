@@ -41,3 +41,9 @@ verify_jwt = false
 
 [functions.shared-zt-data]
 verify_jwt = false
+
+[functions.payroll-office-auth]
+verify_jwt = false
+
+[functions.payroll-office-data]
+verify_jwt = false
