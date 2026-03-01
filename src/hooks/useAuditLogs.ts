@@ -14,21 +14,27 @@ export interface CreateAuditLogParams {
   restaurant_id: string;
 }
 
-export function useAuditLogs(restaurantId: string | null, limit = 50) {
+const AUDIT_PAGE_SIZE = 30;
+
+export function useAuditLogs(restaurantId: string | null, page = 0) {
   return useQuery({
-    queryKey: ['audit-logs', restaurantId, limit],
+    queryKey: ['audit-logs', restaurantId, page],
     queryFn: async () => {
-      if (!restaurantId) return [];
+      if (!restaurantId) return { logs: [] as AuditLog[], totalCount: 0 };
       
-      const { data, error } = await supabase
+      const from = page * AUDIT_PAGE_SIZE;
+      const to = from + AUDIT_PAGE_SIZE - 1;
+      
+      const { data, error, count } = await supabase
         .from('audit_logs')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('restaurant_id', restaurantId)
+        .eq('table_name', 'waiter_shifts')
         .order('created_at', { ascending: false })
-        .limit(limit);
+        .range(from, to);
       
       if (error) throw error;
-      return data as AuditLog[];
+      return { logs: (data ?? []) as AuditLog[], totalCount: count ?? 0 };
     },
     enabled: !!restaurantId,
   });
