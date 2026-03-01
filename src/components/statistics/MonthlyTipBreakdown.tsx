@@ -24,7 +24,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useMonthlyStaffTips, MonthlyTipData } from '@/hooks/useMonthlyStaffTips';
-import { useRestaurant } from '@/hooks/useRestaurant';
+import { useRestaurants } from '@/hooks/useRestaurant';
 
 const CHART_COLORS = [
   'hsl(var(--chart-1))',
@@ -179,8 +179,9 @@ function TipTable({ data, showHours }: TipTableProps) {
 }
 
 export function MonthlyTipBreakdown() {
-  const { restaurantId } = useRestaurant();
-  const { data: monthlyData, isLoading } = useMonthlyStaffTips(12, restaurantId);
+  const { data: restaurants } = useRestaurants();
+  const allRestaurantIds = restaurants?.map(r => r.id) ?? [];
+  const { data: monthlyData, isLoading } = useMonthlyStaffTips(12, allRestaurantIds.length > 0 ? allRestaurantIds : null);
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'waiter' | 'kitchen'>('waiter');
 

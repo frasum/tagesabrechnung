@@ -19,7 +19,7 @@ export interface MonthlyTipData {
   totalKitchenHours: number;
 }
 
-async function fetchMonthlyStaffTips(monthsBack: number = 12, restaurantId?: string): Promise<MonthlyTipData[]> {
+async function fetchMonthlyStaffTips(monthsBack: number = 12, restaurantIds?: string[]): Promise<MonthlyTipData[]> {
   const now = new Date();
   const monthsData: MonthlyTipData[] = [];
 
@@ -34,8 +34,8 @@ async function fetchMonthlyStaffTips(monthsBack: number = 12, restaurantId?: str
     .lte('session_date', format(endDate, 'yyyy-MM-dd'))
     .order('session_date', { ascending: true });
 
-  if (restaurantId) {
-    query.eq('restaurant_id', restaurantId);
+  if (restaurantIds && restaurantIds.length > 0) {
+    query.in('restaurant_id', restaurantIds);
   }
 
   const { data: sessions, error: sessionsError } = await query;
@@ -203,18 +203,18 @@ async function fetchMonthlyStaffTips(monthsBack: number = 12, restaurantId?: str
   return monthsData.sort((a, b) => b.month.localeCompare(a.month));
 }
 
-export function useMonthlyStaffTips(monthsBack: number = 12, restaurantId?: string | null) {
+export function useMonthlyStaffTips(monthsBack: number = 12, restaurantIds?: string[] | null) {
   return useQuery({
-    queryKey: ['monthly-staff-tips', monthsBack, restaurantId],
-    queryFn: () => fetchMonthlyStaffTips(monthsBack, restaurantId || undefined),
-    enabled: !!restaurantId,
+    queryKey: ['monthly-staff-tips', monthsBack, restaurantIds],
+    queryFn: () => fetchMonthlyStaffTips(monthsBack, restaurantIds || undefined),
+    enabled: !!restaurantIds && restaurantIds.length > 0,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 
 // Helper hook to get current month data only
-export function useCurrentMonthTips(restaurantId?: string | null) {
-  const { data, ...rest } = useMonthlyStaffTips(1, restaurantId);
+export function useCurrentMonthTips(restaurantIds?: string[] | null) {
+  const { data, ...rest } = useMonthlyStaffTips(1, restaurantIds);
   const currentMonth = format(new Date(), 'yyyy-MM');
   const currentMonthData = data?.find(m => m.month === currentMonth);
   

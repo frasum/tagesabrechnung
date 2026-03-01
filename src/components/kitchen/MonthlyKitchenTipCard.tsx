@@ -17,7 +17,7 @@ const formatHours = (hours: number) => {
 
 export function MonthlyKitchenTipCard() {
   const { restaurantId } = useRestaurant();
-  const { data: monthData, isLoading } = useCurrentMonthTips(restaurantId);
+  const { data: monthData, isLoading } = useCurrentMonthTips(restaurantId ? [restaurantId] : null);
   
   const currentMonthLabel = format(new Date(), 'MMMM yyyy', { locale: de });
 
