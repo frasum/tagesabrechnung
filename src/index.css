@@ -171,9 +171,7 @@
   .wochenplan-table .day-separator {
     @apply border-l border-border/50;
   }
-  .wochenplan-table .dept-header-row td {
-    background-color: inherit;
-  }
+  /* dept-header-row background comes from getDepartmentBgClass */
   .wochenplan-table .time-input-clean {
     @apply border-transparent bg-transparent shadow-none ring-0 focus-visible:ring-1 focus-visible:bg-background;
   }
