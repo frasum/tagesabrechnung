@@ -1,0 +1,1 @@
+ALTER TABLE staff ADD COLUMN participates_in_pool boolean NOT NULL DEFAULT true;

@@ -718,6 +718,7 @@ export type Database = {
           name: string
           nickname: string | null
           notes: string | null
+          participates_in_pool: boolean
           perso_nr: number | null
           role: Database["public"]["Enums"]["staff_role"]
           updated_at: string
@@ -732,6 +733,7 @@ export type Database = {
           name: string
           nickname?: string | null
           notes?: string | null
+          participates_in_pool?: boolean
           perso_nr?: number | null
           role: Database["public"]["Enums"]["staff_role"]
           updated_at?: string
@@ -746,6 +748,7 @@ export type Database = {
           name?: string
           nickname?: string | null
           notes?: string | null
+          participates_in_pool?: boolean
           perso_nr?: number | null
           role?: Database["public"]["Enums"]["staff_role"]
           updated_at?: string

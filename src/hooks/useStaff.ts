@@ -72,6 +72,7 @@ export interface Staff {
   hourly_rate: number | null;
   notes: string | null;
   is_active: boolean | null;
+  participates_in_pool: boolean;
   created_at: string;
   updated_at: string;
   staff_restaurants?: StaffRestaurant[];
@@ -93,6 +94,7 @@ export interface StaffInput {
   hourly_rate?: number;
   notes?: string;
   is_active?: boolean;
+  participates_in_pool?: boolean;
   pin_code?: string;
   restaurant_ids?: string[];
   restaurant_assignments?: RestaurantAssignment[];

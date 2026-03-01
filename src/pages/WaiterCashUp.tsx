@@ -21,6 +21,7 @@ import { useSession, useCreateSession, useWaiterShifts, useCreateWaiterShift, us
 import { useUpdateWaiterShiftWithAudit } from '@/hooks/useWaiterShiftAudit';
 import { useRestaurant } from '@/hooks/useRestaurant';
 import { useLabels } from '@/hooks/useLabels';
+import { useActiveStaffByRestaurant } from '@/hooks/useStaff';
 import type { WaiterShift } from '@/types/database';
 
 export default function WaiterCashUp() {
@@ -58,6 +59,7 @@ export default function WaiterCashUp() {
   const updateWaiterShift = useUpdateWaiterShiftWithAudit();
   const { data: waiterTipAverages = {} } = useWaiterTipAverages(restaurantId);
   const { getLabel, isFieldHidden } = useLabels(restaurantId);
+  const { data: activeStaff = [] } = useActiveStaffByRestaurant(restaurantId ?? null, 'waiter');
 
   const handleCreateSession = async () => {
     if (!restaurantId) return;
@@ -309,7 +311,16 @@ export default function WaiterCashUp() {
               <CardContent className="space-y-4">
                 <div>
                   <Label>Mitarbeiter auswählen</Label>
-                  <StaffSelect value={newWaiterName} onValueChange={setNewWaiterName} role="waiter" placeholder="Mitarbeiter wählen" excludeNames={waiterShifts.filter((s) => s.id !== editingShiftId).map((s) => s.waiter_name)} restaurantId={restaurantId} />
+                  <StaffSelect value={newWaiterName} onValueChange={(name) => {
+                    setNewWaiterName(name);
+                    // Set pool participation default from staff record
+                    if (!editingShiftId) {
+                      const staffRecord = activeStaff.find(s => s.name === name);
+                      if (staffRecord) {
+                        setNewParticipatesInPool(staffRecord.participates_in_pool ?? true);
+                      }
+                    }
+                  }} role="waiter" placeholder="Mitarbeiter wählen" excludeNames={waiterShifts.filter((s) => s.id !== editingShiftId).map((s) => s.waiter_name)} restaurantId={restaurantId} />
                 </div>
 
                 {newParticipatesInPool &&

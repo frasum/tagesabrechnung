@@ -33,6 +33,7 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
   const [persoNr, setPersoNr] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [pinCode, setPinCode] = useState('');
+  const [participatesInPool, setParticipatesInPool] = useState(true);
   const [restaurantDepts, setRestaurantDepts] = useState<Record<string, Set<string>>>({});
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [permissionLevel, setPermissionLevel] = useState<PermissionLevel>('staff');
@@ -64,6 +65,7 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       setLastName(staff.last_name ?? '');
       setPersoNr(staff.perso_nr != null ? String(staff.perso_nr) : '');
       setIsActive(staff.is_active ?? true);
+      setParticipatesInPool(staff.participates_in_pool ?? true);
       setPinCode('');
       // Build restaurantDepts from existing staff_restaurants
       const depts: Record<string, Set<string>> = {};
@@ -79,6 +81,7 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       setLastName('');
       setPersoNr('');
       setIsActive(true);
+      setParticipatesInPool(true);
       setPinCode('');
       // For new staff, select all restaurants with no departments yet
       const depts: Record<string, Set<string>> = {};
@@ -148,6 +151,7 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       perso_nr: persoNr ? Number(persoNr) : undefined,
       role,
       is_active: isActive,
+      participates_in_pool: participatesInPool,
       pin_code: pinCode.length === 4 ? pinCode : undefined,
       restaurant_assignments,
     });
@@ -321,6 +325,15 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
           <div className="flex items-center justify-between">
             <Label htmlFor="staff-active">Aktiv</Label>
             <Switch id="staff-active" checked={isActive} onCheckedChange={setIsActive} />
+          </div>
+
+          {/* Pool participation toggle */}
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="staff-pool">Am Trinkgeldpool beteiligt</Label>
+              <p className="text-xs text-muted-foreground">Standardwert für neue Abrechnungen</p>
+            </div>
+            <Switch id="staff-pool" checked={participatesInPool} onCheckedChange={setParticipatesInPool} />
           </div>
 
           {/* Permission Level Section - only for existing staff */}

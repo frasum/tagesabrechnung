@@ -72,6 +72,11 @@ export function StaffTableRow({ staff, onEdit, onDelete, rankingData }: StaffTab
               </Tooltip>
             </TooltipProvider>
           )}
+          {!staff.participates_in_pool && (
+            <Badge variant="outline" className="text-xs font-normal text-muted-foreground">
+              kein Pool
+            </Badge>
+          )}
           {isLinked && (
             <TooltipProvider>
               <Tooltip>
