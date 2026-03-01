@@ -45,8 +45,8 @@ async function fetchMonthlyStaffTips(monthsBack: number = 12, restaurantIds?: st
 
   const sessionIds = sessions.map(s => s.id);
 
-  // Fetch all waiter shifts and kitchen shifts for these sessions
-  const [waiterShiftsResult, kitchenShiftsResult] = await Promise.all([
+  // Fetch staff pool status, waiter shifts, and kitchen shifts in parallel
+  const [waiterShiftsResult, kitchenShiftsResult, staffResult] = await Promise.all([
     supabase
       .from('waiter_shifts')
       .select('*')
@@ -55,6 +55,9 @@ async function fetchMonthlyStaffTips(monthsBack: number = 12, restaurantIds?: st
       .from('kitchen_shifts')
       .select('*')
       .in('session_id', sessionIds),
+    supabase
+      .from('staff')
+      .select('name, participates_in_pool'),
   ]);
 
   if (waiterShiftsResult.error) throw waiterShiftsResult.error;
@@ -62,6 +65,15 @@ async function fetchMonthlyStaffTips(monthsBack: number = 12, restaurantIds?: st
 
   const waiterShifts = waiterShiftsResult.data || [];
   const kitchenShifts = kitchenShiftsResult.data || [];
+
+  // Build pool participation lookup by staff name
+  const poolStatusMap: Record<string, boolean> = {};
+  if (staffResult.data) {
+    for (const s of staffResult.data) {
+      poolStatusMap[s.name] = s.participates_in_pool;
+    }
+  }
+  const isPoolParticipant = (name: string) => poolStatusMap[name] !== false;
 
   // Group sessions by month
   const sessionsByMonth: Record<string, typeof sessions> = {};
@@ -151,10 +163,16 @@ async function fetchMonthlyStaffTips(monthsBack: number = 12, restaurantIds?: st
       const totalHours = kitchenShiftsInSession.reduce((sum, ks) => sum + (ks.hours_worked || 0), 0);
       
       if (totalHours > 0 && sessionKitchenPool > 0) {
+        // Only pool participants contribute to the divisor
+        const poolHours = kitchenShiftsInSession.reduce((sum, ks) => {
+          return isPoolParticipant(ks.staff_name) ? sum + (ks.hours_worked || 0) : sum;
+        }, 0);
+
         kitchenShiftsInSession.forEach(ks => {
           const staffName = ks.staff_name;
           const hours = ks.hours_worked || 0;
-          const tipShare = (hours / totalHours) * sessionKitchenPool;
+          const inPool = isPoolParticipant(staffName);
+          const tipShare = (inPool && poolHours > 0) ? (hours / poolHours) * sessionKitchenPool : 0;
           
           if (!kitchenTipsMap[staffName]) {
             kitchenTipsMap[staffName] = { hours: 0, tip: 0 };
