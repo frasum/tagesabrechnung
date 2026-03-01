@@ -200,7 +200,7 @@ export default function ZtWochenplan() {
       return globalShifts?.find(s =>
         s.employee_id === empId &&
         s.shift_date === date &&
-        (s.department !== dept || s.week_id !== selectedWeekId)
+        s.week_id !== selectedWeekId
       ) ?? null;
     },
     [globalShifts, selectedWeekId]
@@ -227,11 +227,11 @@ export default function ZtWochenplan() {
 
       const currentDept = params.department ?? '';
       const hasConflict = allShiftsOnDay?.some(s =>
-        s.department !== currentDept || s.week_id !== params.week_id
+        s.week_id !== params.week_id
       );
       if (hasConflict) {
-        const conflicting = allShiftsOnDay?.find(s => s.department !== currentDept || s.week_id !== params.week_id);
-        throw new Error(`Schicht existiert bereits am ${params.shift_date} in Abt. ${conflicting?.department || '?'} (anderes Restaurant/Department)`);
+        const conflicting = allShiftsOnDay?.find(s => s.week_id !== params.week_id);
+        throw new Error(`Schicht existiert bereits am ${params.shift_date} in Abt. ${conflicting?.department || '?'} (anderes Restaurant)`);
       }
 
       const { data: fresh } = await supabase

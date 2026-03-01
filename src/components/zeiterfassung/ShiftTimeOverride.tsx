@@ -272,7 +272,7 @@ export default function ShiftTimeOverride({
             .eq("employee_id", emp.id)
             .eq("shift_date", date);
           const hasConflict = allShiftsOnDay?.some(s =>
-            s.department !== department || s.week_id !== week.id
+            s.week_id !== week.id
           );
           if (hasConflict) { skipped++; continue; }
 
@@ -392,7 +392,7 @@ export default function ShiftTimeOverride({
             .eq("employee_id", emp.id)
             .eq("shift_date", date);
           const hasConflict = allShiftsOnDay?.some(s =>
-            s.department !== department || s.week_id !== week.id
+            s.week_id !== week.id
           );
           if (hasConflict) { skipped++; continue; }
 

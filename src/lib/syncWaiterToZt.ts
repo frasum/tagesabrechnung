@@ -79,10 +79,10 @@ async function upsertZtShift(params: {
     .eq('shift_date', params.shiftDate);
 
   const hasConflict = allShiftsOnDay?.some(s =>
-    s.department !== dept || s.week_id !== params.weekId
+    s.week_id !== params.weekId
   );
   if (hasConflict) {
-    const conflicting = allShiftsOnDay?.find(s => s.department !== dept || s.week_id !== params.weekId);
+    const conflicting = allShiftsOnDay?.find(s => s.week_id !== params.weekId);
     console.warn(`Sync übersprungen: ${params.employeeId} hat am ${params.shiftDate} bereits eine Schicht in Abt. ${conflicting?.department}`);
     return;
   }
