@@ -178,6 +178,34 @@ export default function ZtWochenplan() {
       })
     : [];
 
+  // Global shifts query: load all shifts for displayed employees on visible dates (across all weeks/restaurants)
+  const employeeIds = sortedEmployees.map(e => e.id);
+  const dateStrings = weekDays.map(d => format(d, "yyyy-MM-dd"));
+
+  const { data: globalShifts } = useQuery({
+    queryKey: ["zt-shifts-global", employeeIds, dateStrings],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("zt_shifts")
+        .select("employee_id, shift_date, department, week_id")
+        .in("employee_id", employeeIds)
+        .in("shift_date", dateStrings);
+      return data ?? [];
+    },
+    enabled: employeeIds.length > 0 && dateStrings.length > 0,
+  });
+
+  const getConflict = useCallback(
+    (empId: string, date: string, dept: string) => {
+      return globalShifts?.find(s =>
+        s.employee_id === empId &&
+        s.shift_date === date &&
+        (s.department !== dept || s.week_id !== selectedWeekId)
+      ) ?? null;
+    },
+    [globalShifts, selectedWeekId]
+  );
+
   const upsertShift = useMutation({
     mutationFn: async (params: {
       employee_id: string;
@@ -252,6 +280,7 @@ export default function ZtWochenplan() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["zt-shifts", selectedWeekId] });
       queryClient.invalidateQueries({ queryKey: ["zt-shifts-period"] });
+      queryClient.invalidateQueries({ queryKey: ["zt-shifts-global"] });
     },
     onError: () => {
       toast.error("Fehler beim Speichern");
@@ -513,6 +542,7 @@ export default function ZtWochenplan() {
                           const dateStr = format(day, "yyyy-MM-dd");
                           const isActive = activeDates.has(dateStr);
                           const shift = isActive ? getShift(emp.id, dateStr, emp.department) : undefined;
+                          const conflict = isActive ? getConflict(emp.id, dateStr, emp.department) : null;
                           const isSunHol = sundayHolidayDays.has(dateStr);
                           const isHoliday = holidayDays.has(dateStr);
                           const sunClass = isHoliday && isActive ? "sunday-col" : "";
@@ -520,6 +550,7 @@ export default function ZtWochenplan() {
                           const absenceType = shift?.absence_type as string | null;
                           const startVal = shift?.start_time?.slice(0, 5) ?? "";
                           const endVal = shift?.end_time?.slice(0, 5) ?? "";
+                          const cellDisabled = isLocked || !!conflict;
                           return (
                             <React.Fragment key={`${emp.id}-${dateStr}`}>
                               {absenceType && isActive ? (
@@ -537,6 +568,21 @@ export default function ZtWochenplan() {
                                     {absenceType === 'urlaub' ? 'U' : 'K'}
                                   </button>
                                 </td>
+                              ) : conflict ? (
+                                <>
+                                  <td colSpan={2} className={`p-0.5 text-center bg-amber-50 dark:bg-amber-900/20 ${sunClass} ${sepClass}`}>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className="inline-flex items-center justify-center h-7 w-full rounded text-xs text-muted-foreground cursor-not-allowed opacity-60">
+                                          ✕
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Bereits in {conflict.department || "anderem Restaurant"} eingetragen</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </td>
+                                </>
                               ) : (
                                 <>
                                   <td className={`p-0.5 group ${!isActive ? "inactive-day" : ""} ${sunClass} ${sepClass}`}>
