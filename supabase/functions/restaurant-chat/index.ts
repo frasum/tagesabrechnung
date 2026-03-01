@@ -6,6 +6,27 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Helper: batch .in() queries in chunks of 500
+async function batchIn<T>(
+  supabase: any,
+  table: string,
+  selectCols: string,
+  filterCol: string,
+  ids: string[],
+  batchSize = 500
+): Promise<T[]> {
+  const results: T[] = [];
+  for (let i = 0; i < ids.length; i += batchSize) {
+    const batch = ids.slice(i, i + batchSize);
+    const { data } = await supabase
+      .from(table)
+      .select(selectCols)
+      .in(filterCol, batch);
+    if (data) results.push(...data);
+  }
+  return results;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -37,18 +58,22 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Calculate 90 days ago
-    const since = new Date();
-    since.setDate(since.getDate() - 90);
-    const sinceStr = since.toISOString().split("T")[0];
+    // Calculate date ranges
+    const since90 = new Date();
+    since90.setDate(since90.getDate() - 90);
+    const since90Str = since90.toISOString().split("T")[0];
 
-    // Load data in parallel
+    const since30 = new Date();
+    since30.setDate(since30.getDate() - 30);
+    const since30Str = since30.toISOString().split("T")[0];
+
+    // Load sessions (90 days) + staff + restaurants in parallel
     const [sessionsRes, staffRes, restaurantsRes] = await Promise.all([
       supabase
         .from("sessions")
         .select("id, session_date, restaurant_id, pos_total, terminal_1_total, terminal_2_total, ordersmart_revenue, wolt_revenue, guest_count, vouchers_sold, vouchers_redeemed, finedine_vouchers, einladung, sonstige_einnahme, notes, created_by_name")
         .in("restaurant_id", restaurant_ids)
-        .gte("session_date", sinceStr)
+        .gte("session_date", since90Str)
         .order("session_date", { ascending: false })
         .limit(5000),
       supabase
@@ -64,39 +89,27 @@ Deno.serve(async (req) => {
     const sessions = sessionsRes.data || [];
     const sessionIds = sessions.map((s: any) => s.id);
 
-    // Load related data
+    // Load related data using batched .in() queries
     let waiterShifts: any[] = [];
     let kitchenShifts: any[] = [];
     let expenses: any[] = [];
     let advances: any[] = [];
 
     if (sessionIds.length > 0) {
-      const [wsRes, ksRes, expRes, advRes] = await Promise.all([
-        supabase
-          .from("waiter_shifts")
-          .select("session_id, waiter_name, pos_sales, kassiert_brutto, differenz, kitchen_tip, hours_worked, participates_in_pool, additional_waiters")
-          .in("session_id", sessionIds)
-          .limit(5000),
-        supabase
-          .from("kitchen_shifts")
-          .select("session_id, staff_name, hours_worked")
-          .in("session_id", sessionIds)
-          .limit(5000),
-        supabase
-          .from("expenses")
-          .select("session_id, amount, description")
-          .in("session_id", sessionIds)
-          .limit(5000),
-        supabase
-          .from("advances")
-          .select("session_id, amount, staff_name")
-          .in("session_id", sessionIds)
-          .limit(5000),
+      [waiterShifts, kitchenShifts, expenses, advances] = await Promise.all([
+        batchIn(supabase, "waiter_shifts",
+          "session_id, waiter_name, pos_sales, kassiert_brutto, differenz, kitchen_tip, hours_worked, participates_in_pool, additional_waiters",
+          "session_id", sessionIds),
+        batchIn(supabase, "kitchen_shifts",
+          "session_id, staff_name, hours_worked",
+          "session_id", sessionIds),
+        batchIn(supabase, "expenses",
+          "session_id, amount, description",
+          "session_id", sessionIds),
+        batchIn(supabase, "advances",
+          "session_id, amount, staff_name",
+          "session_id", sessionIds),
       ]);
-      waiterShifts = wsRes.data || [];
-      kitchenShifts = ksRes.data || [];
-      expenses = expRes.data || [];
-      advances = advRes.data || [];
     }
 
     // Build restaurant name map
@@ -180,8 +193,8 @@ Deno.serve(async (req) => {
         return count + 1 + additionalCount;
       }, 0);
 
-      // Distribute pool equally among participants
-      if (waiterShareCount > 0 && sessionPool > 0) {
+      // Distribute pool equally among participants (FIX: also distribute negative pools)
+      if (waiterShareCount > 0 && sessionPool !== 0) {
         const tipPerWaiter = sessionPool / waiterShareCount;
         shiftsInSession.forEach((ws: any) => {
           // Track hours for all
@@ -264,51 +277,55 @@ Deno.serve(async (req) => {
       }
     }
 
-    contextParts.push("\n=== SESSIONS (letzte 90 Tage, Rohdaten) ===");
-    contextParts.push("Datum | Restaurant | Kassen-Umsatz | Kreditkarten | OrderSmart | Wolt | Gutschein-VK | Gutschein-Einl | FineDine-Gutscheine | Einladung | SoEinnahme | Gäste | Notizen");
-    sessions.forEach((s: any) => {
-      const cards = (s.terminal_1_total || 0) + (s.terminal_2_total || 0);
-      contextParts.push(
-        `${s.session_date} | ${restaurantMap[s.restaurant_id] || "?"} | ${s.pos_total || 0}€ | ${cards}€ | ${s.ordersmart_revenue || 0}€ | ${s.wolt_revenue || 0}€ | ${s.vouchers_sold || 0}€ | ${s.vouchers_redeemed || 0}€ | ${s.finedine_vouchers || 0}€ | ${s.einladung || 0}€ | ${s.sonstige_einnahme || 0}€ | ${s.guest_count || 0} | ${s.notes || "-"}`
-      );
-    });
-
     // Build session info map with date + restaurant
     const sessionInfoMap: Record<string, { date: string; restaurant: string }> = {};
     sessions.forEach((s: any) => {
       sessionInfoMap[s.id] = { date: s.session_date, restaurant: restaurantMap[s.restaurant_id] || "?" };
     });
 
-    contextParts.push("\n=== KELLNER-SCHICHTEN ===");
+    // RAW DATA: limited to last 30 days for context optimization
+    const recentSessions = sessions.filter((s: any) => s.session_date >= since30Str);
+    const recentSessionIds = new Set(recentSessions.map((s: any) => s.id));
+
+    contextParts.push("\n=== SESSIONS (letzte 30 Tage, Rohdaten) ===");
+    contextParts.push("Datum | Restaurant | Kassen-Umsatz | Kreditkarten | OrderSmart | Wolt | Gutschein-VK | Gutschein-Einl | FineDine-Gutscheine | Einladung | SoEinnahme | Gäste | Notizen");
+    recentSessions.forEach((s: any) => {
+      const cards = (s.terminal_1_total || 0) + (s.terminal_2_total || 0);
+      contextParts.push(
+        `${s.session_date} | ${restaurantMap[s.restaurant_id] || "?"} | ${s.pos_total || 0}€ | ${cards}€ | ${s.ordersmart_revenue || 0}€ | ${s.wolt_revenue || 0}€ | ${s.vouchers_sold || 0}€ | ${s.vouchers_redeemed || 0}€ | ${s.finedine_vouchers || 0}€ | ${s.einladung || 0}€ | ${s.sonstige_einnahme || 0}€ | ${s.guest_count || 0} | ${s.notes || "-"}`
+      );
+    });
+
+    contextParts.push("\n=== KELLNER-SCHICHTEN (letzte 30 Tage) ===");
     contextParts.push("Session-Datum | Restaurant | Name | POS-Umsatz | Kassiert | Kellner-TG (Pool-Anteil) | Küchen-TG | Stunden");
-    waiterShifts.forEach((ws: any) => {
+    waiterShifts.filter((ws: any) => recentSessionIds.has(ws.session_id)).forEach((ws: any) => {
       const info = sessionInfoMap[ws.session_id] || { date: "?", restaurant: "?" };
       contextParts.push(
         `${info.date} | ${info.restaurant} | ${ws.waiter_name} | ${ws.pos_sales || 0}€ | ${ws.kassiert_brutto || 0}€ | ${ws.differenz || 0}€ | ${ws.kitchen_tip || 0}€ | ${ws.hours_worked || "-"}h`
       );
     });
 
-    contextParts.push("\n=== KÜCHEN-SCHICHTEN ===");
+    contextParts.push("\n=== KÜCHEN-SCHICHTEN (letzte 30 Tage) ===");
     contextParts.push("Session-Datum | Restaurant | Name | Stunden");
-    kitchenShifts.forEach((ks: any) => {
+    kitchenShifts.filter((ks: any) => recentSessionIds.has(ks.session_id)).forEach((ks: any) => {
       const info = sessionInfoMap[ks.session_id] || { date: "?", restaurant: "?" };
       contextParts.push(
         `${info.date} | ${info.restaurant} | ${ks.staff_name} | ${ks.hours_worked || 0}h`
       );
     });
 
-    contextParts.push("\n=== AUSGABEN ===");
+    contextParts.push("\n=== AUSGABEN (letzte 30 Tage) ===");
     contextParts.push("Session-Datum | Restaurant | Betrag | Beschreibung");
-    expenses.forEach((e: any) => {
+    expenses.filter((e: any) => recentSessionIds.has(e.session_id)).forEach((e: any) => {
       const info = sessionInfoMap[e.session_id] || { date: "?", restaurant: "?" };
       contextParts.push(
         `${info.date} | ${info.restaurant} | ${e.amount}€ | ${e.description}`
       );
     });
 
-    contextParts.push("\n=== VORSCHÜSSE ===");
+    contextParts.push("\n=== VORSCHÜSSE (letzte 30 Tage) ===");
     contextParts.push("Session-Datum | Restaurant | Name | Betrag");
-    advances.forEach((a: any) => {
+    advances.filter((a: any) => recentSessionIds.has(a.session_id)).forEach((a: any) => {
       const info = sessionInfoMap[a.session_id] || { date: "?", restaurant: "?" };
       contextParts.push(
         `${info.date} | ${info.restaurant} | ${a.staff_name} | ${a.amount}€`
@@ -338,6 +355,7 @@ Wichtige Regeln:
 - Wenn Daten nicht vorhanden sind, sage das klar
 - Wenn mehrere Restaurants vorhanden sind, gliedere deine Antwort immer nach Restaurant
 - "Kellner-TG (Pool-Anteil)" ist das Trinkgeld das der Kellner behält (sein Anteil am Trinkgeld-Pool). "Küchen-TG" ist der separate Anteil der an die Küche abgeführt wird. Wenn nach "Trinkgeld" eines Kellners gefragt wird, verwende den "Kellner-TG (Pool-Anteil)".
+- Die Rohdaten (Sessions, Schichten, Ausgaben, Vorschüsse) sind nur für die letzten 30 Tage verfügbar. Für ältere Zeiträume nutze die voraggregierten Monatssummen.
 - Heute ist ${new Date().toISOString().split("T")[0]}`;
 
     // Call AI Gateway
