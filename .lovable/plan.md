@@ -1,38 +1,28 @@
 
 
-## Technische Verbesserungen am Restaurant-Chat-System
+## Checkbox "Am Pool beteiligt" wieder hinzufuegen
 
-Nach Durchsicht des gesamten Systems gibt es drei konkrete Probleme und Optimierungen:
+Der State `newParticipatesInPool` existiert bereits und wird korrekt gespeichert. Aktuell wird der Pool-Status nur als Badge angezeigt (Zeile 310-312), aber es fehlt eine Checkbox zum Umschalten.
 
----
+### Aenderung in `src/pages/WaiterCashUp.tsx`
 
-### 1. Bug: Negativer Pool wird ignoriert
+Die Badge-Anzeige (Zeilen 309-313) wird durch eine Checkbox mit Label ersetzt:
 
-**Problem:** Zeile 184 prueft `sessionPool > 0`. Wenn der Pool negativ ist (z.B. Kellner hat zu viel kassiert), wird das Trinkgeld-Ranking verfaelscht -- die negativen Werte fehlen in der Aggregation, und die Summen stimmen nicht mit der App ueberein.
+```tsx
+import { Checkbox } from '@/components/ui/checkbox';
 
-**Fix:** Bedingung aendern zu `sessionPool !== 0`, damit auch negative Pool-Anteile korrekt verteilt werden.
+// Nach dem StaffSelect, statt der Badge:
+{newWaiterName && (
+  <div className="flex items-center gap-2 mt-2">
+    <Checkbox
+      id="participatesInPool"
+      checked={newParticipatesInPool}
+      onCheckedChange={(checked) => setNewParticipatesInPool(checked === true)}
+    />
+    <Label htmlFor="participatesInPool">Am Pool beteiligt</Label>
+  </div>
+)}
+```
 
----
-
-### 2. Skalierungsproblem: `.in()` mit zu vielen Session-IDs
-
-**Problem:** Bei 90 Tagen und 2 Restaurants sind ~180 Session-IDs moeglich. Das funktioniert noch, aber `.in()` mit tausenden UUIDs kann bei Wachstum Probleme machen. Wichtiger: Falls Sessions je auf ueber 5.000 Zeilen kommen (z.B. waiter_shifts), greift das `.limit(5000)` und Daten werden abgeschnitten -- ohne Fehlermeldung.
-
-**Fix:** Session-IDs in 500er-Batches aufteilen (wie bereits im `useCashBalanceData` Hook gemacht), Ergebnisse zusammenfuehren.
-
----
-
-### 3. Kontext-Optimierung: Rohdaten kuerzen
-
-**Problem:** Der System-Prompt enthaelt sowohl die voraggregierten Zusammenfassungen ALS AUCH alle Rohdaten (Sessions, Schichten, Ausgaben, Vorschuesse). Das erzeugt einen sehr grossen Kontext, der Kosten und Latenz erhoeht. Die Rohdaten werden hauptsaechlich fuer tagesgenaue Detailfragen benoetigt.
-
-**Fix:** Rohdaten-Sektionen (Kellner-Schichten, Kuechen-Schichten, Ausgaben, Vorschuesse) auf die letzten 30 Tage begrenzen statt 90. Die aggregierten Monatssummen decken weiterhin alle 90 Tage ab, sodass Monatsfragen korrekt beantwortet werden.
-
----
-
-### Zusammenfassung der Aenderungen
-
-| Datei | Aenderung |
-|---|---|
-| `supabase/functions/restaurant-chat/index.ts` | 1. `sessionPool > 0` → `sessionPool !== 0` (Bug-Fix negative Pools). 2. Session-IDs in 500er-Batches fuer `.in()`-Queries. 3. Rohdaten auf 30 Tage begrenzen, Aggregation bleibt 90 Tage. |
+Der Default-Wert wird weiterhin aus den Stammdaten des gewaehlten Mitarbeiters uebernommen (Zeile 302-306), kann aber nun manuell ueberschrieben werden.
 
