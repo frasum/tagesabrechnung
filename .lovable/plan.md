@@ -1,27 +1,23 @@
 
 
-## Analyse: Wird `staff.role` anderswo gebraucht?
+## Problem
 
-**Ja, `staff.role` wird an vielen Stellen in der App aktiv verwendet:**
+Mitarbeiter "Ah" hat `staff.role = 'kitchen'` in der Datenbank, aber `zt_department = NULL` bei Spicery. Das Badge "Küche" kommt aus dem alten `staff.role`-Wert, der vor der Umstellung auf Abteilungs-Checkboxen gesetzt wurde.
 
-| Stelle | Verwendung |
-|---|---|
-| `src/pages/StaffManagement.tsx` | Filter-Tabs (Service / Küche / GL) nutzen `hasRole(s.role, ...)` und zählen Mitarbeiter pro Rolle |
-| `src/components/staff/StaffTableRow.tsx` | Zeigt Rollen-Badges (Service, Küche, GL) basierend auf `enumToRoles(staff.role)` |
-| `src/components/staff/StaffCard.tsx` | Icon und Farbe basierend auf `staff.role` (ChefHat vs UtensilsCrossed) |
-| `src/contexts/AuthContext.tsx` | Login setzt `user.role` aus `staff.role` |
-| `supabase/functions/validate-pin/index.ts` | PIN-Login gibt `staff.role` zurück |
-| `src/pages/Login.tsx` | Übernimmt `role` aus PIN-Validierung |
+## Lösung
 
-### Fazit
+Die Rollen-Badges in der Tabelle sollten nicht mehr aus `staff.role` abgeleitet werden, sondern **direkt aus den tatsächlichen `zt_department`-Zuweisungen** in `staff_restaurants`. So zeigt die Tabelle nur an, was wirklich zugewiesen ist.
 
-Die "Rolle"-Checkboxen oben im Dialog können **trotzdem entfernt** werden — aber `staff.role` in der DB muss weiterhin gesetzt werden. Das passiert dann **automatisch**, indem beim Speichern alle gewählten Abteilungen über alle Restaurants gesammelt und via `rolesToEnum()` in den Enum-Wert umgewandelt werden.
+Zusätzlich: Bestehende Staff-Einträge ohne `zt_department` bereinigen via Migration.
 
-### Plan
+### Betroffene Dateien
 
 | Datei | Änderung |
 |---|---|
-| `src/components/staff/StaffDialogNative.tsx` | 1. State-Variablen `roleService`, `roleKitchen`, `roleGl` entfernen. 2. Die UI-Sektion "Rolle" (Zeilen ~240-280) entfernen. 3. Im `handleSubmit`: Rolle aus `restaurantDepts` ableiten — alle Departments über alle Restaurants sammeln, dann `rolesToEnum(allDepts.has('Service'), allDepts.has('Küche'), allDepts.has('GL'))`. 4. Validierung: mindestens eine Abteilung muss gewählt sein. |
+| `src/components/staff/StaffTableRow.tsx` | Rollen-Badges aus `staff.staff_restaurants[].zt_department` ableiten statt aus `enumToRoles(staff.role)` — eindeutige Departments über alle Zuweisungen sammeln und als Badges anzeigen |
+| DB-Migration | `UPDATE staff SET role = 'waiter' WHERE id IN (SELECT staff_id FROM staff_restaurants WHERE zt_department IS NULL)` — alternativ: `zt_department` für bestehende Einträge aus `staff.role` ableiten und nachträglich setzen |
 
-Keine anderen Dateien betroffen — `staff.role` wird weiterhin korrekt in der DB gespeichert, nur die Quelle ändert sich (abgeleitet statt manuell).
+### Option: Bestehende Daten reparieren
+
+Statt nur die Anzeige zu ändern, könnten wir auch eine Migration laufen lassen, die für alle `staff_restaurants`-Einträge mit `zt_department = NULL` die Abteilung aus `staff.role` ableitet und setzt. So wären die Daten konsistent.
 
