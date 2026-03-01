@@ -1,20 +1,28 @@
 
+## Wochennummern mit Datumsbereich anzeigen
 
-## Browser-Titel fuer Lohnbuero aendern
+An drei Stellen werden Wochen aktuell nur als "W1", "W2" etc. angezeigt. Dort wird zusaetzlich der Datumsbereich im Format "dd.MM." ergaenzt.
 
-Der Titel "Spicery Kellner" kommt aus der `index.html` und gilt global. Fuer das Lohnbuero-Portal wird er dynamisch ueberschrieben.
+### Aenderungen
 
-### Aenderung in `src/pages/shared/PayrollPortal.tsx`
+**1. `src/pages/zeiterfassung/ZtWochenplan.tsx` (Zeile 418)**
+Button-Label von `W{w.week_number}` aendern zu:
+```
+W{w.week_number} ({format(parseISO(w.start_date), "dd.MM.")}–{format(parseISO(w.end_date), "dd.MM.")})
+```
+`format` und `parseISO` sind bereits importiert.
 
-Ein `useEffect` wird hinzugefuegt, der beim Laden der Seite den Browser-Titel auf **"YUM Gastronomie GmbH Arbeitszeiterfassung"** setzt und beim Verlassen den urspruenglichen Titel wiederherstellt:
+**2. `src/pages/zeiterfassung/ZtZusammenfassung.tsx` (Zeile 200)**
+Tabellen-Header von `W{w.week_number}` aendern zu:
+```
+W{w.week_number} {format(parseISO(w.start_date), "dd.MM.")}–{format(parseISO(w.end_date), "dd.MM.")}
+```
+`format` und `parseISO` muessen ggf. importiert werden.
 
-```tsx
-useEffect(() => {
-  const prev = document.title;
-  document.title = 'YUM Gastronomie GmbH Arbeitszeiterfassung';
-  return () => { document.title = prev; };
-}, []);
+**3. `src/pages/shared/SharedZtView.tsx` (Zeile 457)**
+Gleiche Anpassung fuer die Lohnbuero-Ansicht:
+```
+W{w.week_number} ({format(parseISO(w.start_date), "dd.MM.")}–{format(parseISO(w.end_date), "dd.MM.")})
 ```
 
-Zusaetzlich wird das Favicon fuer diese Seite nicht geaendert — der Titel allein genuegt laut Anfrage.
-
+Ergebnis: Statt "W1" steht z.B. **"W1 (26.02.–02.03.)"**.
