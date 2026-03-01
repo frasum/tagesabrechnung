@@ -15,10 +15,11 @@ interface SyncParams {
   restaurantId: string;
 }
 
-async function findWeekForDate(date: string): Promise<string | null> {
+async function findWeekForDate(date: string, restaurantId: string): Promise<string | null> {
   const { data } = await supabase
     .from('weeks')
-    .select('id')
+    .select('id, scheduling_periods!inner(restaurant_id)')
+    .eq('scheduling_periods.restaurant_id', restaurantId)
     .lte('start_date', date)
     .gte('end_date', date)
     .limit(1)
@@ -96,7 +97,7 @@ async function upsertZtShift(params: {
 
 export async function syncWaiterShiftToZt(params: SyncParams) {
   try {
-    const weekId = await findWeekForDate(params.sessionDate);
+    const weekId = await findWeekForDate(params.sessionDate, params.restaurantId);
     if (!weekId) return;
 
     const dateObj = new Date(params.sessionDate + 'T12:00:00');
@@ -134,7 +135,7 @@ interface KitchenSyncParams {
 
 export async function syncKitchenShiftToZt(params: KitchenSyncParams) {
   try {
-    const weekId = await findWeekForDate(params.sessionDate);
+    const weekId = await findWeekForDate(params.sessionDate, params.restaurantId);
     if (!weekId) return;
 
     const employeeId = await findStaffByName(params.staffName, params.restaurantId, 'Küche');
