@@ -190,6 +190,7 @@ export default function KitchenTipSplit() {
                       placeholder="Mitarbeiter wählen"
                       excludeNames={kitchenShifts.map((s) => s.staff_name)}
                       restaurantId={restaurantId}
+                      excludeNonPoolParticipants
                     />
                   </div>
 

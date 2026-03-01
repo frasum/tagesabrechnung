@@ -12,6 +12,7 @@ interface StaffSelectProps {
   disabled?: boolean;
   excludeNames?: string[];
   restaurantId?: string | null;
+  excludeNonPoolParticipants?: boolean;
 }
 
 export function StaffSelect({ 
@@ -22,14 +23,18 @@ export function StaffSelect({
   disabled = false,
   excludeNames = [],
   restaurantId,
+  excludeNonPoolParticipants = false,
 }: StaffSelectProps) {
   const resolvedRole = role === 'all' ? undefined : role;
   const globalQuery = useActiveStaff(restaurantId ? undefined : resolvedRole);
   const restaurantQuery = useActiveStaffByRestaurant(restaurantId ?? null, resolvedRole);
   const { data: staffList = [], isLoading } = restaurantId ? restaurantQuery : globalQuery;
-  const filteredStaff = excludeNames.length > 0
+  let filteredStaff = excludeNames.length > 0
     ? staffList.filter((s) => !excludeNames.includes(s.name))
     : staffList;
+  if (excludeNonPoolParticipants) {
+    filteredStaff = filteredStaff.filter((s) => s.participates_in_pool !== false);
+  }
   
   const Icon = role === 'all' ? Users : role === 'kitchen' ? ChefHat : User;
 
