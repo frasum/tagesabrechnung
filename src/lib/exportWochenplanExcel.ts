@@ -61,7 +61,11 @@ export function exportWochenplanExcel(
   for (const week of sortedWeeks) {
     const days = eachDayOfInterval({ start: parseISO(week.start_date), end: parseISO(week.end_date) });
     const dayStrs = days.map(d => format(d, "yyyy-MM-dd"));
-    const weekShifts = shifts.filter(s => s.week_id === week.id);
+    // Support cumulated mode: match shifts by date range instead of just week_id
+    const weekStart = week.start_date;
+    const weekEnd = week.end_date;
+    const weekDayStrs = new Set(dayStrs);
+    const weekShifts = shifts.filter(s => weekDayStrs.has(s.shift_date));
 
     const startFmt = format(parseISO(week.start_date), "dd.MM.", { locale: de });
     const endFmt = format(parseISO(week.end_date), "dd.MM.", { locale: de });

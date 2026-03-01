@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -18,9 +18,10 @@ import { exportWochenplanPdf } from "@/lib/exportWochenplanPdf";
 import { exportWochenplanExcel } from "@/lib/exportWochenplanExcel";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useRestaurant } from "@/hooks/useRestaurant";
+import { useRestaurant, useRestaurants } from "@/hooks/useRestaurant";
 import { useZt } from "@/contexts/ZtContext";
 import { useRestaurantEmployees, type RestaurantEmployee } from "@/hooks/useRestaurantEmployees";
+import { useCumulatedZtData } from "@/hooks/useCumulatedZtData";
 
 type Shift = {
   id: string;
@@ -90,7 +91,10 @@ function handleTimeKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
 export default function ZtWochenplan() {
   const queryClient = useQueryClient();
   const { restaurantId } = useRestaurant();
+  const { data: restaurants } = useRestaurants();
   const { selectedPeriodId, setSelectedPeriodId, selectedWeekId, setSelectedWeekId, periods, weeks, isPeriodLocked } = useZt();
+
+  const [cumulated, setCumulated] = useState(false);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [editingTime, setEditingTime] = useState<Record<string, string>>({});
@@ -104,17 +108,52 @@ export default function ZtWochenplan() {
     department: string | null;
   }>({ open: false, employeeId: "", employeeName: "", absenceType: "urlaub", startDate: new Date(), endDate: undefined, department: null });
 
-  const { data: employees } = useRestaurantEmployees(restaurantId);
+  const selectedPeriod = periods?.find(p => p.id === selectedPeriodId);
 
+  // Cumulated data hook
+  const cumData = useCumulatedZtData(
+    cumulated,
+    selectedPeriod ? { start_date: selectedPeriod.start_date, end_date: selectedPeriod.end_date } : undefined
+  );
+
+  const { data: restaurantEmployees } = useRestaurantEmployees(restaurantId);
+
+  // Effective employees: cumulated or restaurant-specific
+  const employees = cumulated ? cumData.employees : restaurantEmployees;
+
+  // Effective weeks: cumulated (deduplicated by week_number) or restaurant-specific
+  const effectiveWeeks = cumulated ? cumData.weeks : weeks;
+
+  // When cumulated, map selectedWeekId to the deduplicated week
+  // We need a "virtual" selectedWeekId for cumulated mode
+  const [cumSelectedWeekNum, setCumSelectedWeekNum] = useState<number | null>(null);
+
+  // Derive selectedWeek based on mode
+  const selectedWeek = useMemo(() => {
+    if (cumulated) {
+      return cumData.weeks?.find(w => w.week_number === cumSelectedWeekNum) ?? null;
+    }
+    return weeks?.find(w => w.id === selectedWeekId) ?? null;
+  }, [cumulated, cumData.weeks, cumSelectedWeekNum, weeks, selectedWeekId]);
+
+  // All week IDs for the selected week (cumulated: all restaurants, normal: just one)
+  const selectedWeekIds = useMemo(() => {
+    if (cumulated && cumSelectedWeekNum !== null) {
+      return cumData.weekNumberToAllIds[cumSelectedWeekNum] ?? [];
+    }
+    return selectedWeekId ? [selectedWeekId] : [];
+  }, [cumulated, cumSelectedWeekNum, cumData.weekNumberToAllIds, selectedWeekId]);
+
+  // Shifts for current week
   const { data: shifts } = useQuery({
-    queryKey: ["zt-shifts", selectedWeekId],
+    queryKey: ["zt-shifts", cumulated ? `cum-${cumSelectedWeekNum}` : selectedWeekId, selectedWeekIds],
     queryFn: async () => {
-      if (!selectedWeekId) return [];
-      const { data, error } = await supabase.from("zt_shifts").select("*").eq("week_id", selectedWeekId);
+      if (!selectedWeekIds.length) return [];
+      const { data, error } = await supabase.from("zt_shifts").select("*").in("week_id", selectedWeekIds);
       if (error) throw error;
       return data as Shift[];
     },
-    enabled: !!selectedWeekId,
+    enabled: selectedWeekIds.length > 0,
   });
 
   const { data: holidays } = useQuery({
@@ -127,19 +166,24 @@ export default function ZtWochenplan() {
   });
 
   // All shifts for entire period (for totals)
-  const weekIds = weeks?.map((w) => w.id) ?? [];
+  const allPeriodWeekIds = useMemo(() => {
+    if (cumulated) {
+      return cumData.allWeekIds;
+    }
+    return weeks?.map(w => w.id) ?? [];
+  }, [cumulated, cumData.allWeekIds, weeks]);
+
   const { data: allPeriodShifts } = useQuery({
-    queryKey: ["zt-shifts-period", selectedPeriodId, weekIds],
+    queryKey: ["zt-shifts-period", cumulated ? "cum" : selectedPeriodId, allPeriodWeekIds],
     queryFn: async () => {
-      if (!weekIds.length) return [];
-      const { data, error } = await supabase.from("zt_shifts").select("*").in("week_id", weekIds);
+      if (!allPeriodWeekIds.length) return [];
+      const { data, error } = await supabase.from("zt_shifts").select("*").in("week_id", allPeriodWeekIds);
       if (error) throw error;
       return data as Shift[];
     },
-    enabled: weekIds.length > 0,
+    enabled: allPeriodWeekIds.length > 0,
   });
 
-  const selectedWeek = weeks?.find((w) => w.id === selectedWeekId);
   const weekDays = selectedWeek
     ? eachDayOfInterval({
         start: startOfWeek(parseISO(selectedWeek.start_date), { weekStartsOn: 1 }),
@@ -155,9 +199,8 @@ export default function ZtWochenplan() {
 
   // Auto-scroll to today's column
   useEffect(() => {
-    if (!selectedWeekId || !selectedWeek) return;
+    if (!selectedWeek) return;
     const todayStr = format(new Date(), "yyyy-MM-dd");
-    // Small delay to ensure DOM is rendered after data loads
     const timer = setTimeout(() => {
       const el = scrollContainerRef.current?.querySelector(`[data-date="${todayStr}"]`);
       if (el) {
@@ -165,7 +208,7 @@ export default function ZtWochenplan() {
       }
     }, 300);
     return () => clearTimeout(timer);
-  }, [selectedWeekId, selectedWeek]);
+  }, [selectedWeek]);
 
   const sortedEmployees = employees
     ? [...employees].sort((a, b) => {
@@ -197,6 +240,8 @@ export default function ZtWochenplan() {
 
   const getConflict = useCallback(
     (empId: string, date: string, dept: string) => {
+      // In cumulated mode, no conflicts — we show all
+      if (cumulated) return null;
       return globalShifts?.find(s =>
         s.employee_id === empId &&
         s.shift_date === date &&
@@ -204,7 +249,27 @@ export default function ZtWochenplan() {
         (s.start_time || s.absence_type || (s.total_hours ?? 0) > 0)
       ) ?? null;
     },
-    [globalShifts, selectedWeekId]
+    [globalShifts, selectedWeekId, cumulated]
+  );
+
+  // Find the correct week_id for an employee in cumulated mode
+  const findWeekIdForEmployee = useCallback(
+    (employeeId: string, weekNumber: number): string | null => {
+      if (!cumulated || !cumData.matchingPeriods || !cumData.weeks) return selectedWeekId;
+      // We need to find which restaurant this employee belongs to, then find the week_id
+      // Look through all weeks with this week_number
+      const weekIdsForNumber = cumData.weekNumberToAllIds[weekNumber] ?? [];
+      if (weekIdsForNumber.length === 1) return weekIdsForNumber[0];
+      // If multiple, we need to find the right one based on the employee's restaurant
+      // The shifts already loaded can tell us which week_id this employee used before
+      const existingShift = shifts?.find(s => s.employee_id === employeeId && weekIdsForNumber.includes(s.week_id));
+      if (existingShift) return existingShift.week_id;
+      // Fallback: use the first one (or the current restaurant's week)
+      const currentRestWeek = weeks?.find(w => w.week_number === weekNumber);
+      if (currentRestWeek && weekIdsForNumber.includes(currentRestWeek.id)) return currentRestWeek.id;
+      return weekIdsForNumber[0] ?? null;
+    },
+    [cumulated, cumData.matchingPeriods, cumData.weeks, cumData.weekNumberToAllIds, selectedWeekId, shifts, weeks]
   );
 
   const upsertShift = useMutation({
@@ -219,20 +284,23 @@ export default function ZtWochenplan() {
       department?: string | null;
       field?: "start_time" | "end_time";
     }) => {
-      // --- Conflict check: does a shift exist for this employee on this date in another dept/week? ---
+      // --- Conflict check ---
       const { data: allShiftsOnDay } = await supabase
         .from("zt_shifts")
         .select("id, department, week_id, start_time, absence_type, total_hours")
         .eq("employee_id", params.employee_id)
         .eq("shift_date", params.shift_date);
 
-      const hasConflict = allShiftsOnDay?.some(s =>
-        s.week_id !== params.week_id &&
-        (s.start_time || s.absence_type || (s.total_hours ?? 0) > 0)
-      );
-      if (hasConflict) {
-        const conflicting = allShiftsOnDay?.find(s => s.week_id !== params.week_id && (s.start_time || s.absence_type || (s.total_hours ?? 0) > 0));
-        throw new Error(`Schicht existiert bereits am ${params.shift_date} in Abt. ${conflicting?.department || '?'} (anderes Restaurant)`);
+      // In cumulated mode, skip cross-restaurant conflict check
+      if (!cumulated) {
+        const hasConflict = allShiftsOnDay?.some(s =>
+          s.week_id !== params.week_id &&
+          (s.start_time || s.absence_type || (s.total_hours ?? 0) > 0)
+        );
+        if (hasConflict) {
+          const conflicting = allShiftsOnDay?.find(s => s.week_id !== params.week_id && (s.start_time || s.absence_type || (s.total_hours ?? 0) > 0));
+          throw new Error(`Schicht existiert bereits am ${params.shift_date} in Abt. ${conflicting?.department || '?'} (anderes Restaurant)`);
+        }
       }
 
       const { data: fresh } = await supabase
@@ -279,7 +347,7 @@ export default function ZtWochenplan() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["zt-shifts", selectedWeekId] });
+      queryClient.invalidateQueries({ queryKey: ["zt-shifts"] });
       queryClient.invalidateQueries({ queryKey: ["zt-shifts-period"] });
       queryClient.invalidateQueries({ queryKey: ["zt-shifts-global"] });
     },
@@ -294,11 +362,23 @@ export default function ZtWochenplan() {
     [shifts]
   );
 
+  const getWeekIdForUpsert = useCallback(
+    (employeeId: string, dateStr: string): string => {
+      if (cumulated && selectedWeek) {
+        const wId = findWeekIdForEmployee(employeeId, selectedWeek.week_number);
+        if (wId) return wId;
+      }
+      return selectedWeekId;
+    },
+    [cumulated, selectedWeek, findWeekIdForEmployee, selectedWeekId]
+  );
+
   const handleTimeChange = (employeeId: string, date: string, field: "start_time" | "end_time", value: string, department?: string) => {
     const existing = getShift(employeeId, date, department);
+    const weekId = getWeekIdForUpsert(employeeId, date);
     upsertShift.mutate({
       employee_id: employeeId,
-      week_id: selectedWeekId,
+      week_id: weekId,
       shift_date: date,
       start_time: field === "start_time" ? (value || null) : null,
       end_time: field === "end_time" ? (value || null) : null,
@@ -322,7 +402,8 @@ export default function ZtWochenplan() {
   };
 
   const handleAbsenceRange = () => {
-    if (!weeks?.length) return;
+    const weeksToUse = effectiveWeeks;
+    if (!weeksToUse?.length) return;
     const { employeeId, absenceType, startDate, endDate, department } = absenceDialog;
     const rangeEnd = endDate || startDate;
     const days = eachDayOfInterval({ start: startDate, end: rangeEnd });
@@ -330,15 +411,23 @@ export default function ZtWochenplan() {
     let skipped = 0;
     for (const day of days) {
       const dateStr = format(day, "yyyy-MM-dd");
-      const week = weeks.find(w => {
+      const week = weeksToUse.find(w => {
         const ws = parseISO(w.start_date);
         const we = parseISO(w.end_date);
         return isWithinInterval(day, { start: ws, end: we });
       });
       if (!week) { skipped++; continue; }
+
+      // In cumulated mode, find the right week_id
+      let weekId = week.id;
+      if (cumulated) {
+        const found = findWeekIdForEmployee(employeeId, week.week_number);
+        if (found) weekId = found;
+      }
+
       upsertShift.mutate({
         employee_id: employeeId,
-        week_id: week.id,
+        week_id: weekId,
         shift_date: dateStr,
         start_time: null,
         end_time: null,
@@ -355,9 +444,10 @@ export default function ZtWochenplan() {
 
   const handleAbsenceToggle = (employeeId: string, date: string, absenceType: 'krank' | 'urlaub' | null, department?: string) => {
     const existing = getShift(employeeId, date, department);
+    const weekId = getWeekIdForUpsert(employeeId, date);
     upsertShift.mutate({
       employee_id: employeeId,
-      week_id: selectedWeekId,
+      week_id: weekId,
       shift_date: date,
       start_time: null,
       end_time: null,
@@ -380,6 +470,7 @@ export default function ZtWochenplan() {
   };
 
   const isLocked = isPeriodLocked;
+  const hasMultipleRestaurants = (restaurants?.length ?? 0) > 1;
 
   if (!periods?.length) {
     return (
@@ -393,7 +484,7 @@ export default function ZtWochenplan() {
   return (
     <div className="flex flex-col gap-4" style={{ height: 'calc(100vh - 8rem)' }}>
       <div className="flex items-center gap-2 flex-wrap flex-shrink-0">
-        <Select value={selectedPeriodId} onValueChange={(v) => { setSelectedPeriodId(v); setSelectedWeekId(""); }}>
+        <Select value={selectedPeriodId} onValueChange={(v) => { setSelectedPeriodId(v); setSelectedWeekId(""); setCumSelectedWeekNum(null); }}>
           <SelectTrigger className="w-[160px] h-8 text-sm">
             <SelectValue placeholder="Periode wählen" />
           </SelectTrigger>
@@ -405,19 +496,44 @@ export default function ZtWochenplan() {
         </Select>
         {isLocked && <Badge variant="secondary" className="text-xs px-1.5 py-0">Gesperrt</Badge>}
 
-        {weeks && weeks.length > 0 && (
+        {hasMultipleRestaurants && (
+          <Button
+            variant={cumulated ? "default" : "outline"}
+            size="sm"
+            className="h-8 text-xs"
+            onClick={() => {
+              setCumulated(prev => !prev);
+              setCumSelectedWeekNum(null);
+            }}
+          >
+            Alle Restaurants
+          </Button>
+        )}
+
+        {effectiveWeeks && effectiveWeeks.length > 0 && (
           <div className="flex gap-1 flex-wrap">
-            {weeks.map((w) => (
-              <Button
-                key={w.id}
-                variant={w.id === selectedWeekId ? "default" : "outline"}
-                size="sm"
-                className="h-7 px-2 text-xs"
-                onClick={() => setSelectedWeekId(w.id)}
-              >
-                W{w.week_number} ({format(parseISO(w.start_date), "dd.MM.")}–{format(parseISO(w.end_date), "dd.MM.")})
-              </Button>
-            ))}
+            {effectiveWeeks.map((w) => {
+              const isSelected = cumulated
+                ? w.week_number === cumSelectedWeekNum
+                : w.id === selectedWeekId;
+              return (
+                <Button
+                  key={cumulated ? `cum-${w.week_number}` : w.id}
+                  variant={isSelected ? "default" : "outline"}
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => {
+                    if (cumulated) {
+                      setCumSelectedWeekNum(w.week_number);
+                    } else {
+                      setSelectedWeekId(w.id);
+                    }
+                  }}
+                >
+                  W{w.week_number} ({format(parseISO(w.start_date), "dd.MM.")}–{format(parseISO(w.end_date), "dd.MM.")})
+                </Button>
+              );
+            })}
           </div>
         )}
 
@@ -426,11 +542,11 @@ export default function ZtWochenplan() {
             variant="outline"
             size="sm"
             className="h-7 px-2 text-xs gap-1"
-            disabled={!allPeriodShifts?.length || !employees?.length || !weeks?.length}
+            disabled={!allPeriodShifts?.length || !employees?.length || !effectiveWeeks?.length}
             onClick={() => {
               const period = periods?.find(p => p.id === selectedPeriodId);
-              if (!period || !employees || !weeks || !allPeriodShifts) return;
-              exportWochenplanPdf(period.label, employees, weeks, allPeriodShifts, holidays ?? new Map());
+              if (!period || !employees || !effectiveWeeks || !allPeriodShifts) return;
+              exportWochenplanPdf(period.label, employees, effectiveWeeks, allPeriodShifts, holidays ?? new Map());
             }}
           >
             <FileDown className="h-3.5 w-3.5" />
@@ -440,11 +556,11 @@ export default function ZtWochenplan() {
             variant="outline"
             size="sm"
             className="h-7 px-2 text-xs gap-1"
-            disabled={!allPeriodShifts?.length || !employees?.length || !weeks?.length}
+            disabled={!allPeriodShifts?.length || !employees?.length || !effectiveWeeks?.length}
             onClick={() => {
               const period = periods?.find(p => p.id === selectedPeriodId);
-              if (!period || !employees || !weeks || !allPeriodShifts) return;
-              exportWochenplanExcel(period.label, employees, weeks, allPeriodShifts, holidays ?? new Map());
+              if (!period || !employees || !effectiveWeeks || !allPeriodShifts) return;
+              exportWochenplanExcel(period.label, employees, effectiveWeeks, allPeriodShifts, holidays ?? new Map());
             }}
           >
             <FileSpreadsheet className="h-3.5 w-3.5" />
@@ -453,7 +569,7 @@ export default function ZtWochenplan() {
         </div>
       </div>
 
-      {selectedWeekId && weekDays.length > 0 && (() => {
+      {selectedWeek && weekDays.length > 0 && (() => {
         const sundayHolidayDays = new Set(
           weekDays
             .filter((day) => isSunday(day) || holidays?.has(format(day, "yyyy-MM-dd")))
