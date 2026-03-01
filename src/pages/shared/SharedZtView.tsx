@@ -706,10 +706,10 @@ function ZusammenfassungTab({ weeks, shifts, employees, periodLabel, weekNumberT
   return (
     <div className="space-y-3">
       <div className="flex justify-end gap-1">
-        <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => exportZusammenfassungPdf(periodLabel, employees, weeks, shifts as any)}>
+        <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => exportZusammenfassungPdf(periodLabel, employees, weeks, shifts as any, weekNumberToAllIds)}>
           <FileDown className="mr-1 h-4 w-4" /> PDF
         </Button>
-        <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => exportZusammenfassungExcel(periodLabel, employees, weeks, shifts as any)}>
+        <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => exportZusammenfassungExcel(periodLabel, employees, weeks, shifts as any, weekNumberToAllIds)}>
           <FileSpreadsheet className="mr-1 h-4 w-4" /> Excel
         </Button>
       </div>
