@@ -26,13 +26,13 @@ async function findWeekForDate(date: string): Promise<string | null> {
   return data?.id ?? null;
 }
 
-async function findStaffByName(name: string, restaurantId: string): Promise<string | null> {
+async function findStaffByName(name: string, restaurantId: string, department: 'Küche' | 'GL' | 'Service' = 'Service'): Promise<string | null> {
   // Match by staff.name via staff_restaurants for the given restaurant
   const { data } = await supabase
     .from('staff_restaurants')
     .select('staff_id, staff!inner(id, name)')
     .eq('restaurant_id', restaurantId)
-    .eq('zt_department', 'Service');
+    .eq('zt_department', department);
 
   if (!data) return null;
   const match = data.find((sr: any) => sr.staff?.name === name);
@@ -55,7 +55,9 @@ async function upsertZtShift(params: {
   startTime: string;
   endTime: string;
   isSundayOrHoliday: boolean;
+  department?: string;
 }) {
+  const dept = params.department ?? 'Service';
   const hours = calculateShiftHours(params.startTime, params.endTime, params.isSundayOrHoliday);
 
   const { error } = await supabase
@@ -64,7 +66,7 @@ async function upsertZtShift(params: {
       week_id: params.weekId,
       employee_id: params.employeeId,
       shift_date: params.shiftDate,
-      department: 'Service',
+      department: dept,
       start_time: params.startTime,
       end_time: params.endTime,
       total_hours: hours.totalHours,
@@ -77,26 +79,25 @@ async function upsertZtShift(params: {
     });
 
   if (error) {
-    console.error('Failed to sync waiter shift to ZT:', error);
+    console.error(`Failed to sync ${dept} shift to ZT:`, error);
   }
 }
 
 export async function syncWaiterShiftToZt(params: SyncParams) {
   try {
     const weekId = await findWeekForDate(params.sessionDate);
-    if (!weekId) return; // No matching period/week — skip silently
+    if (!weekId) return;
 
     const dateObj = new Date(params.sessionDate + 'T12:00:00');
     const isSunday = dateObj.getDay() === 0;
     const holiday = await isHoliday(params.sessionDate);
     const isSundayOrHoliday = isSunday || holiday;
 
-    // Sync all waiters: primary + additional
     const allWaiters = [params.waiterName, ...params.additionalWaiters];
 
     await Promise.all(allWaiters.map(async (name) => {
       const employeeId = await findStaffByName(name, params.restaurantId);
-      if (!employeeId) return; // Staff not found in ZT — skip
+      if (!employeeId) return;
 
       await upsertZtShift({
         weekId,
@@ -108,7 +109,65 @@ export async function syncWaiterShiftToZt(params: SyncParams) {
       });
     }));
   } catch (err) {
-    // Don't fail the main mutation — just log
     console.error('syncWaiterShiftToZt error:', err);
+  }
+}
+
+interface KitchenSyncParams {
+  staffName: string;
+  sessionDate: string;
+  shiftStart: string;
+  shiftEnd: string;
+  restaurantId: string;
+}
+
+export async function syncKitchenShiftToZt(params: KitchenSyncParams) {
+  try {
+    const weekId = await findWeekForDate(params.sessionDate);
+    if (!weekId) return;
+
+    const employeeId = await findStaffByName(params.staffName, params.restaurantId, 'Küche');
+    if (!employeeId) return;
+
+    const dateObj = new Date(params.sessionDate + 'T12:00:00');
+    const isSunday = dateObj.getDay() === 0;
+    const holiday = await isHoliday(params.sessionDate);
+    const isSundayOrHoliday = isSunday || holiday;
+
+    await upsertZtShift({
+      weekId,
+      employeeId,
+      shiftDate: params.sessionDate,
+      startTime: params.shiftStart,
+      endTime: params.shiftEnd,
+      isSundayOrHoliday,
+      department: 'Küche',
+    });
+  } catch (err) {
+    console.error('syncKitchenShiftToZt error:', err);
+  }
+}
+
+export async function deleteKitchenShiftFromZt(params: {
+  staffName: string;
+  sessionDate: string;
+  restaurantId: string;
+}) {
+  try {
+    const employeeId = await findStaffByName(params.staffName, params.restaurantId, 'Küche');
+    if (!employeeId) return;
+
+    const { error } = await supabase
+      .from('zt_shifts')
+      .delete()
+      .eq('employee_id', employeeId)
+      .eq('shift_date', params.sessionDate)
+      .eq('department', 'Küche');
+
+    if (error) {
+      console.error('Failed to delete kitchen shift from ZT:', error);
+    }
+  } catch (err) {
+    console.error('deleteKitchenShiftFromZt error:', err);
   }
 }

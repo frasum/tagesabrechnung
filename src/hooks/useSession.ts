@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import type { Session, WaiterShift, CardTransaction, KitchenShift, Expense } from '@/types/database';
-import { syncWaiterShiftToZt } from '@/lib/syncWaiterToZt';
+import { syncWaiterShiftToZt, syncKitchenShiftToZt, deleteKitchenShiftFromZt } from '@/lib/syncWaiterToZt';
 
 export function useSession(date: Date, restaurantId: string | null) {
   const dateStr = format(date, 'yyyy-MM-dd');
@@ -328,14 +328,35 @@ export function useCreateKitchenShift() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (shift: Omit<KitchenShift, 'id' | 'hours_worked' | 'created_at'>) => {
+    mutationFn: async (shift: Omit<KitchenShift, 'id' | 'hours_worked' | 'created_at'> & { restaurantId?: string }) => {
+      const { restaurantId, ...insertData } = shift;
       const { data, error } = await supabase
         .from('kitchen_shifts')
-        .insert(shift)
+        .insert(insertData)
         .select()
         .single();
       
       if (error) throw error;
+
+      // Sync to Zeiterfassung: look up session date
+      if (restaurantId) {
+        const { data: session } = await supabase
+          .from('sessions')
+          .select('session_date')
+          .eq('id', insertData.session_id)
+          .single();
+
+        if (session) {
+          syncKitchenShiftToZt({
+            staffName: insertData.staff_name,
+            sessionDate: session.session_date,
+            shiftStart: insertData.shift_start,
+            shiftEnd: insertData.shift_end,
+            restaurantId,
+          });
+        }
+      }
+
       return data as KitchenShift;
     },
     onSuccess: (data) => {
@@ -348,7 +369,24 @@ export function useDeleteKitchenShift() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, sessionId }: { id: string; sessionId: string }) => {
+    mutationFn: async ({ id, sessionId, staffName, restaurantId }: { id: string; sessionId: string; staffName?: string; restaurantId?: string }) => {
+      // Look up session date before deleting
+      if (staffName && restaurantId) {
+        const { data: session } = await supabase
+          .from('sessions')
+          .select('session_date')
+          .eq('id', sessionId)
+          .single();
+
+        if (session) {
+          deleteKitchenShiftFromZt({
+            staffName,
+            sessionDate: session.session_date,
+            restaurantId,
+          });
+        }
+      }
+
       const { error } = await supabase
         .from('kitchen_shifts')
         .delete()

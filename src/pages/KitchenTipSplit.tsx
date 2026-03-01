@@ -77,6 +77,7 @@ export default function KitchenTipSplit() {
         staff_name: staffName.trim(),
         shift_start: shiftStart,
         shift_end: shiftEnd,
+        restaurantId: restaurantId || undefined,
       });
 
       setStaffName('');
@@ -89,7 +90,7 @@ export default function KitchenTipSplit() {
   const handleDeleteKitchenStaff = async (id: string) => {
     if (!session?.id) return;
     try {
-      await deleteKitchenShift.mutateAsync({ id, sessionId: session.id });
+      await deleteKitchenShift.mutateAsync({ id, sessionId: session.id, staffName: kitchenShifts.find(s => s.id === id)?.staff_name, restaurantId: restaurantId || undefined });
       toast({ title: 'Mitarbeiter gelöscht' });
     } catch (error) {
       toast({ title: 'Fehler', variant: 'destructive' });
