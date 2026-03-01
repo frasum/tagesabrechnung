@@ -63,6 +63,12 @@ type CumulatedData = {
 export default function PayrollPortal() {
   const [pin, setPin] = useState(() => sessionStorage.getItem("payroll_pin") ?? "");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    const prev = document.title;
+    document.title = 'YUM Gastronomie GmbH Arbeitszeiterfassung';
+    return () => { document.title = prev; };
+  }, []);
   const [selectedPeriod, setSelectedPeriod] = useState<{ start_date: string; end_date: string; label: string } | null>(null);
   const [pinInput, setPinInput] = useState("");
   const [pinError, setPinError] = useState("");
