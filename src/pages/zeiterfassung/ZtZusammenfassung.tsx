@@ -164,7 +164,7 @@ export default function ZtZusammenfassung() {
             disabled={!employeesWithShifts.length}
             onClick={() => {
               if (selectedPeriod && weeks && shifts) {
-                exportZusammenfassungPdf(selectedPeriod.label + (cumulated ? " (Kumuliert)" : ""), employeesWithShifts, weeks, shifts);
+                exportZusammenfassungPdf(selectedPeriod.label + (cumulated ? " (Alle Restaurants)" : ""), employeesWithShifts, weeks, shifts, cumulated ? cumData.weekNumberToAllIds : undefined);
               }
             }}
           >
@@ -178,7 +178,7 @@ export default function ZtZusammenfassung() {
             disabled={!employeesWithShifts.length}
             onClick={() => {
               if (selectedPeriod && weeks && shifts) {
-                exportZusammenfassungExcel(selectedPeriod.label + (cumulated ? " (Kumuliert)" : ""), employeesWithShifts, weeks, shifts);
+                exportZusammenfassungExcel(selectedPeriod.label + (cumulated ? " (Alle Restaurants)" : ""), employeesWithShifts, weeks, shifts, cumulated ? cumData.weekNumberToAllIds : undefined);
               }
             }}
           >

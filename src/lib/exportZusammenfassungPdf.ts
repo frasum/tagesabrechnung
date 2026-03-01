@@ -44,7 +44,8 @@ export function exportZusammenfassungPdf(
   periodLabel: string,
   employees: Employee[],
   weeks: Week[],
-  shifts: Shift[]
+  shifts: Shift[],
+  externalWeekNumberToIds?: Record<number, string[]>
 ) {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
 
@@ -59,10 +60,11 @@ export function exportZusammenfassungPdf(
 
   const sortedWeeks = [...weeks].sort((a, b) => a.week_number - b.week_number);
 
-  const weekNumberToIds: Record<number, string[]> = {};
-  weeks.forEach(w => {
-    (weekNumberToIds[w.week_number] ??= []).push(w.id);
-  });
+  const weekNumberToIds: Record<number, string[]> = externalWeekNumberToIds ?? (() => {
+    const map: Record<number, string[]> = {};
+    weeks.forEach(w => { (map[w.week_number] ??= []).push(w.id); });
+    return map;
+  })();
 
   const employeesWithShifts = sorted.filter((emp) =>
     shifts.some((s) => s.employee_id === emp.id && s.department === emp.department && (Number(s.total_hours) > 0 || !!s.absence_type))
