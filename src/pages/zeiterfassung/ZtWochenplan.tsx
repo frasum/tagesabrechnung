@@ -379,7 +379,7 @@ export default function ZtWochenplan() {
                       <th
                         key={day.toISOString()}
                         colSpan={2}
-                        className={`text-center p-1.5 font-semibold min-w-[120px] border-b border-border text-xs ${dayIdx > 0 ? "day-separator" : ""} ${isSunHol ? "!bg-destructive/8" : ""}`}
+                        className={`text-center p-1.5 font-semibold min-w-[120px] border-b border-border text-xs ${dayIdx > 0 ? "day-separator" : ""} ${isSunHol ? "sunday-col" : ""}`}
                       >
                         <span className={isSunHol ? "text-destructive font-bold" : ""}>{format(day, "EE", { locale: de })} {format(day, "dd.MM")}</span>
                       </th>

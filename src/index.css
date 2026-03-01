@@ -163,10 +163,10 @@
     @apply bg-muted/85;
   }
   .wochenplan-table .sunday-col {
-    @apply bg-destructive/5;
+    background-color: hsl(0 70% 95%);
   }
   .wochenplan-table .inactive-day {
-    @apply bg-muted/20;
+    background-color: hsl(0 60% 96%);
   }
   .wochenplan-table .day-separator {
     @apply border-l border-border/50;
@@ -178,9 +178,9 @@
     @apply border-transparent bg-transparent shadow-none ring-0 focus-visible:ring-1 focus-visible:bg-background;
   }
   .wochenplan-table .totals-col {
-    @apply bg-muted/20;
+    background-color: hsl(0 60% 94%);
   }
   .wochenplan-table .totals-header {
-    @apply bg-muted;
+    background-color: hsl(0 55% 91%);
   }
 }
