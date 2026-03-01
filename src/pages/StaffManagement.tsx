@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
+import { Table, TableHeader, TableHead, TableBody, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { StaffCard } from '@/components/staff/StaffCard';
+import { StaffTableRow } from '@/components/staff/StaffTableRow';
 import { StaffDialog } from '@/components/staff/StaffDialogNative';
 import { TipRanking, RankingItem } from '@/components/waiter/TipRanking';
 
@@ -40,55 +41,14 @@ export default function StaffManagement() {
 
   // Create a map of waiter name -> ranking data for quick lookup
   const rankingMap = new Map(rankings.map(r => [r.name.toLowerCase(), r]));
-  const filteredStaff = allStaff.filter(s => {
-    const matchesRole = filter === 'all' || hasRole(s.role, filter as 'waiter' | 'kitchen' | 'gl');
-    const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          s.notes?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesRole && matchesSearch;
-  });
-
-  // Group staff by restaurant, then by role
-  const groupedByRestaurant = (() => {
-    // Collect all restaurants from staff assignments
-    const restaurantMap = new Map<string, { id: string; name: string; waiters: Staff[]; kitchen: Staff[] }>();
-    const noRestaurant: { waiters: Staff[]; kitchen: Staff[] } = { waiters: [], kitchen: [] };
-
-    const addToGroup = (group: { waiters: Staff[]; kitchen: Staff[] }, staff: Staff) => {
-      if (hasRole(staff.role, 'waiter')) {
-        if (!group.waiters.find(s => s.id === staff.id)) group.waiters.push(staff);
-      }
-      if (hasRole(staff.role, 'kitchen')) {
-        if (!group.kitchen.find(s => s.id === staff.id)) group.kitchen.push(staff);
-      }
-    };
-
-    for (const staff of filteredStaff) {
-      const restaurants = staff.staff_restaurants ?? [];
-      if (restaurants.length === 0) {
-        addToGroup(noRestaurant, staff);
-      } else {
-        for (const sr of restaurants) {
-          const r = sr.restaurants;
-          if (!restaurantMap.has(r.id)) {
-            restaurantMap.set(r.id, { id: r.id, name: r.name, waiters: [], kitchen: [] });
-          }
-          addToGroup(restaurantMap.get(r.id)!, staff);
-        }
-      }
-    }
-
-    // Sort within each group
-    const sortGroup = (g: { waiters: Staff[]; kitchen: Staff[] }) => {
-      g.waiters.sort((a, b) => a.name.localeCompare(b.name));
-      g.kitchen.sort((a, b) => a.name.localeCompare(b.name));
-    };
-
-    const result = Array.from(restaurantMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-    result.forEach(sortGroup);
-    sortGroup(noRestaurant);
-
-    return { restaurants: result, noRestaurant };
-  })();
+  const filteredStaff = allStaff
+    .filter(s => {
+      const matchesRole = filter === 'all' || hasRole(s.role, filter as 'waiter' | 'kitchen' | 'gl');
+      const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            s.notes?.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesRole && matchesSearch;
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   const waiterCount = allStaff.filter(s => hasRole(s.role, 'waiter')).length;
   const kitchenCount = allStaff.filter(s => hasRole(s.role, 'kitchen')).length;
@@ -244,73 +204,29 @@ export default function StaffManagement() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-8">
-            {groupedByRestaurant.restaurants.map(group => (
-              <div key={group.id} className="space-y-4">
-                <h2 className="text-xl font-bold text-foreground border-b pb-2">{group.name}</h2>
-                
-                {group.waiters.length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-                      <UtensilsCrossed className="w-5 h-5 text-primary" />
-                      Service ({group.waiters.length})
-                    </h3>
-                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                      {group.waiters.map(staff => (
-                        <StaffCard key={staff.id} staff={staff} onEdit={handleEdit} onDelete={setDeleteStaff} rankingData={rankingMap.get(staff.name.toLowerCase())} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {group.kitchen.length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-                      <ChefHat className="w-5 h-5 text-primary" />
-                      Küche ({group.kitchen.length})
-                    </h3>
-                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                      {group.kitchen.map(staff => (
-                        <StaffCard key={staff.id} staff={staff} onEdit={handleEdit} onDelete={setDeleteStaff} rankingData={rankingMap.get(staff.name.toLowerCase())} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {/* Staff without restaurant */}
-            {(groupedByRestaurant.noRestaurant.waiters.length > 0 || groupedByRestaurant.noRestaurant.kitchen.length > 0) && (
-              <div className="space-y-4">
-                <h2 className="text-xl font-bold text-muted-foreground border-b pb-2">Ohne Restaurant</h2>
-                {groupedByRestaurant.noRestaurant.waiters.length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-                      <UtensilsCrossed className="w-5 h-5 text-primary" />
-                      Service ({groupedByRestaurant.noRestaurant.waiters.length})
-                    </h3>
-                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                      {groupedByRestaurant.noRestaurant.waiters.map(staff => (
-                        <StaffCard key={staff.id} staff={staff} onEdit={handleEdit} onDelete={setDeleteStaff} rankingData={rankingMap.get(staff.name.toLowerCase())} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {groupedByRestaurant.noRestaurant.kitchen.length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-                      <ChefHat className="w-5 h-5 text-primary" />
-                      Küche ({groupedByRestaurant.noRestaurant.kitchen.length})
-                    </h3>
-                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                      {groupedByRestaurant.noRestaurant.kitchen.map(staff => (
-                        <StaffCard key={staff.id} staff={staff} onEdit={handleEdit} onDelete={setDeleteStaff} rankingData={rankingMap.get(staff.name.toLowerCase())} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+          <div className="rounded-lg border bg-card overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Rolle</TableHead>
+                  <TableHead>Restaurants</TableHead>
+                  <TableHead>Berechtigung</TableHead>
+                  <TableHead className="text-right">Aktionen</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredStaff.map(staff => (
+                  <StaffTableRow
+                    key={staff.id}
+                    staff={staff}
+                    onEdit={handleEdit}
+                    onDelete={setDeleteStaff}
+                    rankingData={rankingMap.get(staff.name.toLowerCase())}
+                  />
+                ))}
+              </TableBody>
+            </Table>
           </div>
         )}
 
