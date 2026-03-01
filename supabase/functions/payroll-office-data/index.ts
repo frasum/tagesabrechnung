@@ -241,14 +241,15 @@ Deno.serve(async (req) => {
       supabase
         .from("staff_restaurants")
         .select("zt_department, staff_id, restaurant_id, staff!inner(id, name, perso_nr, first_name, last_name, nickname)")
-        .not("zt_department", "is", null),
+        .not("zt_department", "is", null)
+        .in("restaurant_id", (matchingPeriods ?? []).map((p: any) => p.restaurant_id).filter(Boolean)),
       supabase
         .from("payroll_notes")
         .select("*")
         .in("period_id", allPeriodIds),
       supabase
         .from("advances")
-        .select("*, sessions!inner(session_date)")
+        .select("*, sessions!inner(session_date, restaurant_id)")
         .gte("sessions.session_date", period_start_date)
         .lte("sessions.session_date", period_end_date),
       supabase
@@ -271,6 +272,7 @@ Deno.serve(async (req) => {
         last_name: row.staff.last_name,
         nickname: row.staff.nickname,
         department: row.zt_department,
+        restaurant_id: row.restaurant_id,
       });
     }
 
@@ -278,7 +280,18 @@ Deno.serve(async (req) => {
       staff_name: d.staff_name,
       amount: d.amount,
       date: d.sessions.session_date,
+      restaurant_id: d.sessions.restaurant_id,
     }));
+
+    // Build weekToRestaurant mapping (week_id → restaurant_id via period)
+    const periodToRestaurant: Record<string, string> = {};
+    for (const p of (matchingPeriods ?? [])) {
+      periodToRestaurant[p.id] = p.restaurant_id;
+    }
+    const weekToRestaurant: Record<string, string> = {};
+    for (const w of (weeks ?? [])) {
+      weekToRestaurant[w.id] = periodToRestaurant[w.period_id] ?? "";
+    }
 
     // Deduplicate weeks by week_number
     const seenWeeks = new Set<number>();
@@ -301,6 +314,7 @@ Deno.serve(async (req) => {
       weeks: deduplicatedWeeks,
       allWeekIds: weekIds,
       weekNumberToAllIds,
+      weekToRestaurant,
       shifts: shiftsRes.data ?? [],
       employees,
       payrollNotes: notesRes.data ?? [],
@@ -310,6 +324,7 @@ Deno.serve(async (req) => {
         id: p.id,
         label: p.label,
         restaurant_name: p.restaurants?.name ?? "Unbekannt",
+        restaurant_id: p.restaurant_id,
       })),
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

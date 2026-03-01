@@ -51,12 +51,13 @@ type CumulatedData = {
   weeks: any[];
   allWeekIds: string[];
   weekNumberToAllIds: Record<number, string[]>;
+  weekToRestaurant: Record<string, string>;
   shifts: Shift[];
   employees: any[];
   payrollNotes: PayrollNote[];
   advances: AdvanceEntry[];
   holidays: { holiday_date: string; name: string }[];
-  matchingPeriods: { id: string; label: string; restaurant_name: string }[];
+  matchingPeriods: { id: string; label: string; restaurant_name: string; restaurant_id: string }[];
 };
 
 export default function PayrollPortal() {
@@ -286,28 +287,78 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
 }) {
   const [activeTab, setActiveTab] = useState("wochenplan");
   const [selectedWeekId, setSelectedWeekId] = useState<string>("");
+  const [selectedRestaurant, setSelectedRestaurant] = useState<string>("all");
 
-  const { period, weeks, shifts, employees, payrollNotes, advances, holidays, weekNumberToAllIds, matchingPeriods } = data;
+  const { period, weeks, shifts, employees, payrollNotes, advances, holidays, weekNumberToAllIds, weekToRestaurant, matchingPeriods } = data;
   const holidayMap = new Map(holidays.map(h => [h.holiday_date, h.name]));
+  const hasMultipleRestaurants = matchingPeriods.length > 1;
+
+  // Unique restaurants from matchingPeriods
+  const restaurants = useMemo(() => {
+    const seen = new Map<string, string>();
+    matchingPeriods.forEach(p => { if (!seen.has(p.restaurant_id)) seen.set(p.restaurant_id, p.restaurant_name); });
+    return Array.from(seen.entries()).map(([id, name]) => ({ id, name }));
+  }, [matchingPeriods]);
 
   useEffect(() => {
     if (weeks?.length && !selectedWeekId) setSelectedWeekId(weeks[0].id);
   }, [weeks, selectedWeekId]);
 
-  const sortedEmployees = useMemo(() => [...employees].sort((a, b) => {
+  // Filtering logic
+  const effectiveRestaurant = hasMultipleRestaurants ? selectedRestaurant : "all";
+
+  const filteredShifts = useMemo(() => {
+    if (effectiveRestaurant === "all") return shifts;
+    return shifts.filter(s => weekToRestaurant[s.week_id] === effectiveRestaurant);
+  }, [shifts, effectiveRestaurant, weekToRestaurant]);
+
+  const filteredEmployees = useMemo(() => {
+    if (effectiveRestaurant === "all") return employees;
+    return employees.filter((e: any) => e.restaurant_id === effectiveRestaurant);
+  }, [employees, effectiveRestaurant]);
+
+  const filteredAdvances = useMemo(() => {
+    if (effectiveRestaurant === "all") return advances;
+    return advances.filter((a: any) => a.restaurant_id === effectiveRestaurant);
+  }, [advances, effectiveRestaurant]);
+
+  const filteredPayrollNotes = useMemo(() => {
+    if (effectiveRestaurant === "all") return payrollNotes;
+    const periodIds = new Set(matchingPeriods.filter(p => p.restaurant_id === effectiveRestaurant).map(p => p.id));
+    return payrollNotes.filter(n => periodIds.has(n.period_id));
+  }, [payrollNotes, effectiveRestaurant, matchingPeriods]);
+
+  const effectiveWeekNumberToAllIds = useMemo(() => {
+    if (effectiveRestaurant === "all") return weekNumberToAllIds;
+    const filtered: Record<number, string[]> = {};
+    for (const [num, ids] of Object.entries(weekNumberToAllIds)) {
+      filtered[Number(num)] = ids.filter(id => weekToRestaurant[id] === effectiveRestaurant);
+    }
+    return filtered;
+  }, [weekNumberToAllIds, effectiveRestaurant, weekToRestaurant]);
+
+  // Effective period status
+  const effectiveStatus = useMemo(() => {
+    if (effectiveRestaurant === "all") return period.status;
+    const relevant = matchingPeriods.filter(p => p.restaurant_id === effectiveRestaurant);
+    // We don't have status per period in matchingPeriods, use overall
+    return period.status;
+  }, [effectiveRestaurant, matchingPeriods, period.status]);
+
+  const sortedEmployees = useMemo(() => [...filteredEmployees].sort((a, b) => {
     const aIdx = DEPARTMENT_ORDER.indexOf(a.department as any);
     const bIdx = DEPARTMENT_ORDER.indexOf(b.department as any);
     if (aIdx !== bIdx) return aIdx - bIdx;
     const nameA = (a.nickname || a.first_name || "").toLowerCase();
     const nameB = (b.nickname || b.first_name || "").toLowerCase();
     return nameA.localeCompare(nameB, "de");
-  }), [employees]);
+  }), [filteredEmployees]);
 
   const employeesWithShifts = sortedEmployees.filter((emp) =>
-    shifts.some((s) => s.employee_id === emp.id && s.department === emp.department && (Number(s.total_hours) > 0 || !!s.absence_type))
+    filteredShifts.some((s) => s.employee_id === emp.id && s.department === emp.department && (Number(s.total_hours) > 0 || !!s.absence_type))
   );
 
-  const isLocked = period.status === "locked";
+  const isLocked = effectiveStatus === "locked";
 
   const upsertNote = useMutation({
     mutationFn: async (params: { employee_id: string; field: string; value: any }) => {
@@ -350,6 +401,28 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
         </Badge>
       </div>
 
+      {hasMultipleRestaurants && (
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            size="sm"
+            variant={selectedRestaurant === "all" ? "default" : "outline"}
+            onClick={() => setSelectedRestaurant("all")}
+          >
+            Alle
+          </Button>
+          {restaurants.map(r => (
+            <Button
+              key={r.id}
+              size="sm"
+              variant={selectedRestaurant === r.id ? "default" : "outline"}
+              onClick={() => setSelectedRestaurant(r.id)}
+            >
+              {r.name}
+            </Button>
+          ))}
+        </div>
+      )}
+
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="wochenplan">Wochenplan</TabsTrigger>
@@ -360,7 +433,7 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
         <TabsContent value="wochenplan">
           <PayrollWochenplanTab
             weeks={weeks}
-            shifts={shifts}
+            shifts={filteredShifts}
             employees={sortedEmployees}
             holidays={holidayMap}
             periodLabel={period.label}
@@ -368,7 +441,7 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
             onSelectWeek={setSelectedWeekId}
             isLocked={isLocked}
             pin={pin}
-            weekNumberToAllIds={weekNumberToAllIds}
+            weekNumberToAllIds={effectiveWeekNumberToAllIds}
             onShiftsChanged={() => queryClient.invalidateQueries({ queryKey: ["payroll-data"] })}
           />
         </TabsContent>
@@ -376,19 +449,19 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
         <TabsContent value="zusammenfassung">
           <PayrollZusammenfassungTab
             weeks={weeks}
-            shifts={shifts}
+            shifts={filteredShifts}
             employees={employeesWithShifts}
             periodLabel={period.label}
-            weekNumberToAllIds={weekNumberToAllIds}
+            weekNumberToAllIds={effectiveWeekNumberToAllIds}
           />
         </TabsContent>
 
         <TabsContent value="buchhaltung">
           <PayrollBuchhaltungTab
-            shifts={shifts}
+            shifts={filteredShifts}
             employees={employeesWithShifts}
-            payrollNotes={payrollNotes}
-            advances={advances}
+            payrollNotes={filteredPayrollNotes}
+            advances={filteredAdvances}
             periodLabel={period.label}
             isLocked={isLocked}
             onUpsertNote={(p) => upsertNote.mutate(p)}
