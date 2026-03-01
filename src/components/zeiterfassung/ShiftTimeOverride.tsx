@@ -481,6 +481,9 @@ export default function ShiftTimeOverride({
             <Separator />
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Bestehende Schichten überschreiben</p>
+              <p className="text-xs text-muted-foreground">
+                Überschreibt die Zeiten aller vorhandenen Schichten (mit Start-/Endzeit, ohne Abwesenheit) auf die Standardwerte. Es werden keine neuen Schichten erzeugt.
+              </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {uniqueEmployees.map((emp) => (
                   <div key={emp.id} className="flex items-center gap-2">
