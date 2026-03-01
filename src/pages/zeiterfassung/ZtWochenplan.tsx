@@ -13,7 +13,9 @@ import { Calendar } from "@/components/ui/calendar";
 import { format, parseISO, eachDayOfInterval, startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
 import { de } from "date-fns/locale";
 import { toast } from "sonner";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, FileDown, FileSpreadsheet } from "lucide-react";
+import { exportWochenplanPdf } from "@/lib/exportWochenplanPdf";
+import { exportWochenplanExcel } from "@/lib/exportWochenplanExcel";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useRestaurant } from "@/hooks/useRestaurant";
@@ -372,6 +374,37 @@ export default function ZtWochenplan() {
             ))}
           </div>
         )}
+
+        <div className="ml-auto flex gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 px-2 text-xs gap-1"
+            disabled={!allPeriodShifts?.length || !employees?.length || !weeks?.length}
+            onClick={() => {
+              const period = periods?.find(p => p.id === selectedPeriodId);
+              if (!period || !employees || !weeks || !allPeriodShifts) return;
+              exportWochenplanPdf(period.label, employees, weeks, allPeriodShifts, holidays ?? new Map());
+            }}
+          >
+            <FileDown className="h-3.5 w-3.5" />
+            PDF
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 px-2 text-xs gap-1"
+            disabled={!allPeriodShifts?.length || !employees?.length || !weeks?.length}
+            onClick={() => {
+              const period = periods?.find(p => p.id === selectedPeriodId);
+              if (!period || !employees || !weeks || !allPeriodShifts) return;
+              exportWochenplanExcel(period.label, employees, weeks, allPeriodShifts, holidays ?? new Map());
+            }}
+          >
+            <FileSpreadsheet className="h-3.5 w-3.5" />
+            Excel
+          </Button>
+        </div>
       </div>
 
       {selectedWeekId && weekDays.length > 0 && (() => {
