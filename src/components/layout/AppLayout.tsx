@@ -17,7 +17,8 @@ import {
   QrCode,
   ChevronDown,
   LucideIcon,
-  Send
+  Send,
+  MessageCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -227,6 +228,19 @@ export function AppLayout({ children }: AppLayoutProps) {
                   <Send className="w-5 h-5" />
                   Telegram
                 </Link>
+                <Link
+                  to={getNavHref('chat')}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors",
+                    isActive('chat')
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground" 
+                      : "text-sidebar-foreground hover:bg-sidebar-accent"
+                  )}
+                >
+                  <MessageCircle className="w-5 h-5" />
+                  Chat
+                </Link>
               </>
             )}
             <button
@@ -317,6 +331,18 @@ export function AppLayout({ children }: AppLayoutProps) {
               >
                 <Send className="w-5 h-5" />
                 Telegram
+              </Link>
+              <Link
+                to={getNavHref('chat')}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                  isActive('chat')
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground" 
+                    : "text-sidebar-foreground hover:bg-sidebar-accent"
+                )}
+              >
+                <MessageCircle className="w-5 h-5" />
+                Chat
               </Link>
             </>
           )}

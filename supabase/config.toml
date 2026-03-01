@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.payroll-office-data]
 verify_jwt = false
+
+[functions.restaurant-chat]
+verify_jwt = false
