@@ -13,7 +13,7 @@ import { StaffSelect } from '@/components/shared/StaffSelect';
 import { TeamWaiterSelect } from '@/components/shared/TeamWaiterSelect';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
@@ -290,22 +290,6 @@ export default function WaiterCashUp() {
                       </>
                   }
                   </CardTitle>
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                    id="participates-in-pool"
-                    checked={newParticipatesInPool}
-                    onCheckedChange={(checked) => {
-                      const participates = checked === true;
-                      setNewParticipatesInPool(participates);
-                      if (!participates) {
-                        setNewAdditionalWaiters([]);
-                      }
-                    }} />
-
-                    <Label htmlFor="participates-in-pool" className="text-sm font-normal cursor-pointer">
-                      Am Pool beteiligt
-                    </Label>
-                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
