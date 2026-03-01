@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { TableRow, TableCell } from '@/components/ui/table';
-import { Staff, enumToRoles } from '@/hooks/useStaff';
+import type { Staff } from '@/hooks/useStaff';
 import type { WaiterRankingItem } from '@/hooks/useWaiterRanking';
 
 interface StaffTableRowProps {
@@ -14,7 +14,12 @@ interface StaffTableRowProps {
 }
 
 export function StaffTableRow({ staff, onEdit, onDelete, rankingData }: StaffTableRowProps) {
-  const roles = enumToRoles(staff.role);
+  // Derive departments from actual zt_department assignments
+  const departments = new Set(
+    staff.staff_restaurants
+      ?.map(sr => sr.zt_department)
+      .filter(Boolean) ?? []
+  );
   const missingNameData = !staff.first_name || !staff.last_name;
   const isLinked = !!staff.linked_profile;
   const linkedEmail = staff.linked_profile?.email;
@@ -85,9 +90,9 @@ export function StaffTableRow({ staff, onEdit, onDelete, rankingData }: StaffTab
       {/* Rolle */}
       <TableCell>
         <div className="flex items-center gap-1 flex-wrap">
-          {roles.service && <Badge variant="outline" className="text-xs font-normal">Service</Badge>}
-          {roles.kitchen && <Badge variant="outline" className="text-xs font-normal">Küche</Badge>}
-          {roles.gl && <Badge variant="outline" className="text-xs font-normal">GL</Badge>}
+          {departments.has('Service') && <Badge variant="outline" className="text-xs font-normal">Service</Badge>}
+          {departments.has('Küche') && <Badge variant="outline" className="text-xs font-normal">Küche</Badge>}
+          {departments.has('GL') && <Badge variant="outline" className="text-xs font-normal">GL</Badge>}
         </div>
       </TableCell>
 
