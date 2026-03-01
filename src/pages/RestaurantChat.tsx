@@ -17,6 +17,10 @@ const SUGGESTIONS = [
   'Was waren die Ausgaben im letzten Monat?',
   'Vergleiche die Restaurants der letzten 2 Wochen',
   'Wie viele Gäste hatten wir letzte Woche?',
+  'Wie hoch war der Kreditkartenanteil am Umsatz letzte Woche?',
+  'Wer hat diesen Monat das meiste Trinkgeld bekommen?',
+  'Wie viele Stunden hat die Küche letzte Woche gearbeitet?',
+  'Wie verhält sich der Umsatz zu den Schichtstunden pro Kellner?',
 ];
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/restaurant-chat`;
