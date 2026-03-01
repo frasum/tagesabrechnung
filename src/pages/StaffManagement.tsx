@@ -11,7 +11,7 @@ import { StaffCard } from '@/components/staff/StaffCard';
 import { StaffDialog } from '@/components/staff/StaffDialogNative';
 import { TipRanking, RankingItem } from '@/components/waiter/TipRanking';
 
-import { useStaff, useCreateStaff, useUpdateStaff, useDeleteStaff, Staff, StaffInput, StaffRole } from '@/hooks/useStaff';
+import { useStaff, useCreateStaff, useUpdateStaff, useDeleteStaff, hasRole, Staff, StaffInput, StaffRole } from '@/hooks/useStaff';
 import { useShowTipRanking } from '@/hooks/useSettings';
 import { useWaiterRanking } from '@/hooks/useWaiterRanking';
 import { useRestaurants } from '@/hooks/useRestaurant';
@@ -41,8 +41,7 @@ export default function StaffManagement() {
   // Create a map of waiter name -> ranking data for quick lookup
   const rankingMap = new Map(rankings.map(r => [r.name.toLowerCase(), r]));
   const filteredStaff = allStaff.filter(s => {
-    const matchesRole = filter === 'all' || s.role === filter || 
-      (s.role === 'both' && (filter === 'waiter' || filter === 'kitchen'));
+    const matchesRole = filter === 'all' || hasRole(s.role, filter as 'waiter' | 'kitchen' | 'gl');
     const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           s.notes?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesRole && matchesSearch;
@@ -55,10 +54,10 @@ export default function StaffManagement() {
     const noRestaurant: { waiters: Staff[]; kitchen: Staff[] } = { waiters: [], kitchen: [] };
 
     const addToGroup = (group: { waiters: Staff[]; kitchen: Staff[] }, staff: Staff) => {
-      if (staff.role === 'waiter' || staff.role === 'both') {
+      if (hasRole(staff.role, 'waiter')) {
         if (!group.waiters.find(s => s.id === staff.id)) group.waiters.push(staff);
       }
-      if (staff.role === 'kitchen' || staff.role === 'both') {
+      if (hasRole(staff.role, 'kitchen')) {
         if (!group.kitchen.find(s => s.id === staff.id)) group.kitchen.push(staff);
       }
     };
@@ -91,8 +90,8 @@ export default function StaffManagement() {
     return { restaurants: result, noRestaurant };
   })();
 
-  const waiterCount = allStaff.filter(s => s.role === 'waiter' || s.role === 'both').length;
-  const kitchenCount = allStaff.filter(s => s.role === 'kitchen' || s.role === 'both').length;
+  const waiterCount = allStaff.filter(s => hasRole(s.role, 'waiter')).length;
+  const kitchenCount = allStaff.filter(s => hasRole(s.role, 'kitchen')).length;
 
   // Auto-select first restaurant for ranking toggle
   useEffect(() => {

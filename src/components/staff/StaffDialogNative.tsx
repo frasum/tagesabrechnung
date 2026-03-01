@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import { enumToRoles, rolesToEnum } from '@/hooks/useStaff';
 import type { Staff, StaffInput, StaffRole } from '@/hooks/useStaff';
 import { useRestaurants } from '@/hooks/useRestaurant';
 import { useUnlinkedProfiles, useLinkedProfilesForStaff, useAdminLinkAccount } from '@/hooks/useProfiles';
@@ -30,7 +31,9 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [persoNr, setPersoNr] = useState('');
-  const [role, setRole] = useState<StaffRole>('waiter');
+  const [roleService, setRoleService] = useState(true);
+  const [roleKitchen, setRoleKitchen] = useState(false);
+  const [roleGl, setRoleGl] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [pinCode, setPinCode] = useState('');
   const [selectedRestaurants, setSelectedRestaurants] = useState<string[]>([]);
@@ -63,7 +66,10 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       setFirstName(staff.first_name ?? '');
       setLastName(staff.last_name ?? '');
       setPersoNr(staff.perso_nr != null ? String(staff.perso_nr) : '');
-      setRole(staff.role);
+      const flags = enumToRoles(staff.role);
+      setRoleService(flags.service);
+      setRoleKitchen(flags.kitchen);
+      setRoleGl(flags.gl);
       setIsActive(staff.is_active ?? true);
       setPinCode('');
       setSelectedRestaurants(staff.staff_restaurants?.map((sr) => sr.restaurant_id) ?? []);
@@ -73,7 +79,9 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       setFirstName('');
       setLastName('');
       setPersoNr('');
-      setRole('waiter');
+      setRoleService(true);
+      setRoleKitchen(false);
+      setRoleGl(false);
       setIsActive(true);
       setPinCode('');
       setSelectedRestaurants(restaurants.map((r) => r.id));
@@ -96,6 +104,9 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
+    if (!roleService && !roleKitchen && !roleGl) return;
+
+    const role = rolesToEnum(roleService, roleKitchen, roleGl);
 
     // Save staff data
     onSave({
@@ -193,19 +204,44 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
             />
           </div>
 
-          {/* Role - native select */}
+          {/* Role - checkboxes */}
           <div className="space-y-2">
-            <Label htmlFor="staff-role">Rolle *</Label>
-            <select
-              id="staff-role"
-              value={role}
-              onChange={(e) => setRole(e.target.value as StaffRole)}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              <option value="waiter">Service</option>
-              <option value="kitchen">Küche</option>
-              <option value="both">Service & Küche</option>
-            </select>
+            <Label>Rolle *</Label>
+            <div className="flex flex-wrap gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={roleService}
+                  onChange={(e) => setRoleService(e.target.checked)}
+                  className="h-4 w-4 rounded border-input text-primary focus:ring-primary"
+                />
+                <span className="text-sm font-medium">Service</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={roleKitchen}
+                  onChange={(e) => setRoleKitchen(e.target.checked)}
+                  className="h-4 w-4 rounded border-input text-primary focus:ring-primary"
+                />
+                <span className="text-sm font-medium">Küche</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={roleGl}
+                  onChange={(e) => setRoleGl(e.target.checked)}
+                  className="h-4 w-4 rounded border-input text-primary focus:ring-primary"
+                />
+                <span className="text-sm font-medium">GL</span>
+              </label>
+            </div>
+            {!roleService && !roleKitchen && !roleGl && (
+              <p className="text-sm text-destructive bg-destructive/10 p-2 rounded-md flex items-center gap-2">
+                <span className="text-lg">⚠️</span>
+                Mindestens eine Rolle muss ausgewählt werden
+              </p>
+            )}
           </div>
 
           {/* Restaurants - native checkboxes */}

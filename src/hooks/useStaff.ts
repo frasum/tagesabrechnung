@@ -2,7 +2,39 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-export type StaffRole = 'waiter' | 'kitchen' | 'both';
+export type StaffRole = 'waiter' | 'kitchen' | 'both' | 'gl' | 'waiter_gl' | 'kitchen_gl' | 'all';
+
+export interface RoleFlags {
+  service: boolean;
+  kitchen: boolean;
+  gl: boolean;
+}
+
+export function enumToRoles(role: StaffRole): RoleFlags {
+  return {
+    service: ['waiter', 'both', 'waiter_gl', 'all'].includes(role),
+    kitchen: ['kitchen', 'both', 'kitchen_gl', 'all'].includes(role),
+    gl: ['gl', 'waiter_gl', 'kitchen_gl', 'all'].includes(role),
+  };
+}
+
+export function rolesToEnum(s: boolean, k: boolean, g: boolean): StaffRole {
+  if (s && k && g) return 'all';
+  if (s && k) return 'both';
+  if (s && g) return 'waiter_gl';
+  if (k && g) return 'kitchen_gl';
+  if (s) return 'waiter';
+  if (k) return 'kitchen';
+  if (g) return 'gl';
+  return 'waiter'; // fallback
+}
+
+export function hasRole(role: StaffRole, check: 'waiter' | 'kitchen' | 'gl'): boolean {
+  const flags = enumToRoles(role);
+  if (check === 'waiter') return flags.service;
+  if (check === 'kitchen') return flags.kitchen;
+  return flags.gl;
+}
 
 export interface StaffRestaurant {
   restaurant_id: string;
@@ -89,7 +121,7 @@ export function useStaff(role?: StaffRole, options?: { includeLinkedProfiles?: b
         .order('name', { ascending: true });
 
       if (role) {
-        query = query.in('role', role === 'waiter' || role === 'kitchen' ? [role, 'both'] : [role]);
+        query = query.in('role', getRoleFilterValues(role));
       }
 
       const { data: staffData, error } = await query;
@@ -182,7 +214,7 @@ export function useActiveStaff(role?: StaffRole) {
         .order('name', { ascending: true });
 
       if (role) {
-        query = query.in('role', role === 'waiter' || role === 'kitchen' ? [role, 'both'] : [role]);
+        query = query.in('role', getRoleFilterValues(role));
       }
 
       const { data, error } = await query;
@@ -190,6 +222,14 @@ export function useActiveStaff(role?: StaffRole) {
       return data as Staff[];
     },
   });
+}
+
+/** Returns all enum values that include the given role */
+function getRoleFilterValues(role: StaffRole): StaffRole[] {
+  if (role === 'waiter') return ['waiter', 'both', 'waiter_gl', 'all'];
+  if (role === 'kitchen') return ['kitchen', 'both', 'kitchen_gl', 'all'];
+  if (role === 'gl') return ['gl', 'waiter_gl', 'kitchen_gl', 'all'];
+  return [role];
 }
 
 // Get active staff for a specific restaurant
@@ -230,7 +270,7 @@ export function useActiveStaffByRestaurant(restaurantId: string | null, role?: S
         .order('name', { ascending: true });
 
       if (role) {
-        query = query.in('role', role === 'waiter' || role === 'kitchen' ? [role, 'both'] : [role]);
+        query = query.in('role', getRoleFilterValues(role));
       }
 
       const { data, error } = await query;

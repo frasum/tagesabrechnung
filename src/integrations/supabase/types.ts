@@ -1184,7 +1184,14 @@ export type Database = {
     Enums: {
       app_permission_level: "staff" | "manager" | "admin"
       period_status: "open" | "locked"
-      staff_role: "waiter" | "kitchen" | "both"
+      staff_role:
+        | "waiter"
+        | "kitchen"
+        | "both"
+        | "gl"
+        | "waiter_gl"
+        | "kitchen_gl"
+        | "all"
       zt_department: "Küche" | "GL" | "Service"
     }
     CompositeTypes: {
@@ -1315,7 +1322,15 @@ export const Constants = {
     Enums: {
       app_permission_level: ["staff", "manager", "admin"],
       period_status: ["open", "locked"],
-      staff_role: ["waiter", "kitchen", "both"],
+      staff_role: [
+        "waiter",
+        "kitchen",
+        "both",
+        "gl",
+        "waiter_gl",
+        "kitchen_gl",
+        "all",
+      ],
       zt_department: ["Küche", "GL", "Service"],
     },
   },
