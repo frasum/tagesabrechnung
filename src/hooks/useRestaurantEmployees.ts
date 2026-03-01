@@ -22,23 +22,15 @@ export function useRestaurantEmployees(restaurantId: string) {
         .not("zt_department", "is", null);
       if (error) throw error;
 
-      // Deduplicate by staff id (multiple rows possible for multiple departments)
-      const seen = new Map<string, RestaurantEmployee>();
-      for (const row of data as any[]) {
-        const existing = seen.get(row.staff.id);
-        if (!existing) {
-          seen.set(row.staff.id, {
-            id: row.staff.id,
-            name: row.staff.name,
-            perso_nr: row.staff.perso_nr,
-            first_name: row.staff.first_name,
-            last_name: row.staff.last_name,
-            nickname: row.staff.nickname,
-            department: row.zt_department,
-          });
-        }
-      }
-      return Array.from(seen.values());
+      return (data as any[]).map((row) => ({
+        id: row.staff.id,
+        name: row.staff.name,
+        perso_nr: row.staff.perso_nr,
+        first_name: row.staff.first_name,
+        last_name: row.staff.last_name,
+        nickname: row.staff.nickname,
+        department: row.zt_department,
+      }));
     },
     enabled: !!restaurantId,
   });
