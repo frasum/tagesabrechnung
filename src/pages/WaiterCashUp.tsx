@@ -13,6 +13,7 @@ import { StaffSelect } from '@/components/shared/StaffSelect';
 import { TeamWaiterSelect } from '@/components/shared/TeamWaiterSelect';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -307,9 +308,14 @@ export default function WaiterCashUp() {
                     }
                   }} role="waiter" placeholder="Mitarbeiter wählen" excludeNames={waiterShifts.filter((s) => s.id !== editingShiftId).map((s) => s.waiter_name)} restaurantId={restaurantId} />
                   {newWaiterName && (
-                    <Badge variant={newParticipatesInPool ? "default" : "secondary"} className="mt-2">
-                      {newParticipatesInPool ? "Pool-Mitglied" : "Kein Pool"}
-                    </Badge>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Checkbox
+                        id="participatesInPool"
+                        checked={newParticipatesInPool}
+                        onCheckedChange={(checked) => setNewParticipatesInPool(checked === true)}
+                      />
+                      <Label htmlFor="participatesInPool">Am Pool beteiligt</Label>
+                    </div>
                   )}
                 </div>
 
