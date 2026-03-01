@@ -232,9 +232,7 @@ export default function ShiftTimeOverride({
       for (const week of weeks) {
         const weekdayDates = getWeekdayDates(week.start_date, week.end_date);
         for (const d of weekdayDates) {
-          if (!holidaySet.has(d)) {
-            allDates.push({ date: d, week });
-          }
+          allDates.push({ date: d, week });
         }
       }
 
@@ -262,9 +260,10 @@ export default function ShiftTimeOverride({
         if (loadErr) throw loadErr;
 
         const existingByDate = new Map((existing ?? []).map((s) => [s.shift_date, s]));
-        const hours = calculateShiftHours("17:00", "01:00", false);
 
         for (const { date, week } of allDates) {
+          const isHoliday = holidaySet.has(date);
+          const hours = calculateShiftHours("17:00", "01:00", isHoliday);
           // Conflict check: shift in another dept/week?
           const { data: allShiftsOnDay } = await supabase
             .from("zt_shifts")
@@ -288,7 +287,7 @@ export default function ShiftTimeOverride({
                 evening_hours: hours.eveningHours,
                 night_hours: hours.nightHours,
                 sunday_holiday_hours: hours.sundayHolidayHours,
-                is_holiday: false,
+                is_holiday: isHoliday,
               })
               .eq("id", existingShift.id);
             if (upErr) throw upErr;
@@ -307,7 +306,7 @@ export default function ShiftTimeOverride({
                 evening_hours: hours.eveningHours,
                 night_hours: hours.nightHours,
                 sunday_holiday_hours: hours.sundayHolidayHours,
-                is_holiday: false,
+                is_holiday: isHoliday,
               });
             if (insErr) throw insErr;
             created++;
@@ -518,7 +517,7 @@ export default function ShiftTimeOverride({
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Mo–Fr Schichten erzeugen & anpassen</p>
               <p className="text-xs text-muted-foreground">
-                Erzeugt fehlende Mo–Fr Einträge mit 17:00–01:00 für die gesamte Periode. Feiertage werden übersprungen.
+                Erzeugt fehlende Mo–Fr Einträge mit 17:00–01:00 für die gesamte Periode (inkl. Feiertage unter der Woche).
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {uniqueAllEmployees.map((emp) => (
