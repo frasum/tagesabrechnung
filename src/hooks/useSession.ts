@@ -405,21 +405,25 @@ export function useDeleteExpense() {
   });
 }
 
-export function useSessionHistory(restaurantId: string | null) {
+export function useSessionHistory(restaurantId: string | null, page = 0) {
+  const PAGE_SIZE = 30;
   return useQuery({
-    queryKey: ['session-history', restaurantId],
+    queryKey: ['session-history', restaurantId, page],
     queryFn: async () => {
-      if (!restaurantId) return [];
+      if (!restaurantId) return { sessions: [] as Session[], totalCount: 0 };
       
-      const { data, error } = await supabase
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      
+      const { data, error, count } = await supabase
         .from('sessions')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('restaurant_id', restaurantId)
         .order('session_date', { ascending: false })
-        .limit(30);
+        .range(from, to);
       
       if (error) throw error;
-      return data as Session[];
+      return { sessions: (data ?? []) as Session[], totalCount: count ?? 0 };
     },
     enabled: !!restaurantId,
   });

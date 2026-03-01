@@ -1,8 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { History as HistoryIcon, Calendar, Eye, Trash2 } from 'lucide-react';
-import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelectedDate } from '@/contexts/DateContext';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -11,6 +10,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from '@/components/ui/pagination';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,7 +44,11 @@ export default function History() {
   const [selectedMonth, setSelectedMonth] = useState(selectedDate);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [confirmText, setConfirmText] = useState('');
-  const { data: sessions = [], isLoading } = useSessionHistory(restaurantId);
+  const [page, setPage] = useState(0);
+  const { data, isLoading } = useSessionHistory(restaurantId, page);
+  const sessions = data?.sessions ?? [];
+  const totalCount = data?.totalCount ?? 0;
+  const totalPages = Math.ceil(totalCount / 30);
   const deleteAllSessions = useDeleteAllSessions(restaurantId);
   const { data: cashRows = [] } = useCashBalanceData(restaurantId);
 
@@ -58,7 +70,7 @@ export default function History() {
     navigate(`/${restaurantSlug}/summary`);
   };
 
-  const totalSessions = sessions.length;
+  const totalSessions = totalCount;
 
   const isConfirmValid = confirmText.toLowerCase() === 'löschen';
 
@@ -208,6 +220,7 @@ export default function History() {
                   Noch keine Sessions vorhanden.
                 </p> :
 
+              <>
               <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
@@ -278,6 +291,43 @@ export default function History() {
                     </TableBody>
                   </Table>
                 </div>
+                {totalPages > 1 && (
+                  <Pagination className="mt-4">
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          onClick={() => setPage((p) => Math.max(0, p - 1))}
+                          className={page === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                        />
+                      </PaginationItem>
+                      {Array.from({ length: totalPages }, (_, i) => {
+                        if (totalPages <= 7 || i === 0 || i === totalPages - 1 || Math.abs(i - page) <= 1) {
+                          return (
+                            <PaginationItem key={i}>
+                              <PaginationLink
+                                isActive={i === page}
+                                onClick={() => setPage(i)}
+                                className="cursor-pointer"
+                              >
+                                {i + 1}
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                        }
+                        if (i === 1 && page > 3) return <PaginationItem key={i}><PaginationEllipsis /></PaginationItem>;
+                        if (i === totalPages - 2 && page < totalPages - 4) return <PaginationItem key={i}><PaginationEllipsis /></PaginationItem>;
+                        return null;
+                      })}
+                      <PaginationItem>
+                        <PaginationNext
+                          onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                          className={page === totalPages - 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                )}
+              </>
               }
             </CardContent>
           </Card>
