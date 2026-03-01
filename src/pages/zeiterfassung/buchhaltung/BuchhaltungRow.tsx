@@ -1,7 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
-import { formatHours, getSickDateRanges, formatSickRanges } from "@/lib/shiftCalculations";
+import { formatHours, getSickDateRanges, getVacationDateRanges, formatSickRanges } from "@/lib/shiftCalculations";
 import { displayNum } from "./utils";
 import type { EmployeeTotals, PayrollNote, Shift, AdvanceEntry } from "./types";
 import type { RestaurantEmployee } from "@/hooks/useRestaurantEmployees";
@@ -28,7 +28,9 @@ export default function BuchhaltungRow({ emp, totals, note, shifts, advances, is
     .join("; ");
 
   const vorschussValue = advanceSum > 0 ? advanceSum : (note?.vorschuss ?? 0);
-  const besonderheitenValue = [advanceText, note?.besonderheiten].filter(Boolean).join(" | ");
+  const vacRanges = getVacationDateRanges(shifts);
+  const vacText = vacRanges.length > 0 ? `U: ${formatSickRanges(vacRanges).join(", ")}` : "";
+  const besonderheitenValue = [advanceText, vacText, note?.besonderheiten].filter(Boolean).join(" | ");
 
   // Build display name
   const nameParts = [emp.first_name, emp.last_name].filter(Boolean).join(" ") || emp.name;

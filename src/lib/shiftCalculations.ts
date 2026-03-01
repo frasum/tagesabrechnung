@@ -101,22 +101,23 @@ export function countSickDays(shifts: { absence_type?: string | null }[]): numbe
 /**
  * Get sick date ranges from shifts grouped into consecutive day ranges.
  */
-export function getSickDateRanges(
-  shifts: { absence_type?: string | null; shift_date?: string }[]
+export function getAbsenceDateRanges(
+  shifts: { absence_type?: string | null; shift_date?: string }[],
+  type: string
 ): { from: string; to: string }[] {
-  const sickDates = shifts
-    .filter(s => s.absence_type === 'krank' && s.shift_date)
+  const dates = shifts
+    .filter(s => s.absence_type === type && s.shift_date)
     .map(s => s.shift_date!)
     .sort();
 
-  if (!sickDates.length) return [];
+  if (!dates.length) return [];
 
   const ranges: { from: string; to: string }[] = [];
-  let from = sickDates[0];
-  let prev = sickDates[0];
+  let from = dates[0];
+  let prev = dates[0];
 
-  for (let i = 1; i < sickDates.length; i++) {
-    const curr = sickDates[i];
+  for (let i = 1; i < dates.length; i++) {
+    const curr = dates[i];
     const prevDate = new Date(prev);
     const currDate = new Date(curr);
     const diffDays = (currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24);
@@ -130,6 +131,19 @@ export function getSickDateRanges(
   }
   ranges.push({ from, to: prev });
   return ranges;
+}
+
+/** Backward-compatible wrapper */
+export function getSickDateRanges(
+  shifts: { absence_type?: string | null; shift_date?: string }[]
+): { from: string; to: string }[] {
+  return getAbsenceDateRanges(shifts, 'krank');
+}
+
+export function getVacationDateRanges(
+  shifts: { absence_type?: string | null; shift_date?: string }[]
+): { from: string; to: string }[] {
+  return getAbsenceDateRanges(shifts, 'urlaub');
 }
 
 /**

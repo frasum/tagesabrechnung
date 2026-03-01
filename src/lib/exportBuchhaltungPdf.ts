@@ -1,6 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { formatHours, DEPARTMENT_ORDER, countVacationDays, countSickDays, getSickDateRanges, formatSickRanges } from "./shiftCalculations";
+import { formatHours, DEPARTMENT_ORDER, countVacationDays, countSickDays, getSickDateRanges, getVacationDateRanges, formatSickRanges } from "./shiftCalculations";
 
 interface Employee {
   id: string;
@@ -79,7 +79,9 @@ export function exportBuchhaltungPdf(
     const empShifts = shifts.filter((s) => s.employee_id === emp.id && s.department === emp.department);
     const sickRanges = getSickDateRanges(empShifts);
     const sickText = sickRanges.length > 0 ? `K: ${formatSickRanges(sickRanges).join(", ")}` : "";
-    const besText = [note?.besonderheiten, sickText].filter(Boolean).join(" | ");
+    const vacRanges = getVacationDateRanges(empShifts);
+    const vacText = vacRanges.length > 0 ? `U: ${formatSickRanges(vacRanges).join(", ")}` : "";
+    const besText = [note?.besonderheiten, vacText, sickText].filter(Boolean).join(" | ");
 
     const nameParts = [emp.first_name, emp.last_name].filter(Boolean).join(" ") || emp.name;
     const metaParts: string[] = [];
