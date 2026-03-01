@@ -120,11 +120,8 @@ export default function Login() {
       localStorage.setItem('spicery_auth_user', JSON.stringify(parsed));
     }
     setPendingRoleSelection(null);
-    toast({
-      title: 'Willkommen!',
-      description: `Anmeldung erfolgreich als ${pendingRoleSelection?.staffName || ''}.`,
-    });
-    navigate('/select-restaurant', { replace: true });
+    // Full page reload so AuthContext reads updated localStorage (including permissionLevel)
+    window.location.replace('/select-restaurant');
   };
 
   const handlePinChange = (value: string) => {

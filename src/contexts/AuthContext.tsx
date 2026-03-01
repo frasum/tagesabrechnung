@@ -223,8 +223,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               if (response.ok && isMounted) {
                 const roleData = await response.json();
                 const newLevel = roleData.permission_level || 'staff';
-                if (newLevel !== parsed.permissionLevel) {
-                  const updated = { ...parsed, permissionLevel: newLevel };
+                // Don't override permission if user chose a non-GL active role
+                const effectiveLevel = parsed.activeRole && parsed.activeRole !== 'gl' 
+                  ? 'staff' 
+                  : newLevel;
+                if (effectiveLevel !== parsed.permissionLevel) {
+                  const updated = { ...parsed, permissionLevel: effectiveLevel };
                   setUser(updated);
                   localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updated));
                 }
