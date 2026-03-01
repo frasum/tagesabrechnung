@@ -1,43 +1,32 @@
 
 
-## Küchenschichten automatisch in die Zeiterfassung übernehmen
+## Trinkgeldpool-Ausschluss über Mitarbeitereinstellungen
 
-Gleicher Ansatz wie bei den Kellnern: Beim Anlegen einer Küchenschicht wird automatisch ein `zt_shifts`-Eintrag mit Abteilung "Küche" erstellt/aktualisiert.
+Aktuell wird `participates_in_pool` pro Schicht in `waiter_shifts` gesetzt (Standard: `true`). Die Idee: Ein neues Feld `participates_in_pool` direkt am Mitarbeiter (`staff`-Tabelle), das als **Standardwert** beim Anlegen einer Abrechnung verwendet wird.
 
 ### Änderungen
 
-| Datei | Änderung |
+| Datei / Bereich | Änderung |
 |---|---|
-| `src/lib/syncWaiterToZt.ts` | Umbenennen/erweitern zu generischer Sync-Funktion. Neue exportierte Funktion `syncKitchenShiftToZt` hinzufügen, die `staff_name` → `employee_id` mappt (über `staff_restaurants` mit `zt_department = 'Küche'`), die passende `week_id` findet und einen Upsert in `zt_shifts` mit `department = 'Küche'` durchführt. Die bestehende `findWeekForDate`, `isHoliday` und `upsertZtShift` Hilfsfunktionen werden wiederverwendet. |
-| `src/hooks/useSession.ts` | In `useCreateKitchenShift` nach erfolgreichem Insert: Session-Datum laden, dann `syncKitchenShiftToZt` aufrufen mit `staffName`, `shiftStart`, `shiftEnd`, `sessionDate`, `restaurantId`. |
-| `src/hooks/useSession.ts` | Auch bei `useDeleteKitchenShift`: den entsprechenden `zt_shifts`-Eintrag löschen (optional, oder Hinweis dass manuell bereinigt werden muss). |
+| **Migration** | `ALTER TABLE staff ADD COLUMN participates_in_pool boolean NOT NULL DEFAULT true;` |
+| `src/hooks/useStaff.ts` | `Staff`-Interface und `StaffInput` um `participates_in_pool` erweitern. |
+| `src/components/staff/StaffDialogNative.tsx` | Neuer Toggle/Switch im Dialog: "Am Trinkgeldpool beteiligt". |
+| `src/pages/WaiterCashUp.tsx` | Beim Auswählen eines Kellners den Standardwert aus `staff.participates_in_pool` übernehmen (statt immer `true`). Kann pro Schicht weiterhin überschrieben werden. |
+| `src/components/staff/StaffTableRow.tsx` | Optional: Anzeige "(kein Pool)" Badge wenn `participates_in_pool = false`. |
 
-### Sync-Logik (in syncWaiterToZt.ts)
+### Logik
 
-```typescript
-export async function syncKitchenShiftToZt(params: {
-  staffName: string;
-  sessionDate: string;
-  shiftStart: string;
-  shiftEnd: string;
-  restaurantId: string;
-}) {
-  // 1. findWeekForDate → weekId
-  // 2. findStaffByName (mit zt_department = 'Küche') → employeeId
-  // 3. isHoliday + isSunday check
-  // 4. upsertZtShift mit department = 'Küche'
-}
-```
-
-Die bestehende `findStaffByName` Funktion filtert aktuell auf `zt_department = 'Service'`. Diese wird generalisiert, sodass die Abteilung als Parameter übergeben werden kann.
+- Der Mitarbeiter-Stammdatensatz bestimmt den **Default** — nicht den absoluten Wert
+- Bei der Abrechnung kann der Pool-Status pro Schicht weiterhin manuell geändert werden
+- Bestehende Schichten bleiben unverändert (das Feld auf `waiter_shifts` bleibt maßgeblich)
 
 ### Datenfluss
 
 ```text
-KitchenTipSplit → useCreateKitchenShift → INSERT kitchen_shifts
-                                        → syncKitchenShiftToZt
-                                          → lookup staff_id (Küche)
-                                          → lookup week_id
-                                          → UPSERT zt_shifts (dept=Küche)
+Staff Dialog → staff.participates_in_pool = false
+                        ↓
+WaiterCashUp → Kellner auswählen → Default aus staff laden
+                        ↓
+waiter_shifts.participates_in_pool = false (überschreibbar)
 ```
 
