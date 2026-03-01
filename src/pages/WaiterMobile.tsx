@@ -121,6 +121,7 @@ export default function WaiterMobile() {
     
     try {
       const sessionId = session.id;
+      const additionalWaiters = secondWaiterName !== 'none' ? [secondWaiterName] : [];
 
       if (myShift) {
         await updateWaiterShift.mutateAsync({
@@ -128,6 +129,7 @@ export default function WaiterMobile() {
           sessionId,
           restaurantId: restaurantId!,
           second_waiter_name: secondWaiterName === 'none' ? null : secondWaiterName,
+          additional_waiters: additionalWaiters,
           ...formData,
         });
         toast({ title: 'Gespeichert', description: 'Deine Abrechnung wurde aktualisiert.' });
@@ -136,7 +138,7 @@ export default function WaiterMobile() {
           session_id: sessionId,
           waiter_name: staffName,
           second_waiter_name: secondWaiterName === 'none' ? null : secondWaiterName,
-          additional_waiters: [],
+          additional_waiters: additionalWaiters,
           participates_in_pool: true,
           ...formData,
         });
