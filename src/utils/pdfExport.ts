@@ -375,27 +375,32 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
     doc.line(margin, cutLineY, pageWidth - margin, cutLineY);
     doc.setLineDashPattern([], 0); // Reset
 
-    // Farbiger Hintergrund-Block
-    const boxY = cutLineY + 4;
-    const boxH = 14;
-    const fillColor: [number, number, number] = rc >= 2000 ? [220, 252, 231] : [254, 226, 226];
-    doc.setFillColor(...fillColor);
-    doc.roundedRect(margin, boxY, pageWidth - 2 * margin, boxH, 2, 2, 'F');
-
-    // Zentrierter Text
+    // Grosser zentrierter Wechselgeldbestand (ohne Hintergrundfarbe für S/W-Drucker)
+    const textY = cutLineY + 12;
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(0);
     doc.text(
       `Wechselgeldbestand: ${formatCurrency(rc)}`,
       pageWidth / 2,
-      boxY + boxH / 2 + 2,
+      textY,
       { align: 'center' }
     );
 
-    y = boxY + boxH + 4;
+    // Datum/Uhrzeit + erstellt von
+    const now = new Date();
+    const timestampStr = `${format(now, 'dd.MM.yyyy')} um ${format(now, 'HH:mm')} Uhr`;
+    const createdBy = data.createdByName || data.exportedBy || '';
+    const infoLine = createdBy
+      ? `${timestampStr}  –  Abrechnung von ${createdBy}`
+      : timestampStr;
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100);
+    doc.text(infoLine, pageWidth / 2, textY + 7, { align: 'center' });
+    doc.setTextColor(0);
+
+    y = textY + 12;
   }
 
   // ========== Footer with page numbers ==========
