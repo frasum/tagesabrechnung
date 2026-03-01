@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatHours, DEPARTMENT_ORDER, getDepartmentBgClass, countVacationDays, countSickDays } from "@/lib/shiftCalculations";
-import { useRestaurant } from "@/hooks/useRestaurant";
+import { useRestaurant, useRestaurants } from "@/hooks/useRestaurant";
 import { useRestaurantEmployees } from "@/hooks/useRestaurantEmployees";
 import { useZt } from "@/contexts/ZtContext";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,8 @@ type Shift = {
 
 export default function ZtZusammenfassung() {
   const { restaurantId, restaurantSlug } = useRestaurant();
+  const { data: allRestaurants } = useRestaurants();
+  const allRestaurantIds = allRestaurants?.map(r => r.id) ?? [];
   const { selectedPeriodId, setSelectedPeriodId, periods, weeks: contextWeeks } = useZt();
   const { data: restaurantEmployees } = useRestaurantEmployees(restaurantId);
   const [cumulated, setCumulated] = useState(false);
@@ -39,6 +41,52 @@ export default function ZtZusammenfassung() {
 
   const selectedPeriod = periods?.find(p => p.id === selectedPeriodId);
   const cumData = useCumulatedZtData(cumulated, selectedPeriod);
+
+  // Load employees from ALL restaurants for ShiftTimeOverride
+  const { data: allRestaurantEmployees } = useQuery({
+    queryKey: ["all-restaurant-employees-zt", allRestaurantIds],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("staff_restaurants")
+        .select("zt_department, staff_id, restaurant_id, staff!inner(id, name, perso_nr, first_name, last_name, nickname)")
+        .in("restaurant_id", allRestaurantIds)
+        .not("zt_department", "is", null);
+      if (error) throw error;
+      return (data as any[]).map((row) => ({
+        id: row.staff.id,
+        name: row.staff.name,
+        perso_nr: row.staff.perso_nr,
+        first_name: row.staff.first_name,
+        last_name: row.staff.last_name,
+        nickname: row.staff.nickname,
+        department: row.zt_department,
+      }));
+    },
+    enabled: allRestaurantIds.length > 0,
+  });
+
+  // Load all week IDs across ALL restaurants for the same period date range
+  const { data: allRestaurantWeeks } = useQuery({
+    queryKey: ["all-restaurant-weeks-zt", selectedPeriod?.start_date, selectedPeriod?.end_date],
+    queryFn: async () => {
+      // Find all periods across all restaurants with the same date range
+      const { data: matchingPeriods, error: pErr } = await supabase
+        .from("scheduling_periods")
+        .select("id")
+        .eq("start_date", selectedPeriod!.start_date)
+        .eq("end_date", selectedPeriod!.end_date);
+      if (pErr) throw pErr;
+      const periodIds = matchingPeriods.map(p => p.id);
+      if (!periodIds.length) return [];
+      const { data, error } = await supabase
+        .from("weeks")
+        .select("*")
+        .in("period_id", periodIds);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedPeriod,
+  });
 
   const employees = cumulated ? cumData.employees : restaurantEmployees;
   const weeks = cumulated ? cumData.weeks : contextWeeks;
@@ -279,23 +327,34 @@ export default function ZtZusammenfassung() {
         </table>
       </div>
 
-      {hasPermission('admin') && selectedPeriod && (
-        <ShiftTimeOverride
-          employeesWithShifts={employeesWithShifts}
-          allEmployees={sortedEmployees.filter(e => [e.name, e.first_name, e.nickname].some(n => n?.toLowerCase().includes("peter")))}
-          dailyEmployees={restaurantSlug === "yum"
-            ? sortedEmployees.filter(e =>
-                [e.name, e.last_name].some(n => n?.toLowerCase().includes("schumann")) ||
-                e.nickname?.toLowerCase().includes("chefin")
-              )
-            : []
-          }
-          weekIds={weekIds}
-          weeks={weeks ?? []}
-          periodStartDate={selectedPeriod.start_date}
-          periodEndDate={selectedPeriod.end_date}
-        />
-      )}
+      {hasPermission('admin') && selectedPeriod && (() => {
+        const allEmpsSorted = allRestaurantEmployees
+          ? [...allRestaurantEmployees].sort((a, b) => {
+              const aIdx = DEPARTMENT_ORDER.indexOf(a.department as any);
+              const bIdx = DEPARTMENT_ORDER.indexOf(b.department as any);
+              if (aIdx !== bIdx) return aIdx - bIdx;
+              const nameA = (a.nickname || a.first_name || "").toLowerCase();
+              const nameB = (b.nickname || b.first_name || "").toLowerCase();
+              return nameA.localeCompare(nameB, "de");
+            })
+          : [];
+        const allWeekIds = allRestaurantWeeks?.map(w => w.id) ?? [];
+        const allWeeksForOverride = allRestaurantWeeks ?? [];
+        return (
+          <ShiftTimeOverride
+            employeesWithShifts={allEmpsSorted}
+            allEmployees={allEmpsSorted.filter(e => [e.name, e.first_name, e.nickname].some(n => n?.toLowerCase().includes("peter")))}
+            dailyEmployees={allEmpsSorted.filter(e =>
+              [e.name, e.last_name].some(n => n?.toLowerCase().includes("schumann")) ||
+              e.nickname?.toLowerCase().includes("chefin")
+            )}
+            weekIds={allWeekIds}
+            weeks={allWeeksForOverride}
+            periodStartDate={selectedPeriod.start_date}
+            periodEndDate={selectedPeriod.end_date}
+          />
+        );
+      })()}
     </div>
   );
 }
