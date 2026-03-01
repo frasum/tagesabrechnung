@@ -29,10 +29,23 @@ interface Week {
 interface ShiftTimeOverrideProps {
   employeesWithShifts: Employee[];
   allEmployees: Employee[];
+  dailyEmployees?: Employee[];
   weekIds: string[];
   weeks: Week[];
   periodStartDate?: string;
   periodEndDate?: string;
+}
+
+/** Generate all dates between start and end (inclusive) */
+function getAllDates(startDate: string, endDate: string): string[] {
+  const dates: string[] = [];
+  const current = new Date(startDate + "T12:00:00");
+  const end = new Date(endDate + "T12:00:00");
+  while (current <= end) {
+    dates.push(current.toISOString().slice(0, 10));
+    current.setDate(current.getDate() + 1);
+  }
+  return dates;
 }
 
 /** Generate all dates Mon-Fri between start and end (inclusive) */
@@ -58,6 +71,7 @@ function findWeekForDate(date: string, weeks: Week[]): Week | undefined {
 export default function ShiftTimeOverride({
   employeesWithShifts,
   allEmployees,
+  dailyEmployees = [],
   weekIds,
   weeks,
   periodStartDate,
@@ -67,6 +81,8 @@ export default function ShiftTimeOverride({
   const [generateIds, setGenerateIds] = useState<Set<string>>(new Set());
   const [isUpdating, setIsUpdating] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [dailyIds, setDailyIds] = useState<Set<string>>(new Set());
+  const [isDailyGenerating, setIsDailyGenerating] = useState(false);
   const queryClient = useQueryClient();
 
   // Deduplicate employees by id
@@ -85,6 +101,14 @@ export default function ShiftTimeOverride({
     });
     return Array.from(map.values());
   }, [allEmployees]);
+
+  const uniqueDailyEmployees = React.useMemo(() => {
+    const map = new Map<string, Employee>();
+    dailyEmployees.forEach((e) => {
+      if (!map.has(e.id)) map.set(e.id, e);
+    });
+    return Array.from(map.values());
+  }, [dailyEmployees]);
 
   // Load holidays for the period range
   const { data: holidays } = useQuery({
@@ -293,10 +317,122 @@ export default function ShiftTimeOverride({
     }
   };
 
-  if (uniqueEmployees.length === 0 && uniqueAllEmployees.length === 0) return null;
+  // --- Section 3: Generate daily (Mo-So) shifts ---
+  const toggleDaily = (id: string) => {
+    setDailyIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAllDaily = () => {
+    if (dailyIds.size === uniqueDailyEmployees.length) {
+      setDailyIds(new Set());
+    } else {
+      setDailyIds(new Set(uniqueDailyEmployees.map((e) => e.id)));
+    }
+  };
+
+  const handleDailyGenerate = async () => {
+    if (dailyIds.size === 0 || weeks.length === 0) return;
+    setIsDailyGenerating(true);
+    try {
+      // Collect ALL dates across all weeks
+      const allDates: { date: string; week: Week }[] = [];
+      for (const week of weeks) {
+        const dates = getAllDates(week.start_date, week.end_date);
+        for (const d of dates) {
+          allDates.push({ date: d, week });
+        }
+      }
+
+      if (allDates.length === 0) {
+        toast({ title: "Keine Tage in der Periode gefunden." });
+        setIsDailyGenerating(false);
+        return;
+      }
+
+      const selectedEmps = uniqueDailyEmployees.filter((e) => dailyIds.has(e.id));
+      let created = 0;
+      let updated = 0;
+
+      for (const emp of selectedEmps) {
+        const department = emp.department || "";
+
+        const { data: existing, error: loadErr } = await supabase
+          .from("zt_shifts")
+          .select("id, shift_date, week_id")
+          .in("week_id", weekIds)
+          .eq("employee_id", emp.id)
+          .eq("department", department);
+        if (loadErr) throw loadErr;
+
+        const existingByDate = new Map((existing ?? []).map((s) => [s.shift_date, s]));
+
+        for (const { date, week } of allDates) {
+          const dayOfWeek = new Date(date + "T12:00:00").getDay();
+          const isSundayOrHoliday = dayOfWeek === 0 || holidaySet.has(date);
+          const hours = calculateShiftHours("17:00", "01:00", isSundayOrHoliday);
+
+          const existingShift = existingByDate.get(date);
+          if (existingShift) {
+            const { error: upErr } = await supabase
+              .from("zt_shifts")
+              .update({
+                start_time: "17:00",
+                end_time: "01:00",
+                total_hours: hours.totalHours,
+                evening_hours: hours.eveningHours,
+                night_hours: hours.nightHours,
+                sunday_holiday_hours: hours.sundayHolidayHours,
+                is_holiday: isSundayOrHoliday,
+                absence_type: null,
+              })
+              .eq("id", existingShift.id);
+            if (upErr) throw upErr;
+            updated++;
+          } else {
+            const { error: insErr } = await supabase
+              .from("zt_shifts")
+              .insert({
+                week_id: week.id,
+                employee_id: emp.id,
+                shift_date: date,
+                department,
+                start_time: "17:00",
+                end_time: "01:00",
+                total_hours: hours.totalHours,
+                evening_hours: hours.eveningHours,
+                night_hours: hours.nightHours,
+                sunday_holiday_hours: hours.sundayHolidayHours,
+                is_holiday: isSundayOrHoliday,
+              });
+            if (insErr) throw insErr;
+            created++;
+          }
+        }
+      }
+
+      toast({
+        title: `${created} Schichten erzeugt, ${updated} aktualisiert`,
+        description: "Mo–So 17:00–01:00 für die gesamte Periode.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["zt-summary-shifts"] });
+      queryClient.invalidateQueries({ queryKey: ["zt-shifts"] });
+    } catch (err: any) {
+      toast({ title: "Fehler beim Erzeugen", description: err.message, variant: "destructive" });
+    } finally {
+      setIsDailyGenerating(false);
+    }
+  };
+
+  if (uniqueEmployees.length === 0 && uniqueAllEmployees.length === 0 && uniqueDailyEmployees.length === 0) return null;
 
   const allSelected = selectedIds.size === uniqueEmployees.length && uniqueEmployees.length > 0;
   const allGenerateSelected = generateIds.size === uniqueAllEmployees.length && uniqueAllEmployees.length > 0;
+  const allDailySelected = dailyIds.size === uniqueDailyEmployees.length && uniqueDailyEmployees.length > 0;
 
   return (
     <Card>
@@ -378,6 +514,44 @@ export default function ShiftTimeOverride({
                 </Button>
                 <Button size="sm" disabled={generateIds.size === 0 || isGenerating} onClick={handleGenerate}>
                   {isGenerating && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
+                  Schichten erzeugen
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Section 3: Generate daily Mo-So shifts */}
+        {uniqueDailyEmployees.length > 0 && (
+          <>
+            <Separator />
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tägliche Schichten erzeugen (Mo–So)</p>
+              <p className="text-xs text-muted-foreground">
+                Erzeugt/überschreibt Einträge mit 17:00–01:00 für jeden Tag der Periode (inkl. Wochenende).
+              </p>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {uniqueDailyEmployees.map((emp) => (
+                  <div key={emp.id} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`daily-${emp.id}`}
+                      checked={dailyIds.has(emp.id)}
+                      onCheckedChange={() => toggleDaily(emp.id)}
+                    />
+                    <Label htmlFor={`daily-${emp.id}`} className="text-sm cursor-pointer">
+                      {emp.nickname ? `${emp.nickname} – ` : ""}
+                      {[emp.first_name, emp.last_name].filter(Boolean).join(" ") || emp.name}
+                      {emp.department ? ` (${emp.department})` : ""}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={toggleAllDaily}>
+                  {allDailySelected ? "Keine auswählen" : "Alle auswählen"}
+                </Button>
+                <Button size="sm" disabled={dailyIds.size === 0 || isDailyGenerating} onClick={handleDailyGenerate}>
+                  {isDailyGenerating && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
                   Schichten erzeugen
                 </Button>
               </div>

@@ -30,7 +30,7 @@ type Shift = {
 };
 
 export default function ZtZusammenfassung() {
-  const { restaurantId } = useRestaurant();
+  const { restaurantId, restaurantSlug } = useRestaurant();
   const { selectedPeriodId, setSelectedPeriodId, periods, weeks: contextWeeks } = useZt();
   const { data: restaurantEmployees } = useRestaurantEmployees(restaurantId);
   const [cumulated, setCumulated] = useState(false);
@@ -282,6 +282,13 @@ export default function ZtZusammenfassung() {
         <ShiftTimeOverride
           employeesWithShifts={employeesWithShifts}
           allEmployees={sortedEmployees.filter(e => [e.name, e.first_name, e.nickname].some(n => n?.toLowerCase().includes("peter")))}
+          dailyEmployees={restaurantSlug === "yum"
+            ? sortedEmployees.filter(e =>
+                [e.name, e.last_name].some(n => n?.toLowerCase().includes("schumann")) ||
+                e.nickname?.toLowerCase().includes("chefin")
+              )
+            : []
+          }
           weekIds={weekIds}
           weeks={weeks ?? []}
           periodStartDate={selectedPeriod.start_date}
