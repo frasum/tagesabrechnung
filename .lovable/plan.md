@@ -1,21 +1,31 @@
 
 
-## Plan: "Am Pool beteiligt"-Checkbox entfernen
+## Plan: Export-Funktionen für Zusammenfassung (PDF + Excel)
 
-Der Pool-Status wird bereits in den Stammdaten des Mitarbeiters festgelegt (`participates_in_pool`). Die Checkbox auf der Abrechnungsseite ist daher redundant und soll entfernt werden.
+Zwei neue Export-Dateien analog zum bestehenden Wochenplan-Export, plus Buttons in der Zusammenfassungs-UI.
 
-### Änderung in `src/pages/WaiterCashUp.tsx`
+### 1. Neue Datei `src/lib/exportZusammenfassungPdf.ts`
 
-1. **Checkbox + Label entfernen** (Zeilen 293–308): Die gesamte Checkbox-UI im CardHeader entfernen.
+- Querformat A4, eine Seite
+- Titel: "Zusammenfassung – {periodLabel}"
+- Tabelle mit jsPDF autoTable: gleiche Struktur wie die UI-Tabelle
+  - Spalten: Mitarbeiter | W1 | W2 | ... | Gesamt | Schichten | So/Fei | 20-24 | 24-x | U | K
+  - Abteilungs-Header-Zeilen (farbig hinterlegt)
+  - Abteilungs-Summenzeilen
+  - Gesamtsumme als letzte Zeile
+- Berechnung der Daten identisch zur bestehenden Komponente (getEmployeeTotals, getWeeklyHours etc.)
+- Parameter: `periodLabel`, `employees`, `weeks`, `shifts`
 
-2. **State beibehalten**: `newParticipatesInPool` bleibt als interne Variable, wird aber ausschließlich automatisch gesetzt:
-   - Beim Auswählen eines Mitarbeiters (Zeile 318–321, bereits vorhanden)
-   - Beim Bearbeiten einer bestehenden Schicht (Zeile 97, bereits vorhanden)
-   - Beim Zurücksetzen (Zeile 83, bereits vorhanden)
+### 2. Neue Datei `src/lib/exportZusammenfassungExcel.ts`
 
-3. **Team-Mitglieder-Bereich**: Die bedingte Anzeige `{newParticipatesInPool && ...}` bleibt bestehen, damit bei Nicht-Pool-Mitarbeitern keine Team-Auswahl erscheint.
+- Ein Sheet "Zusammenfassung"
+- Gleiche tabellarische Struktur wie PDF
+- Numerische Werte als Zahlen (nicht formatierte Strings), damit in Excel rechenbar
+- Abteilungs-Header als eigene Zeilen
 
-4. **Speicherlogik**: `participates_in_pool: newParticipatesInPool` wird weiterhin in die DB geschrieben (Zeilen 140, 159), da der Wert dort für die Trinkgeldberechnung gebraucht wird.
+### 3. Änderung in `src/pages/zeiterfassung/ZtZusammenfassung.tsx`
 
-Einzige sichtbare Änderung: Die Checkbox verschwindet aus dem Formular-Header.
+- Import der beiden Export-Funktionen + `Button` + `FileDown`/`FileSpreadsheet` Icons
+- Zwei Buttons neben dem Perioden-Select: "PDF" und "Excel"
+- Buttons rufen die Export-Funktionen mit den bereits vorhandenen Daten auf (`employeesWithShifts`, `weeks`, `shifts`, `selectedPeriod.label`)
 
