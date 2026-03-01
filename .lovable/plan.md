@@ -1,26 +1,20 @@
 
 
-## Paginierung für die Audit-Log-Liste
+## Zeiterfassung-Berechtigung hinzufügen
+
+Einfache Ergänzung: Der Pfad `zeiterfassung` muss in zwei Stellen in `src/types/permissions.ts` hinzugefügt werden.
 
 ### Änderungen
 
-**1. `src/hooks/useAuditLogs.ts` — `useAuditLogs` erweitern**
-- Parameter `page` (default 0) hinzufügen, `PAGE_SIZE = 30`
-- Query mit `{ count: 'exact' }` und `.range(page * 30, (page + 1) * 30 - 1)`
-- Rückgabe: `{ logs, totalCount }` statt flachem Array
-- QueryKey enthält `page`
-- Filter `table_name = 'waiter_shifts'` in die DB-Query verschieben (statt client-seitig), damit die Paginierung korrekt zählt
-
-**2. `src/components/audit/AuditLogList.tsx` — Paginierungs-UI**
-- `page` State (default 0) hinzufügen
-- `totalCount` aus Hook auslesen, `totalPages` berechnen
-- Unter den Log-Einträgen Pagination-Komponenten (Vor/Zurück + Seitenzahlen) anzeigen
-- Client-seitigen `waiterShiftLogs`-Filter entfernen (wird jetzt in DB gefiltert)
+**`src/types/permissions.ts`**
+1. `NAV_PERMISSIONS`: Neuen Eintrag `'zeiterfassung': { label: 'Zeiterfassung', description: 'Arbeitszeiten verwalten', minLevel: 'manager' }` hinzufügen
+2. `MANAGER_NAV_ITEMS`: Neuen Eintrag `{ path: 'zeiterfassung', label: 'Zeiterfassung' }` hinzufügen
 
 ### Betroffene Dateien
 
 | Datei | Änderung |
 |---|---|
-| `src/hooks/useAuditLogs.ts` | `page`-Parameter, `count: 'exact'`, `.range()`, `.eq('table_name', 'waiter_shifts')` |
-| `src/components/audit/AuditLogList.tsx` | Page-State, Pagination-UI, DB-Filter statt Client-Filter |
+| `src/types/permissions.ts` | Zeiterfassung in beide Arrays einfügen |
+
+Keine weiteren Dateien betroffen -- die PermissionManagement-Seite und die Navigation lesen bereits aus diesen Arrays.
 
