@@ -15,6 +15,7 @@ import { de } from "date-fns/locale";
 import { toast } from "sonner";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useRestaurant } from "@/hooks/useRestaurant";
 import { useZt } from "@/contexts/ZtContext";
 import { useRestaurantEmployees, type RestaurantEmployee } from "@/hooks/useRestaurantEmployees";
@@ -117,9 +118,9 @@ export default function ZtWochenplan() {
   const { data: holidays } = useQuery({
     queryKey: ["bavarian-holidays"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("bavarian_holidays").select("holiday_date");
+      const { data, error } = await supabase.from("bavarian_holidays").select("holiday_date, name");
       if (error) throw error;
-      return new Set(data.map((h) => h.holiday_date));
+      return new Map(data.map((h) => [h.holiday_date, h.name]));
     },
   });
 
@@ -395,6 +396,7 @@ export default function ZtWochenplan() {
                   {weekDays.map((day, dayIdx) => {
                     const dateStr = format(day, "yyyy-MM-dd");
                     const isSunHol = sundayHolidayDays.has(dateStr);
+                    const holidayName = holidays?.get(dateStr);
                     return (
                       <th
                         key={day.toISOString()}
@@ -402,7 +404,18 @@ export default function ZtWochenplan() {
                         data-date={dateStr}
                         className={`text-center p-1.5 font-semibold min-w-[120px] border-b border-border text-xs ${dayIdx > 0 ? "day-separator" : ""} ${holidayDays.has(dateStr) ? "sunday-col" : ""} ${!activeDates.has(dateStr) ? "inactive-day" : ""}`}
                       >
-                        <span className={`${holidayDays.has(dateStr) ? "text-destructive font-bold" : ""} ${!activeDates.has(dateStr) ? "text-muted-foreground" : ""}`}>{format(day, "EE", { locale: de })} {format(day, "dd.MM")}</span>
+                        {holidayName ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="text-destructive font-bold cursor-help">{format(day, "EE", { locale: de })} {format(day, "dd.MM")}</span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{holidayName}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          <span className={`${!activeDates.has(dateStr) ? "text-muted-foreground" : ""}`}>{format(day, "EE", { locale: de })} {format(day, "dd.MM")}</span>
+                        )}
                       </th>
                     );
                   })}
