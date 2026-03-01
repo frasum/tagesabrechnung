@@ -6,6 +6,10 @@ import { formatHours, DEPARTMENT_ORDER, getDepartmentBgClass, countVacationDays,
 import { useRestaurant } from "@/hooks/useRestaurant";
 import { useRestaurantEmployees } from "@/hooks/useRestaurantEmployees";
 import { useZt } from "@/contexts/ZtContext";
+import { Button } from "@/components/ui/button";
+import { FileDown, FileSpreadsheet } from "lucide-react";
+import { exportZusammenfassungPdf } from "@/lib/exportZusammenfassungPdf";
+import { exportZusammenfassungExcel } from "@/lib/exportZusammenfassungExcel";
 
 type Shift = {
   id: string;
@@ -115,16 +119,48 @@ export default function ZtZusammenfassung() {
         <h1 className="text-2xl font-bold">Zusammenfassung</h1>
       </div>
 
-      <Select value={selectedPeriodId} onValueChange={setSelectedPeriodId}>
-        <SelectTrigger className="w-[200px]">
-          <SelectValue placeholder="Periode wählen" />
-        </SelectTrigger>
-        <SelectContent>
-          {periods?.map((p) => (
-            <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <div className="flex items-center gap-2 flex-wrap">
+        <Select value={selectedPeriodId} onValueChange={setSelectedPeriodId}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Periode wählen" />
+          </SelectTrigger>
+          <SelectContent>
+            {periods?.map((p) => (
+              <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={!employeesWithShifts.length}
+          onClick={() => {
+            const selectedPeriod = periods?.find(p => p.id === selectedPeriodId);
+            if (selectedPeriod && weeks && shifts) {
+              exportZusammenfassungPdf(selectedPeriod.label, employeesWithShifts, weeks, shifts);
+            }
+          }}
+        >
+          <FileDown className="mr-1 h-4 w-4" />
+          PDF
+        </Button>
+
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={!employeesWithShifts.length}
+          onClick={() => {
+            const selectedPeriod = periods?.find(p => p.id === selectedPeriodId);
+            if (selectedPeriod && weeks && shifts) {
+              exportZusammenfassungExcel(selectedPeriod.label, employeesWithShifts, weeks, shifts);
+            }
+          }}
+        >
+          <FileSpreadsheet className="mr-1 h-4 w-4" />
+          Excel
+        </Button>
+      </div>
 
       <div className="overflow-x-auto border rounded-lg">
         <table className="w-full text-sm">
