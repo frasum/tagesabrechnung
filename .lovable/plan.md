@@ -1,40 +1,19 @@
 
 
-## Fix: "Alle" Modus zeigt nur Spicery-Mitarbeiter
+## Takeaway-Umsatz in der Umsatzentwicklung-Grafik
 
-### Analyse
+### Änderung
 
-Die Netzwerk-Requests zeigen `restaurant_id=eq.a1710390...` (nur Spicery) statt `restaurant_id=in.(...)` (beide). Das deutet darauf hin, dass `allRestaurantIds` zum Zeitpunkt der Query-Ausführung noch nicht beide IDs enthält oder ein Caching-Problem vorliegt.
+In `src/pages/Statistics.tsx` wird dem bestehenden AreaChart eine dritte Area `deliveryRevenue` (Name: "Takeaway") hinzugefügt:
 
-Zusätzlich: `restaurantIds.sort()` im Cache-Key **mutiert** das memoized Array direkt, was zu React-Problemen führen kann.
+1. Neuer `linearGradient` mit `chart-3` Farbe (neben den bestehenden für Umsatz und Bargeld)
+2. Neue `<Area>` mit `dataKey="deliveryRevenue"` und Name "Takeaway"
 
-### Änderungen
+Die Daten sind bereits vorhanden -- `chartData` enthält `deliveryRevenue` aus dem `useStatistics`-Hook. Es muss nur die visuelle Darstellung ergänzt werden.
 
-**`src/hooks/useStatistics.ts`** und **`src/hooks/useStatisticsComparison.ts`**:
-- Cache-Key: `[...restaurantIds].sort().join(',')` statt `restaurantIds.sort().join(',')` (Array-Kopie vor Sort)
+### Datei
 
-**`src/pages/Statistics.tsx`**:
-- Vereinfachte, explizitere Logik für die Hook-Aufrufe:
-  - `statsMode === 'single'`: `useStatistics(range, customRange, restaurantId)`
-  - `statsMode === 'all'` oder `'compare'`: `useStatistics(range, customRange, undefined, allRestaurantIds)` -- aber nur wenn `allRestaurantIds.length > 0`
-  - Fallback: Wenn `allRestaurantIds` leer ist (noch ladend), die Hooks mit `enabled: false` blocken statt mit leeren Arrays aufzurufen
-- `isLoading`-State berücksichtigt auch den Ladezustand von `allRestaurants`, um keine veralteten Daten anzuzeigen
-
-### Technische Details
-
-```typescript
-// Robusterer Cache-Key (keine Mutation)
-const cacheKey = restaurantIds ? [...restaurantIds].sort().join(',') : restaurantId;
-
-// Statistics.tsx - klarere Trennung
-const isMultiMode = statsMode !== 'single';
-const multiReady = isMultiMode && allRestaurantIds.length > 1;
-
-const { data, isLoading } = useStatistics(
-  timeRange,
-  customRange,
-  isMultiMode ? undefined : restaurantId,
-  multiReady ? allRestaurantIds : undefined
-);
-```
+| Datei | Änderung |
+|---|---|
+| `src/pages/Statistics.tsx` | Dritte Area + Gradient für Takeaway-Umsatz im Umsatzentwicklung-Chart |
 
