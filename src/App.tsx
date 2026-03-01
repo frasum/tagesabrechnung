@@ -36,6 +36,7 @@ const ZtZusammenfassung = lazy(() => import("./pages/zeiterfassung/ZtZusammenfas
 const ZtBuchhaltung = lazy(() => import("./pages/zeiterfassung/ZtBuchhaltung"));
 const ZtPerioden = lazy(() => import("./pages/zeiterfassung/ZtPerioden"));
 const SharedZtView = lazy(() => import("./pages/shared/SharedZtView"));
+const PayrollPortal = lazy(() => import("./pages/shared/PayrollPortal"));
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -117,6 +118,7 @@ function AppContent() {
           <Route path="/install" element={<Install />} />
           <Route path="/confirm-login/:token" element={<ConfirmLoginPage />} />
           <Route path="/shared/zt/:token" element={<SharedZtView />} />
+          <Route path="/lohnbuero" element={<PayrollPortal />} />
           <Route path="/staff" element={<ProtectedRoute requiredLevel="admin"><StaffManagement /></ProtectedRoute>} />
           <Route path="/permissions" element={<ProtectedRoute requiredLevel="admin"><PermissionManagement /></ProtectedRoute>} />
           <Route path="/telegram" element={<ProtectedRoute requiredLevel="admin"><TelegramSettings /></ProtectedRoute>} />

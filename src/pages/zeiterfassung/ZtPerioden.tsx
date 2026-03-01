@@ -1,13 +1,18 @@
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Lock, Unlock, Share2, Copy, XCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
+import { Lock, Unlock, Share2, Copy, XCircle, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
 import { useRestaurant } from "@/hooks/useRestaurant";
 import { useZt } from "@/contexts/ZtContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 function generateToken(): string {
   const bytes = new Uint8Array(32);
@@ -19,6 +24,49 @@ export default function ZtPerioden() {
   const queryClient = useQueryClient();
   const { restaurantId } = useRestaurant();
   const { periods, isPeriodsLoading } = useZt();
+  const { user } = useAuth();
+  const isAdmin = user?.permissionLevel === "admin";
+  const staffId = user?.staffId;
+
+  const [newPin, setNewPin] = useState("");
+  const PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+  const API_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+  // Load current PIN (admin only)
+  const { data: currentPin } = useQuery({
+    queryKey: ["payroll-pin", staffId],
+    queryFn: async () => {
+      const res = await fetch(`https://${PROJECT_ID}.supabase.co/functions/v1/payroll-office-auth`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: API_KEY },
+        body: JSON.stringify({ action: "get_pin", caller_staff_id: staffId }),
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.pin as string | null;
+    },
+    enabled: isAdmin && !!staffId,
+  });
+
+  useEffect(() => {
+    if (currentPin) setNewPin(currentPin);
+  }, [currentPin]);
+
+  const savePin = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`https://${PROJECT_ID}.supabase.co/functions/v1/payroll-office-auth`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: API_KEY },
+        body: JSON.stringify({ action: "set_pin", new_pin: newPin, caller_staff_id: staffId }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payroll-pin"] });
+      toast.success("PIN gespeichert");
+    },
+    onError: (e) => toast.error(e.message || "Fehler beim Speichern"),
+  });
 
   const { data: weeksByPeriod } = useQuery({
     queryKey: ["zt-all-weeks", restaurantId],
@@ -164,6 +212,57 @@ export default function ZtPerioden() {
           <p className="text-muted-foreground text-center py-8">Keine Perioden vorhanden</p>
         )}
       </div>
+
+      {/* Lohnbüro PIN Settings (Admin only) */}
+      {isAdmin && (
+        <Card className="p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <KeyRound className="h-5 w-5 text-primary" />
+            <h2 className="font-bold text-lg">Lohnbüro-Zugang</h2>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Globaler PIN-Code für das Lohnbüro-Portal. Das Lohnbüro sieht dort alle freigegebenen Perioden aller Restaurants.
+          </p>
+          <div className="flex items-end gap-3 flex-wrap">
+            <div className="space-y-1">
+              <Label htmlFor="payroll-pin">PIN (4–6 Ziffern)</Label>
+              <Input
+                id="payroll-pin"
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                placeholder="z.B. 4821"
+                value={newPin}
+                onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ""))}
+                className="w-[120px] text-center tracking-widest"
+              />
+            </div>
+            <Button
+              size="sm"
+              disabled={!/^\d{4,6}$/.test(newPin) || savePin.isPending}
+              onClick={() => savePin.mutate()}
+            >
+              PIN speichern
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                const url = `${window.location.origin}/lohnbuero`;
+                navigator.clipboard.writeText(url);
+                toast.success("Portal-URL kopiert!");
+              }}
+            >
+              <Copy className="h-3 w-3 mr-1" /> Portal-URL kopieren
+            </Button>
+          </div>
+          {currentPin && (
+            <p className="text-xs text-muted-foreground">
+              Aktueller PIN: <span className="font-mono font-bold">{currentPin}</span> · URL: <span className="font-mono">{window.location.origin}/lohnbuero</span>
+            </p>
+          )}
+        </Card>
+      )}
     </div>
   );
 }
