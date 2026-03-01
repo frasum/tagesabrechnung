@@ -4,6 +4,7 @@ import { useCreateAuditLog } from './useAuditLogs';
 import { useAuth } from '@/contexts/AuthContext';
 import type { WaiterShift } from '@/types/database';
 import type { Json } from '@/integrations/supabase/types';
+import { syncWaiterShiftToZt } from '@/lib/syncWaiterToZt';
 
 type UpdateWaiterShiftParams = {
   id: string;
@@ -87,8 +88,24 @@ export function useUpdateWaiterShiftWithAudit() {
           restaurant_id: restaurantId,
         });
       } catch (auditError) {
-        // Log audit errors but don't fail the mutation
         console.error('Failed to create audit log:', auditError);
+      }
+
+      // Sync to Zeiterfassung
+      const { data: session } = await supabase
+        .from('sessions')
+        .select('session_date')
+        .eq('id', sessionId)
+        .single();
+      if (session) {
+        syncWaiterShiftToZt({
+          waiterName: newData.waiter_name,
+          additionalWaiters: newData.additional_waiters || [],
+          sessionDate: session.session_date,
+          shiftStart: newData.shift_start || '16:00',
+          shiftEnd: newData.shift_end || '22:00',
+          restaurantId,
+        });
       }
     },
   });

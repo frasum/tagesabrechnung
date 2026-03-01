@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import type { Session, WaiterShift, CardTransaction, KitchenShift, Expense } from '@/types/database';
+import { syncWaiterShiftToZt } from '@/lib/syncWaiterToZt';
 
 export function useSession(date: Date, restaurantId: string | null) {
   const dateStr = format(date, 'yyyy-MM-dd');
@@ -160,10 +161,27 @@ export function useCreateWaiterShift() {
       if (error) throw error;
       return data as WaiterShift;
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['waiter-shifts', data.session_id] });
       queryClient.invalidateQueries({ queryKey: ['previous-day-deficit'] });
       queryClient.invalidateQueries({ queryKey: ['cash-balance'] });
+
+      // Sync to Zeiterfassung
+      const { data: session } = await supabase
+        .from('sessions')
+        .select('session_date, restaurant_id')
+        .eq('id', data.session_id)
+        .single();
+      if (session) {
+        syncWaiterShiftToZt({
+          waiterName: data.waiter_name,
+          additionalWaiters: data.additional_waiters || [],
+          sessionDate: session.session_date,
+          shiftStart: data.shift_start || '16:00',
+          shiftEnd: data.shift_end || '22:00',
+          restaurantId: session.restaurant_id,
+        });
+      }
     },
   });
 }
