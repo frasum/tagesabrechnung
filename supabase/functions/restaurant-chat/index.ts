@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
     const [sessionsRes, staffRes, restaurantsRes] = await Promise.all([
       supabase
         .from("sessions")
-        .select("id, session_date, restaurant_id, pos_total, terminal_1_total, terminal_2_total, ordersmart_revenue, wolt_revenue, guest_count, vouchers_sold, vouchers_redeemed, einladung, sonstige_einnahme, notes, created_by_name")
+        .select("id, session_date, restaurant_id, pos_total, terminal_1_total, terminal_2_total, ordersmart_revenue, wolt_revenue, guest_count, vouchers_sold, vouchers_redeemed, finedine_vouchers, einladung, sonstige_einnahme, notes, created_by_name")
         .in("restaurant_id", restaurant_ids)
         .gte("session_date", sinceStr)
         .order("session_date", { ascending: false }),
@@ -108,11 +108,11 @@ Deno.serve(async (req) => {
     });
 
     contextParts.push("\n=== SESSIONS (letzte 90 Tage) ===");
-    contextParts.push("Datum | Restaurant | Kassen-Umsatz | Kreditkarten | OrderSmart | Wolt | Gäste | Notizen");
+    contextParts.push("Datum | Restaurant | Kassen-Umsatz | Kreditkarten | OrderSmart | Wolt | Gutschein-VK | Gutschein-Einl | FineDine-Gutscheine | Einladung | SoEinnahme | Gäste | Notizen");
     sessions.forEach((s: any) => {
       const cards = (s.terminal_1_total || 0) + (s.terminal_2_total || 0);
       contextParts.push(
-        `${s.session_date} | ${restaurantMap[s.restaurant_id] || "?"} | ${s.pos_total || 0}€ | ${cards}€ | ${s.ordersmart_revenue || 0}€ | ${s.wolt_revenue || 0}€ | ${s.guest_count || 0} | ${s.notes || "-"}`
+        `${s.session_date} | ${restaurantMap[s.restaurant_id] || "?"} | ${s.pos_total || 0}€ | ${cards}€ | ${s.ordersmart_revenue || 0}€ | ${s.wolt_revenue || 0}€ | ${s.vouchers_sold || 0}€ | ${s.vouchers_redeemed || 0}€ | ${s.finedine_vouchers || 0}€ | ${s.einladung || 0}€ | ${s.sonstige_einnahme || 0}€ | ${s.guest_count || 0} | ${s.notes || "-"}`
       );
     });
 
