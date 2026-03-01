@@ -1,22 +1,28 @@
 
 
-## Problem: Sumit fehlt in der Zeiterfassung
+## Problem: Restaurant-Wechsel setzt Periode/Woche nicht zurück
 
-Sumit (SUMIT, perso_nr 109) ist beiden Restaurants (Spicery + YUM) zugewiesen, hat aber bei keinem eine **Abteilung für die Zeiterfassung** (`zt_department`) gesetzt. Die Zeiterfassungs-Ansichten filtern nur Mitarbeiter mit gesetztem `zt_department` — daher taucht Sumit nicht auf.
+Wenn man von Spicery zu YUM wechselt (oder umgekehrt), behält der `ZtContext` die zuvor gewählte Periode bei. Da die Perioden-IDs restaurant-spezifisch sind, werden danach die falschen Wochen und Schichten geladen.
+
+### Ursache
+
+In `src/contexts/ZtContext.tsx`, Zeile 75-78:
+```typescript
+useEffect(() => {
+  if (!periods?.length || selectedPeriodId) return; // ← skippt wenn schon gesetzt
+  ...
+}, [periods, selectedPeriodId]);
+```
+
+Wenn `selectedPeriodId` bereits einen Wert hat (von Spicery), wird der Auto-Select für YUM übersprungen. Die Schichten werden dann für Spicery-Wochen geladen, aber die Mitarbeiterliste zeigt YUM-Mitarbeiter -- keine Übereinstimmungen, leere Tabelle.
 
 ### Lösung
 
-`zt_department` für Sumit setzen. Laut dem Screenshot gehört Sumit zur **Küche**.
+Ein `useEffect` hinzufügen, der `selectedPeriodId` und `selectedWeekId` zurücksetzt, wenn sich `restaurantId` ändert.
 
 ### Änderung
 
-Eine Migration, die `zt_department = 'Küche'` für Sumit bei beiden Restaurants setzt:
-
-```sql
-UPDATE staff_restaurants
-SET zt_department = 'Küche'
-WHERE staff_id = '0cbe9b9b-de09-4cb8-b0ee-936d15615a70';
-```
-
-Keine Code-Änderungen nötig.
+| Datei | Änderung |
+|---|---|
+| `src/contexts/ZtContext.tsx` | `useEffect` ergänzen: bei `restaurantId`-Änderung beide IDs zurücksetzen |
 
