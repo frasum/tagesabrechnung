@@ -60,10 +60,10 @@ export default function Login() {
 
   // Redirect if already logged in (including OAuth users)
   useEffect(() => {
-    if (user) {
+    if (user && !pendingRoleSelection) {
       navigate('/select-restaurant', { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, navigate, pendingRoleSelection]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

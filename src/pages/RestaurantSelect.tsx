@@ -47,13 +47,16 @@ export default function RestaurantSelect() {
         .map((sr: any) => sr.restaurants as Restaurant)
         .filter(Boolean);
 
-      if (mapped.length === 1) {
-        const slug = mapped[0].slug;
+      // Deduplizieren nach ID
+      const unique = Array.from(new Map(mapped.map(r => [r.id, r])).values());
+
+      if (unique.length === 1) {
+        const slug = unique[0].slug;
         navigate(isStaff || isMobile ? `/${slug}/waiter` : `/${slug}`, { replace: true });
         return;
       }
 
-      setRestaurants(mapped);
+      setRestaurants(unique);
       setIsLoading(false);
 
       // Show WebAuthn prompt after loading restaurants
