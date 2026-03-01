@@ -6,11 +6,17 @@ export type StaffRole = 'waiter' | 'kitchen' | 'both';
 
 export interface StaffRestaurant {
   restaurant_id: string;
+  zt_department: string | null;
   restaurants: {
     id: string;
     name: string;
     slug: string;
   };
+}
+
+export interface RestaurantAssignment {
+  restaurant_id: string;
+  zt_department: string | null;
 }
 
 export interface LinkedProfile {
@@ -57,6 +63,7 @@ export interface StaffInput {
   is_active?: boolean;
   pin_code?: string;
   restaurant_ids?: string[];
+  restaurant_assignments?: RestaurantAssignment[];
 }
 
 export function useStaff(role?: StaffRole, options?: { includeLinkedProfiles?: boolean }) {
@@ -71,6 +78,7 @@ export function useStaff(role?: StaffRole, options?: { includeLinkedProfiles?: b
           *,
           staff_restaurants (
             restaurant_id,
+            zt_department,
             restaurants (
               id,
               name,
@@ -162,6 +170,7 @@ export function useActiveStaff(role?: StaffRole) {
           *,
           staff_restaurants (
             restaurant_id,
+            zt_department,
             restaurants (
               id,
               name,
@@ -208,6 +217,7 @@ export function useActiveStaffByRestaurant(restaurantId: string | null, role?: S
           *,
           staff_restaurants (
             restaurant_id,
+            zt_department,
             restaurants (
               id,
               name,
@@ -236,7 +246,7 @@ export function useCreateStaff() {
 
   return useMutation({
     mutationFn: async (input: StaffInput) => {
-      const { restaurant_ids, pin_code, ...staffData } = input;
+      const { restaurant_ids, restaurant_assignments, pin_code, ...staffData } = input;
       
       // Check for duplicate staff name
       const { data: duplicateCheck, error: checkError } = await supabase
@@ -247,7 +257,7 @@ export function useCreateStaff() {
         throw new Error(duplicateCheck[0].error_message || 'Ein Mitarbeiter mit diesem Namen existiert bereits.');
       }
       
-      // Create the staff member (without pin_code, which is in separate table)
+      // Create the staff member
       const { data: staff, error } = await supabase
         .from('staff')
         .insert(staffData)
@@ -255,13 +265,15 @@ export function useCreateStaff() {
         .single();
       if (error) throw error;
       
-      // Add restaurant assignments if provided
-      if (restaurant_ids && restaurant_ids.length > 0) {
+      // Add restaurant assignments with zt_department
+      const assignments = restaurant_assignments ?? restaurant_ids?.map(rid => ({ restaurant_id: rid, zt_department: null }));
+      if (assignments && assignments.length > 0) {
         const { error: assignError } = await supabase
           .from('staff_restaurants')
-          .insert(restaurant_ids.map(rid => ({
+          .insert(assignments.map(a => ({
             staff_id: staff.id,
-            restaurant_id: rid,
+            restaurant_id: a.restaurant_id,
+            zt_department: a.zt_department,
           })));
         if (assignError) throw assignError;
       }
@@ -304,7 +316,7 @@ export function useUpdateStaff() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, restaurant_ids, pin_code, ...staffData }: Partial<StaffInput> & { id: string }) => {
+    mutationFn: async ({ id, restaurant_ids, restaurant_assignments, pin_code, ...staffData }: Partial<StaffInput> & { id: string }) => {
       // Check for duplicate staff name if name is being changed
       if (staffData.name) {
         const { data: duplicateCheck, error: checkError } = await supabase
@@ -316,7 +328,7 @@ export function useUpdateStaff() {
         }
       }
       
-      // Update the staff member (without pin_code, which is in separate table)
+      // Update the staff member
       const { data, error } = await supabase
         .from('staff')
         .update(staffData)
@@ -326,7 +338,8 @@ export function useUpdateStaff() {
       if (error) throw error;
       
       // Update restaurant assignments if provided
-      if (restaurant_ids !== undefined) {
+      const assignments = restaurant_assignments ?? restaurant_ids?.map(rid => ({ restaurant_id: rid, zt_department: null }));
+      if (assignments !== undefined) {
         // Remove all existing assignments
         const { error: deleteError } = await supabase
           .from('staff_restaurants')
@@ -334,13 +347,14 @@ export function useUpdateStaff() {
           .eq('staff_id', id);
         if (deleteError) throw deleteError;
         
-        // Add new assignments
-        if (restaurant_ids.length > 0) {
+        // Add new assignments with zt_department
+        if (assignments && assignments.length > 0) {
           const { error: insertError } = await supabase
             .from('staff_restaurants')
-            .insert(restaurant_ids.map(rid => ({
+            .insert(assignments.map(a => ({
               staff_id: id,
-              restaurant_id: rid,
+              restaurant_id: a.restaurant_id,
+              zt_department: a.zt_department,
             })));
           if (insertError) throw insertError;
         }

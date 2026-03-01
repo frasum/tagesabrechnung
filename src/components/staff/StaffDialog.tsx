@@ -9,6 +9,10 @@ import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Staff, StaffInput, StaffRole } from '@/hooks/useStaff';
 import { useRestaurants } from '@/hooks/useRestaurant';
+import { Constants } from '@/integrations/supabase/types';
+
+type ZtDepartment = 'Küche' | 'GL' | 'Service';
+const ZT_DEPARTMENTS = Constants.public.Enums.zt_department;
 
 interface StaffDialogProps {
   open: boolean;
@@ -27,7 +31,7 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
   const [role, setRole] = useState<StaffRole>('waiter');
   const [isActive, setIsActive] = useState(true);
   const [pinCode, setPinCode] = useState('');
-  const [selectedRestaurants, setSelectedRestaurants] = useState<string[]>([]);
+  const [restaurantDepts, setRestaurantDepts] = useState<Record<string, ZtDepartment | null>>({});
 
   const { data: restaurants = [] } = useRestaurants();
 
@@ -46,7 +50,11 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       setRole(staff.role);
       setIsActive(staff.is_active ?? true);
       setPinCode('');
-      setSelectedRestaurants(staff.staff_restaurants?.map(sr => sr.restaurant_id) ?? []);
+      const depts: Record<string, ZtDepartment | null> = {};
+      for (const sr of staff.staff_restaurants ?? []) {
+        depts[sr.restaurant_id] = (sr.zt_department as ZtDepartment) ?? null;
+      }
+      setRestaurantDepts(depts);
     } else {
       // Creating new staff - start with empty selection
       setName('');
@@ -57,7 +65,7 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       setRole('waiter');
       setIsActive(true);
       setPinCode('');
-      setSelectedRestaurants([]);
+      setRestaurantDepts({});
     }
   }, [open, staff]);
 
@@ -67,12 +75,25 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
   };
 
   const handleRestaurantToggle = (restaurantId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedRestaurants(prev => [...prev, restaurantId]);
-    } else {
-      setSelectedRestaurants(prev => prev.filter(id => id !== restaurantId));
-    }
+    setRestaurantDepts(prev => {
+      const next = { ...prev };
+      if (checked) {
+        next[restaurantId] = null;
+      } else {
+        delete next[restaurantId];
+      }
+      return next;
+    });
   };
+
+  const handleDeptChange = (restaurantId: string, value: string) => {
+    setRestaurantDepts(prev => ({
+      ...prev,
+      [restaurantId]: value === '__none__' ? null : value as ZtDepartment,
+    }));
+  };
+
+  const selectedRestaurants = Object.keys(restaurantDepts);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,7 +108,10 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       role,
       is_active: isActive,
       pin_code: pinCode.length === 4 ? pinCode : undefined,
-      restaurant_ids: selectedRestaurants,
+      restaurant_assignments: selectedRestaurants.map(rid => ({
+        restaurant_id: rid,
+        zt_department: restaurantDepts[rid] ?? null,
+      })),
     });
   };
 
@@ -179,33 +203,52 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
               {restaurants.map((restaurant) => {
                 const isSelected = selectedRestaurants.includes(restaurant.id);
                 return (
-                  <div
-                    key={restaurant.id}
-                    onClick={() => handleRestaurantToggle(restaurant.id, !isSelected)}
-                    className={`
-                      flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer
-                      transition-all duration-200
-                      ${isSelected 
-                        ? 'border-primary bg-primary/10 shadow-sm' 
-                        : 'border-muted hover:border-muted-foreground/30 hover:bg-muted/50'
-                      }
-                    `}
-                  >
-                    <Checkbox
-                      id={`restaurant-${restaurant.id}`}
-                      checked={isSelected}
-                      onCheckedChange={(checked) => 
-                        handleRestaurantToggle(restaurant.id, checked as boolean)
-                      }
-                      className="pointer-events-none"
-                    />
-                    <div className="flex-1">
-                      <span className={`font-medium ${isSelected ? 'text-primary' : 'text-foreground'}`}>
-                        {restaurant.name}
-                      </span>
+                  <div key={restaurant.id} className="space-y-2">
+                    <div
+                      onClick={() => handleRestaurantToggle(restaurant.id, !isSelected)}
+                      className={`
+                        flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer
+                        transition-all duration-200
+                        ${isSelected 
+                          ? 'border-primary bg-primary/10 shadow-sm' 
+                          : 'border-muted hover:border-muted-foreground/30 hover:bg-muted/50'
+                        }
+                      `}
+                    >
+                      <Checkbox
+                        id={`restaurant-${restaurant.id}`}
+                        checked={isSelected}
+                        onCheckedChange={(checked) => 
+                          handleRestaurantToggle(restaurant.id, checked as boolean)
+                        }
+                        className="pointer-events-none"
+                      />
+                      <div className="flex-1">
+                        <span className={`font-medium ${isSelected ? 'text-primary' : 'text-foreground'}`}>
+                          {restaurant.name}
+                        </span>
+                      </div>
+                      {isSelected && (
+                        <div className="w-2 h-2 rounded-full bg-primary animate-scale-in" />
+                      )}
                     </div>
                     {isSelected && (
-                      <div className="w-2 h-2 rounded-full bg-primary animate-scale-in" />
+                      <div className="ml-8" onClick={(e) => e.stopPropagation()}>
+                        <Select
+                          value={restaurantDepts[restaurant.id] ?? '__none__'}
+                          onValueChange={(v) => handleDeptChange(restaurant.id, v)}
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder="Abteilung (ZT)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">— keine Abteilung</SelectItem>
+                            {ZT_DEPARTMENTS.map((dept) => (
+                              <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     )}
                   </div>
                 );
