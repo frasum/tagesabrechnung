@@ -1,28 +1,18 @@
 
-## Wochennummern mit Datumsbereich anzeigen
 
-An drei Stellen werden Wochen aktuell nur als "W1", "W2" etc. angezeigt. Dort wird zusaetzlich der Datumsbereich im Format "dd.MM." ergaenzt.
+## Mitarbeiter-Checkboxen in 3 Spalten anzeigen
 
-### Aenderungen
+In `src/components/zeiterfassung/ShiftTimeOverride.tsx` werden die drei Mitarbeiter-Listen (Bestehende Schichten, Mo-Fr, Mo-So) von einer einspaltigen Liste auf ein 3-Spalten-Grid umgestellt.
 
-**1. `src/pages/zeiterfassung/ZtWochenplan.tsx` (Zeile 418)**
-Button-Label von `W{w.week_number}` aendern zu:
-```
-W{w.week_number} ({format(parseISO(w.start_date), "dd.MM.")}–{format(parseISO(w.end_date), "dd.MM.")})
-```
-`format` und `parseISO` sind bereits importiert.
+### Aenderung
 
-**2. `src/pages/zeiterfassung/ZtZusammenfassung.tsx` (Zeile 200)**
-Tabellen-Header von `W{w.week_number}` aendern zu:
-```
-W{w.week_number} {format(parseISO(w.start_date), "dd.MM.")}–{format(parseISO(w.end_date), "dd.MM.")}
-```
-`format` und `parseISO` muessen ggf. importiert werden.
+Die drei `div`-Container mit `className="space-y-2 max-h-60 overflow-y-auto"` werden ersetzt durch:
 
-**3. `src/pages/shared/SharedZtView.tsx` (Zeile 457)**
-Gleiche Anpassung fuer die Lohnbuero-Ansicht:
 ```
-W{w.week_number} ({format(parseISO(w.start_date), "dd.MM.")}–{format(parseISO(w.end_date), "dd.MM.")})
+className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2"
 ```
 
-Ergebnis: Statt "W1" steht z.B. **"W1 (26.02.–02.03.)"**.
+Das `max-h-60 overflow-y-auto` wird entfernt, da bei 3 Spalten kein Scrollen mehr noetig ist.
+
+Betrifft drei Stellen in der Datei (ca. Zeilen 283, 310, 337).
+
