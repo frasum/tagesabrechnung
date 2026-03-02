@@ -54,7 +54,7 @@ const allNavItems: NavItem[] = [
   { path: 'kitchen', label: 'Küchen Trinkgeld', icon: ChefHat, minLevel: 'manager' },
   { path: 'summary', label: 'Tagesabrechnung', icon: FileText, minLevel: 'manager' },
   { path: 'zeiterfassung', label: 'Zeiterfassung', icon: Clock, minLevel: 'manager' },
-  { path: 'qr-poster', label: 'QR-Poster', icon: QrCode, minLevel: 'manager' },
+  { path: 'qr-poster', label: 'QR-Code', icon: QrCode, minLevel: 'manager' },
   { path: 'statistics', label: 'Statistiken', icon: BarChart3, minLevel: 'manager' },
   { path: 'history', label: 'Verlauf', icon: History, minLevel: 'manager' },
   { path: 'cash-balance', label: 'Bargeldbestand', icon: Wallet, minLevel: 'manager' },
