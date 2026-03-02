@@ -3,6 +3,7 @@ import { format, parseISO } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ZtToolbar } from "@/components/zeiterfassung/ZtToolbar";
 import { formatHours, DEPARTMENT_ORDER, getDepartmentBgClass, countVacationDays, countSickDays } from "@/lib/shiftCalculations";
 import { useRestaurant, useRestaurants } from "@/hooks/useRestaurant";
 import { useRestaurantEmployees } from "@/hooks/useRestaurantEmployees";
@@ -187,58 +188,24 @@ export default function ZtZusammenfassung() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold">Zusammenfassung</h1>
-          <Select value={selectedPeriodId} onValueChange={setSelectedPeriodId}>
-            <SelectTrigger className="w-[200px] h-8 text-xs">
-              <SelectValue placeholder="Periode wählen" />
-            </SelectTrigger>
-            <SelectContent>
-              {periods?.map((p) => (
-                <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            variant={cumulated ? "default" : "outline"}
-            size="sm"
-            onClick={() => setCumulated(c => !c)}
-          >
-            Alle Restaurants
-          </Button>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!employeesWithShifts.length}
-            onClick={() => {
-              if (selectedPeriod && weeks && shifts) {
-                exportZusammenfassungPdf(selectedPeriod.label + (cumulated ? " (Alle Restaurants)" : ""), employeesWithShifts, weeks, shifts, cumulated ? cumData.weekNumberToAllIds : undefined);
-              }
-            }}
-          >
-            <FileDown className="mr-1 h-4 w-4" />
-            PDF
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!employeesWithShifts.length}
-            onClick={() => {
-              if (selectedPeriod && weeks && shifts) {
-                exportZusammenfassungExcel(selectedPeriod.label + (cumulated ? " (Alle Restaurants)" : ""), employeesWithShifts, weeks, shifts, cumulated ? cumData.weekNumberToAllIds : undefined);
-              }
-            }}
-          >
-            <FileSpreadsheet className="mr-1 h-4 w-4" />
-            Excel
-          </Button>
-        </div>
-      </div>
+      <ZtToolbar
+        periods={periods}
+        selectedPeriodId={selectedPeriodId}
+        onPeriodChange={setSelectedPeriodId}
+        showCumulated={(allRestaurants?.length ?? 0) > 1}
+        cumulated={cumulated}
+        onCumulatedToggle={() => setCumulated(c => !c)}
+        actions={
+          <>
+            <Button variant="outline" size="sm" disabled={!employeesWithShifts.length} onClick={() => { if (selectedPeriod && weeks && shifts) { exportZusammenfassungPdf(selectedPeriod.label + (cumulated ? " (Alle Restaurants)" : ""), employeesWithShifts, weeks, shifts, cumulated ? cumData.weekNumberToAllIds : undefined); } }}>
+              <FileDown className="mr-1 h-4 w-4" /> PDF
+            </Button>
+            <Button variant="outline" size="sm" disabled={!employeesWithShifts.length} onClick={() => { if (selectedPeriod && weeks && shifts) { exportZusammenfassungExcel(selectedPeriod.label + (cumulated ? " (Alle Restaurants)" : ""), employeesWithShifts, weeks, shifts, cumulated ? cumData.weekNumberToAllIds : undefined); } }}>
+              <FileSpreadsheet className="mr-1 h-4 w-4" /> Excel
+            </Button>
+          </>
+        }
+      />
 
       <div className="overflow-x-auto border rounded-lg">
         <table className="w-full text-sm">

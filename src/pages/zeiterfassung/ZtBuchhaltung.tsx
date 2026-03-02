@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { ZtToolbar } from "@/components/zeiterfassung/ZtToolbar";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -165,54 +166,24 @@ export default function ZtBuchhaltung() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-3 flex-wrap">
-          <h1 className="text-2xl font-bold">Buchhaltung</h1>
-          <Select value={selectedPeriodId} onValueChange={setSelectedPeriodId}>
-            <SelectTrigger className="w-[200px] h-8 text-xs">
-              <SelectValue placeholder="Periode wählen" />
-            </SelectTrigger>
-            <SelectContent>
-              {periods?.map((p) => (
-                <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            variant={cumulated ? "default" : "outline"}
-            size="sm"
-            onClick={() => setCumulated(c => !c)}
-          >
-            Alle Restaurants
-          </Button>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!selectedPeriodId || !employeesWithShifts.length}
-            onClick={() => {
-              if (!selectedPeriod) return;
-              exportBuchhaltungPdf(selectedPeriod.label + (cumulated ? " (Kumuliert)" : ""), employeesWithShifts, shifts ?? [], payrollNotes ?? []);
-              toast.success("PDF wurde erstellt");
-            }}
-          >
-            <Download className="mr-1 h-4 w-4" /> PDF
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!selectedPeriodId || !employeesWithShifts.length}
-            onClick={() => {
-              if (!selectedPeriod) return;
-              exportBuchhaltungExcel(selectedPeriod.label + (cumulated ? " (Kumuliert)" : ""), employeesWithShifts, shifts ?? [], payrollNotes ?? []);
-              toast.success("Excel wurde erstellt");
-            }}
-          >
-            <FileSpreadsheet className="mr-1 h-4 w-4" /> Excel
-          </Button>
-        </div>
-      </div>
+      <ZtToolbar
+        periods={periods}
+        selectedPeriodId={selectedPeriodId}
+        onPeriodChange={setSelectedPeriodId}
+        showCumulated
+        cumulated={cumulated}
+        onCumulatedToggle={() => setCumulated(c => !c)}
+        actions={
+          <>
+            <Button variant="outline" size="sm" disabled={!selectedPeriodId || !employeesWithShifts.length} onClick={() => { if (!selectedPeriod) return; exportBuchhaltungPdf(selectedPeriod.label + (cumulated ? " (Kumuliert)" : ""), employeesWithShifts, shifts ?? [], payrollNotes ?? []); toast.success("PDF wurde erstellt"); }}>
+              <Download className="mr-1 h-4 w-4" /> PDF
+            </Button>
+            <Button variant="outline" size="sm" disabled={!selectedPeriodId || !employeesWithShifts.length} onClick={() => { if (!selectedPeriod) return; exportBuchhaltungExcel(selectedPeriod.label + (cumulated ? " (Kumuliert)" : ""), employeesWithShifts, shifts ?? [], payrollNotes ?? []); toast.success("Excel wurde erstellt"); }}>
+              <FileSpreadsheet className="mr-1 h-4 w-4" /> Excel
+            </Button>
+          </>
+        }
+      />
 
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
