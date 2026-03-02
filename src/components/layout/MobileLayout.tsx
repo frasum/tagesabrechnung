@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { LogOut, Utensils } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRestaurant } from '@/hooks/useRestaurant';
@@ -19,7 +19,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-primary-foreground">
-              <Utensils className="w-4 h-4" />
+              <img src="/app-icon.png" alt="App" className="w-4 h-4 rounded" />
             </div>
             <span className="font-display font-semibold text-foreground">{restaurantName || 'Restaurant'}</span>
           </div>

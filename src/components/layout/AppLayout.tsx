@@ -10,7 +10,7 @@ import {
   UserCog,
   Menu,
   X,
-  Euro,
+  
   BarChart3,
   LogOut,
   Wallet,
@@ -140,7 +140,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         <div className="flex items-center justify-between px-4 h-16">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-sidebar-primary flex items-center justify-center">
-              <Euro className="w-5 h-5 text-sidebar-primary-foreground" />
+              <img src="/app-icon.png" alt="App" className="w-5 h-5 rounded" />
             </div>
             {restaurants.length > 1 ? (
               <DropdownMenu>
@@ -258,7 +258,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:flex lg:w-64 lg:flex-col bg-sidebar border-r border-sidebar-border">
         <div className="flex items-center gap-3 px-6 h-16 border-b border-sidebar-border">
           <div className="w-9 h-9 rounded-lg bg-sidebar-primary flex items-center justify-center">
-            <Euro className="w-5 h-5 text-sidebar-primary-foreground" />
+            <img src="/app-icon.png" alt="App" className="w-5 h-5 rounded" />
           </div>
           {restaurants.length > 1 ? (
             <DropdownMenu>
