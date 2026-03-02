@@ -149,8 +149,18 @@ export default function Statistics() {
   if (isLoading) {
     return (
       <AppLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-pulse text-muted-foreground">Statistiken werden geladen...</div>
+        <div className="space-y-6 animate-fade-in">
+          <div className="rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-border/50 p-6 lg:p-8">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+                <BarChart3 className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-2xl lg:text-3xl font-display font-bold text-foreground">Statistiken</h1>
+                <p className="text-muted-foreground mt-0.5 animate-pulse">Daten werden geladen…</p>
+              </div>
+            </div>
+          </div>
         </div>
       </AppLayout>
     );
@@ -181,19 +191,25 @@ export default function Statistics() {
   return (
     <AppLayout>
       <div className="space-y-6 animate-fade-in">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl lg:text-3xl font-display font-bold text-foreground flex items-center gap-3">
-              <BarChart3 className="w-8 h-8 text-primary" />
-              Statistiken
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Umsatz, Trinkgeld und Trends im Überblick
-            </p>
+        {/* Hero Header */}
+        <div className="rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-border/50 p-6 lg:p-8">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-5">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+                <BarChart3 className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-2xl lg:text-3xl font-display font-bold text-foreground">
+                  Statistiken
+                </h1>
+                <p className="text-muted-foreground mt-0.5">
+                  Umsatz, Trinkgeld und Trends im Überblick
+                </p>
+              </div>
+            </div>
           </div>
-          
-          <div className="flex flex-col sm:flex-row gap-3">
+
+          <div className="flex flex-col gap-3">
             {allRestaurants && allRestaurants.length > 1 && (
               <Tabs value={statsMode === 'current' ? (restaurantId || '') : statsMode} onValueChange={(v) => setStatsMode(v)}>
                 <TabsList>
@@ -213,33 +229,35 @@ export default function Statistics() {
               </Tabs>
             )}
 
-            <Tabs value={timeRange} onValueChange={handleTimeRangeChange}>
-              <TabsList>
-                <TabsTrigger value="week" className="gap-2">
-                  <Calendar className="w-4 h-4" />
-                  Woche
-                </TabsTrigger>
-                <TabsTrigger value="month" className="gap-2">
-                  <Calendar className="w-4 h-4" />
-                  Monat
-                </TabsTrigger>
-                <TabsTrigger value="3months" className="gap-2">
-                  <Calendar className="w-4 h-4" />
-                  3 Monate
-                </TabsTrigger>
-                <TabsTrigger value="custom" className="gap-2">
-                  <Calendar className="w-4 h-4" />
-                  Benutzerdefiniert
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-            
-            {timeRange === 'custom' && (
-              <DateRangePicker
-                dateRange={customDateRange}
-                onDateRangeChange={handleCustomDateRangeChange}
-              />
-            )}
+            <div className="flex flex-wrap items-center gap-3">
+              <Tabs value={timeRange} onValueChange={handleTimeRangeChange}>
+                <TabsList>
+                  <TabsTrigger value="week" className="gap-2">
+                    <Calendar className="w-4 h-4" />
+                    Woche
+                  </TabsTrigger>
+                  <TabsTrigger value="month" className="gap-2">
+                    <Calendar className="w-4 h-4" />
+                    Monat
+                  </TabsTrigger>
+                  <TabsTrigger value="3months" className="gap-2">
+                    <Calendar className="w-4 h-4" />
+                    3 Monate
+                  </TabsTrigger>
+                  <TabsTrigger value="custom" className="gap-2">
+                    <Calendar className="w-4 h-4" />
+                    Benutzerdefiniert
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+              
+              {timeRange === 'custom' && (
+                <DateRangePicker
+                  dateRange={customDateRange}
+                  onDateRangeChange={handleCustomDateRangeChange}
+                />
+              )}
+            </div>
           </div>
         </div>
 
@@ -247,11 +265,13 @@ export default function Statistics() {
         {dailyStats.length === 0 && (
           <Card className="border-dashed">
             <CardContent className="py-12 text-center">
-              <BarChart3 className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">
+              <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4">
+                <BarChart3 className="w-7 h-7 text-muted-foreground" />
+              </div>
+              <p className="text-muted-foreground font-medium">
                 Keine Daten für den gewählten Zeitraum vorhanden.
               </p>
-              <p className="text-sm text-muted-foreground mt-2">
+              <p className="text-sm text-muted-foreground mt-1.5">
                 Erstellen Sie Sessions und fügen Sie Abrechnungsdaten hinzu.
               </p>
             </CardContent>
@@ -305,27 +325,32 @@ export default function Statistics() {
             {/* Summary Table */}
             <Card>
               <CardHeader>
-                <CardTitle>Zusammenfassung Zeitraum</CardTitle>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+                    <Receipt className="w-5 h-5 text-primary" />
+                  </div>
+                  <CardTitle>Zusammenfassung Zeitraum</CardTitle>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="bg-muted rounded-lg p-4">
+                  <div className="rounded-lg border border-border/50 bg-card p-4 border-l-4 border-l-primary/40">
                     <p className="text-sm text-muted-foreground">Tage mit Daten</p>
                     <p className="text-2xl font-bold tabular-nums">{summary?.daysWithData || 0}</p>
                   </div>
-                  <div className="bg-muted rounded-lg p-4">
+                  <div className="rounded-lg border border-border/50 bg-card p-4 border-l-4 border-l-success/40">
                     <p className="text-sm text-muted-foreground">Küchen Trinkgeld</p>
                     <p className="text-2xl font-bold tabular-nums text-success">
                       {formatCurrency(summary?.totalKitchenTip || 0)}
                     </p>
                   </div>
-                  <div className="bg-muted rounded-lg p-4">
+                  <div className="rounded-lg border border-border/50 bg-card p-4 border-l-4 border-l-success/40">
                     <p className="text-sm text-muted-foreground">Mitarbeiter Trinkgeld</p>
                     <p className="text-2xl font-bold tabular-nums text-success">
                       {formatCurrency(summary?.totalWaiterTip || 0)}
                     </p>
                   </div>
-                  <div className="bg-muted rounded-lg p-4">
+                  <div className="rounded-lg border border-border/50 bg-card p-4 border-l-4 border-l-destructive/40">
                     <p className="text-sm text-muted-foreground">Gesamt Ausgaben</p>
                     <p className="text-2xl font-bold tabular-nums text-destructive">
                       {formatCurrency(summary?.totalExpenses || 0)}
@@ -351,8 +376,10 @@ export default function Statistics() {
             {/* Revenue Trend Chart */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5" />
+                <CardTitle className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+                    <TrendingUp className="w-5 h-5 text-primary" />
+                  </div>
                   Umsatzentwicklung
                 </CardTitle>
               </CardHeader>
@@ -421,8 +448,10 @@ export default function Statistics() {
               {/* Tips Bar Chart */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="w-5 h-5" />
+                  <CardTitle className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+                      <Users className="w-5 h-5 text-primary" />
+                    </div>
                     Trinkgeld Verteilung
                   </CardTitle>
                 </CardHeader>
@@ -462,8 +491,10 @@ export default function Statistics() {
               {/* Delivery Platforms Pie Chart */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Truck className="w-5 h-5" />
+                  <CardTitle className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+                      <Truck className="w-5 h-5 text-primary" />
+                    </div>
                     Lieferplattformen Anteil
                   </CardTitle>
                 </CardHeader>
