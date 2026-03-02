@@ -271,7 +271,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             </div>
           )}
           <p className="text-xs text-sidebar-foreground/60">
-            Restaurant Cash System v1.0
+            Restaurant Abrechnung v.3
           </p>
         </div>
       </aside>
