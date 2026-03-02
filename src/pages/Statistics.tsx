@@ -294,7 +294,7 @@ export default function Statistics() {
                     </p>
                   </div>
                   <div className="rounded-lg border border-border/50 bg-card p-4 border-l-4 border-l-success/40">
-                    <p className="text-sm text-muted-foreground">Mitarbeiter Trinkgeld</p>
+                    <p className="text-sm text-muted-foreground">Service Trinkgeld</p>
                     <p className="text-2xl font-bold tabular-nums text-success">
                       {formatCurrency(summary?.totalWaiterTip || 0)}
                     </p>
