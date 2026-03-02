@@ -14,6 +14,7 @@ import { format, parseISO, eachDayOfInterval, startOfWeek, endOfWeek, isWithinIn
 import { de } from "date-fns/locale";
 import { toast } from "sonner";
 import { CalendarIcon, FileDown, FileSpreadsheet } from "lucide-react";
+import { ZtToolbar } from "@/components/zeiterfassung/ZtToolbar";
 import { exportWochenplanPdf } from "@/lib/exportWochenplanPdf";
 import { exportWochenplanExcel } from "@/lib/exportWochenplanExcel";
 import { cn } from "@/lib/utils";
@@ -483,91 +484,31 @@ export default function ZtWochenplan() {
 
   return (
     <div className="flex flex-col gap-4" style={{ height: 'calc(100vh - 8rem)' }}>
-      <div className="flex items-center gap-2 flex-wrap flex-shrink-0">
-        <Select value={selectedPeriodId} onValueChange={(v) => { setSelectedPeriodId(v); setSelectedWeekId(""); setCumSelectedWeekNum(null); }}>
-          <SelectTrigger className="w-[160px] h-8 text-sm">
-            <SelectValue placeholder="Periode wählen" />
-          </SelectTrigger>
-          <SelectContent>
-            {periods?.map((p) => (
-              <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {isLocked && <Badge variant="secondary" className="text-xs px-1.5 py-0">Gesperrt</Badge>}
-
-        {hasMultipleRestaurants && (
-          <Button
-            variant={cumulated ? "default" : "outline"}
-            size="sm"
-            className="h-8 text-xs"
-            onClick={() => {
-              setCumulated(prev => !prev);
-              setCumSelectedWeekNum(null);
-            }}
-          >
-            Alle Restaurants
-          </Button>
-        )}
-
-        {effectiveWeeks && effectiveWeeks.length > 0 && (
-          <div className="flex gap-1 flex-wrap">
-            {effectiveWeeks.map((w) => {
-              const isSelected = cumulated
-                ? w.week_number === cumSelectedWeekNum
-                : w.id === selectedWeekId;
-              return (
-                <Button
-                  key={cumulated ? `cum-${w.week_number}` : w.id}
-                  variant={isSelected ? "default" : "outline"}
-                  size="sm"
-                  className="h-7 px-2 text-xs"
-                  onClick={() => {
-                    if (cumulated) {
-                      setCumSelectedWeekNum(w.week_number);
-                    } else {
-                      setSelectedWeekId(w.id);
-                    }
-                  }}
-                >
-                  W{w.week_number} ({format(parseISO(w.start_date), "dd.MM.")}–{format(parseISO(w.end_date), "dd.MM.")})
-                </Button>
-              );
-            })}
-          </div>
-        )}
-
-        <div className="ml-auto flex gap-1">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 px-2 text-xs gap-1"
-            disabled={!allPeriodShifts?.length || !employees?.length || !effectiveWeeks?.length}
-            onClick={() => {
-              const period = periods?.find(p => p.id === selectedPeriodId);
-              if (!period || !employees || !effectiveWeeks || !allPeriodShifts) return;
-              exportWochenplanPdf(period.label, employees, effectiveWeeks, allPeriodShifts, holidays ?? new Map());
-            }}
-          >
-            <FileDown className="h-3.5 w-3.5" />
-            PDF
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 px-2 text-xs gap-1"
-            disabled={!allPeriodShifts?.length || !employees?.length || !effectiveWeeks?.length}
-            onClick={() => {
-              const period = periods?.find(p => p.id === selectedPeriodId);
-              if (!period || !employees || !effectiveWeeks || !allPeriodShifts) return;
-              exportWochenplanExcel(period.label, employees, effectiveWeeks, allPeriodShifts, holidays ?? new Map());
-            }}
-          >
-            <FileSpreadsheet className="h-3.5 w-3.5" />
-            Excel
-          </Button>
-        </div>
-      </div>
+      <ZtToolbar
+        periods={periods}
+        selectedPeriodId={selectedPeriodId}
+        onPeriodChange={(v) => { setSelectedPeriodId(v); setSelectedWeekId(""); setCumSelectedWeekNum(null); }}
+        isLocked={isLocked}
+        showCumulated={hasMultipleRestaurants}
+        cumulated={cumulated}
+        onCumulatedToggle={() => { setCumulated(prev => !prev); setCumSelectedWeekNum(null); }}
+        weeks={effectiveWeeks}
+        selectedWeekId={selectedWeekId}
+        cumSelectedWeekNum={cumSelectedWeekNum}
+        onWeekSelect={(id, num) => {
+          if (cumulated) { setCumSelectedWeekNum(num); } else { setSelectedWeekId(id); }
+        }}
+        actions={
+          <>
+            <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" disabled={!allPeriodShifts?.length || !employees?.length || !effectiveWeeks?.length} onClick={() => { const period = periods?.find(p => p.id === selectedPeriodId); if (!period || !employees || !effectiveWeeks || !allPeriodShifts) return; exportWochenplanPdf(period.label, employees, effectiveWeeks, allPeriodShifts, holidays ?? new Map()); }}>
+              <FileDown className="h-3.5 w-3.5" /> PDF
+            </Button>
+            <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" disabled={!allPeriodShifts?.length || !employees?.length || !effectiveWeeks?.length} onClick={() => { const period = periods?.find(p => p.id === selectedPeriodId); if (!period || !employees || !effectiveWeeks || !allPeriodShifts) return; exportWochenplanExcel(period.label, employees, effectiveWeeks, allPeriodShifts, holidays ?? new Map()); }}>
+              <FileSpreadsheet className="h-3.5 w-3.5" /> Excel
+            </Button>
+          </>
+        }
+      />
 
       {selectedWeek && weekDays.length > 0 && (() => {
         const sundayHolidayDays = new Set(
