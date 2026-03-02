@@ -1,30 +1,15 @@
 
 
-## Sidebar-Modernisierung (aktualisierte Gruppierung)
+## GlobalLayout Sidebar an AppLayout-Stil anpassen
 
-### Gruppierung
+Die `GlobalLayout.tsx` Sidebar (verwendet auf /staff, /permissions) bekommt dieselben visuellen Modernisierungen wie die `AppLayout.tsx`:
 
-**Tagesgeschäft**: Mitarbeiter Abrechnung, Küchen Trinkgeld, Tagesabrechnung, Zeiterfassung, QR-Poster
+### Änderungen in `src/components/layout/GlobalLayout.tsx`
 
-**Auswertung**: Statistiken, Verlauf, Bargeldbestand
-
-**Verwaltung** (nur Admin): Mitarbeiter, Telegram, Chat
-
-### Visuelle Änderungen (wie zuvor geplant)
-
-- Glassmorphism Header: `backdrop-blur-sm bg-sidebar/80`
-- Gruppenlabels: `text-xs uppercase text-muted-foreground` mit Separatoren zwischen Gruppen
-- Aktiver Eintrag: Linke Amber-Leiste (`border-l-3 border-primary`) + `bg-sidebar-accent/50` + Icon in `text-primary`
-- Gleiche Logik für Desktop-Sidebar und Mobile-Menü
-
-### Technische Umsetzung
-
-**Datei: `src/components/layout/AppLayout.tsx`**
-
-- `allNavItems` Array-Reihenfolge anpassen: QR-Poster nach Zeiterfassung
-- Gruppen-Definition: Tagesgeschäft = `['', 'kitchen', 'summary', 'zeiterfassung', 'qr-poster']`, Auswertung = `['statistics', 'history', 'cash-balance']`
-- Admin-Items (Mitarbeiter, Telegram, Chat) als separate Verwaltungs-Gruppe
-- Gruppen mit Permission-Filter kombinieren, leere Gruppen ausblenden
-- Aktiver Zustand und Glassmorphism-Styles anwenden
-- Mobile-Menü dieselbe Gruppierung verwenden
+- **Glassmorphism Header**: `backdrop-blur-sm bg-sidebar/80` für Desktop- und Mobile-Header
+- **Aktiver Eintrag**: `border-l-3 border-primary` + `bg-sidebar-accent/50` statt `bg-sidebar-primary` (voller Hintergrund)
+- **Icon-Highlight**: Aktives Icon bekommt `text-primary`
+- **Gruppenlabels**: "Zurück zur App" als eigener Bereich oben, dann Separator, dann Gruppenlabel "VERWALTUNG" über Mitarbeiter/Berechtigungen
+- **Separator**: `h-px bg-sidebar-border my-3` zwischen Bereichen
+- **Mobile-Menü**: Gleiche Styles übernehmen
 
