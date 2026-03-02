@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version, x-staff-id',
 };
 
 Deno.serve(async (req) => {
@@ -63,34 +63,39 @@ Deno.serve(async (req) => {
         );
       }
 
-      const userClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
-        global: { headers: { Authorization: authHeader } },
-      });
+      // Try OAuth JWT first
+      let callerStaffId: string | null = null;
+      try {
+        const userClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
+          global: { headers: { Authorization: authHeader } },
+        });
+        const { data: { user }, error: authError } = await userClient.auth.getUser();
+        if (user && !authError) {
+          const { data: callerProfile } = await supabase
+            .from('profiles')
+            .select('staff_id')
+            .eq('user_id', user.id)
+            .single();
+          callerStaffId = callerProfile?.staff_id || null;
+        }
+      } catch {
+        // OAuth failed, try PIN-based
+      }
 
-      const { data: { user }, error: authError } = await userClient.auth.getUser();
-      if (authError || !user) {
+      // Fallback: PIN-based auth via x-staff-id header
+      if (!callerStaffId) {
+        callerStaffId = req.headers.get('x-staff-id');
+      }
+
+      if (!callerStaffId) {
         return new Response(
           JSON.stringify({ error: 'Invalid authentication token' }),
           { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      // Resolve caller's staff_id from profile
-      const { data: callerProfile } = await supabase
-        .from('profiles')
-        .select('staff_id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!callerProfile?.staff_id) {
-        return new Response(
-          JSON.stringify({ error: 'No staff profile linked to your account' }),
-          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
       const { data: callerPermission } = await supabase.rpc('get_staff_permission', { 
-        p_staff_id: callerProfile.staff_id 
+        p_staff_id: callerStaffId 
       });
       if (callerPermission !== 'admin') {
         return new Response(

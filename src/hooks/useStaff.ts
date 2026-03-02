@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { getAuthToken } from '@/lib/authToken';
+import { getAuthHeaders } from '@/lib/authToken';
 
 export type StaffRole = 'waiter' | 'kitchen' | 'both' | 'gl' | 'waiter_gl' | 'kitchen_gl' | 'all';
 
@@ -134,14 +134,12 @@ export function useStaff(role?: StaffRole, options?: { includeLinkedProfiles?: b
       let linkedProfilesMap: Record<string, LinkedProfile[]> = {};
       if (includeLinkedProfiles) {
         try {
-          const token = await getAuthToken();
+          const headers = await getAuthHeaders();
           const response = await fetch(
             `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-link-account?action=get-all-linked`,
             {
               method: 'GET',
-              headers: {
-                'Authorization': `Bearer ${token}`,
-              },
+              headers,
             }
           );
           if (response.ok) {
@@ -324,14 +322,14 @@ export function useCreateStaff() {
       
       // Save PIN code via secure edge function
       if (pin_code && pin_code.length === 4) {
-        const token = await getAuthToken();
+        const pinHeaders = await getAuthHeaders();
         const response = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-pin`,
           {
             method: 'POST',
             headers: {
+              ...pinHeaders,
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
             },
             body: JSON.stringify({
               staff_id: staff.id,
@@ -407,14 +405,14 @@ export function useUpdateStaff() {
       
       // Update PIN code via secure edge function if provided
       if (pin_code && pin_code.length === 4) {
-        const token = await getAuthToken();
+        const pinHeaders2 = await getAuthHeaders();
         const response = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-pin`,
           {
             method: 'POST',
             headers: {
+              ...pinHeaders2,
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
             },
             body: JSON.stringify({
               staff_id: id,

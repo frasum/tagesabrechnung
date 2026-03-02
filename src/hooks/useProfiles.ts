@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { getAuthToken } from '@/lib/authToken';
+import { getAuthHeaders } from '@/lib/authToken';
 
 export interface LinkedProfile {
   id: string;
@@ -20,13 +20,13 @@ export function useUnlinkedProfiles() {
   return useQuery({
     queryKey: ['profiles', 'unlinked'],
     queryFn: async () => {
-      const token = await getAuthToken();
+      const headers = await getAuthHeaders();
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-link-account`,
         {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${token}`,
+            ...headers,
             'Content-Type': 'application/json',
           },
         }
@@ -50,13 +50,13 @@ export function useLinkedProfilesForStaff(staffId: string | null) {
     queryKey: ['profiles', 'linked', staffId],
     enabled: !!staffId,
     queryFn: async () => {
-      const token = await getAuthToken();
+      const headers = await getAuthHeaders();
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-link-account?action=get-linked-for-staff&staff_id=${staffId}`,
         {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${token}`,
+            ...headers,
             'Content-Type': 'application/json',
           },
         }
@@ -88,14 +88,14 @@ export function useAdminLinkAccount() {
       profile_id: string;
       action: 'link' | 'unlink';
     }) => {
-      const token = await getAuthToken();
+      const headers = await getAuthHeaders();
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-link-account`,
         {
           method: 'POST',
           headers: {
+            ...headers,
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
           },
           body: JSON.stringify({
             staff_id: action === 'link' ? staff_id : null,
