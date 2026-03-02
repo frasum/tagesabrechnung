@@ -485,7 +485,7 @@ export default function Statistics() {
                     <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
                       <Truck className="w-5 h-5 text-primary" />
                     </div>
-                    Lieferplattformen Anteil
+                    Take Away Kanäle
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
