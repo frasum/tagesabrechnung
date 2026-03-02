@@ -2,7 +2,6 @@ import { ReactNode, useState, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Users, 
-  Settings, 
   ChefHat,
   Clock,
   FileText, 
@@ -10,7 +9,6 @@ import {
   UserCog,
   Menu,
   X,
-  
   BarChart3,
   LogOut,
   Wallet,
@@ -45,16 +43,33 @@ interface NavItem {
   minLevel: PermissionLevel;
 }
 
+interface NavGroup {
+  label: string;
+  paths: string[];
+  adminOnly?: boolean;
+}
+
 const allNavItems: NavItem[] = [
   { path: '', label: 'Mitarbeiter Abrechnung', icon: Users, minLevel: 'staff' },
   { path: 'kitchen', label: 'Küchen Trinkgeld', icon: ChefHat, minLevel: 'manager' },
   { path: 'summary', label: 'Tagesabrechnung', icon: FileText, minLevel: 'manager' },
-  
+  { path: 'zeiterfassung', label: 'Zeiterfassung', icon: Clock, minLevel: 'manager' },
+  { path: 'qr-poster', label: 'QR-Poster', icon: QrCode, minLevel: 'manager' },
   { path: 'statistics', label: 'Statistiken', icon: BarChart3, minLevel: 'manager' },
   { path: 'history', label: 'Verlauf', icon: History, minLevel: 'manager' },
   { path: 'cash-balance', label: 'Bargeldbestand', icon: Wallet, minLevel: 'manager' },
-  { path: 'qr-poster', label: 'QR-Poster', icon: QrCode, minLevel: 'manager' },
-  { path: 'zeiterfassung', label: 'Zeiterfassung', icon: Clock, minLevel: 'manager' },
+];
+
+const adminNavItems: NavItem[] = [
+  { path: '/staff', label: 'Mitarbeiter', icon: UserCog, minLevel: 'admin' },
+  { path: '/telegram', label: 'Telegram', icon: Send, minLevel: 'admin' },
+  { path: 'chat', label: 'Chat', icon: MessageCircle, minLevel: 'admin' },
+];
+
+const navGroups: NavGroup[] = [
+  { label: 'Tagesgeschäft', paths: ['', 'kitchen', 'summary', 'zeiterfassung', 'qr-poster'] },
+  { label: 'Auswertung', paths: ['statistics', 'history', 'cash-balance'] },
+  { label: 'Verwaltung', paths: ['/staff', '/telegram', 'chat'], adminOnly: true },
 ];
 
 export function AppLayout({ children }: AppLayoutProps) {
@@ -65,52 +80,45 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { restaurantName, restaurantSlug } = useRestaurant();
   const { data: restaurants = [] } = useRestaurants();
   
-  // Get user's permission level
   const userLevel = user?.permissionLevel || 'staff';
   const isAdmin = hasPermission(userLevel, 'admin');
   const isManager = userLevel === 'manager';
   
-  // Fetch manager-specific nav permissions (only for managers)
   const { data: managerPaths = [], isLoading: isLoadingPermissions } = useManagerNavPermissions(
     isManager ? user?.staffId : undefined
   );
   const hasCustomPermissions = isManager && managerPaths.length > 0;
-  
-  // Paths that managers ALWAYS see (core functionality)
   const alwaysVisibleForManager = [''];
+
+  // Combine all items and filter by permissions
+  const allItems = useMemo(() => [...allNavItems, ...(isAdmin ? adminNavItems : [])], [isAdmin]);
   
-  // Filter nav items based on permission level and manager-specific permissions
-  const navItems = useMemo(() => {
-    return allNavItems.filter(item => {
-      // Admin sees all
+  const filteredItems = useMemo(() => {
+    return allItems.filter(item => {
       if (isAdmin) return true;
-      
-      // Manager ALWAYS sees core navigation items
       if (isManager && alwaysVisibleForManager.includes(item.path)) return true;
-      
-      // Manager permissions still loading - show only core items
-      if (isManager && isLoadingPermissions) {
-        return alwaysVisibleForManager.includes(item.path);
-      }
-      
-      // Manager with custom permissions - check if path is allowed
+      if (isManager && isLoadingPermissions) return alwaysVisibleForManager.includes(item.path);
       if (isManager && hasCustomPermissions) {
-        // For zeiterfassung: show if any sub-path is permitted
-        if (item.path === 'zeiterfassung') {
-          return managerPaths.some(p => p.startsWith('zeiterfassung'));
-        }
+        if (item.path === 'zeiterfassung') return managerPaths.some(p => p.startsWith('zeiterfassung'));
         return managerPaths.includes(item.path);
       }
-      
-      // Manager without custom permissions - sees all non-admin items
-      if (isManager) {
-        return item.minLevel !== 'admin';
-      }
-      
-      // Staff - only staff level items
+      if (isManager) return item.minLevel !== 'admin';
       return item.minLevel === 'staff';
     });
-  }, [userLevel, isAdmin, isManager, isLoadingPermissions, hasCustomPermissions, managerPaths, alwaysVisibleForManager]);
+  }, [userLevel, isAdmin, isManager, isLoadingPermissions, hasCustomPermissions, managerPaths, allItems]);
+
+  // Build grouped navigation
+  const groupedNav = useMemo(() => {
+    return navGroups
+      .filter(group => !group.adminOnly || isAdmin)
+      .map(group => ({
+        label: group.label,
+        items: group.paths
+          .map(path => filteredItems.find(item => item.path === path))
+          .filter((item): item is NavItem => !!item),
+      }))
+      .filter(group => group.items.length > 0);
+  }, [filteredItems, isAdmin]);
 
   const handleLogout = () => {
     logout();
@@ -118,14 +126,17 @@ export function AppLayout({ children }: AppLayoutProps) {
   };
 
   const handleRestaurantSwitch = (slug: string) => {
-    // Get current path relative to restaurant
     const currentPath = location.pathname.replace(`/${restaurantSlug}`, '');
     navigate(`/${slug}${currentPath}`);
   };
 
-  const getNavHref = (path: string) => `/${restaurantSlug}/${path}`;
+  const getNavHref = (path: string) => {
+    if (path.startsWith('/')) return path;
+    return `/${restaurantSlug}/${path}`;
+  };
   
   const isActive = (path: string) => {
+    if (path.startsWith('/')) return location.pathname === path;
     const fullPath = `/${restaurantSlug}/${path}`;
     if (path === '') {
       return location.pathname === `/${restaurantSlug}` || location.pathname === `/${restaurantSlug}/`;
@@ -133,40 +144,79 @@ export function AppLayout({ children }: AppLayoutProps) {
     return location.pathname.startsWith(fullPath);
   };
 
+  const linkClasses = (path: string) =>
+    cn(
+      "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+      isActive(path)
+        ? "border-l-3 border-primary bg-sidebar-accent/50 text-sidebar-foreground"
+        : "text-sidebar-foreground hover:bg-sidebar-accent"
+    );
+
+  const iconClasses = (path: string) =>
+    cn("w-5 h-5", isActive(path) && "text-primary");
+
+  // Shared nav renderer for both desktop and mobile
+  const renderNavGroups = (onClickLink?: () => void) => (
+    <>
+      {groupedNav.map((group, idx) => (
+        <div key={group.label}>
+          {idx > 0 && <div className="h-px bg-sidebar-border my-3" />}
+          <p className="text-xs uppercase tracking-wider text-muted-foreground px-3 mb-2">
+            {group.label}
+          </p>
+          {group.items.map((item) => (
+            <Link
+              key={item.path}
+              to={getNavHref(item.path)}
+              onClick={onClickLink}
+              className={linkClasses(item.path)}
+            >
+              <item.icon className={iconClasses(item.path)} />
+              {item.label}
+            </Link>
+          ))}
+        </div>
+      ))}
+    </>
+  );
+
+  const renderRestaurantSwitcher = () =>
+    restaurants.length > 1 ? (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="font-display font-semibold text-sidebar-foreground gap-1 px-2">
+            {restaurantName || 'Restaurant'}
+            <ChevronDown className="w-4 h-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          {restaurants.map((r) => (
+            <DropdownMenuItem
+              key={r.id}
+              onClick={() => handleRestaurantSwitch(r.slug)}
+              className={cn(r.slug === restaurantSlug && 'bg-accent')}
+            >
+              {r.name}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    ) : (
+      <span className="font-display font-semibold text-sidebar-foreground px-2">
+        {restaurantName || 'Restaurant'}
+      </span>
+    );
+
   return (
     <div className="min-h-screen bg-background">
       {/* Mobile Header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-sidebar border-b border-sidebar-border">
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-sidebar/80 backdrop-blur-sm border-b border-sidebar-border">
         <div className="flex items-center justify-between px-4 h-16">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg overflow-hidden">
               <img src="/app-icon.png" alt="App" className="w-full h-full object-cover" />
             </div>
-            {restaurants.length > 1 ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="font-display font-semibold text-sidebar-foreground gap-1 px-2">
-                    {restaurantName || 'Restaurant'}
-                    <ChevronDown className="w-4 h-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  {restaurants.map((r) => (
-                    <DropdownMenuItem
-                      key={r.id}
-                      onClick={() => handleRestaurantSwitch(r.slug)}
-                      className={cn(r.slug === restaurantSlug && 'bg-accent')}
-                    >
-                      {r.name}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <span className="font-display font-semibold text-sidebar-foreground px-2">
-                {restaurantName || 'Restaurant'}
-              </span>
-            )}
+            {renderRestaurantSwitcher()}
           </div>
           <Button
             variant="ghost"
@@ -178,71 +228,10 @@ export function AppLayout({ children }: AppLayoutProps) {
           </Button>
         </div>
 
-        {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <nav className="px-4 pb-4 bg-sidebar border-b border-sidebar-border animate-slide-in">
-            {navItems.map((item) => {
-              const active = isActive(item.path);
-              return (
-                <Link
-                  key={item.path}
-                  to={getNavHref(item.path)}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors",
-                    active 
-                      ? "bg-sidebar-primary text-sidebar-primary-foreground" 
-                      : "text-sidebar-foreground hover:bg-sidebar-accent"
-                  )}
-                >
-                  <item.icon className="w-5 h-5" />
-                  {item.label}
-                </Link>
-              );
-            })}
-            {isAdmin && (
-              <>
-                <Link
-                  to="/staff"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors",
-                    location.pathname === '/staff'
-                      ? "bg-sidebar-primary text-sidebar-primary-foreground" 
-                      : "text-sidebar-foreground hover:bg-sidebar-accent"
-                  )}
-                >
-                  <UserCog className="w-5 h-5" />
-                  Mitarbeiter
-                </Link>
-                <Link
-                  to="/telegram"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors",
-                    location.pathname === '/telegram'
-                      ? "bg-sidebar-primary text-sidebar-primary-foreground" 
-                      : "text-sidebar-foreground hover:bg-sidebar-accent"
-                  )}
-                >
-                  <Send className="w-5 h-5" />
-                  Telegram
-                </Link>
-                <Link
-                  to={getNavHref('chat')}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors",
-                    isActive('chat')
-                      ? "bg-sidebar-primary text-sidebar-primary-foreground" 
-                      : "text-sidebar-foreground hover:bg-sidebar-accent"
-                  )}
-                >
-                  <MessageCircle className="w-5 h-5" />
-                  Chat
-                </Link>
-              </>
-            )}
+          <nav className="px-4 pb-4 bg-sidebar border-b border-sidebar-border animate-slide-in space-y-1">
+            {renderNavGroups(() => setMobileMenuOpen(false))}
+            <div className="h-px bg-sidebar-border my-3" />
             <button
               onClick={() => { setMobileMenuOpen(false); handleLogout(); }}
               className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors text-destructive hover:bg-sidebar-accent w-full"
@@ -256,96 +245,15 @@ export function AppLayout({ children }: AppLayoutProps) {
 
       {/* Desktop Sidebar */}
       <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:flex lg:w-64 lg:flex-col bg-sidebar border-r border-sidebar-border">
-        <div className="flex items-center gap-3 px-6 h-16 border-b border-sidebar-border">
+        <div className="flex items-center gap-3 px-6 h-16 border-b border-sidebar-border bg-sidebar/80 backdrop-blur-sm">
           <div className="w-9 h-9 rounded-lg overflow-hidden">
             <img src="/app-icon.png" alt="App" className="w-full h-full object-cover" />
           </div>
-          {restaurants.length > 1 ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="font-display font-semibold text-sidebar-foreground gap-1 px-2">
-                  {restaurantName || 'Restaurant'}
-                  <ChevronDown className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                {restaurants.map((r) => (
-                  <DropdownMenuItem
-                    key={r.id}
-                    onClick={() => handleRestaurantSwitch(r.slug)}
-                    className={cn(r.slug === restaurantSlug && 'bg-accent')}
-                  >
-                    {r.name}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <span className="font-display font-semibold text-sidebar-foreground px-2">
-              {restaurantName || 'Restaurant'}
-            </span>
-          )}
+          {renderRestaurantSwitcher()}
         </div>
         
-        <nav className="flex-1 px-4 py-6 space-y-1">
-          {navItems.map((item) => {
-            const active = isActive(item.path);
-            return (
-              <Link
-                key={item.path}
-                to={getNavHref(item.path)}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                  active 
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground" 
-                    : "text-sidebar-foreground hover:bg-sidebar-accent"
-                )}
-              >
-                <item.icon className="w-5 h-5" />
-                {item.label}
-              </Link>
-            );
-          })}
-          {isAdmin && (
-            <>
-              <Link
-                to="/staff"
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                  location.pathname === '/staff'
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground" 
-                    : "text-sidebar-foreground hover:bg-sidebar-accent"
-                )}
-              >
-                <UserCog className="w-5 h-5" />
-                Mitarbeiter
-              </Link>
-               <Link
-                to="/telegram"
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                  location.pathname === '/telegram'
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground" 
-                    : "text-sidebar-foreground hover:bg-sidebar-accent"
-                )}
-              >
-                <Send className="w-5 h-5" />
-                Telegram
-              </Link>
-              <Link
-                to={getNavHref('chat')}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                  isActive('chat')
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground" 
-                    : "text-sidebar-foreground hover:bg-sidebar-accent"
-                )}
-              >
-                <MessageCircle className="w-5 h-5" />
-                Chat
-              </Link>
-            </>
-          )}
+        <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+          {renderNavGroups()}
         </nav>
 
         <div className="px-4 py-4 border-t border-sidebar-border space-y-3">
