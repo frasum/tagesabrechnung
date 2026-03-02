@@ -1,26 +1,22 @@
 
 
-## CSV-Export für das Lohnbüro-Portal
+## Statistiken-Seite modernisieren
 
-Alle drei Tabs (Wochenplan, Zusammenfassung, Buchhaltung) im PayrollPortal bekommen einen zusätzlichen CSV-Export-Button neben den bestehenden PDF/Excel-Buttons.
+Gleicher Design-Stil wie bei StaffManagement und PermissionManagement anwenden.
 
-### Neue Datei: `src/lib/exportCsv.ts`
+### Änderungen in `src/pages/Statistics.tsx`
 
-Utility-Funktion `downloadCsv(filename, headers, rows)` die:
-- Header-Zeile + Datenzeilen als CSV formatiert (Semikolon-getrennt für deutsche Excel-Kompatibilität)
-- Zahlen mit Komma als Dezimaltrennzeichen
-- UTF-8 BOM voranstellt (damit Excel Umlaute korrekt anzeigt)
-- Als `.csv`-Datei herunterlädt
+1. **Hero Header mit Gradient-Banner**: Ersetze den einfachen Header durch das `rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5`-Pattern mit Icon in abgerundetem Container. Restaurant-Tabs und Zeitraum-Tabs darunter in den Banner integriert.
 
-### Drei Export-Funktionen in `src/lib/exportCsv.ts`
+2. **Zusammenfassung Zeitraum modernisieren**: Die vier `bg-muted`-Boxen durch subtilere Cards ersetzen — `border border-border/50 bg-card` mit leichtem linkem Farbbalken (analog zu den StatCards oben).
 
-1. **`exportBuchhaltungCsv`** — Spalten: Mitarbeiter, Abteilung, Gesamt Std., Schichten, So/Fei, 20-24, 24-x, Urlaub, Krank, Vorschuss, Besonderheiten
-2. **`exportZusammenfassungCsv`** — Spalten: Mitarbeiter, Abteilung, W1..Wn (dynamisch), Gesamt, Schichten, So/Fei, 20-24, 24-x, U, K
-3. **`exportWochenplanCsv`** — Spalten: Mitarbeiter, Abteilung, dann pro Tag (Mo-So): Von, Bis, Stunden, Abwesenheit
+3. **Empty State modernisieren**: Icon in abgerundetem Container wie bei StaffManagement, `border-dashed` beibehalten.
 
-### Änderungen in `src/pages/shared/PayrollPortal.tsx`
+4. **Loading State**: Konsistenter animierter Pulse-Text im gleichen Layout.
 
-- Import der drei CSV-Funktionen
-- Je Tab einen dritten Button mit `FileDown`-Icon und Label "CSV" neben PDF/Excel einfügen
-- Gleiche Daten wie bei den bestehenden Excel-Exporten übergeben
+### Änderungen in `src/components/statistics/PeriodComparison.tsx`
+
+5. **Card-Header modernisieren**: Icon in `rounded-xl bg-primary/15`-Container statt direkt neben dem Text.
+
+### Kein funktionaler Eingriff — nur visuelle Angleichung an das bestehende Design-System.
 
