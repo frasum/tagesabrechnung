@@ -2,57 +2,80 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version, x-staff-id',
 };
 
+/**
+ * Verify the caller is an admin. Supports two auth methods:
+ * 1. OAuth JWT (via Authorization header → getUser)
+ * 2. PIN-based auth (via x-staff-id header → get_staff_permission)
+ */
 async function verifyAdmin(req: Request) {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+  const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: { persistSession: false },
+  });
+
   const authHeader = req.headers.get('Authorization');
   if (!authHeader?.startsWith('Bearer ')) {
     return { error: 'Missing authorization header', status: 401 };
   }
 
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
-  // Create user-scoped client to verify JWT
-  const userClient = createClient(supabaseUrl, supabaseAnonKey, {
-    global: { headers: { Authorization: authHeader } },
-  });
-
   const token = authHeader.replace('Bearer ', '');
-  const { data: { user }, error } = await userClient.auth.getUser(token);
-  if (error || !user) {
-    console.error('Token validation failed:', error);
+
+  // Method 1: Try OAuth JWT
+  try {
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user }, error } = await userClient.auth.getUser(token);
+
+    if (user && !error) {
+      // Resolve staff_id from profile
+      const { data: profile } = await adminClient
+        .from('profiles')
+        .select('staff_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!profile?.staff_id) {
+        return { error: 'No staff profile linked', status: 403 };
+      }
+
+      const { data: permission } = await adminClient.rpc('get_staff_permission', {
+        p_staff_id: profile.staff_id,
+      });
+
+      if (permission !== 'admin') {
+        return { error: 'Admin privileges required', status: 403 };
+      }
+
+      return { adminClient, staffId: profile.staff_id };
+    }
+  } catch (e) {
+    // OAuth validation failed, try PIN-based auth below
+    console.log('OAuth auth failed, trying PIN-based auth:', e);
+  }
+
+  // Method 2: PIN-based auth via x-staff-id header
+  const callerStaffId = req.headers.get('x-staff-id');
+  if (!callerStaffId) {
     return { error: 'Invalid authentication token', status: 401 };
   }
 
-  // Create admin client for service-role operations
-  const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
-    auth: { persistSession: false },
-  });
-
-  // Resolve staff_id from profile
-  const { data: profile } = await adminClient
-    .from('profiles')
-    .select('staff_id')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!profile?.staff_id) {
-    return { error: 'No staff profile linked', status: 403 };
-  }
-
-  // Verify admin permission
+  // Verify staff exists and is admin
   const { data: permission } = await adminClient.rpc('get_staff_permission', {
-    p_staff_id: profile.staff_id,
+    p_staff_id: callerStaffId,
   });
 
   if (permission !== 'admin') {
     return { error: 'Admin privileges required', status: 403 };
   }
 
-  return { adminClient, staffId: profile.staff_id };
+  return { adminClient, staffId: callerStaffId };
 }
 
 Deno.serve(async (req) => {

@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import type { PermissionLevel } from '@/types/permissions';
-import { getAuthToken } from '@/lib/authToken';
+import { getAuthHeaders } from '@/lib/authToken';
 
 interface UserRoleResponse {
   staff_id: string;
@@ -48,14 +48,14 @@ export function useUpdateUserRole() {
 
   return useMutation({
     mutationFn: async ({ staffId, permissionLevel }: { staffId: string; permissionLevel: PermissionLevel; callerStaffId?: string }) => {
-      const token = await getAuthToken();
+      const headers = await getAuthHeaders();
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-user-role`,
         {
           method: 'POST',
           headers: {
+            ...headers,
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
           },
           body: JSON.stringify({
             staff_id: staffId,
