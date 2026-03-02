@@ -108,7 +108,10 @@ async function fetchMonthlyStaffTips(monthsBack: number = 12, restaurantIds?: st
     // For each session, calculate the pool and distribute equally (team shifts count as 2, only if participates_in_pool)
     for (const [sessionId, shiftsInSession] of Object.entries(waiterShiftsBySession)) {
       // Calculate session pool: sum of all differenz values (tip contributions)
-      const sessionPool = shiftsInSession.reduce((sum, s) => sum + (s.differenz || 0), 0);
+      const sessionPool = shiftsInSession.reduce((sum, s) => {
+        const expected = (s.pos_sales || 0) + (s.hilf_mahl || 0) - (s.open_invoices || 0) - (s.card_total || 0);
+        return sum + ((s.cash_handed_in || 0) - expected - (s.kitchen_tip || 0));
+      }, 0);
       
       // Count waiter shares (team shifts use additional_waiters, only if participates_in_pool)
       const waiterShareCount = shiftsInSession.reduce((count, s) => {
@@ -117,7 +120,7 @@ async function fetchMonthlyStaffTips(monthsBack: number = 12, restaurantIds?: st
         return count + 1 + additionalCount;
       }, 0);
       
-      if (waiterShareCount > 0 && sessionPool > 0) {
+      if (waiterShareCount > 0) {
         const tipPerWaiter = sessionPool / waiterShareCount;
         shiftsInSession.forEach(ws => {
           // Skip waiters who don't participate in pool
