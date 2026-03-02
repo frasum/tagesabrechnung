@@ -18,8 +18,8 @@ export function MobileLayout({ children }: MobileLayoutProps) {
       <header className="sticky top-0 z-50 bg-card border-b border-border">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-primary-foreground">
-              <img src="/app-icon.png" alt="App" className="w-4 h-4 rounded" />
+            <div className="w-8 h-8 rounded-lg overflow-hidden">
+              <img src="/app-icon.png" alt="App" className="w-full h-full object-cover" />
             </div>
             <span className="font-display font-semibold text-foreground">{restaurantName || 'Restaurant'}</span>
           </div>
