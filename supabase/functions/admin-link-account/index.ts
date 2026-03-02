@@ -20,8 +20,10 @@ async function verifyAdmin(req: Request) {
     global: { headers: { Authorization: authHeader } },
   });
 
-  const { data: { user }, error } = await userClient.auth.getUser();
+  const token = authHeader.replace('Bearer ', '');
+  const { data: { user }, error } = await userClient.auth.getUser(token);
   if (error || !user) {
+    console.error('Token validation failed:', error);
     return { error: 'Invalid authentication token', status: 401 };
   }
 
