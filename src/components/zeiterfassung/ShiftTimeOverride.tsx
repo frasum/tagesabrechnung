@@ -229,7 +229,7 @@ export default function ShiftTimeOverride({
             night_hours: hours.nightHours,
             night_deep_hours: hours.nightDeepHours,
             sunday_holiday_hours: hours.sundayHolidayHours,
-            is_holiday: isSundayOrHoliday,
+            is_holiday: holidaySet.has(date),
           })
           .eq("id", shift.id);
         if (updateError) throw updateError;
@@ -459,7 +459,7 @@ export default function ShiftTimeOverride({
                 night_hours: hours.nightHours,
                 night_deep_hours: hours.nightDeepHours,
                 sunday_holiday_hours: hours.sundayHolidayHours,
-                is_holiday: isSundayOrHoliday,
+                is_holiday: holidaySet.has(date),
                 absence_type: null,
               })
               .eq("id", existingShift.id);
@@ -480,7 +480,7 @@ export default function ShiftTimeOverride({
                 night_hours: hours.nightHours,
                 night_deep_hours: hours.nightDeepHours,
                 sunday_holiday_hours: hours.sundayHolidayHours,
-                is_holiday: isSundayOrHoliday,
+                is_holiday: holidaySet.has(date),
               });
             if (insErr) throw insErr;
             created++;

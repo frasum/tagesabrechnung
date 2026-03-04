@@ -67,6 +67,7 @@ async function upsertZtShift(params: {
   startTime: string;
   endTime: string;
   isSundayOrHoliday: boolean;
+  isHoliday: boolean;
   department?: string;
 }) {
   const dept = params.department ?? 'Service';
@@ -104,7 +105,7 @@ async function upsertZtShift(params: {
       evening_hours: hours.eveningHours,
       night_hours: hours.nightHours,
       night_deep_hours: hours.nightDeepHours,
-      is_holiday: params.isSundayOrHoliday,
+      is_holiday: params.isHoliday,
     }, {
       onConflict: 'employee_id,shift_date,department',
     });
@@ -137,6 +138,7 @@ export async function syncWaiterShiftToZt(params: SyncParams) {
         startTime: params.shiftStart,
         endTime: params.shiftEnd,
         isSundayOrHoliday,
+        isHoliday: holiday,
       });
     }));
   } catch (err) {
@@ -172,6 +174,7 @@ export async function syncKitchenShiftToZt(params: KitchenSyncParams) {
       startTime: params.shiftStart,
       endTime: params.shiftEnd,
       isSundayOrHoliday,
+      isHoliday: holiday,
       department: 'Küche',
     });
   } catch (err) {
