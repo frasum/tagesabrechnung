@@ -1,27 +1,22 @@
 
 
-## Plan: Stundenlohn-Autofill reparieren
+## Plan: Sozialabgabenbefreiung im Brutto-Netto-Rechner
 
-### Problem
-Der Stundenlohn wird beim Mitarbeiterwechsel nicht angezeigt, weil `useMemo` für State-Updates (`setState`) verwendet wird. `useMemo` ist für berechnete Werte gedacht, nicht für Side-Effects — React garantiert nicht, dass der Callback zuverlässig ausgeführt wird.
+### Änderungen
 
-### Lösung
+**1. `src/pages/zeiterfassung/ZtBruttoNetto.tsx`**
+- `is_sv_exempt` zur Staff-Query hinzufügen (Zeile 64)
+- Neuen State `isSvExempt` hinzufügen, default `false`
+- Im Auto-fill `useEffect` den Wert aus `staffDetails.is_sv_exempt` übernehmen
+- Switch-Toggle "Sozialabgabenbefreit" in der UI ergänzen (unter Kirchensteuer-Toggle)
+- `isSvExempt` im Payload an `calculate-payroll` übergeben
 
-**Datei: `src/pages/zeiterfassung/ZtBruttoNetto.tsx`**
+**2. `supabase/functions/calculate-payroll/index.ts`**
+- Wenn `body.isSvExempt === true`: Sozialversicherungsbeiträge (AN + AG: KV, RV, AV, PV) auf 0 setzen
+- Gilt sowohl für API-Ergebnis als auch Fallback-Berechnung
 
-`useMemo` (Zeile 93) durch `useEffect` ersetzen:
-
-```typescript
-useEffect(() => {
-  if (staffDetails) {
-    if (staffDetails.tax_class) setTaxClass(staffDetails.tax_class);
-    if (effectiveHourlyRate) setHourlyRate(String(effectiveHourlyRate));
-    if (staffDetails.health_insurance) {
-      setInsuranceType(staffDetails.health_insurance === "privat" ? "privat" : "gesetzlich");
-    }
-  }
-}, [staffDetails, effectiveHourlyRate]);
-```
-
-Einzeilige Änderung — `useMemo` → `useEffect`. Keine weiteren Anpassungen nötig.
+### Ergebnis
+- Feld wird aus Mitarbeiterkartei automatisch übernommen
+- Kann im Rechner manuell überschrieben werden
+- Berechnung berücksichtigt Befreiung korrekt (keine SV-Abzüge)
 
