@@ -32,6 +32,7 @@ export default function ZtBruttoNetto() {
   const [taxClass, setTaxClass] = useState<string>("I");
   const [state, setState] = useState<string>("Bayern");
   const [churchTax, setChurchTax] = useState(false);
+  const [isSvExempt, setIsSvExempt] = useState(false);
   const [insuranceType, setInsuranceType] = useState<"gesetzlich" | "privat">("gesetzlich");
   const [childAllowances, setChildAllowances] = useState<number>(0);
   const [localPeriodId, setLocalPeriodId] = useState<string>("");
@@ -61,7 +62,7 @@ export default function ZtBruttoNetto() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("staff")
-        .select("hourly_rate, tax_class, health_insurance, is_minijob")
+        .select("hourly_rate, tax_class, health_insurance, is_minijob, is_sv_exempt")
         .eq("id", employeeId)
         .single();
       if (error) throw error;
@@ -97,6 +98,7 @@ export default function ZtBruttoNetto() {
       if (staffDetails.health_insurance) {
         setInsuranceType(staffDetails.health_insurance === "privat" ? "privat" : "gesetzlich");
       }
+      setIsSvExempt(staffDetails.is_sv_exempt === true);
     }
   }, [staffDetails, effectiveHourlyRate]);
 
@@ -173,6 +175,7 @@ export default function ZtBruttoNetto() {
         churchTax,
         insuranceType,
         childAllowances,
+        isSvExempt,
         sfnHours: {
           night: sfnData?.nightHours ?? 0,
           sunday: sfnData?.sundayHours ?? 0,
@@ -294,6 +297,11 @@ export default function ZtBruttoNetto() {
             <div className="flex items-center gap-3">
               <Switch checked={churchTax} onCheckedChange={setChurchTax} />
               <Label>Kirchensteuer</Label>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Switch checked={isSvExempt} onCheckedChange={setIsSvExempt} />
+              <Label>Sozialabgabenbefreit</Label>
             </div>
           </CardContent>
         </Card>

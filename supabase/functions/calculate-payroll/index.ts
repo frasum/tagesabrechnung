@@ -298,11 +298,17 @@ Deno.serve(async (req) => {
       coreResult = fallbackCalculation({ ...body, grossMonthly: gross });
     }
 
-    // ── Compute employerTotal if from API (add employer contributions) ──
-    if (!coreResult.employerTotal) {
-      const emp = coreResult.employer;
-      coreResult.employerTotal = Math.round((gross + emp.kv + emp.rv + emp.av + emp.pv) * 100) / 100;
+    // ── SV-Befreiung: zero out social security contributions ──
+    if (body.isSvExempt === true) {
+      coreResult.employee = { kv: 0, rv: 0, av: 0, pv: 0 };
+      coreResult.employer = { kv: 0, rv: 0, av: 0, pv: 0 };
+      // Recalculate net (gross minus taxes only)
+      coreResult.netMonthly = Math.round((gross - coreResult.incomeTax - coreResult.soli - coreResult.churchTax) * 100) / 100;
     }
+
+    // ── Compute employerTotal ──
+    const emp = coreResult.employer;
+    coreResult.employerTotal = Math.round((gross + emp.kv + emp.rv + emp.av + emp.pv) * 100) / 100;
 
     // ── SFN bonuses (always local) ──
     const effectiveSfnRate = Math.min(sfnHourlyRate, SFN_TAX_FREE_HOURLY_LIMIT);
