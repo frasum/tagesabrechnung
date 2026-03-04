@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
-import { Calculator, Info, AlertTriangle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Calculator, Info, AlertTriangle, CheckCircle, AlertCircle } from "lucide-react";
 import { SFN_RATES } from "@/lib/sfnRates";
 import { GERMAN_STATES, TAX_CLASSES, type PayrollResult } from "@/types/payroll";
 
@@ -124,6 +125,10 @@ export default function ZtBruttoNetto() {
 
   const hasSfnData = sfnData && sfnData.shiftCount > 0;
 
+  // Derive calculation year/month from dateFrom
+  const calculationYear = dateFrom ? new Date(dateFrom).getFullYear() : undefined;
+  const calculationMonth = dateFrom ? new Date(dateFrom).getMonth() + 1 : undefined;
+
   async function handleCalculate() {
     setError(null);
     setResult(null);
@@ -154,6 +159,8 @@ export default function ZtBruttoNetto() {
           holiday: sfnData?.holidayHours ?? 0,
         },
         sfnHourlyRate: hr ?? (gross && mh ? gross / mh : 0),
+        calculationYear,
+        calculationMonth,
       };
 
       const { data, error: fnError } = await supabase.functions.invoke("calculate-payroll", {
@@ -173,7 +180,7 @@ export default function ZtBruttoNetto() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Brutto-Netto-Rechner 2026</h1>
+      <h1 className="text-2xl font-bold">Brutto-Netto-Rechner</h1>
 
       {/* Eingabeformular */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -335,6 +342,26 @@ export default function ZtBruttoNetto() {
       {/* Ergebnis */}
       {result && (
         <div className="space-y-6">
+          {/* Source indicator */}
+          <div className="flex items-center gap-2">
+            {result.source === "api" ? (
+              <Badge variant="outline" className="gap-1 text-xs border-green-500/50 text-green-700 dark:text-green-400">
+                <CheckCircle className="h-3 w-3" />
+                Berechnung via Lohnica API
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="gap-1 text-xs border-yellow-500/50 text-yellow-700 dark:text-yellow-400">
+                <AlertCircle className="h-3 w-3" />
+                Interne Schätzung (Fallback)
+              </Badge>
+            )}
+            {calculationYear && calculationMonth && (
+              <Badge variant="secondary" className="text-xs">
+                {String(calculationMonth).padStart(2, "0")}/{calculationYear}
+              </Badge>
+            )}
+          </div>
+
           {/* Zusammenfassungskarten */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Card>
@@ -387,6 +414,16 @@ export default function ZtBruttoNetto() {
                     <tr className="text-muted-foreground"><td className="py-2 pl-4">AG-Rentenversicherung</td><td className="text-right">{fmt(result.employer.rv)}</td></tr>
                     <tr className="text-muted-foreground"><td className="py-2 pl-4">AG-Arbeitslosenversicherung</td><td className="text-right">{fmt(result.employer.av)}</td></tr>
                     <tr className="text-muted-foreground"><td className="py-2 pl-4">AG-Pflegeversicherung</td><td className="text-right">{fmt(result.employer.pv)}</td></tr>
+                    
+                    {/* AG-Umlagen from API */}
+                    {result.agUmlagen && (
+                      <>
+                        <tr className="text-muted-foreground"><td className="py-2 pl-4">U1 (Krankheit)</td><td className="text-right">{fmt(result.agUmlagen.u1)}</td></tr>
+                        <tr className="text-muted-foreground"><td className="py-2 pl-4">U2 (Mutterschaft)</td><td className="text-right">{fmt(result.agUmlagen.u2)}</td></tr>
+                        <tr className="text-muted-foreground"><td className="py-2 pl-4">Insolvenzumlage</td><td className="text-right">{fmt(result.agUmlagen.insolvenzumlage)}</td></tr>
+                      </>
+                    )}
+                    
                     <tr className="font-semibold border-t border-border"><td className="py-2">AG-Gesamtkosten</td><td className="text-right">{fmt(result.employerTotal)}</td></tr>
                   </tbody>
                 </table>
@@ -435,9 +472,10 @@ export default function ZtBruttoNetto() {
           <Alert>
             <Info className="h-4 w-4" />
             <AlertDescription className="text-xs">
-              <strong>Hinweis:</strong> Diese Berechnung ist unverbindlich und ersetzt keine offizielle Lohnabrechnung.
-              SFN-Zuschläge (Nacht, Sonntag, Feiertag) werden vereinfachend berechnet.
-              Für verbindliche Auskünfte sind Lohnbüro, Steuerberater oder offizielle Rechner zu nutzen.
+              <strong>Hinweis:</strong> {result.source === "api"
+                ? "Berechnung basiert auf der Lohnica Brutto-Netto-API. Trotzdem unverbindlich – keine offizielle Lohnabrechnung."
+                : "Diese Berechnung ist eine interne Schätzung und ersetzt keine offizielle Lohnabrechnung."}
+              {" "}SFN-Zuschläge (Nacht, Sonntag, Feiertag) werden vereinfachend berechnet.
             </AlertDescription>
           </Alert>
         </div>
