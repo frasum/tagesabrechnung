@@ -13,6 +13,16 @@ export interface PayrollInput {
     holiday: number;
   };
   sfnHourlyRate: number;
+  /** Year for Lohnica API calculation */
+  calculationYear?: number;
+  /** Month (1-12) for Lohnica API calculation */
+  calculationMonth?: number;
+}
+
+export interface AgUmlagen {
+  u1: number;
+  u2: number;
+  insolvenzumlage: number;
 }
 
 export interface PayrollResult {
@@ -31,6 +41,10 @@ export interface PayrollResult {
     totalBonus: number;
   };
   effectiveNetHourlyRate: number;
+  /** Where the calculation came from */
+  source?: 'api' | 'fallback';
+  /** Employer levies from Lohnica API */
+  agUmlagen?: AgUmlagen;
 }
 
 export const GERMAN_STATES = [
@@ -44,3 +58,23 @@ export const TAX_CLASSES = ["I", "II", "III", "IV", "V", "VI"] as const;
 
 /** States where church tax is 9% (all others 8%) */
 export const CHURCH_TAX_9_STATES = ["Bayern", "Baden-Württemberg"] as const;
+
+/** Mapping German state names to Lohnica API abbreviations */
+export const STATE_ABBREVIATIONS: Record<string, string> = {
+  "Baden-Württemberg": "bw",
+  "Bayern": "by",
+  "Berlin": "be",
+  "Brandenburg": "bb",
+  "Bremen": "hb",
+  "Hamburg": "hh",
+  "Hessen": "he",
+  "Mecklenburg-Vorpommern": "mv",
+  "Niedersachsen": "ni",
+  "Nordrhein-Westfalen": "nw",
+  "Rheinland-Pfalz": "rp",
+  "Saarland": "sl",
+  "Sachsen": "sn",
+  "Sachsen-Anhalt": "st",
+  "Schleswig-Holstein": "sh",
+  "Thüringen": "th",
+};
