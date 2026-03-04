@@ -49,6 +49,7 @@ interface Shift {
   end_time: string | null;
   total_hours: number;
   sunday_holiday_hours: number;
+  is_holiday: boolean;
   evening_hours: number;
   night_hours: number;
   absence_type: string | null;
@@ -99,14 +100,15 @@ export function exportBuchhaltungCsv(
   payrollNotes: PayrollNote[]
 ) {
   const sorted = sortEmployees(employees);
-  const headers = ["Mitarbeiter", "Abteilung", "Gesamt Std.", "Schichten", "20-24", "24-x", "So/Fei", "Urlaub", "Krank", "Vorschuss", "Besonderheiten"];
+  const headers = ["Mitarbeiter", "Abteilung", "Gesamt Std.", "Schichten", "20-24", "24-x", "So", "Fei", "Urlaub", "Krank", "Vorschuss", "Besonderheiten"];
   const rows: (string | number)[][] = [];
 
   for (const emp of sorted) {
     const empShifts = shifts.filter(s => s.employee_id === emp.id && s.department === emp.department);
     const t = {
       gesamt: empShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
-      soFei: empShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+      sonntagStunden: empShifts.reduce((sum, s) => sum + (s.is_holiday ? 0 : Number(s.sunday_holiday_hours)), 0),
+      feiertagStunden: empShifts.reduce((sum, s) => sum + (s.is_holiday ? Number(s.sunday_holiday_hours) : 0), 0),
       evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s), 0),
       night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s), 0),
       schichten: empShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
@@ -128,7 +130,8 @@ export function exportBuchhaltungCsv(
       t.schichten,
       t.evening,
       t.night,
-      t.soFei,
+      t.sonntagStunden,
+      t.feiertagStunden,
       t.urlaubTage,
       t.krankTage,
       note?.vorschuss || 0,
@@ -161,14 +164,15 @@ export function exportZusammenfassungCsv(
     shifts.some(s => s.employee_id === emp.id && s.department === emp.department && (Number(s.total_hours) > 0 || !!s.absence_type))
   );
 
-  const headers = ["Mitarbeiter", "Abteilung", ...sortedWeeks.map(w => `W${w.week_number}`), "Gesamt", "Schichten", "20-24", "24-x", "So/Fei", "U", "K"];
+  const headers = ["Mitarbeiter", "Abteilung", ...sortedWeeks.map(w => `W${w.week_number}`), "Gesamt", "Schichten", "20-24", "24-x", "So", "Fei", "U", "K"];
   const rows: (string | number)[][] = [];
 
   for (const emp of employeesWithShifts) {
     const empShifts = shifts.filter(s => s.employee_id === emp.id && s.department === emp.department);
     const totals = {
       gesamt: empShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
-      soFei: empShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+      sonntagStunden: empShifts.reduce((sum, s) => sum + (s.is_holiday ? 0 : Number(s.sunday_holiday_hours)), 0),
+      feiertagStunden: empShifts.reduce((sum, s) => sum + (s.is_holiday ? Number(s.sunday_holiday_hours) : 0), 0),
       evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s), 0),
       night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s), 0),
       schichten: empShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
@@ -191,7 +195,8 @@ export function exportZusammenfassungCsv(
       totals.schichten,
       totals.evening,
       totals.night,
-      totals.soFei,
+      totals.sonntagStunden,
+      totals.feiertagStunden,
       totals.urlaubTage,
       totals.krankTage,
     ]);

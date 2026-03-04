@@ -15,7 +15,8 @@ export default function BuchhaltungFooter({ grandTotals }: BuchhaltungFooterProp
         <td className="text-center px-1 py-2.5 tabular-nums">{grandTotals.schichten}</td>
         <td className="text-center px-1 py-2.5 tabular-nums">{displayNum(grandTotals.evening, formatHours)}</td>
         <td className="text-center px-1 py-2.5 tabular-nums">{displayNum(grandTotals.night, formatHours)}</td>
-        <td className="text-center px-1 py-2.5 tabular-nums">{displayNum(grandTotals.soFei, formatHours)}</td>
+        <td className="text-center px-1 py-2.5 tabular-nums">{displayNum(grandTotals.sonntagStunden, formatHours)}</td>
+        <td className="text-center px-1 py-2.5 tabular-nums">{displayNum(grandTotals.feiertagStunden, formatHours)}</td>
         <td className="text-center px-1 py-2.5 tabular-nums text-green-600 border-l border-border/40">
           {grandTotals.urlaubTage > 0 ? grandTotals.urlaubTage.toFixed(2).replace('.', ',') : "–"}
         </td>

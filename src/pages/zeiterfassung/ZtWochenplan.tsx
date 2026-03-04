@@ -465,7 +465,8 @@ export default function ZtWochenplan() {
     const empShifts = shifts?.filter((s) => s.employee_id === employeeId && (!department || s.department === department)) ?? [];
     return {
       gesamt: empShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
-      soFei: empShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+      sonntagStunden: empShifts.reduce((sum, s) => sum + (s.is_holiday ? 0 : Number(s.sunday_holiday_hours)), 0),
+      feiertagStunden: empShifts.reduce((sum, s) => sum + (s.is_holiday ? Number(s.sunday_holiday_hours) : 0), 0),
       evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s), 0),
       night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s), 0),
       urlaubTage: countVacationDays(empShifts),
@@ -561,7 +562,8 @@ export default function ZtWochenplan() {
                   <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-l-2 border-primary/20 border-b border-border text-xs">Ges</th>
                    <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs"><SfnTooltipHeader column="evening" label="20-24" /></th>
                    <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs"><SfnTooltipHeader column="night" label="24-x" /></th>
-                   <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs"><SfnTooltipHeader column="soFei" label="So/F" /></th>
+                   <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs"><SfnTooltipHeader column="soFei" label="So" /></th>
+                   <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs"><SfnTooltipHeader column="feiertag" label="Fei" /></th>
                   <th className="totals-header text-center p-1.5 font-semibold min-w-[35px] border-b border-border text-xs">U</th>
                   <th className="totals-header text-center p-1.5 font-semibold min-w-[35px] border-b border-border text-xs">K</th>
                 </tr>
@@ -581,7 +583,7 @@ export default function ZtWochenplan() {
                       {showDeptHeader && (
                         <tr className="dept-header-row">
                           <td
-                            colSpan={weekDays.length * 2 + 7}
+                            colSpan={weekDays.length * 2 + 8}
                             className={`px-3 py-2.5 font-bold text-sm uppercase tracking-wide border-l-4 ${
                               emp.department === "Küche" ? "border-[hsl(15_80%_50%)]" :
                               emp.department === "GL" ? "border-[hsl(220_60%_50%)]" :
@@ -756,7 +758,8 @@ export default function ZtWochenplan() {
                         <td className={`text-center p-2 border-l-2 border-primary/20 bg-primary/5 ${totals.gesamt > 0 ? "font-bold text-sm" : "text-xs text-muted-foreground"}`}>{formatHours(totals.gesamt)}</td>
                          <td className="totals-col text-center p-2 text-xs">{totals.evening > 0 ? formatHours(totals.evening) : ""}</td>
                          <td className="totals-col text-center p-2 text-xs">{totals.night > 0 ? formatHours(totals.night) : ""}</td>
-                         <td className="totals-col text-center p-2 text-xs">{totals.soFei > 0 ? formatHours(totals.soFei) : ""}</td>
+                         <td className="totals-col text-center p-2 text-xs">{totals.sonntagStunden > 0 ? formatHours(totals.sonntagStunden) : ""}</td>
+                         <td className="totals-col text-center p-2 text-xs">{totals.feiertagStunden > 0 ? formatHours(totals.feiertagStunden) : ""}</td>
                         <td className="totals-col text-center p-2 text-xs text-success font-medium">{totals.urlaubTage > 0 ? totals.urlaubTage.toFixed(2).replace('.', ',') : ""}</td>
                         <td className="totals-col text-center p-2 text-xs text-destructive font-medium">{totals.krankTage > 0 ? totals.krankTage : ""}</td>
                       </tr>

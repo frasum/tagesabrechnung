@@ -1,6 +1,7 @@
 export interface EmployeeTotals {
   gesamt: number;
-  soFei: number;
+  sonntagStunden: number;
+  feiertagStunden: number;
   evening: number;
   night: number;
   schichten: number;
@@ -13,6 +14,7 @@ export interface Shift {
   week_id: string;
   total_hours: number;
   sunday_holiday_hours: number;
+  is_holiday: boolean;
   evening_hours: number;
   night_hours: number;
   start_time: string | null;

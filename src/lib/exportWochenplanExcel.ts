@@ -27,6 +27,7 @@ interface Shift {
   end_time: string | null;
   total_hours: number;
   sunday_holiday_hours: number;
+  is_holiday: boolean;
   evening_hours: number;
   night_hours: number;
   absence_type: string | null;
@@ -82,7 +83,7 @@ export function exportWochenplanExcel(
       const dayDate = format(d, "dd.MM.");
       return `${dayName} ${dayDate}`;
     });
-    wsData.push(["Mitarbeiter", ...dayHeaders, "Ges", "20-24", "24-x", "So/F", "U", "K"]);
+    wsData.push(["Mitarbeiter", ...dayHeaders, "Ges", "20-24", "24-x", "So", "Fei", "U", "K"]);
 
     let lastDept = "";
     for (const emp of sorted) {
@@ -96,7 +97,8 @@ export function exportWochenplanExcel(
       const empShifts = weekShifts.filter(s => s.employee_id === emp.id && s.department === emp.department);
       const totals = {
         gesamt: empShifts.reduce((s, x) => s + Number(x.total_hours), 0),
-        soFei: empShifts.reduce((s, x) => s + Number(x.sunday_holiday_hours), 0),
+        sonntagStunden: empShifts.reduce((s, x) => s + (x.is_holiday ? 0 : Number(x.sunday_holiday_hours)), 0),
+        feiertagStunden: empShifts.reduce((s, x) => s + (x.is_holiday ? Number(x.sunday_holiday_hours) : 0), 0),
         evening: empShifts.reduce((s, x) => s + effectiveEveningHours(x), 0),
         night: empShifts.reduce((s, x) => s + effectiveNightHours(x), 0),
         urlaub: countVacationDays(empShifts),
@@ -120,7 +122,8 @@ export function exportWochenplanExcel(
         totals.gesamt,
         totals.evening,
         totals.night,
-        totals.soFei,
+        totals.sonntagStunden,
+        totals.feiertagStunden,
         totals.urlaub,
         totals.krank,
       ]);
@@ -130,7 +133,7 @@ export function exportWochenplanExcel(
     ws["!cols"] = [
       { wch: 18 },
       ...days.map(() => ({ wch: 12 })),
-      { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 5 }, { wch: 5 },
+      { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 5 }, { wch: 5 },
     ];
 
     XLSX.utils.book_append_sheet(wb, ws, `W${week.week_number}`);

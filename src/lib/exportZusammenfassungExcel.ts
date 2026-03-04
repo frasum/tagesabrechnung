@@ -24,6 +24,7 @@ interface Shift {
   end_time: string | null;
   total_hours: number;
   sunday_holiday_hours: number;
+  is_holiday: boolean;
   evening_hours: number;
   night_hours: number;
   absence_type: string | null;
@@ -69,7 +70,8 @@ export function exportZusammenfassungExcel(
     const empShifts = shifts.filter((s) => s.employee_id === empId && (!department || s.department === department));
     return {
       gesamt: empShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
-      soFei: empShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+      sonntagStunden: empShifts.reduce((sum, s) => sum + (s.is_holiday ? 0 : Number(s.sunday_holiday_hours)), 0),
+      feiertagStunden: empShifts.reduce((sum, s) => sum + (s.is_holiday ? Number(s.sunday_holiday_hours) : 0), 0),
       evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s), 0),
       night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s), 0),
       schichten: empShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
@@ -82,7 +84,8 @@ export function exportZusammenfassungExcel(
     const deptShifts = shifts.filter((s) => s.department === department);
     return {
       gesamt: deptShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
-      soFei: deptShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+      sonntagStunden: deptShifts.reduce((sum, s) => sum + (s.is_holiday ? 0 : Number(s.sunday_holiday_hours)), 0),
+      feiertagStunden: deptShifts.reduce((sum, s) => sum + (s.is_holiday ? Number(s.sunday_holiday_hours) : 0), 0),
       evening: deptShifts.reduce((sum, s) => sum + effectiveEveningHours(s), 0),
       night: deptShifts.reduce((sum, s) => sum + effectiveNightHours(s), 0),
       schichten: deptShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
@@ -98,12 +101,12 @@ export function exportZusammenfassungExcel(
   wsData.push([]);
 
   // Header
-  wsData.push(["Mitarbeiter", ...sortedWeeks.map(w => `W${w.week_number}`), "Gesamt", "Schichten", "20-24", "24-x", "So/Fei", "U", "K"]);
+  wsData.push(["Mitarbeiter", ...sortedWeeks.map(w => `W${w.week_number}`), "Gesamt", "Schichten", "20-24", "24-x", "So", "Fei", "U", "K"]);
 
   let lastDept = "";
   for (const emp of employeesWithShifts) {
     if (emp.department !== lastDept) {
-      const emptyRow: (string | number)[] = new Array(sortedWeeks.length + 8).fill("");
+      const emptyRow: (string | number)[] = new Array(sortedWeeks.length + 9).fill("");
       emptyRow[0] = emp.department;
       wsData.push(emptyRow);
       lastDept = emp.department;
@@ -124,7 +127,8 @@ export function exportZusammenfassungExcel(
       totals.schichten || "",
       totals.evening || "",
       totals.night || "",
-      totals.soFei || "",
+      totals.sonntagStunden || "",
+      totals.feiertagStunden || "",
       totals.urlaubTage || "",
       totals.krankTage || "",
     ]);
@@ -141,7 +145,8 @@ export function exportZusammenfassungExcel(
         dt.schichten || "",
         dt.evening || "",
         dt.night || "",
-        dt.soFei || "",
+        dt.sonntagStunden || "",
+        dt.feiertagStunden || "",
         dt.urlaubTage || "",
         dt.krankTage || "",
       ]);
@@ -151,7 +156,8 @@ export function exportZusammenfassungExcel(
   // Grand total
   const grand = {
     gesamt: shifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
-    soFei: shifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+    sonntagStunden: shifts.reduce((sum, s) => sum + (s.is_holiday ? 0 : Number(s.sunday_holiday_hours)), 0),
+    feiertagStunden: shifts.reduce((sum, s) => sum + (s.is_holiday ? Number(s.sunday_holiday_hours) : 0), 0),
     evening: shifts.reduce((sum, s) => sum + effectiveEveningHours(s), 0),
     night: shifts.reduce((sum, s) => sum + effectiveNightHours(s), 0),
     schichten: shifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
@@ -166,7 +172,8 @@ export function exportZusammenfassungExcel(
     grand.schichten || "",
     grand.evening || "",
     grand.night || "",
-    grand.soFei || "",
+    grand.sonntagStunden || "",
+    grand.feiertagStunden || "",
     grand.urlaubTage || "",
     grand.krankTage || "",
   ]);
@@ -176,7 +183,7 @@ export function exportZusammenfassungExcel(
   ws["!cols"] = [
     { wch: 30 },
     ...sortedWeeks.map(() => ({ wch: 8 })),
-    { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 6 }, { wch: 6 },
+    { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 6 }, { wch: 6 },
   ];
 
   XLSX.utils.book_append_sheet(wb, ws, "Zusammenfassung");

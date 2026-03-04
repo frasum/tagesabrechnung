@@ -29,6 +29,7 @@ interface Shift {
   end_time: string | null;
   total_hours: number;
   sunday_holiday_hours: number;
+  is_holiday: boolean;
   evening_hours: number;
   night_hours: number;
   absence_type: string | null;
@@ -86,7 +87,7 @@ export function exportWochenplanPdf(
       return `${dayName} ${dayDate}${isHol ? " *" : ""}`;
     });
 
-    const head = [["Mitarbeiter", ...dayHeaders, "Ges", "20-24", "24-x", "So/F", "U", "K"]];
+    const head = [["Mitarbeiter", ...dayHeaders, "Ges", "20-24", "24-x", "So", "Fei", "U", "K"]];
 
     const rows: any[][] = [];
     let lastDept = "";
@@ -101,7 +102,8 @@ export function exportWochenplanPdf(
       const empShifts = weekShifts.filter(s => s.employee_id === emp.id && s.department === emp.department);
       const totals = {
         gesamt: empShifts.reduce((s, x) => s + Number(x.total_hours), 0),
-        soFei: empShifts.reduce((s, x) => s + Number(x.sunday_holiday_hours), 0),
+        sonntagStunden: empShifts.reduce((s, x) => s + (x.is_holiday ? 0 : Number(x.sunday_holiday_hours)), 0),
+        feiertagStunden: empShifts.reduce((s, x) => s + (x.is_holiday ? Number(x.sunday_holiday_hours) : 0), 0),
         evening: empShifts.reduce((s, x) => s + effectiveEveningHours(x), 0),
         night: empShifts.reduce((s, x) => s + effectiveNightHours(x), 0),
         urlaub: countVacationDays(empShifts),
@@ -125,7 +127,8 @@ export function exportWochenplanPdf(
         formatHours(totals.gesamt),
         totals.evening > 0 ? formatHours(totals.evening) : "",
         totals.night > 0 ? formatHours(totals.night) : "",
-        totals.soFei > 0 ? formatHours(totals.soFei) : "",
+        totals.sonntagStunden > 0 ? formatHours(totals.sonntagStunden) : "",
+        totals.feiertagStunden > 0 ? formatHours(totals.feiertagStunden) : "",
         totals.urlaub > 0 ? String(totals.urlaub) : "",
         totals.krank > 0 ? String(totals.krank) : "",
       ]);
@@ -140,8 +143,8 @@ export function exportWochenplanPdf(
       columnStyles[i + 1] = { halign: "center", cellWidth: dayColWidth };
     });
     const summaryStart = days.length + 1;
-    for (let i = 0; i < 6; i++) {
-      columnStyles[summaryStart + i] = { halign: "center", cellWidth: 13 };
+    for (let i = 0; i < 7; i++) {
+      columnStyles[summaryStart + i] = { halign: "center", cellWidth: 12 };
     }
 
     autoTable(doc, {

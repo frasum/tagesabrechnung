@@ -28,6 +28,7 @@ type Shift = {
   evening_hours: number;
   night_hours: number;
   sunday_holiday_hours: number;
+  is_holiday: boolean;
   absence_type: string | null;
   department: string | null;
 };
@@ -142,7 +143,8 @@ export default function ZtZusammenfassung() {
     const empShifts = shifts?.filter((s) => s.employee_id === empId && (!department || s.department === department)) ?? [];
     return {
       gesamt: empShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
-      soFei: empShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+      sonntagStunden: empShifts.reduce((sum, s) => sum + (s.is_holiday ? 0 : Number(s.sunday_holiday_hours)), 0),
+      feiertagStunden: empShifts.reduce((sum, s) => sum + (s.is_holiday ? Number(s.sunday_holiday_hours) : 0), 0),
       evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s), 0),
       night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s), 0),
       schichten: empShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
@@ -155,7 +157,8 @@ export default function ZtZusammenfassung() {
     const deptShifts = shifts?.filter((s) => s.department === department) ?? [];
     return {
       gesamt: deptShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
-      soFei: deptShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+      sonntagStunden: deptShifts.reduce((sum, s) => sum + (s.is_holiday ? 0 : Number(s.sunday_holiday_hours)), 0),
+      feiertagStunden: deptShifts.reduce((sum, s) => sum + (s.is_holiday ? Number(s.sunday_holiday_hours) : 0), 0),
       evening: deptShifts.reduce((sum, s) => sum + effectiveEveningHours(s), 0),
       night: deptShifts.reduce((sum, s) => sum + effectiveNightHours(s), 0),
       schichten: deptShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
@@ -168,7 +171,8 @@ export default function ZtZusammenfassung() {
     const allShifts = shifts ?? [];
     return {
       gesamt: allShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
-      soFei: allShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+      sonntagStunden: allShifts.reduce((sum, s) => sum + (s.is_holiday ? 0 : Number(s.sunday_holiday_hours)), 0),
+      feiertagStunden: allShifts.reduce((sum, s) => sum + (s.is_holiday ? Number(s.sunday_holiday_hours) : 0), 0),
       evening: allShifts.reduce((sum, s) => sum + effectiveEveningHours(s), 0),
       night: allShifts.reduce((sum, s) => sum + effectiveNightHours(s), 0),
       schichten: allShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
@@ -220,7 +224,8 @@ export default function ZtZusammenfassung() {
               <th className="text-center p-2 font-medium">Schichten</th>
                <th className="text-center p-2 font-medium"><SfnTooltipHeader column="evening" label="20-24" /></th>
                <th className="text-center p-2 font-medium"><SfnTooltipHeader column="night" label="24-x" /></th>
-               <th className="text-center p-2 font-medium"><SfnTooltipHeader column="soFei" label="So/Fei" /></th>
+               <th className="text-center p-2 font-medium"><SfnTooltipHeader column="soFei" label="So" /></th>
+               <th className="text-center p-2 font-medium"><SfnTooltipHeader column="feiertag" label="Fei" /></th>
               <th className="text-center p-2 font-medium">U</th>
               <th className="text-center p-2 font-medium">K</th>
             </tr>
@@ -237,7 +242,7 @@ export default function ZtZusammenfassung() {
                 <React.Fragment key={`${emp.id}-${emp.department}`}>
                   {showDeptHeader && (
                     <tr>
-                      <td colSpan={(weeks?.length ?? 0) + 8} className={`p-2 font-bold text-xs uppercase tracking-wide ${getDepartmentBgClass(emp.department)}`}>
+                      <td colSpan={(weeks?.length ?? 0) + 9} className={`p-2 font-bold text-xs uppercase tracking-wide ${getDepartmentBgClass(emp.department)}`}>
                         {emp.department}
                       </td>
                     </tr>
@@ -255,7 +260,8 @@ export default function ZtZusammenfassung() {
                     <td className="text-center p-2">{totals.schichten || ""}</td>
                      <td className="text-center p-2">{totals.evening > 0 ? formatHours(totals.evening) : ""}</td>
                      <td className="text-center p-2">{totals.night > 0 ? formatHours(totals.night) : ""}</td>
-                     <td className="text-center p-2">{totals.soFei > 0 ? formatHours(totals.soFei) : ""}</td>
+                     <td className="text-center p-2">{totals.sonntagStunden > 0 ? formatHours(totals.sonntagStunden) : ""}</td>
+                     <td className="text-center p-2">{totals.feiertagStunden > 0 ? formatHours(totals.feiertagStunden) : ""}</td>
                     <td className="text-center p-2 text-green-600 font-medium">{totals.urlaubTage > 0 ? totals.urlaubTage.toFixed(2).replace('.', ',') : ""}</td>
                     <td className="text-center p-2 text-red-600 font-medium">{totals.krankTage > 0 ? totals.krankTage : ""}</td>
                   </tr>
@@ -269,7 +275,8 @@ export default function ZtZusammenfassung() {
                         <td className="text-center p-2">{dt.schichten || ""}</td>
                          <td className="text-center p-2">{dt.evening > 0 ? formatHours(dt.evening) : ""}</td>
                          <td className="text-center p-2">{dt.night > 0 ? formatHours(dt.night) : ""}</td>
-                         <td className="text-center p-2">{dt.soFei > 0 ? formatHours(dt.soFei) : ""}</td>
+                          <td className="text-center p-2">{dt.sonntagStunden > 0 ? formatHours(dt.sonntagStunden) : ""}</td>
+                          <td className="text-center p-2">{dt.feiertagStunden > 0 ? formatHours(dt.feiertagStunden) : ""}</td>
                         <td className="text-center p-2">{dt.urlaubTage > 0 ? dt.urlaubTage.toFixed(2).replace('.', ',') : ""}</td>
                         <td className="text-center p-2">{dt.krankTage > 0 ? dt.krankTage : ""}</td>
                       </tr>
@@ -287,7 +294,8 @@ export default function ZtZusammenfassung() {
               <td className="text-center p-2">{grandTotals.schichten || ""}</td>
                <td className="text-center p-2">{grandTotals.evening > 0 ? formatHours(grandTotals.evening) : ""}</td>
                <td className="text-center p-2">{grandTotals.night > 0 ? formatHours(grandTotals.night) : ""}</td>
-               <td className="text-center p-2">{grandTotals.soFei > 0 ? formatHours(grandTotals.soFei) : ""}</td>
+               <td className="text-center p-2">{grandTotals.sonntagStunden > 0 ? formatHours(grandTotals.sonntagStunden) : ""}</td>
+               <td className="text-center p-2">{grandTotals.feiertagStunden > 0 ? formatHours(grandTotals.feiertagStunden) : ""}</td>
               <td className="text-center p-2">{grandTotals.urlaubTage > 0 ? grandTotals.urlaubTage.toFixed(2).replace('.', ',') : ""}</td>
               <td className="text-center p-2">{grandTotals.krankTage > 0 ? grandTotals.krankTage : ""}</td>
             </tr>
