@@ -170,9 +170,9 @@ export default function ZtBruttoNetto() {
     }
   }, [sfnData]);
 
-  // Derive calculation year/month from dateFrom
-  const calculationYear = dateFrom ? new Date(dateFrom).getFullYear() : undefined;
-  const calculationMonth = dateFrom ? new Date(dateFrom).getMonth() + 1 : undefined;
+  // Derive calculation year/month from dateTo (end_date falls in the correct payroll month)
+  const calculationYear = dateTo ? new Date(dateTo).getFullYear() : undefined;
+  const calculationMonth = dateTo ? new Date(dateTo).getMonth() + 1 : undefined;
 
   async function handleCalculate() {
     setError(null);
