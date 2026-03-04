@@ -1,18 +1,31 @@
 
 
-## Fix: Tooltips werden durch `overflow` des Scroll-Containers verdeckt
+## Fix: `is_holiday` wird fälschlicherweise auch für Sonntage gesetzt
 
 ### Problem
-Die Tooltip-Popups werden innerhalb des `overflow-x-auto overflow-y-auto` Scroll-Containers gerendert und dadurch abgeschnitten.
+
+Das Feld `is_holiday` in `zt_shifts` soll nur `true` sein, wenn der Tag ein **bayerischer Feiertag** ist — NICHT wenn es ein Sonntag ist. Downstream in `ZtBruttoNetto.tsx` wird `is_holiday` verwendet, um zwischen Sonntag (50%) und Feiertag (125%) zu unterscheiden. Aktuell wird `is_holiday` auf `isSundayOrHoliday` gesetzt, wodurch Sonntagsstunden fälschlich den 125%-Feiertagszuschlag bekommen statt 50%.
+
+### Betroffene Stellen
+
+| Datei | Zeile | Bug |
+|-------|-------|-----|
+| `src/lib/syncWaiterToZt.ts` | 107 | `is_holiday: params.isSundayOrHoliday` → sollte separate `isHoliday`-Flag sein |
+| `src/components/zeiterfassung/ShiftTimeOverride.tsx` | 232, 462, 483 | `is_holiday: isSundayOrHoliday` → sollte `holidaySet.has(date)` sein |
+
+`ZtWochenplan.tsx` ist korrekt — nutzt bereits `holidays?.has(date)`.
 
 ### Lösung
-`TooltipContent` mit `portal`-Rendering und erhöhtem `z-index` versehen. Radix Tooltip rendert standardmäßig bereits in einem Portal, aber der `z-index` muss höher sein als der sticky Header (`z-20`). Außerdem `side="bottom"` setzen um sicherzustellen, dass der Tooltip nach unten öffnet statt nach oben (wo er am oberen Rand des Containers abgeschnitten werden könnte).
 
-### Änderung
+**`syncWaiterToZt.ts`**:
+- `upsertZtShift` bekommt einen neuen Parameter `isHoliday: boolean` (nur Feiertag, nicht Sonntag)
+- `is_holiday` wird auf `params.isHoliday` gesetzt statt `params.isSundayOrHoliday`
+- Aufrufer übergeben `isHoliday` separat vom `isSundayOrHoliday`
 
-**`src/components/zeiterfassung/SfnTooltipHeader.tsx`**:
-- `TooltipContent` bekommt `side="bottom"` und `className="z-50"` um über dem sticky Header zu erscheinen
-- `avoidCollisions` aktiviert lassen (default)
+**`ShiftTimeOverride.tsx`**:
+- `is_holiday` wird auf `holidaySet.has(date)` gesetzt statt `isSundayOrHoliday`
 
-Das sollte ausreichen, da Radix Tooltip standardmäßig ein Portal nutzt. Falls es trotzdem nicht klappt, liegt es möglicherweise daran, dass der `z-index` des Tooltip-Portals zu niedrig ist — dann wird der `z-50` auf dem Content das beheben.
+### Auswirkung
+
+Bestehende Schichtdaten, die an Sonntagen fälschlich `is_holiday = true` haben, müssten ggf. korrigiert werden. Neue Syncs und Batch-Updates werden korrekt gespeichert.
 
