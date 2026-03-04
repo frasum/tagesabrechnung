@@ -1,6 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { formatHours, DEPARTMENT_ORDER, countVacationDays, countSickDays } from "./shiftCalculations";
+import { formatHours, DEPARTMENT_ORDER, countVacationDays, countSickDays, effectiveEveningHours, effectiveNightHours } from "./shiftCalculations";
 
 interface Employee {
   id: string;
@@ -75,8 +75,8 @@ export function exportZusammenfassungPdf(
     return {
       gesamt: empShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
       soFei: empShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      evening: empShifts.reduce((sum, s) => sum + Number(s.evening_hours), 0),
-      night: empShifts.reduce((sum, s) => sum + Number(s.night_hours), 0),
+      evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s), 0),
+      night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s), 0),
       schichten: empShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
       urlaubTage: countVacationDays(empShifts),
       krankTage: countSickDays(empShifts),
@@ -95,8 +95,8 @@ export function exportZusammenfassungPdf(
     return {
       gesamt: deptShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
       soFei: deptShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      evening: deptShifts.reduce((sum, s) => sum + Number(s.evening_hours), 0),
-      night: deptShifts.reduce((sum, s) => sum + Number(s.night_hours), 0),
+      evening: deptShifts.reduce((sum, s) => sum + effectiveEveningHours(s), 0),
+      night: deptShifts.reduce((sum, s) => sum + effectiveNightHours(s), 0),
       schichten: deptShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
       urlaubTage: countVacationDays(deptShifts),
       krankTage: countSickDays(deptShifts),
@@ -163,8 +163,8 @@ export function exportZusammenfassungPdf(
   const grand = {
     gesamt: allShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
     soFei: allShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-    evening: allShifts.reduce((sum, s) => sum + Number(s.evening_hours), 0),
-    night: allShifts.reduce((sum, s) => sum + Number(s.night_hours), 0),
+    evening: allShifts.reduce((sum, s) => sum + effectiveEveningHours(s), 0),
+    night: allShifts.reduce((sum, s) => sum + effectiveNightHours(s), 0),
     schichten: allShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
     urlaubTage: countVacationDays(allShifts),
     krankTage: countSickDays(allShifts),
