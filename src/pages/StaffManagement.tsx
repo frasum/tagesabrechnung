@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Users, Plus, ChefHat, UtensilsCrossed, Search, Trophy, ChevronDown, UserPlus } from 'lucide-react';
+import { Users, Plus, ChefHat, UtensilsCrossed, Search, Trophy, ChevronDown, UserPlus, Download } from 'lucide-react';
+import { toast } from 'sonner';
+import { getAuthHeaders } from '@/lib/authToken';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -113,10 +115,36 @@ export default function StaffManagement() {
               </p>
             </div>
             
-            <Button onClick={handleOpenNew} size="lg" className="gap-2 shadow-md">
-              <UserPlus className="w-4 h-4" />
-              Neuer Mitarbeiter
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="lg"
+                className="gap-2"
+                onClick={async () => {
+                  try {
+                    const headers = await getAuthHeaders();
+                    const res = await fetch(
+                      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sync-thaitime-staff`,
+                      { method: 'POST', headers }
+                    );
+                    const result = await res.json();
+                    if (!res.ok) throw new Error(result.error || 'Import fehlgeschlagen');
+                    toast.success(`Import abgeschlossen: ${result.updated} aktualisiert, ${result.created} neu, ${result.skipped} übersprungen`);
+                    // Refresh staff list
+                    window.location.reload();
+                  } catch (e: any) {
+                    toast.error(e.message || 'Import fehlgeschlagen');
+                  }
+                }}
+              >
+                <Download className="w-4 h-4" />
+                Import aus thaitime
+              </Button>
+              <Button onClick={handleOpenNew} size="lg" className="gap-2 shadow-md">
+                <UserPlus className="w-4 h-4" />
+                Neuer Mitarbeiter
+              </Button>
+            </div>
           </div>
         </div>
 

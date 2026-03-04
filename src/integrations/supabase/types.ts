@@ -737,48 +737,96 @@ export type Database = {
       staff: {
         Row: {
           created_at: string
+          date_of_birth: string | null
+          employment_end: string | null
+          employment_start: string | null
           first_name: string | null
+          health_insurance: string | null
           hourly_rate: number | null
           id: string
           is_active: boolean | null
+          is_minijob: boolean | null
+          is_sv_exempt: boolean | null
           last_name: string | null
           name: string
+          nationality: string | null
           nickname: string | null
           notes: string | null
           participates_in_pool: boolean
           perso_nr: number | null
+          personnel_group: string | null
           role: Database["public"]["Enums"]["staff_role"]
+          sick_days_total: number | null
+          social_security_nr: string | null
+          tax_class: string | null
+          tax_id: string | null
           updated_at: string
+          vacation_days_contractual: number | null
+          vacation_days_current: number | null
+          vacation_days_previous: number | null
+          vacation_days_taken: number | null
         }
         Insert: {
           created_at?: string
+          date_of_birth?: string | null
+          employment_end?: string | null
+          employment_start?: string | null
           first_name?: string | null
+          health_insurance?: string | null
           hourly_rate?: number | null
           id?: string
           is_active?: boolean | null
+          is_minijob?: boolean | null
+          is_sv_exempt?: boolean | null
           last_name?: string | null
           name: string
+          nationality?: string | null
           nickname?: string | null
           notes?: string | null
           participates_in_pool?: boolean
           perso_nr?: number | null
+          personnel_group?: string | null
           role: Database["public"]["Enums"]["staff_role"]
+          sick_days_total?: number | null
+          social_security_nr?: string | null
+          tax_class?: string | null
+          tax_id?: string | null
           updated_at?: string
+          vacation_days_contractual?: number | null
+          vacation_days_current?: number | null
+          vacation_days_previous?: number | null
+          vacation_days_taken?: number | null
         }
         Update: {
           created_at?: string
+          date_of_birth?: string | null
+          employment_end?: string | null
+          employment_start?: string | null
           first_name?: string | null
+          health_insurance?: string | null
           hourly_rate?: number | null
           id?: string
           is_active?: boolean | null
+          is_minijob?: boolean | null
+          is_sv_exempt?: boolean | null
           last_name?: string | null
           name?: string
+          nationality?: string | null
           nickname?: string | null
           notes?: string | null
           participates_in_pool?: boolean
           perso_nr?: number | null
+          personnel_group?: string | null
           role?: Database["public"]["Enums"]["staff_role"]
+          sick_days_total?: number | null
+          social_security_nr?: string | null
+          tax_class?: string | null
+          tax_id?: string | null
           updated_at?: string
+          vacation_days_contractual?: number | null
+          vacation_days_current?: number | null
+          vacation_days_previous?: number | null
+          vacation_days_taken?: number | null
         }
         Relationships: []
       }

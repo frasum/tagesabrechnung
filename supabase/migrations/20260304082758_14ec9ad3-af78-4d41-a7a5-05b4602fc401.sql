@@ -1,0 +1,17 @@
+ALTER TABLE public.staff
+  ADD COLUMN IF NOT EXISTS tax_class text,
+  ADD COLUMN IF NOT EXISTS is_minijob boolean,
+  ADD COLUMN IF NOT EXISTS is_sv_exempt boolean,
+  ADD COLUMN IF NOT EXISTS date_of_birth date,
+  ADD COLUMN IF NOT EXISTS employment_start date,
+  ADD COLUMN IF NOT EXISTS employment_end date,
+  ADD COLUMN IF NOT EXISTS tax_id text,
+  ADD COLUMN IF NOT EXISTS social_security_nr text,
+  ADD COLUMN IF NOT EXISTS nationality text,
+  ADD COLUMN IF NOT EXISTS personnel_group text,
+  ADD COLUMN IF NOT EXISTS health_insurance text,
+  ADD COLUMN IF NOT EXISTS vacation_days_contractual integer,
+  ADD COLUMN IF NOT EXISTS vacation_days_previous integer,
+  ADD COLUMN IF NOT EXISTS vacation_days_current integer,
+  ADD COLUMN IF NOT EXISTS vacation_days_taken integer,
+  ADD COLUMN IF NOT EXISTS sick_days_total integer;
