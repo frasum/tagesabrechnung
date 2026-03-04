@@ -408,8 +408,11 @@ export default function ZtBruttoNetto() {
             </Card>
             <Card>
               <CardContent className="pt-6 text-center">
-                <p className="text-sm text-muted-foreground">Netto</p>
-                <p className="text-2xl font-bold text-primary">{fmt(result.netMonthly)}</p>
+                <p className="text-sm text-muted-foreground">Netto-Auszahlung</p>
+                <p className="text-2xl font-bold text-primary">{fmt(result.netMonthly + result.sfn.totalBonus)}</p>
+                {result.sfn.totalBonus > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">inkl. {fmt(result.sfn.totalBonus)} SFN-Zuschläge</p>
+                )}
               </CardContent>
             </Card>
             <Card>
@@ -443,7 +446,26 @@ export default function ZtBruttoNetto() {
                     <tr className="text-muted-foreground"><td className="py-2 pl-4">– AN-Rentenversicherung</td><td className="text-right">{fmt(result.employee.rv)}</td></tr>
                     <tr className="text-muted-foreground"><td className="py-2 pl-4">– AN-Arbeitslosenversicherung</td><td className="text-right">{fmt(result.employee.av)}</td></tr>
                     <tr className="text-muted-foreground"><td className="py-2 pl-4">– AN-Pflegeversicherung</td><td className="text-right">{fmt(result.employee.pv)}</td></tr>
-                    <tr className="font-semibold border-t-2 border-border"><td className="py-2">Nettogehalt</td><td className="text-right text-primary">{fmt(result.netMonthly)}</td></tr>
+                    <tr className="font-semibold border-t-2 border-border"><td className="py-2">Nettogehalt</td><td className="text-right">{fmt(result.netMonthly)}</td></tr>
+
+                    {result.sfn.totalBonus > 0 && (
+                      <>
+                        <tr className="border-t"><td className="py-2 pt-4 font-medium" colSpan={2}>Steuerfreie Zuschläge (SFN)</td></tr>
+                        {result.sfn.nightBonus > 0 && (
+                          <tr className="text-muted-foreground"><td className="py-2 pl-4">+ Nachtzuschlag (steuerfrei)</td><td className="text-right">{fmt(result.sfn.nightBonus)}</td></tr>
+                        )}
+                        {result.sfn.sundayBonus > 0 && (
+                          <tr className="text-muted-foreground"><td className="py-2 pl-4">+ Sonntagszuschlag (steuerfrei)</td><td className="text-right">{fmt(result.sfn.sundayBonus)}</td></tr>
+                        )}
+                        {result.sfn.holidayBonus > 0 && (
+                          <tr className="text-muted-foreground"><td className="py-2 pl-4">+ Feiertagszuschlag (steuerfrei)</td><td className="text-right">{fmt(result.sfn.holidayBonus)}</td></tr>
+                        )}
+                        <tr className="font-semibold border-t-2 border-border">
+                          <td className="py-2">Netto-Auszahlung</td>
+                          <td className="text-right text-primary">{fmt(result.netMonthly + result.sfn.totalBonus)}</td>
+                        </tr>
+                      </>
+                    )}
 
                     <tr className="border-t-2"><td className="py-2 pt-4 font-medium" colSpan={2}>Arbeitgeberanteile</td></tr>
                     <tr className="text-muted-foreground"><td className="py-2 pl-4">AG-Krankenversicherung</td><td className="text-right">{fmt(result.employer.kv)}</td></tr>
