@@ -99,7 +99,7 @@ export function exportBuchhaltungCsv(
   payrollNotes: PayrollNote[]
 ) {
   const sorted = sortEmployees(employees);
-  const headers = ["Mitarbeiter", "Abteilung", "Gesamt Std.", "Schichten", "So/Fei", "20-24", "24-x", "Urlaub", "Krank", "Vorschuss", "Besonderheiten"];
+  const headers = ["Mitarbeiter", "Abteilung", "Gesamt Std.", "Schichten", "20-24", "24-x", "So/Fei", "Urlaub", "Krank", "Vorschuss", "Besonderheiten"];
   const rows: (string | number)[][] = [];
 
   for (const emp of sorted) {
@@ -126,9 +126,9 @@ export function exportBuchhaltungCsv(
       emp.department,
       t.gesamt,
       t.schichten,
-      t.soFei,
       t.evening,
       t.night,
+      t.soFei,
       t.urlaubTage,
       t.krankTage,
       note?.vorschuss || 0,
@@ -161,7 +161,7 @@ export function exportZusammenfassungCsv(
     shifts.some(s => s.employee_id === emp.id && s.department === emp.department && (Number(s.total_hours) > 0 || !!s.absence_type))
   );
 
-  const headers = ["Mitarbeiter", "Abteilung", ...sortedWeeks.map(w => `W${w.week_number}`), "Gesamt", "Schichten", "So/Fei", "20-24", "24-x", "U", "K"];
+  const headers = ["Mitarbeiter", "Abteilung", ...sortedWeeks.map(w => `W${w.week_number}`), "Gesamt", "Schichten", "20-24", "24-x", "So/Fei", "U", "K"];
   const rows: (string | number)[][] = [];
 
   for (const emp of employeesWithShifts) {
@@ -189,9 +189,9 @@ export function exportZusammenfassungCsv(
       ...weekCells,
       totals.gesamt,
       totals.schichten,
-      totals.soFei,
       totals.evening,
       totals.night,
+      totals.soFei,
       totals.urlaubTage,
       totals.krankTage,
     ]);

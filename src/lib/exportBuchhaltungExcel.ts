@@ -62,7 +62,7 @@ export function exportBuchhaltungExcel(
   const wsData: (string | number)[][] = [];
   wsData.push([`Buchhaltung – ${periodLabel}`]);
   wsData.push([]);
-  wsData.push(["Mitarbeiter", "Gesamt Std.", "Schichten", "So/Fei Std.", "20-24 Std.", "24-x Std.", "U (angr.)", "K", "Vorschuss", "Besonderheiten"]);
+  wsData.push(["Mitarbeiter", "Gesamt Std.", "Schichten", "20-24 Std.", "24-x Std.", "So/Fei Std.", "U (angr.)", "K", "Vorschuss", "Besonderheiten"]);
 
   let lastDept = "";
   for (const emp of sorted) {
@@ -93,9 +93,9 @@ export function exportBuchhaltungExcel(
       nameStr,
       t.gesamt || "",
       t.schichten || "",
-      t.soFei || "",
       t.evening || "",
       t.night || "",
+      t.soFei || "",
       t.urlaubTage || "",
       t.krankTage || "",
       note?.vorschuss || "",

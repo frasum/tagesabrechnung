@@ -82,7 +82,7 @@ export function exportWochenplanExcel(
       const dayDate = format(d, "dd.MM.");
       return `${dayName} ${dayDate}`;
     });
-    wsData.push(["Mitarbeiter", ...dayHeaders, "Ges", "So/F", "20-24", "24-x", "U", "K"]);
+    wsData.push(["Mitarbeiter", ...dayHeaders, "Ges", "20-24", "24-x", "So/F", "U", "K"]);
 
     let lastDept = "";
     for (const emp of sorted) {
@@ -118,9 +118,9 @@ export function exportWochenplanExcel(
         displayName,
         ...dayCells,
         totals.gesamt,
-        totals.soFei,
         totals.evening,
         totals.night,
+        totals.soFei,
         totals.urlaub,
         totals.krank,
       ]);

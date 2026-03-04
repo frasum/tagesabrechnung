@@ -93,9 +93,9 @@ export function exportBuchhaltungPdf(
       nameStr,
       formatHours(t.gesamt),
       String(t.schichten),
-      t.soFei > 0 ? formatHours(t.soFei) : "",
       t.evening > 0 ? formatHours(t.evening) : "",
       t.night > 0 ? formatHours(t.night) : "",
+      t.soFei > 0 ? formatHours(t.soFei) : "",
       t.urlaubTage > 0 ? t.urlaubTage.toFixed(2).replace('.', ',') : "",
       t.krankTage > 0 ? String(t.krankTage) : "",
       note?.vorschuss ? String(note.vorschuss) : "",
@@ -105,7 +105,7 @@ export function exportBuchhaltungPdf(
 
   autoTable(doc, {
     startY: 20,
-    head: [["Mitarbeiter", "Gesamt Std.", "Schichten", "So/Fei Std.", "20-24 Std.", "24-x Std.", "U (angr.)", "K", "Vorschuss", "Besonderheiten"]],
+    head: [["Mitarbeiter", "Gesamt Std.", "Schichten", "20-24 Std.", "24-x Std.", "So/Fei Std.", "U (angr.)", "K", "Vorschuss", "Besonderheiten"]],
     body: rows,
     styles: { fontSize: 8, cellPadding: 2 },
     headStyles: { fillColor: [60, 60, 60] },

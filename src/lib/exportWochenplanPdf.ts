@@ -86,7 +86,7 @@ export function exportWochenplanPdf(
       return `${dayName} ${dayDate}${isHol ? " *" : ""}`;
     });
 
-    const head = [["Mitarbeiter", ...dayHeaders, "Ges", "So/F", "20-24", "24-x", "U", "K"]];
+    const head = [["Mitarbeiter", ...dayHeaders, "Ges", "20-24", "24-x", "So/F", "U", "K"]];
 
     const rows: any[][] = [];
     let lastDept = "";
@@ -123,9 +123,9 @@ export function exportWochenplanPdf(
         displayName,
         ...dayCells,
         formatHours(totals.gesamt),
-        totals.soFei > 0 ? formatHours(totals.soFei) : "",
         totals.evening > 0 ? formatHours(totals.evening) : "",
         totals.night > 0 ? formatHours(totals.night) : "",
+        totals.soFei > 0 ? formatHours(totals.soFei) : "",
         totals.urlaub > 0 ? String(totals.urlaub) : "",
         totals.krank > 0 ? String(totals.krank) : "",
       ]);

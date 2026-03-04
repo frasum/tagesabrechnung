@@ -98,7 +98,7 @@ export function exportZusammenfassungExcel(
   wsData.push([]);
 
   // Header
-  wsData.push(["Mitarbeiter", ...sortedWeeks.map(w => `W${w.week_number}`), "Gesamt", "Schichten", "So/Fei", "20-24", "24-x", "U", "K"]);
+  wsData.push(["Mitarbeiter", ...sortedWeeks.map(w => `W${w.week_number}`), "Gesamt", "Schichten", "20-24", "24-x", "So/Fei", "U", "K"]);
 
   let lastDept = "";
   for (const emp of employeesWithShifts) {
@@ -122,9 +122,9 @@ export function exportZusammenfassungExcel(
       ...weekCells,
       totals.gesamt,
       totals.schichten || "",
-      totals.soFei || "",
       totals.evening || "",
       totals.night || "",
+      totals.soFei || "",
       totals.urlaubTage || "",
       totals.krankTage || "",
     ]);
@@ -139,9 +139,9 @@ export function exportZusammenfassungExcel(
         ...sortedWeeks.map(() => "" as string | number),
         dt.gesamt,
         dt.schichten || "",
-        dt.soFei || "",
         dt.evening || "",
         dt.night || "",
+        dt.soFei || "",
         dt.urlaubTage || "",
         dt.krankTage || "",
       ]);
@@ -164,9 +164,9 @@ export function exportZusammenfassungExcel(
     ...sortedWeeks.map(() => "" as string | number),
     grand.gesamt,
     grand.schichten || "",
-    grand.soFei || "",
     grand.evening || "",
     grand.night || "",
+    grand.soFei || "",
     grand.urlaubTage || "",
     grand.krankTage || "",
   ]);

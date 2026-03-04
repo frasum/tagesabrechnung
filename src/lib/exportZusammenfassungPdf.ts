@@ -106,7 +106,7 @@ export function exportZusammenfassungPdf(
   doc.setFontSize(12);
   doc.text(`Zusammenfassung – ${periodLabel}`, 14, 12);
 
-  const head = [["Mitarbeiter", ...sortedWeeks.map(w => `W${w.week_number}`), "Gesamt", "Schichten", "So/Fei", "20-24", "24-x", "U", "K"]];
+  const head = [["Mitarbeiter", ...sortedWeeks.map(w => `W${w.week_number}`), "Gesamt", "Schichten", "20-24", "24-x", "So/Fei", "U", "K"]];
   const colCount = sortedWeeks.length + 8;
 
   const rows: any[][] = [];
@@ -132,9 +132,9 @@ export function exportZusammenfassungPdf(
       ...weekCells,
       formatHours(totals.gesamt),
       totals.schichten || "",
-      totals.soFei > 0 ? formatHours(totals.soFei) : "",
       totals.evening > 0 ? formatHours(totals.evening) : "",
       totals.night > 0 ? formatHours(totals.night) : "",
+      totals.soFei > 0 ? formatHours(totals.soFei) : "",
       totals.urlaubTage > 0 ? totals.urlaubTage.toFixed(2).replace(".", ",") : "",
       totals.krankTage > 0 ? String(totals.krankTage) : "",
     ]);
@@ -149,9 +149,9 @@ export function exportZusammenfassungPdf(
         ...sortedWeeks.map(() => ""),
         { content: formatHours(dt.gesamt), styles: { fontStyle: "bold" } },
         { content: dt.schichten || "", styles: { fontStyle: "bold" } },
-        dt.soFei > 0 ? formatHours(dt.soFei) : "",
         dt.evening > 0 ? formatHours(dt.evening) : "",
         dt.night > 0 ? formatHours(dt.night) : "",
+        dt.soFei > 0 ? formatHours(dt.soFei) : "",
         dt.urlaubTage > 0 ? dt.urlaubTage.toFixed(2).replace(".", ",") : "",
         dt.krankTage > 0 ? String(dt.krankTage) : "",
       ]);
@@ -175,9 +175,9 @@ export function exportZusammenfassungPdf(
     ...sortedWeeks.map(() => ({ content: "", styles: { fillColor: [200, 200, 200] } })),
     { content: formatHours(grand.gesamt), styles: { fontStyle: "bold", fillColor: [200, 200, 200] } },
     { content: grand.schichten || "", styles: { fontStyle: "bold", fillColor: [200, 200, 200] } },
-    { content: grand.soFei > 0 ? formatHours(grand.soFei) : "", styles: { fillColor: [200, 200, 200] } },
     { content: grand.evening > 0 ? formatHours(grand.evening) : "", styles: { fillColor: [200, 200, 200] } },
     { content: grand.night > 0 ? formatHours(grand.night) : "", styles: { fillColor: [200, 200, 200] } },
+    { content: grand.soFei > 0 ? formatHours(grand.soFei) : "", styles: { fillColor: [200, 200, 200] } },
     { content: grand.urlaubTage > 0 ? grand.urlaubTage.toFixed(2).replace(".", ",") : "", styles: { fillColor: [200, 200, 200] } },
     { content: grand.krankTage > 0 ? String(grand.krankTage) : "", styles: { fillColor: [200, 200, 200] } },
   ]);
