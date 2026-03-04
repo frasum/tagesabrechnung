@@ -1,25 +1,22 @@
 
 
-## Plan: SFN-Zuschläge in Netto und Detailtabelle einrechnen
+## Plan: Evening + Night Hours kombinieren für Nachtzuschlag
 
 ### Problem
-Die SFN-Zuschläge (Nacht, Sonntag, Feiertag) werden zwar berechnet und separat angezeigt, aber **nicht** zum Netto-Betrag addiert. Die Netto-Karte zeigt nur `netMonthly` ohne Zuschläge.
+Die App speichert Abendstunden (20:00–24:00) und Nachtstunden (00:00–06:00) getrennt. Für die SFN-Zuschlagsberechnung nach §3b EStG zählen aber beide als zuschlagspflichtige Nachtarbeit. Aktuell werden nur `night_hours` (nach Mitternacht) für den Nachtzuschlag verwendet – `evening_hours` werden ignoriert.
 
-### Lösung
+### Änderung
 
 **Datei: `src/pages/zeiterfassung/ZtBruttoNetto.tsx`**
 
-1. **Netto-Karte**: Statt `result.netMonthly` den Wert `result.netMonthly + result.sfn.totalBonus` als "Netto-Auszahlung" anzeigen. Das reine Netto ohne Zuschläge bleibt in der Detailtabelle sichtbar.
+1. **Aggregation (Zeile ~132)**: `nightHours` wird zu `evening + night` kombiniert:
+   ```
+   nightHours: Math.round((agg.night + agg.evening) * 100) / 100
+   ```
 
-2. **Detailtabelle erweitern**: Nach der Netto-Zeile die SFN-Zuschläge als Plus-Positionen einfügen:
-   - `+ Nachtzuschlag (steuerfrei)`
-   - `+ Sonntagszuschlag (steuerfrei)`
-   - `+ Feiertagszuschlag (steuerfrei)`
-   - **Netto-Auszahlung** (fett, als Summe)
+2. **Anzeige (Zeile ~343)**: Label von "Nachtstunden" zu "Nachtstunden (20–06 Uhr)" ändern, damit klar ist was enthalten ist.
 
-3. **Separater SFN-Block** bleibt bestehen für die Detail-Aufschlüsselung (Stunden, Sätze).
+3. Die separate `eveningHours`-Property im Return-Objekt kann entfallen, da sie nicht mehr separat benötigt wird.
 
-### Ergebnis
-- Die Netto-Karte zeigt den tatsächlichen Auszahlungsbetrag inkl. steuerfreier Zuschläge
-- Die Detailtabelle macht die Zusammensetzung transparent
+Alle anderen Stellen (SFN-Berechnung, API-Aufruf) verwenden bereits `sfnData.nightHours` und brauchen keine Änderung.
 
