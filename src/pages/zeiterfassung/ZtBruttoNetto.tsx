@@ -34,17 +34,19 @@ export default function ZtBruttoNetto() {
   const [churchTax, setChurchTax] = useState(false);
   const [insuranceType, setInsuranceType] = useState<"gesetzlich" | "privat">("gesetzlich");
   const [childAllowances, setChildAllowances] = useState<number>(0);
-  const [dateFrom, setDateFrom] = useState<string>("");
-  const [dateTo, setDateTo] = useState<string>("");
+  const [localPeriodId, setLocalPeriodId] = useState<string>("");
 
-  // Auto-fill date range from selected period
+  // Init local period from global selection
   useEffect(() => {
-    const period = periods?.find(p => p.id === selectedPeriodId);
-    if (period) {
-      setDateFrom(period.start_date);
-      setDateTo(period.end_date);
+    if (selectedPeriodId && !localPeriodId) {
+      setLocalPeriodId(selectedPeriodId);
     }
-  }, [selectedPeriodId, periods]);
+  }, [selectedPeriodId]);
+
+  // Derive dates from selected period
+  const selectedLocalPeriod = periods?.find(p => p.id === localPeriodId);
+  const dateFrom = selectedLocalPeriod?.start_date ?? "";
+  const dateTo = selectedLocalPeriod?.end_date ?? "";
 
   const [result, setResult] = useState<PayrollResult | null>(null);
   const [calculating, setCalculating] = useState(false);
@@ -295,15 +297,23 @@ export default function ZtBruttoNetto() {
             <CardTitle className="text-lg">Schichtdaten (SFN)</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Von</Label>
-                <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Bis</Label>
-                <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} />
-              </div>
+            <div className="space-y-1.5">
+              <Label>Abrechnungsperiode</Label>
+              <Select value={localPeriodId} onValueChange={setLocalPeriodId}>
+                <SelectTrigger><SelectValue placeholder="Periode wählen..." /></SelectTrigger>
+                <SelectContent>
+                  {periods?.map(p => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {dateFrom && dateTo && (
+                <p className="text-xs text-muted-foreground">
+                  {new Date(dateFrom).toLocaleDateString("de-DE")} – {new Date(dateTo).toLocaleDateString("de-DE")}
+                </p>
+              )}
             </div>
 
             {hasSfnData ? (
