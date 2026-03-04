@@ -70,7 +70,6 @@ async function callLohnicaApi(body: any, apiKey: string): Promise<any> {
     headers: {
       "Content-Type": "application/json",
       "X-API-Key": apiKey,
-      "Authorization": `Bearer ${apiKey}`,
     },
     body: JSON.stringify(apiPayload),
     signal: controller.signal,
