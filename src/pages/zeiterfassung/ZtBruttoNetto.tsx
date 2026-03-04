@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Calculator, Info, AlertTriangle, CheckCircle, AlertCircle } from "lucide-react";
 import { SFN_RATES } from "@/lib/sfnRates";
 import { GERMAN_STATES, TAX_CLASSES, type PayrollResult } from "@/types/payroll";
@@ -476,8 +477,26 @@ export default function ZtBruttoNetto() {
                     {/* AG-Umlagen from API */}
                     {result.agUmlagen && (
                       <>
-                        <tr className="text-muted-foreground"><td className="py-2 pl-4">U1 (Krankheit)</td><td className="text-right">{fmt(result.agUmlagen.u1)}</td></tr>
-                        <tr className="text-muted-foreground"><td className="py-2 pl-4">U2 (Mutterschaft)</td><td className="text-right">{fmt(result.agUmlagen.u2)}</td></tr>
+                        <tr className="text-muted-foreground">
+                          <td className="py-2 pl-4 flex items-center gap-1">
+                            Umlage U1
+                            <Tooltip>
+                              <TooltipTrigger asChild><Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" /></TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-[240px] text-xs">Gesetzliche Arbeitgeber-Umlage zur Erstattung von Lohnfortzahlungskosten im Krankheitsfall. Wird für alle Mitarbeiter abgeführt.</TooltipContent>
+                            </Tooltip>
+                          </td>
+                          <td className="text-right">{fmt(result.agUmlagen.u1)}</td>
+                        </tr>
+                        <tr className="text-muted-foreground">
+                          <td className="py-2 pl-4 flex items-center gap-1">
+                            Umlage U2
+                            <Tooltip>
+                              <TooltipTrigger asChild><Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" /></TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-[240px] text-xs">Gesetzliche Arbeitgeber-Umlage für Mutterschutz-Erstattungen. Wird für alle Mitarbeiter abgeführt – unabhängig vom Geschlecht.</TooltipContent>
+                            </Tooltip>
+                          </td>
+                          <td className="text-right">{fmt(result.agUmlagen.u2)}</td>
+                        </tr>
                         <tr className="text-muted-foreground"><td className="py-2 pl-4">Insolvenzumlage</td><td className="text-right">{fmt(result.agUmlagen.insolvenzumlage)}</td></tr>
                       </>
                     )}
