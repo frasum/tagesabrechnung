@@ -2,7 +2,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { format, parseISO, eachDayOfInterval } from "date-fns";
 import { de } from "date-fns/locale";
-import { formatHours, DEPARTMENT_ORDER, calculateShiftHours, isSunday, countVacationDays, countSickDays } from "./shiftCalculations";
+import { formatHours, DEPARTMENT_ORDER, calculateShiftHours, isSunday, countVacationDays, countSickDays, effectiveEveningHours, effectiveNightHours } from "./shiftCalculations";
 
 interface Employee {
   id: string;
@@ -102,8 +102,8 @@ export function exportWochenplanPdf(
       const totals = {
         gesamt: empShifts.reduce((s, x) => s + Number(x.total_hours), 0),
         soFei: empShifts.reduce((s, x) => s + Number(x.sunday_holiday_hours), 0),
-        evening: empShifts.reduce((s, x) => s + Number(x.evening_hours), 0),
-        night: empShifts.reduce((s, x) => s + Number(x.night_hours), 0),
+        evening: empShifts.reduce((s, x) => s + effectiveEveningHours(x), 0),
+        night: empShifts.reduce((s, x) => s + effectiveNightHours(x), 0),
         urlaub: countVacationDays(empShifts),
         krank: countSickDays(empShifts),
       };

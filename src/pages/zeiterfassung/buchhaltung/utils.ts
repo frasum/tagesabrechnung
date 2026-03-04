@@ -1,4 +1,4 @@
-import { countVacationDays, countSickDays } from "@/lib/shiftCalculations";
+import { countVacationDays, countSickDays, effectiveEveningHours, effectiveNightHours } from "@/lib/shiftCalculations";
 import type { Shift, EmployeeTotals } from "./types";
 
 export function getDeptBorderClass(dept: string): string {
@@ -20,8 +20,8 @@ export function getEmployeeTotals(empId: string, shifts: Shift[], department?: s
   return {
     gesamt: empShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
     soFei: empShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-    evening: empShifts.reduce((sum, s) => sum + Number(s.evening_hours), 0),
-    night: empShifts.reduce((sum, s) => sum + Number(s.night_hours), 0),
+    evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s), 0),
+    night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s), 0),
     schichten: empShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
     urlaubTage: countVacationDays(empShifts),
     krankTage: countSickDays(empShifts),

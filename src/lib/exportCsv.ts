@@ -1,4 +1,4 @@
-import { DEPARTMENT_ORDER, countVacationDays, countSickDays, getSickDateRanges, getVacationDateRanges, formatSickRanges } from "./shiftCalculations";
+import { DEPARTMENT_ORDER, countVacationDays, countSickDays, getSickDateRanges, getVacationDateRanges, formatSickRanges, effectiveEveningHours, effectiveNightHours } from "./shiftCalculations";
 import { format, parseISO, eachDayOfInterval } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -107,8 +107,8 @@ export function exportBuchhaltungCsv(
     const t = {
       gesamt: empShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
       soFei: empShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      evening: empShifts.reduce((sum, s) => sum + Number(s.evening_hours), 0),
-      night: empShifts.reduce((sum, s) => sum + Number(s.night_hours), 0),
+      evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s), 0),
+      night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s), 0),
       schichten: empShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
       urlaubTage: countVacationDays(empShifts),
       krankTage: countSickDays(empShifts),
@@ -169,8 +169,8 @@ export function exportZusammenfassungCsv(
     const totals = {
       gesamt: empShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
       soFei: empShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      evening: empShifts.reduce((sum, s) => sum + Number(s.evening_hours), 0),
-      night: empShifts.reduce((sum, s) => sum + Number(s.night_hours), 0),
+      evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s), 0),
+      night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s), 0),
       schichten: empShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
       urlaubTage: countVacationDays(empShifts),
       krankTage: countSickDays(empShifts),

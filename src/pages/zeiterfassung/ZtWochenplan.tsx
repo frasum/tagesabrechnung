@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { calculateShiftHours, isSunday, formatHours, DEPARTMENT_ORDER, countVacationDays, countSickDays, getDepartmentBgClass } from "@/lib/shiftCalculations";
+import { calculateShiftHours, isSunday, formatHours, DEPARTMENT_ORDER, countVacationDays, countSickDays, getDepartmentBgClass, effectiveEveningHours, effectiveNightHours } from "@/lib/shiftCalculations";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -466,8 +466,8 @@ export default function ZtWochenplan() {
     return {
       gesamt: empShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
       soFei: empShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      evening: empShifts.reduce((sum, s) => sum + Number(s.evening_hours), 0),
-      night: empShifts.reduce((sum, s) => sum + Number(s.night_hours), 0),
+      evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s), 0),
+      night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s), 0),
       urlaubTage: countVacationDays(empShifts),
       krankTage: countSickDays(empShifts),
     };
