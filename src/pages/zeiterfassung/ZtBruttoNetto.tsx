@@ -103,6 +103,16 @@ export default function ZtBruttoNetto() {
     }
   }, [staffDetails, effectiveHourlyRate]);
 
+  // Explicit return type for the SFN shift query (avoids `as any` casts)
+  interface SfnShiftRow {
+    total_hours: number;
+    night_hours: number;
+    night_deep_hours: number;
+    sunday_holiday_hours: number;
+    is_holiday: boolean;
+    evening_hours: number;
+  }
+
   // Fetch SFN shift data
   const { data: sfnData } = useQuery({
     queryKey: ["sfn-shifts", employeeId, dateFrom, dateTo],
@@ -113,19 +123,20 @@ export default function ZtBruttoNetto() {
         .eq("employee_id", employeeId)
         .gte("shift_date", dateFrom)
         .lte("shift_date", dateTo)
-        .is("absence_type", null);
+        .is("absence_type", null)
+        .returns<SfnShiftRow[]>();
       if (error) throw error;
 
       const agg = { total: 0, night: 0, nightDeep: 0, sunday: 0, holiday: 0, evening: 0, sundayEvening: 0, sundayNightDeep: 0 };
       for (const s of data) {
         agg.total += s.total_hours || 0;
         agg.night += s.night_hours || 0;
-        agg.nightDeep += (s as any).night_deep_hours || 0;
+        agg.nightDeep += s.night_deep_hours || 0;
         agg.evening += s.evening_hours || 0;
         const isSundayOrHoliday = (s.sunday_holiday_hours || 0) > 0;
         if (isSundayOrHoliday) {
           agg.sundayEvening += s.evening_hours || 0;
-          agg.sundayNightDeep += (s as any).night_deep_hours || 0;
+          agg.sundayNightDeep += s.night_deep_hours || 0;
         }
         if (s.is_holiday) {
           agg.holiday += s.sunday_holiday_hours || 0;
