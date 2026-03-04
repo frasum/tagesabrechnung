@@ -59,7 +59,8 @@ async function callLohnicaApi(body: any, apiKey: string): Promise<any> {
   const apiUrl = Deno.env.get("BRUTTO_NETTO_API_URL") || "https://brutto-netto-api.de";
   const url = `${apiUrl}/api/v1/gross-net-calc/${period}`;
 
-  console.log("Calling Lohnica API:", url);
+  const keyPreview = apiKey ? `${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 4)}` : "(empty)";
+  console.log("Calling Lohnica API:", url, "key:", keyPreview);
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10_000);
