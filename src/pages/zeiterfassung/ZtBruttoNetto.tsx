@@ -116,20 +116,29 @@ export default function ZtBruttoNetto() {
         .is("absence_type", null);
       if (error) throw error;
 
-      const agg = { total: 0, night: 0, sunday: 0, holiday: 0, evening: 0 };
+      const agg = { total: 0, night: 0, sunday: 0, holiday: 0, evening: 0, sundayEvening: 0 };
       for (const s of data) {
         agg.total += s.total_hours || 0;
         agg.night += s.night_hours || 0;
         agg.evening += s.evening_hours || 0;
+        const isSundayOrHoliday = (s.sunday_holiday_hours || 0) > 0;
+        if (isSundayOrHoliday) {
+          // Track evening hours on sunday/holiday shifts separately
+          // so we can subtract them from night hours (higher surcharge wins)
+          agg.sundayEvening += s.evening_hours || 0;
+        }
         if (s.is_holiday) {
           agg.holiday += s.sunday_holiday_hours || 0;
         } else {
           agg.sunday += s.sunday_holiday_hours || 0;
         }
       }
+      // Night hours = all evening + night hours MINUS those already covered by sunday/holiday surcharge
+      // Per §3b EStG: when sunday (50%) and night (25%) overlap, only the higher surcharge applies
+      const rawNight = agg.night + agg.evening - agg.sundayEvening;
       return {
         totalHours: Math.round(agg.total * 100) / 100,
-        nightHours: Math.round((agg.night + agg.evening) * 100) / 100,
+        nightHours: Math.round(Math.max(0, rawNight) * 100) / 100,
         sundayHours: Math.round(agg.sunday * 100) / 100,
         holidayHours: Math.round(agg.holiday * 100) / 100,
         eveningHours: Math.round(agg.evening * 100) / 100,
