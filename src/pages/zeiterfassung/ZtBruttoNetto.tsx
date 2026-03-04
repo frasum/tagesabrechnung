@@ -90,7 +90,7 @@ export default function ZtBruttoNetto() {
   const effectiveHourlyRate = staffRestaurant?.zt_hourly_rate ?? staffDetails?.hourly_rate ?? 0;
 
   // When employee selected, auto-fill fields
-  useMemo(() => {
+  useEffect(() => {
     if (staffDetails) {
       if (staffDetails.tax_class) setTaxClass(staffDetails.tax_class);
       if (effectiveHourlyRate) setHourlyRate(String(effectiveHourlyRate));
