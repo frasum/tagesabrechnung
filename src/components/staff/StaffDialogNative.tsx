@@ -37,6 +37,23 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
   const [restaurantDepts, setRestaurantDepts] = useState<Record<string, Set<string>>>({});
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [permissionLevel, setPermissionLevel] = useState<PermissionLevel>('staff');
+  // Payroll state
+  const [taxClass, setTaxClass] = useState('');
+  const [taxId, setTaxId] = useState('');
+  const [socialSecurityNr, setSocialSecurityNr] = useState('');
+  const [healthInsurance, setHealthInsurance] = useState('');
+  const [nationality, setNationality] = useState('');
+  const [personnelGroup, setPersonnelGroup] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [employmentStart, setEmploymentStart] = useState('');
+  const [employmentEnd, setEmploymentEnd] = useState('');
+  const [isMinijob, setIsMinijob] = useState(false);
+  const [isSvExempt, setIsSvExempt] = useState(false);
+  const [vacDaysContractual, setVacDaysContractual] = useState('');
+  const [vacDaysPrevious, setVacDaysPrevious] = useState('');
+  const [vacDaysCurrent, setVacDaysCurrent] = useState('');
+  const [vacDaysTaken, setVacDaysTaken] = useState('');
+  const [sickDaysTotal, setSickDaysTotal] = useState('');
 
   const { data: restaurants = [] } = useRestaurants();
   const { data: unlinkedProfiles = [], isLoading: profilesLoading } = useUnlinkedProfiles();
@@ -67,6 +84,23 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       setIsActive(staff.is_active ?? true);
       setParticipatesInPool(staff.participates_in_pool ?? true);
       setPinCode('');
+      // Payroll init
+      setTaxClass(staff.tax_class ?? '');
+      setTaxId(staff.tax_id ?? '');
+      setSocialSecurityNr(staff.social_security_nr ?? '');
+      setHealthInsurance(staff.health_insurance ?? '');
+      setNationality(staff.nationality ?? '');
+      setPersonnelGroup(staff.personnel_group ?? '');
+      setDateOfBirth(staff.date_of_birth ?? '');
+      setEmploymentStart(staff.employment_start ?? '');
+      setEmploymentEnd(staff.employment_end ?? '');
+      setIsMinijob(staff.is_minijob ?? false);
+      setIsSvExempt(staff.is_sv_exempt ?? false);
+      setVacDaysContractual(staff.vacation_days_contractual != null ? String(staff.vacation_days_contractual) : '');
+      setVacDaysPrevious(staff.vacation_days_previous != null ? String(staff.vacation_days_previous) : '');
+      setVacDaysCurrent(staff.vacation_days_current != null ? String(staff.vacation_days_current) : '');
+      setVacDaysTaken(staff.vacation_days_taken != null ? String(staff.vacation_days_taken) : '');
+      setSickDaysTotal(staff.sick_days_total != null ? String(staff.sick_days_total) : '');
       // Build restaurantDepts from existing staff_restaurants
       const depts: Record<string, Set<string>> = {};
       for (const sr of staff.staff_restaurants ?? []) {
@@ -83,6 +117,13 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       setIsActive(true);
       setParticipatesInPool(true);
       setPinCode('');
+      // Payroll reset
+      setTaxClass(''); setTaxId(''); setSocialSecurityNr(''); setHealthInsurance('');
+      setNationality(''); setPersonnelGroup(''); setDateOfBirth('');
+      setEmploymentStart(''); setEmploymentEnd('');
+      setIsMinijob(false); setIsSvExempt(false);
+      setVacDaysContractual(''); setVacDaysPrevious(''); setVacDaysCurrent('');
+      setVacDaysTaken(''); setSickDaysTotal('');
       // For new staff, select all restaurants with no departments yet
       const depts: Record<string, Set<string>> = {};
       restaurants.forEach((r) => { depts[r.id] = new Set(); });
@@ -143,6 +184,8 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
         : [{ restaurant_id: rid, zt_department: null }]
     );
 
+    const toInt = (v: string) => v ? parseInt(v, 10) : null;
+
     // Save staff data
     onSave({
       name: name.trim(),
@@ -154,6 +197,23 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       participates_in_pool: participatesInPool,
       pin_code: pinCode.length === 4 ? pinCode : undefined,
       restaurant_assignments,
+      // Payroll
+      tax_class: taxClass || null,
+      tax_id: taxId || null,
+      social_security_nr: socialSecurityNr || null,
+      health_insurance: healthInsurance || null,
+      nationality: nationality || null,
+      personnel_group: personnelGroup || null,
+      date_of_birth: dateOfBirth || null,
+      employment_start: employmentStart || null,
+      employment_end: employmentEnd || null,
+      is_minijob: isMinijob,
+      is_sv_exempt: isSvExempt,
+      vacation_days_contractual: toInt(vacDaysContractual),
+      vacation_days_previous: toInt(vacDaysPrevious),
+      vacation_days_current: toInt(vacDaysCurrent),
+      vacation_days_taken: toInt(vacDaysTaken),
+      sick_days_total: toInt(sickDaysTotal),
     });
 
     // Update permission level for existing staff
@@ -336,66 +396,86 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
             <Switch id="staff-pool" checked={participatesInPool} onCheckedChange={setParticipatesInPool} />
           </div>
 
-          {/* Payroll Data Section - read-only, only for existing staff with data */}
-          {staff && (staff as any).tax_class !== undefined && (
-            <>
-              <Separator />
-              <div className="space-y-3">
-                <Label className="text-base font-semibold">Lohnabrechnungsdaten</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    ['Steuerklasse', (staff as any).tax_class],
-                    ['Steuer-ID', (staff as any).tax_id],
-                    ['SV-Nr.', (staff as any).social_security_nr],
-                    ['Krankenkasse', (staff as any).health_insurance],
-                    ['Nationalität', (staff as any).nationality],
-                    ['Personengruppe', (staff as any).personnel_group],
-                    ['Geburtsdatum', (staff as any).date_of_birth],
-                    ['Eintritt', (staff as any).employment_start],
-                    ['Austritt', (staff as any).employment_end],
-                  ]
-                    .filter(([, v]) => v != null && v !== '')
-                    .map(([label, value]) => (
-                      <div key={label as string} className="space-y-1">
-                        <p className="text-xs text-muted-foreground">{label}</p>
-                        <p className="text-sm font-medium">{String(value)}</p>
-                      </div>
-                    ))}
-                </div>
-                <div className="flex items-center gap-4">
-                  {(staff as any).is_minijob && (
-                    <span className="text-xs bg-accent text-accent-foreground px-2 py-1 rounded-full">Minijob</span>
-                  )}
-                  {(staff as any).is_sv_exempt && (
-                    <span className="text-xs bg-accent text-accent-foreground px-2 py-1 rounded-full">SV-befreit</span>
-                  )}
-                </div>
+          {/* Payroll Data Section - editable */}
+          <Separator />
+          <div className="space-y-3">
+            <Label className="text-base font-semibold">Lohnabrechnungsdaten</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="pay-tax-class" className="text-xs">Steuerklasse</Label>
+                <Input id="pay-tax-class" value={taxClass} onChange={e => setTaxClass(e.target.value)} placeholder="z.B. I" />
               </div>
+              <div className="space-y-1">
+                <Label htmlFor="pay-tax-id" className="text-xs">Steuer-ID</Label>
+                <Input id="pay-tax-id" value={taxId} onChange={e => setTaxId(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="pay-sv-nr" className="text-xs">SV-Nr.</Label>
+                <Input id="pay-sv-nr" value={socialSecurityNr} onChange={e => setSocialSecurityNr(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="pay-insurance" className="text-xs">Krankenkasse</Label>
+                <Input id="pay-insurance" value={healthInsurance} onChange={e => setHealthInsurance(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="pay-nationality" className="text-xs">Nationalität</Label>
+                <Input id="pay-nationality" value={nationality} onChange={e => setNationality(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="pay-pers-group" className="text-xs">Personengruppe</Label>
+                <Input id="pay-pers-group" value={personnelGroup} onChange={e => setPersonnelGroup(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="pay-dob" className="text-xs">Geburtsdatum</Label>
+                <Input id="pay-dob" type="date" value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="pay-start" className="text-xs">Eintritt</Label>
+                <Input id="pay-start" type="date" value={employmentStart} onChange={e => setEmploymentStart(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="pay-end" className="text-xs">Austritt</Label>
+                <Input id="pay-end" type="date" value={employmentEnd} onChange={e => setEmploymentEnd(e.target.value)} />
+              </div>
+            </div>
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <Switch id="pay-minijob" checked={isMinijob} onCheckedChange={setIsMinijob} />
+                <Label htmlFor="pay-minijob" className="text-sm">Minijob</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch id="pay-sv-exempt" checked={isSvExempt} onCheckedChange={setIsSvExempt} />
+                <Label htmlFor="pay-sv-exempt" className="text-sm">SV-befreit</Label>
+              </div>
+            </div>
+          </div>
 
-              {/* Vacation / Sick days */}
-              {((staff as any).vacation_days_contractual != null || (staff as any).vacation_days_taken != null || (staff as any).sick_days_total != null) && (
-                <div className="space-y-3">
-                  <Label className="text-base font-semibold">Urlaubsdaten</Label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {[
-                      ['Vertraglich', (staff as any).vacation_days_contractual],
-                      ['Resturlaub Vorjahr', (staff as any).vacation_days_previous],
-                      ['Aktuelles Jahr', (staff as any).vacation_days_current],
-                      ['Genommen', (staff as any).vacation_days_taken],
-                      ['Kranktage', (staff as any).sick_days_total],
-                    ]
-                      .filter(([, v]) => v != null)
-                      .map(([label, value]) => (
-                        <div key={label as string} className="space-y-1">
-                          <p className="text-xs text-muted-foreground">{label}</p>
-                          <p className="text-sm font-medium">{String(value)} Tage</p>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              )}
-            </>
-          )}
+          {/* Vacation / Sick days - editable */}
+          <div className="space-y-3">
+            <Label className="text-base font-semibold">Urlaubsdaten</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="vac-contract" className="text-xs">Vertraglich</Label>
+                <Input id="vac-contract" type="number" inputMode="numeric" value={vacDaysContractual} onChange={e => setVacDaysContractual(e.target.value)} placeholder="Tage" />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="vac-prev" className="text-xs">Resturlaub Vorjahr</Label>
+                <Input id="vac-prev" type="number" inputMode="numeric" value={vacDaysPrevious} onChange={e => setVacDaysPrevious(e.target.value)} placeholder="Tage" />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="vac-current" className="text-xs">Aktuelles Jahr</Label>
+                <Input id="vac-current" type="number" inputMode="numeric" value={vacDaysCurrent} onChange={e => setVacDaysCurrent(e.target.value)} placeholder="Tage" />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="vac-taken" className="text-xs">Genommen</Label>
+                <Input id="vac-taken" type="number" inputMode="numeric" value={vacDaysTaken} onChange={e => setVacDaysTaken(e.target.value)} placeholder="Tage" />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="sick-total" className="text-xs">Kranktage gesamt</Label>
+                <Input id="sick-total" type="number" inputMode="numeric" value={sickDaysTotal} onChange={e => setSickDaysTotal(e.target.value)} placeholder="Tage" />
+              </div>
+            </div>
+          </div>
 
           {/* Permission Level Section - only for existing staff */}
           {staff && (

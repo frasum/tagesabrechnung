@@ -83,13 +83,29 @@ export interface Staff {
   linked_profile?: LinkedProfile | null;
   /** Permission level from user_roles table */
   permission_level?: PermissionLevel;
+  // Payroll fields
+  tax_class?: string | null;
+  is_minijob?: boolean | null;
+  is_sv_exempt?: boolean | null;
+  date_of_birth?: string | null;
+  employment_start?: string | null;
+  employment_end?: string | null;
+  tax_id?: string | null;
+  social_security_nr?: string | null;
+  nationality?: string | null;
+  personnel_group?: string | null;
+  health_insurance?: string | null;
+  vacation_days_contractual?: number | null;
+  vacation_days_previous?: number | null;
+  vacation_days_current?: number | null;
+  vacation_days_taken?: number | null;
+  sick_days_total?: number | null;
 }
 
 export interface StaffInput {
   name: string;
   first_name?: string;
   last_name?: string;
-  
   perso_nr?: number;
   role: StaffRole;
   hourly_rate?: number;
@@ -99,6 +115,23 @@ export interface StaffInput {
   pin_code?: string;
   restaurant_ids?: string[];
   restaurant_assignments?: RestaurantAssignment[];
+  // Payroll fields
+  tax_class?: string | null;
+  is_minijob?: boolean | null;
+  is_sv_exempt?: boolean | null;
+  date_of_birth?: string | null;
+  employment_start?: string | null;
+  employment_end?: string | null;
+  tax_id?: string | null;
+  social_security_nr?: string | null;
+  nationality?: string | null;
+  personnel_group?: string | null;
+  health_insurance?: string | null;
+  vacation_days_contractual?: number | null;
+  vacation_days_previous?: number | null;
+  vacation_days_current?: number | null;
+  vacation_days_taken?: number | null;
+  sick_days_total?: number | null;
 }
 
 export function useStaff(role?: StaffRole, options?: { includeLinkedProfiles?: boolean }) {
