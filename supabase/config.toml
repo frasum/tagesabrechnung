@@ -50,6 +50,3 @@ verify_jwt = false
 
 [functions.restaurant-chat]
 verify_jwt = false
-
-[functions.sync-thaitime-staff]
-verify_jwt = false

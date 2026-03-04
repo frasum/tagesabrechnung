@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, Plus, ChefHat, UtensilsCrossed, Search, Trophy, ChevronDown, UserPlus, Download, Loader2 } from 'lucide-react';
+import { Users, Plus, ChefHat, UtensilsCrossed, Search, Trophy, ChevronDown, UserPlus } from 'lucide-react';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,9 +11,6 @@ import { StaffTableRow } from '@/components/staff/StaffTableRow';
 import { StaffDialog } from '@/components/staff/StaffDialogNative';
 import { TipRanking } from '@/components/waiter/TipRanking';
 import { cn } from '@/lib/utils';
-import { getAuthHeaders } from '@/lib/authToken';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/hooks/use-toast';
 
 import { useStaff, useCreateStaff, useUpdateStaff, useDeleteStaff, hasRole, Staff, StaffInput, StaffRole } from '@/hooks/useStaff';
 import { useShowTipRanking } from '@/hooks/useSettings';
@@ -39,8 +36,6 @@ export default function StaffManagement() {
   const [deleteStaff, setDeleteStaff] = useState<Staff | null>(null);
   const [rankingOpen, setRankingOpen] = useState(false);
   const [selectedRankingRestaurantId, setSelectedRankingRestaurantId] = useState<string | null>(null);
-  const [isImporting, setIsImporting] = useState(false);
-  const { user } = useAuth();
 
   const { data: restaurants = [] } = useRestaurants();
   const restaurantId = selectedRankingRestaurantId;
@@ -74,31 +69,6 @@ export default function StaffManagement() {
 
   const handleOpenNew = () => { setEditingStaff(null); setDialogOpen(true); };
   const handleEdit = (staff: Staff) => { setEditingStaff(staff); setDialogOpen(true); };
-
-  const handleThaitimeImport = async () => {
-    setIsImporting(true);
-    try {
-      const headers = await getAuthHeaders();
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/sync-thaitime-staff`,
-        { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' } }
-      );
-      const data = await res.json();
-      if (!res.ok) {
-        toast({ title: 'Import fehlgeschlagen', description: data.error || 'Unbekannter Fehler', variant: 'destructive' });
-        return;
-      }
-      toast({
-        title: 'Import abgeschlossen',
-        description: `${data.created} neu, ${data.updated} aktualisiert, ${data.skipped} übersprungen (${data.total} gesamt)`,
-      });
-    } catch (err) {
-      toast({ title: 'Import fehlgeschlagen', description: String(err), variant: 'destructive' });
-    } finally {
-      setIsImporting(false);
-    }
-  };
 
   const handleSave = (data: StaffInput) => {
     if (editingStaff) {
@@ -143,18 +113,10 @@ export default function StaffManagement() {
               </p>
             </div>
             
-            <div className="flex gap-2">
-              {user?.permissionLevel === 'admin' && (
-                <Button onClick={handleThaitimeImport} variant="outline" size="lg" className="gap-2" disabled={isImporting}>
-                  {isImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                  Import thaitime
-                </Button>
-              )}
-              <Button onClick={handleOpenNew} size="lg" className="gap-2 shadow-md">
-                <UserPlus className="w-4 h-4" />
-                Neuer Mitarbeiter
-              </Button>
-            </div>
+            <Button onClick={handleOpenNew} size="lg" className="gap-2 shadow-md">
+              <UserPlus className="w-4 h-4" />
+              Neuer Mitarbeiter
+            </Button>
           </div>
         </div>
 

@@ -1,38 +1,53 @@
 
 
-## Plan: Einmaliger Mitarbeiter-Import aus thaitime (aktualisiert)
+## Bug: Falsche Pool-Berechnung in `useMonthlyStaffTips.ts`
 
-### Übersicht
+### Ursache
 
-Die thaitime-App stellt bereits eine Edge Function `sync-employees` bereit, die alle Mitarbeiterdaten als JSON liefert. Dieses Projekt muss nur noch eine eigene Edge Function erstellen, die diese Daten abruft und in die lokale `staff`-Tabelle importiert.
+In `src/hooks/useMonthlyStaffTips.ts` (Zeile 111) wird der Session-Pool falsch berechnet:
 
-### Datenformat von thaitime
-
-Die API liefert pro Mitarbeiter:
-```text
-{ thaitime_id, perso_nr, first_name, last_name, name (Spitzname), hourly_rate, is_active, branch_id }
+```js
+// FALSCH: differenz = pos_sales - card_total (erwartetes Bargeld)
+const sessionPool = shiftsInSession.reduce((sum, s) => sum + (s.differenz || 0), 0);
 ```
 
-### Umsetzung
+`differenz` speichert den erwarteten Bargeldbetrag (pos_sales - card_total), **nicht** den Trinkgeldbeitrag. Die korrekte Formel (wie in `useStatistics.ts` und `WaiterCashUp.tsx`) ist:
 
-**1. Secret konfigurieren**
-- `THAITIME_SYNC_API_KEY` — derselbe Key, der im thaitime-Projekt als `SYNC_API_KEY` hinterlegt ist
+```
+contribution = cash_handed_in - (pos_sales + hilf_mahl - open_invoices - card_total) - kitchen_tip
+```
 
-**2. Edge Function `sync-thaitime-staff`**
-- Ruft `https://dqxyyfxcwuxtzyhxlfyo.supabase.co/functions/v1/sync-employees` mit dem API-Key auf
-- Für jeden Mitarbeiter aus der Antwort:
-  - Abgleich über `perso_nr` in der lokalen `staff`-Tabelle
-  - Falls gefunden → `first_name`, `last_name`, `hourly_rate`, `name` aktualisieren
-  - Falls nicht gefunden → neuen Eintrag anlegen (`name`, `first_name`, `last_name`, `perso_nr`, `hourly_rate`, `role = 'waiter'`, `is_active`)
-- Gibt Bericht zurück: `{ updated: X, created: Y, skipped: Z }`
-- Authentifizierung: Admin-Check über `x-staff-id` Header (bestehendes Muster)
+### Nachweis mit den Daten vom 1. März
 
-**3. Import-Button auf der Mitarbeiterseite**
-- Button "Import aus thaitime" in der StaffManagement-Seite
-- Ruft die Edge Function auf, zeigt Toast mit Ergebnis
-- Kann nach erfolgreichem Import entfernt werden
+| Kellner | differenz (falsch) | Korrekter Beitrag |
+|---------|-------------------|------------------|
+| Ann     | 104,97 €          | 83,35 €          |
+| Cherry  | 195,43 €          | 106,75 €         |
+| Coco    | -183,42 €         | 137,56 €         |
 
-### Sicherheit
-- Server-zu-Server-Aufruf, API-Key nie im Frontend exponiert
-- Admin-Berechtigung wird serverseitig geprüft
+- **Falscher Pool** (Summe differenz): 116,98 € ÷ 4 Anteile = **29,25 €** ← das sieht der User
+- **Korrekter Pool**: 327,66 € ÷ 4 Anteile = **81,92 €** ← erwarteter Wert
+
+### Zweites Problem (Zeile 120)
+
+```js
+if (waiterShareCount > 0 && sessionPool > 0) {
+```
+
+Bei negativem Pool wird gar nichts verteilt. In `useStatistics.ts` werden negative Pools korrekt verteilt. Dieses `> 0` muss entfernt werden, damit auch Sessions mit negativem Pool (z.B. wenn Kellner weniger abgeben als erwartet) korrekt berechnet werden.
+
+### Fix in `src/hooks/useMonthlyStaffTips.ts`
+
+1. **Zeile 111**: Pool-Berechnung durch die korrekte Formel ersetzen:
+   ```js
+   const sessionPool = shiftsInSession.reduce((sum, s) => {
+     const expected = (s.pos_sales || 0) + (s.hilf_mahl || 0) - (s.open_invoices || 0) - (s.card_total || 0);
+     return sum + ((s.cash_handed_in || 0) - expected - (s.kitchen_tip || 0));
+   }, 0);
+   ```
+
+2. **Zeile 120**: `sessionPool > 0` entfernen, damit auch negative Pools verteilt werden:
+   ```js
+   if (waiterShareCount > 0) {
+   ```
 
