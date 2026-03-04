@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, FormEvent } from 'react';
-import { Store, Link2, Unlink, Smartphone, Loader2, Shield } from 'lucide-react';
+import { Store, Link2, Unlink, Smartphone, Loader2, Shield, ChevronDown } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -396,86 +397,87 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
             <Switch id="staff-pool" checked={participatesInPool} onCheckedChange={setParticipatesInPool} />
           </div>
 
-          {/* Payroll Data Section - editable */}
+          {/* Payroll Data Section - collapsible */}
           <Separator />
-          <div className="space-y-3">
-            <Label className="text-base font-semibold">Lohnabrechnungsdaten</Label>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label htmlFor="pay-tax-class" className="text-xs">Steuerklasse</Label>
-                <Input id="pay-tax-class" value={taxClass} onChange={e => setTaxClass(e.target.value)} placeholder="z.B. I" />
+          <Collapsible>
+            <CollapsibleTrigger className="flex items-center justify-between w-full py-1 group">
+              <Label className="text-base font-semibold cursor-pointer">Lohnabrechnungsdaten</Label>
+              <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 pt-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="pay-tax-class" className="text-xs">Steuerklasse</Label>
+                  <Input id="pay-tax-class" value={taxClass} onChange={e => setTaxClass(e.target.value)} placeholder="z.B. I" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="pay-tax-id" className="text-xs">Steuer-ID</Label>
+                  <Input id="pay-tax-id" value={taxId} onChange={e => setTaxId(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="pay-sv-nr" className="text-xs">SV-Nr.</Label>
+                  <Input id="pay-sv-nr" value={socialSecurityNr} onChange={e => setSocialSecurityNr(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="pay-insurance" className="text-xs">Krankenkasse</Label>
+                  <Input id="pay-insurance" value={healthInsurance} onChange={e => setHealthInsurance(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="pay-nationality" className="text-xs">Nationalität</Label>
+                  <Input id="pay-nationality" value={nationality} onChange={e => setNationality(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="pay-pers-group" className="text-xs">Personengruppe</Label>
+                  <Input id="pay-pers-group" value={personnelGroup} onChange={e => setPersonnelGroup(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="pay-dob" className="text-xs">Geburtsdatum</Label>
+                  <Input id="pay-dob" type="date" value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="pay-start" className="text-xs">Eintritt</Label>
+                  <Input id="pay-start" type="date" value={employmentStart} onChange={e => setEmploymentStart(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="pay-end" className="text-xs">Austritt</Label>
+                  <Input id="pay-end" type="date" value={employmentEnd} onChange={e => setEmploymentEnd(e.target.value)} />
+                </div>
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="pay-tax-id" className="text-xs">Steuer-ID</Label>
-                <Input id="pay-tax-id" value={taxId} onChange={e => setTaxId(e.target.value)} />
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2">
+                  <Switch id="pay-minijob" checked={isMinijob} onCheckedChange={setIsMinijob} />
+                  <Label htmlFor="pay-minijob" className="text-sm">Minijob</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch id="pay-sv-exempt" checked={isSvExempt} onCheckedChange={setIsSvExempt} />
+                  <Label htmlFor="pay-sv-exempt" className="text-sm">SV-befreit</Label>
+                </div>
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="pay-sv-nr" className="text-xs">SV-Nr.</Label>
-                <Input id="pay-sv-nr" value={socialSecurityNr} onChange={e => setSocialSecurityNr(e.target.value)} />
+              <Label className="text-base font-semibold">Urlaubsdaten</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="vac-contract" className="text-xs">Vertraglich</Label>
+                  <Input id="vac-contract" type="number" inputMode="numeric" value={vacDaysContractual} onChange={e => setVacDaysContractual(e.target.value)} placeholder="Tage" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="vac-prev" className="text-xs">Resturlaub Vorjahr</Label>
+                  <Input id="vac-prev" type="number" inputMode="numeric" value={vacDaysPrevious} onChange={e => setVacDaysPrevious(e.target.value)} placeholder="Tage" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="vac-current" className="text-xs">Aktuelles Jahr</Label>
+                  <Input id="vac-current" type="number" inputMode="numeric" value={vacDaysCurrent} onChange={e => setVacDaysCurrent(e.target.value)} placeholder="Tage" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="vac-taken" className="text-xs">Genommen</Label>
+                  <Input id="vac-taken" type="number" inputMode="numeric" value={vacDaysTaken} onChange={e => setVacDaysTaken(e.target.value)} placeholder="Tage" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="sick-total" className="text-xs">Kranktage gesamt</Label>
+                  <Input id="sick-total" type="number" inputMode="numeric" value={sickDaysTotal} onChange={e => setSickDaysTotal(e.target.value)} placeholder="Tage" />
+                </div>
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="pay-insurance" className="text-xs">Krankenkasse</Label>
-                <Input id="pay-insurance" value={healthInsurance} onChange={e => setHealthInsurance(e.target.value)} />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="pay-nationality" className="text-xs">Nationalität</Label>
-                <Input id="pay-nationality" value={nationality} onChange={e => setNationality(e.target.value)} />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="pay-pers-group" className="text-xs">Personengruppe</Label>
-                <Input id="pay-pers-group" value={personnelGroup} onChange={e => setPersonnelGroup(e.target.value)} />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="pay-dob" className="text-xs">Geburtsdatum</Label>
-                <Input id="pay-dob" type="date" value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="pay-start" className="text-xs">Eintritt</Label>
-                <Input id="pay-start" type="date" value={employmentStart} onChange={e => setEmploymentStart(e.target.value)} />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="pay-end" className="text-xs">Austritt</Label>
-                <Input id="pay-end" type="date" value={employmentEnd} onChange={e => setEmploymentEnd(e.target.value)} />
-              </div>
-            </div>
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2">
-                <Switch id="pay-minijob" checked={isMinijob} onCheckedChange={setIsMinijob} />
-                <Label htmlFor="pay-minijob" className="text-sm">Minijob</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch id="pay-sv-exempt" checked={isSvExempt} onCheckedChange={setIsSvExempt} />
-                <Label htmlFor="pay-sv-exempt" className="text-sm">SV-befreit</Label>
-              </div>
-            </div>
-          </div>
-
-          {/* Vacation / Sick days - editable */}
-          <div className="space-y-3">
-            <Label className="text-base font-semibold">Urlaubsdaten</Label>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label htmlFor="vac-contract" className="text-xs">Vertraglich</Label>
-                <Input id="vac-contract" type="number" inputMode="numeric" value={vacDaysContractual} onChange={e => setVacDaysContractual(e.target.value)} placeholder="Tage" />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="vac-prev" className="text-xs">Resturlaub Vorjahr</Label>
-                <Input id="vac-prev" type="number" inputMode="numeric" value={vacDaysPrevious} onChange={e => setVacDaysPrevious(e.target.value)} placeholder="Tage" />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="vac-current" className="text-xs">Aktuelles Jahr</Label>
-                <Input id="vac-current" type="number" inputMode="numeric" value={vacDaysCurrent} onChange={e => setVacDaysCurrent(e.target.value)} placeholder="Tage" />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="vac-taken" className="text-xs">Genommen</Label>
-                <Input id="vac-taken" type="number" inputMode="numeric" value={vacDaysTaken} onChange={e => setVacDaysTaken(e.target.value)} placeholder="Tage" />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="sick-total" className="text-xs">Kranktage gesamt</Label>
-                <Input id="sick-total" type="number" inputMode="numeric" value={sickDaysTotal} onChange={e => setSickDaysTotal(e.target.value)} placeholder="Tage" />
-              </div>
-            </div>
-          </div>
+            </CollapsibleContent>
+          </Collapsible>
 
           {/* Permission Level Section - only for existing staff */}
           {staff && (
