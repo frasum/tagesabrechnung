@@ -39,6 +39,7 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [permissionLevel, setPermissionLevel] = useState<PermissionLevel>('staff');
   // Payroll state
+  const [hourlyRate, setHourlyRate] = useState('');
   const [taxClass, setTaxClass] = useState('');
   const [taxId, setTaxId] = useState('');
   const [socialSecurityNr, setSocialSecurityNr] = useState('');
@@ -86,6 +87,7 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       setParticipatesInPool(staff.participates_in_pool ?? true);
       setPinCode('');
       // Payroll init
+      setHourlyRate(staff.hourly_rate != null ? String(staff.hourly_rate) : '');
       setTaxClass(staff.tax_class ?? '');
       setTaxId(staff.tax_id ?? '');
       setSocialSecurityNr(staff.social_security_nr ?? '');
@@ -119,6 +121,7 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       setParticipatesInPool(true);
       setPinCode('');
       // Payroll reset
+      setHourlyRate('');
       setTaxClass(''); setTaxId(''); setSocialSecurityNr(''); setHealthInsurance('');
       setNationality(''); setPersonnelGroup(''); setDateOfBirth('');
       setEmploymentStart(''); setEmploymentEnd('');
@@ -199,6 +202,7 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       pin_code: pinCode.length === 4 ? pinCode : undefined,
       restaurant_assignments,
       // Payroll
+      hourly_rate: hourlyRate ? parseFloat(hourlyRate) : undefined,
       tax_class: taxClass || null,
       tax_id: taxId || null,
       social_security_nr: socialSecurityNr || null,
@@ -406,6 +410,10 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-4 pt-3">
               <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="pay-hourly-rate" className="text-xs">Stundenlohn (€)</Label>
+                  <Input id="pay-hourly-rate" type="text" inputMode="decimal" value={hourlyRate} onChange={e => setHourlyRate(e.target.value)} placeholder="z.B. 14,50" />
+                </div>
                 <div className="space-y-1">
                   <Label htmlFor="pay-tax-class" className="text-xs">Steuerklasse</Label>
                   <Input id="pay-tax-class" value={taxClass} onChange={e => setTaxClass(e.target.value)} placeholder="z.B. I" />
