@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRestaurant } from "@/hooks/useRestaurant";
 import { useRestaurantEmployees } from "@/hooks/useRestaurantEmployees";
 import { useQuery } from "@tanstack/react-query";
@@ -15,12 +15,14 @@ import { Badge } from "@/components/ui/badge";
 import { Calculator, Info, AlertTriangle, CheckCircle, AlertCircle } from "lucide-react";
 import { SFN_RATES } from "@/lib/sfnRates";
 import { GERMAN_STATES, TAX_CLASSES, type PayrollResult } from "@/types/payroll";
+import { useZt } from "@/contexts/ZtContext";
 
 const CHILD_ALLOWANCE_OPTIONS = Array.from({ length: 17 }, (_, i) => i * 0.5);
 
 export default function ZtBruttoNetto() {
   const { restaurantId } = useRestaurant();
   const { data: employees = [] } = useRestaurantEmployees(restaurantId);
+  const { selectedPeriodId, periods } = useZt();
 
   // Form state
   const [employeeId, setEmployeeId] = useState<string>("");
@@ -34,6 +36,15 @@ export default function ZtBruttoNetto() {
   const [childAllowances, setChildAllowances] = useState<number>(0);
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
+
+  // Auto-fill date range from selected period
+  useEffect(() => {
+    const period = periods?.find(p => p.id === selectedPeriodId);
+    if (period) {
+      setDateFrom(period.start_date);
+      setDateTo(period.end_date);
+    }
+  }, [selectedPeriodId, periods]);
 
   const [result, setResult] = useState<PayrollResult | null>(null);
   const [calculating, setCalculating] = useState(false);
