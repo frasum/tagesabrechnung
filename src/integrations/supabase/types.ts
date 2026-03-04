@@ -1182,6 +1182,7 @@ export type Database = {
           evening_hours: number
           id: string
           is_holiday: boolean
+          night_deep_hours: number
           night_hours: number
           shift_date: string
           start_time: string | null
@@ -1199,6 +1200,7 @@ export type Database = {
           evening_hours?: number
           id?: string
           is_holiday?: boolean
+          night_deep_hours?: number
           night_hours?: number
           shift_date: string
           start_time?: string | null
@@ -1216,6 +1218,7 @@ export type Database = {
           evening_hours?: number
           id?: string
           is_holiday?: boolean
+          night_deep_hours?: number
           night_hours?: number
           shift_date?: string
           start_time?: string | null

@@ -6,8 +6,9 @@
 export interface ShiftHours {
   totalHours: number;
   sundayHolidayHours: number;
-  eveningHours: number; // 20:00–24:00
-  nightHours: number;   // 00:00–end (after midnight)
+  eveningHours: number;      // 20:00–24:00
+  nightHours: number;        // 00:00–end (after midnight, total)
+  nightDeepHours: number;    // 00:00–04:00 (40% surcharge per §3b EStG)
 }
 
 function timeToMinutes(time: string): number {
@@ -32,7 +33,7 @@ export function calculateShiftHours(
   isSundayOrHoliday: boolean
 ): ShiftHours {
   if (!startTime || !endTime) {
-    return { totalHours: 0, sundayHolidayHours: 0, eveningHours: 0, nightHours: 0 };
+    return { totalHours: 0, sundayHolidayHours: 0, eveningHours: 0, nightHours: 0, nightDeepHours: 0 };
   }
 
   const startMin = timeToMinutes(startTime);
@@ -49,19 +50,26 @@ export function calculateShiftHours(
 
   let eveningMinutes = 0;
   let nightMinutes = 0;
+  let nightDeepMinutes = 0;
 
   if (endMin > startMin) {
+    // Shift does NOT cross midnight
     eveningMinutes = overlapMinutes(startMin, endMin, 1200, 1440);
+    // No night hours possible (shift ends before midnight)
   } else {
+    // Shift crosses midnight
     eveningMinutes = overlapMinutes(startMin, 1440, 1200, 1440);
-    nightMinutes = endMin;
+    nightMinutes = endMin; // 00:00 to endMin
+    // Deep night: 00:00–04:00 (240 min)
+    nightDeepMinutes = Math.min(endMin, 240);
   }
 
   const eveningHours = Math.round((eveningMinutes / 60) * 100) / 100;
   const nightHours = Math.round((nightMinutes / 60) * 100) / 100;
+  const nightDeepHours = Math.round((nightDeepMinutes / 60) * 100) / 100;
   const sundayHolidayHours = isSundayOrHoliday ? totalHours : 0;
 
-  return { totalHours, sundayHolidayHours, eveningHours, nightHours };
+  return { totalHours, sundayHolidayHours, eveningHours, nightHours, nightDeepHours };
 }
 
 export function isSunday(date: Date): boolean {
