@@ -12,6 +12,8 @@ export interface PayrollInput {
     night40: number;
     sunday: number;
     holiday: number;
+    /** Besondere Feiertage (1. Mai, 25./26.12.) — 150% Zuschlag */
+    holiday150?: number;
   };
   sfnHourlyRate: number;
   /** Year for Lohnica API calculation */
@@ -40,6 +42,8 @@ export interface PayrollResult {
     night40Bonus: number;
     sundayBonus: number;
     holidayBonus: number;
+    /** Bonus für besondere Feiertage (150%) */
+    holiday150Bonus?: number;
     totalBonus: number;
   };
   effectiveNetHourlyRate: number;

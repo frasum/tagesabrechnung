@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { useOutletContext } from "react-router-dom";
 import { ZtToolbar } from "@/components/zeiterfassung/ZtToolbar";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,6 +28,9 @@ export default function ZtBuchhaltung() {
   const { selectedPeriodId, setSelectedPeriodId, periods, weeks, isPeriodLocked } = useZt();
   const { data: restaurantEmployees } = useRestaurantEmployees(restaurantId);
   const [cumulated, setCumulated] = useState(false);
+  const outletContext = useOutletContext<{ sfnMode?: string }>();
+  const sfnMode = (outletContext?.sfnMode as "simple" | "extended") ?? "simple";
+  const isExtended = sfnMode === "extended";
 
   const selectedPeriod = periods?.find(p => p.id === selectedPeriodId);
   const cumData = useCumulatedZtData(cumulated, selectedPeriod);
@@ -147,12 +151,14 @@ export default function ZtBuchhaltung() {
   );
 
   const grandTotals = useMemo(() => {
-    const t = { gesamt: 0, schichten: 0, soFeiStunden: 0, evening: 0, night: 0, urlaubTage: 0, krankTage: 0 };
+    const t = { gesamt: 0, schichten: 0, soFeiStunden: 0, sonntagStunden: 0, feiertagStunden: 0, evening: 0, night: 0, urlaubTage: 0, krankTage: 0 };
     employeesWithShifts.forEach((emp) => {
-      const row = getEmployeeTotals(emp.id, shifts ?? [], emp.department);
+      const row = getEmployeeTotals(emp.id, shifts ?? [], emp.department, isExtended);
       t.gesamt += row.gesamt;
       t.schichten += row.schichten;
       t.soFeiStunden += row.soFeiStunden;
+      t.sonntagStunden += row.sonntagStunden;
+      t.feiertagStunden += row.feiertagStunden;
       t.evening += row.evening;
       t.night += row.night;
       t.urlaubTage += row.urlaubTage;
@@ -188,7 +194,7 @@ export default function ZtBuchhaltung() {
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm table-fixed">
-            <BuchhaltungTableHead />
+            <BuchhaltungTableHead sfnMode={sfnMode} />
             <tbody>
               {employeesWithShifts.map((emp) => {
                 const showDeptHeader = emp.department !== lastDept;
@@ -196,13 +202,13 @@ export default function ZtBuchhaltung() {
                 const isEven = zebraIdx % 2 === 1;
                 zebraIdx++;
 
-                const totals = getEmployeeTotals(emp.id, shifts ?? [], emp.department);
+                const totals = getEmployeeTotals(emp.id, shifts ?? [], emp.department, isExtended);
                 const note = payrollNotes?.find((n) => n.employee_id === emp.id);
                 const empShifts = shifts?.filter(s => s.employee_id === emp.id && s.department === emp.department) ?? [];
 
                 return (
                   <React.Fragment key={`${emp.id}-${emp.department}-${selectedPeriodId}`}>
-                    {showDeptHeader && <BuchhaltungDeptHeader department={emp.department} />}
+                    {showDeptHeader && <BuchhaltungDeptHeader department={emp.department} sfnMode={sfnMode} />}
                     <BuchhaltungRow
                       emp={emp}
                       totals={totals}
@@ -211,13 +217,14 @@ export default function ZtBuchhaltung() {
                       advances={advancesByName[emp.name] ?? []}
                       isEven={isEven}
                       isLocked={isPeriodLocked}
+                      sfnMode={sfnMode}
                       onUpsertNote={(params) => upsertNote.mutate(params)}
                     />
                   </React.Fragment>
                 );
               })}
             </tbody>
-            {employeesWithShifts.length > 0 && <BuchhaltungFooter grandTotals={grandTotals} />}
+            {employeesWithShifts.length > 0 && <BuchhaltungFooter grandTotals={grandTotals} sfnMode={sfnMode} />}
           </table>
         </div>
       </Card>

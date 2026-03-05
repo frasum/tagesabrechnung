@@ -1,12 +1,16 @@
 import { formatHours } from "@/lib/shiftCalculations";
 import { displayNum } from "./utils";
 import type { EmployeeTotals } from "./types";
+import type { SfnMode } from "@/hooks/useSfnMode";
 
 interface BuchhaltungFooterProps {
   grandTotals: EmployeeTotals;
+  sfnMode?: SfnMode;
 }
 
-export default function BuchhaltungFooter({ grandTotals }: BuchhaltungFooterProps) {
+export default function BuchhaltungFooter({ grandTotals, sfnMode = "simple" }: BuchhaltungFooterProps) {
+  const isExtended = sfnMode === "extended";
+
   return (
     <tfoot>
       <tr className="bg-muted/60 border-t-2 border-border font-bold text-sm sticky bottom-0">
@@ -15,7 +19,14 @@ export default function BuchhaltungFooter({ grandTotals }: BuchhaltungFooterProp
         <td className="text-center px-1 py-2.5 tabular-nums">{grandTotals.schichten}</td>
         <td className="text-center px-1 py-2.5 tabular-nums">{displayNum(grandTotals.evening, formatHours)}</td>
         <td className="text-center px-1 py-2.5 tabular-nums">{displayNum(grandTotals.night, formatHours)}</td>
-        <td className="text-center px-1 py-2.5 tabular-nums">{displayNum(grandTotals.soFeiStunden, formatHours)}</td>
+        {isExtended ? (
+          <>
+            <td className="text-center px-1 py-2.5 tabular-nums">{displayNum(grandTotals.sonntagStunden, formatHours)}</td>
+            <td className="text-center px-1 py-2.5 tabular-nums">{displayNum(grandTotals.feiertagStunden, formatHours)}</td>
+          </>
+        ) : (
+          <td className="text-center px-1 py-2.5 tabular-nums">{displayNum(grandTotals.soFeiStunden, formatHours)}</td>
+        )}
         <td className="text-center px-1 py-2.5 tabular-nums text-green-600 border-l border-border/40">
           {grandTotals.urlaubTage > 0 ? grandTotals.urlaubTage.toFixed(2).replace('.', ',') : "–"}
         </td>

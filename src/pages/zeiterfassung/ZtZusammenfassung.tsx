@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useOutletContext } from "react-router-dom";
 import SfnTooltipHeader from "@/components/zeiterfassung/SfnTooltipHeader";
 import { format, parseISO } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
@@ -41,6 +42,9 @@ export default function ZtZusammenfassung() {
   const { data: restaurantEmployees } = useRestaurantEmployees(restaurantId);
   const [cumulated, setCumulated] = useState(false);
   const { hasPermission } = useAuth();
+  const outletContext = useOutletContext<{ sfnMode?: string }>();
+  const sfnMode = (outletContext?.sfnMode as "simple" | "extended") ?? "simple";
+  const isExtended = sfnMode === "extended";
 
   const selectedPeriod = periods?.find(p => p.id === selectedPeriodId);
   const cumData = useCumulatedZtData(cumulated, selectedPeriod);
@@ -144,8 +148,10 @@ export default function ZtZusammenfassung() {
     return {
       gesamt: empShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
       soFeiStunden: empShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s), 0),
-      night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s), 0),
+      sonntagStunden: empShifts.filter(s => !s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+      feiertagStunden: empShifts.filter(s => s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+      evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s, isExtended), 0),
+      night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s, isExtended), 0),
       schichten: empShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
       urlaubTage: countVacationDays(empShifts),
       krankTage: countSickDays(empShifts),
@@ -157,8 +163,10 @@ export default function ZtZusammenfassung() {
     return {
       gesamt: deptShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
       soFeiStunden: deptShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      evening: deptShifts.reduce((sum, s) => sum + effectiveEveningHours(s), 0),
-      night: deptShifts.reduce((sum, s) => sum + effectiveNightHours(s), 0),
+      sonntagStunden: deptShifts.filter(s => !s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+      feiertagStunden: deptShifts.filter(s => s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+      evening: deptShifts.reduce((sum, s) => sum + effectiveEveningHours(s, isExtended), 0),
+      night: deptShifts.reduce((sum, s) => sum + effectiveNightHours(s, isExtended), 0),
       schichten: deptShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
       urlaubTage: countVacationDays(deptShifts),
       krankTage: countSickDays(deptShifts),
@@ -170,8 +178,10 @@ export default function ZtZusammenfassung() {
     return {
       gesamt: allShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
       soFeiStunden: allShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      evening: allShifts.reduce((sum, s) => sum + effectiveEveningHours(s), 0),
-      night: allShifts.reduce((sum, s) => sum + effectiveNightHours(s), 0),
+      sonntagStunden: allShifts.filter(s => !s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+      feiertagStunden: allShifts.filter(s => s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+      evening: allShifts.reduce((sum, s) => sum + effectiveEveningHours(s, isExtended), 0),
+      night: allShifts.reduce((sum, s) => sum + effectiveNightHours(s, isExtended), 0),
       schichten: allShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
       urlaubTage: countVacationDays(allShifts),
       krankTage: countSickDays(allShifts),
@@ -221,7 +231,14 @@ export default function ZtZusammenfassung() {
               <th className="text-center p-2 font-medium">Schichten</th>
                <th className="text-center p-2 font-medium"><SfnTooltipHeader column="evening" label="20-24" /></th>
                <th className="text-center p-2 font-medium"><SfnTooltipHeader column="night" label="24-x" /></th>
-               <th className="text-center p-2 font-medium"><SfnTooltipHeader column="soFei" label="So/Fei" /></th>
+               {isExtended ? (
+                 <>
+                   <th className="text-center p-2 font-medium"><SfnTooltipHeader column="sonntag" label="So" /></th>
+                   <th className="text-center p-2 font-medium"><SfnTooltipHeader column="feiertag" label="Fei" /></th>
+                 </>
+               ) : (
+                 <th className="text-center p-2 font-medium"><SfnTooltipHeader column="soFei" label="So/Fei" /></th>
+               )}
               <th className="text-center p-2 font-medium">U</th>
               <th className="text-center p-2 font-medium">K</th>
             </tr>
@@ -238,7 +255,7 @@ export default function ZtZusammenfassung() {
                 <React.Fragment key={`${emp.id}-${emp.department}`}>
                   {showDeptHeader && (
                     <tr>
-                      <td colSpan={(weeks?.length ?? 0) + 8} className={`p-2 font-bold text-xs uppercase tracking-wide ${getDepartmentBgClass(emp.department)}`}>
+                      <td colSpan={(weeks?.length ?? 0) + (isExtended ? 9 : 8)} className={`p-2 font-bold text-xs uppercase tracking-wide ${getDepartmentBgClass(emp.department)}`}>
                         {emp.department}
                       </td>
                     </tr>
@@ -256,7 +273,14 @@ export default function ZtZusammenfassung() {
                     <td className="text-center p-2">{totals.schichten || ""}</td>
                      <td className="text-center p-2">{totals.evening > 0 ? formatHours(totals.evening) : ""}</td>
                      <td className="text-center p-2">{totals.night > 0 ? formatHours(totals.night) : ""}</td>
-                     <td className="text-center p-2">{totals.soFeiStunden > 0 ? formatHours(totals.soFeiStunden) : ""}</td>
+                     {isExtended ? (
+                       <>
+                         <td className="text-center p-2">{totals.sonntagStunden > 0 ? formatHours(totals.sonntagStunden) : ""}</td>
+                         <td className="text-center p-2">{totals.feiertagStunden > 0 ? formatHours(totals.feiertagStunden) : ""}</td>
+                       </>
+                     ) : (
+                       <td className="text-center p-2">{totals.soFeiStunden > 0 ? formatHours(totals.soFeiStunden) : ""}</td>
+                     )}
                     <td className="text-center p-2 text-green-600 font-medium">{totals.urlaubTage > 0 ? totals.urlaubTage.toFixed(2).replace('.', ',') : ""}</td>
                     <td className="text-center p-2 text-red-600 font-medium">{totals.krankTage > 0 ? totals.krankTage : ""}</td>
                   </tr>
@@ -270,7 +294,14 @@ export default function ZtZusammenfassung() {
                         <td className="text-center p-2">{dt.schichten || ""}</td>
                          <td className="text-center p-2">{dt.evening > 0 ? formatHours(dt.evening) : ""}</td>
                          <td className="text-center p-2">{dt.night > 0 ? formatHours(dt.night) : ""}</td>
-                          <td className="text-center p-2">{dt.soFeiStunden > 0 ? formatHours(dt.soFeiStunden) : ""}</td>
+                          {isExtended ? (
+                            <>
+                              <td className="text-center p-2">{dt.sonntagStunden > 0 ? formatHours(dt.sonntagStunden) : ""}</td>
+                              <td className="text-center p-2">{dt.feiertagStunden > 0 ? formatHours(dt.feiertagStunden) : ""}</td>
+                            </>
+                          ) : (
+                            <td className="text-center p-2">{dt.soFeiStunden > 0 ? formatHours(dt.soFeiStunden) : ""}</td>
+                          )}
                         <td className="text-center p-2">{dt.urlaubTage > 0 ? dt.urlaubTage.toFixed(2).replace('.', ',') : ""}</td>
                         <td className="text-center p-2">{dt.krankTage > 0 ? dt.krankTage : ""}</td>
                       </tr>
@@ -288,7 +319,14 @@ export default function ZtZusammenfassung() {
               <td className="text-center p-2">{grandTotals.schichten || ""}</td>
                <td className="text-center p-2">{grandTotals.evening > 0 ? formatHours(grandTotals.evening) : ""}</td>
                <td className="text-center p-2">{grandTotals.night > 0 ? formatHours(grandTotals.night) : ""}</td>
-               <td className="text-center p-2">{grandTotals.soFeiStunden > 0 ? formatHours(grandTotals.soFeiStunden) : ""}</td>
+               {isExtended ? (
+                 <>
+                   <td className="text-center p-2">{grandTotals.sonntagStunden > 0 ? formatHours(grandTotals.sonntagStunden) : ""}</td>
+                   <td className="text-center p-2">{grandTotals.feiertagStunden > 0 ? formatHours(grandTotals.feiertagStunden) : ""}</td>
+                 </>
+               ) : (
+                 <td className="text-center p-2">{grandTotals.soFeiStunden > 0 ? formatHours(grandTotals.soFeiStunden) : ""}</td>
+               )}
               <td className="text-center p-2">{grandTotals.urlaubTage > 0 ? grandTotals.urlaubTage.toFixed(2).replace('.', ',') : ""}</td>
               <td className="text-center p-2">{grandTotals.krankTage > 0 ? grandTotals.krankTage : ""}</td>
             </tr>

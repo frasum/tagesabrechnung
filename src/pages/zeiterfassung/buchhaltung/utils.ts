@@ -15,13 +15,15 @@ export function displayNum(val: number, formatter?: (v: number) => string): stri
   return formatter ? formatter(val) : String(val);
 }
 
-export function getEmployeeTotals(empId: string, shifts: Shift[], department?: string): EmployeeTotals {
+export function getEmployeeTotals(empId: string, shifts: Shift[], department?: string, additive = false): EmployeeTotals {
   const empShifts = shifts.filter((s) => s.employee_id === empId && (!department || s.department === department));
   return {
     gesamt: empShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
     soFeiStunden: empShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-    evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s), 0),
-    night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s), 0),
+    sonntagStunden: empShifts.filter(s => !s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+    feiertagStunden: empShifts.filter(s => s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+    evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s, additive), 0),
+    night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s, additive), 0),
     schichten: empShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
     urlaubTage: countVacationDays(empShifts),
     krankTage: countSickDays(empShifts),

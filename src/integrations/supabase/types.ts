@@ -147,21 +147,27 @@ export type Database = {
       bavarian_holidays: {
         Row: {
           created_at: string
+          from_hour: number | null
           holiday_date: string
           id: string
           name: string
+          surcharge_rate: number
         }
         Insert: {
           created_at?: string
+          from_hour?: number | null
           holiday_date: string
           id?: string
           name: string
+          surcharge_rate?: number
         }
         Update: {
           created_at?: string
+          from_hour?: number | null
           holiday_date?: string
           id?: string
           name?: string
+          surcharge_rate?: number
         }
         Relationships: []
       }

@@ -9,8 +9,10 @@ export const SFN_RATES = {
   night40: 0.40,
   /** Sonntagszuschlag: 50% des Grundlohns */
   sunday: 0.50,
-  /** Feiertagszuschlag: 125% des Grundlohns */
+  /** Feiertagszuschlag: 125% des Grundlohns (Standard-Feiertage) */
   holiday: 1.25,
+  /** Feiertagszuschlag: 150% des Grundlohns (1. Mai, 25./26.12.) */
+  holiday150: 1.50,
 } as const;
 
 /** Grundlohngrenze für steuerfreie SFN-Zuschläge (2026): 50 €/h */
