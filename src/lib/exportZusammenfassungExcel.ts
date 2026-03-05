@@ -121,7 +121,10 @@ export function exportZusammenfassungExcel(
 
     const empShifts = shifts.filter(s => s.employee_id === emp.id && s.department === emp.department);
     const totals = getData(empShifts);
-    const displayName = `${emp.perso_nr ? emp.perso_nr + " " : ""}${emp.nickname ? emp.nickname + " - " : ""}${[emp.first_name, emp.last_name].filter(Boolean).join(" ") || emp.name}`;
+    const nameBase = emp.first_name || emp.last_name
+      ? [emp.first_name, emp.nickname ? `(${emp.nickname})` : null, emp.last_name].filter(Boolean).join(" ")
+      : emp.name;
+    const displayName = emp.perso_nr && emp.perso_nr > 0 ? `${nameBase} ${emp.perso_nr}` : nameBase;
 
     const weekCells = sortedWeeks.map(w => {
       const h = getWeeklyHours(emp.id, w.week_number, emp.department);

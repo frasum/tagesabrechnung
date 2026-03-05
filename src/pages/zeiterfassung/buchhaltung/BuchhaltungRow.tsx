@@ -35,17 +35,16 @@ export default function BuchhaltungRow({ emp, totals, note, shifts, advances, is
   const vacText = vacRanges.length > 0 ? `U: ${formatSickRanges(vacRanges).join(", ")}` : "";
   const besonderheitenValue = [advanceText, vacText, note?.besonderheiten].filter(Boolean).join(" | ");
 
-  const nameParts = [emp.first_name, emp.last_name].filter(Boolean).join(" ") || emp.name;
-  const metaParts: string[] = [];
-  if (emp.nickname) metaParts.push(emp.nickname);
-  if (emp.perso_nr && emp.perso_nr > 0) metaParts.push(String(emp.perso_nr));
-  const metaStr = metaParts.length > 0 ? ` (${metaParts.join(" · ")})` : "";
+  const nameBase = emp.first_name || emp.last_name
+    ? [emp.first_name, emp.nickname ? `(${emp.nickname})` : null, emp.last_name].filter(Boolean).join(" ")
+    : emp.name;
+  const persoStr = emp.perso_nr && emp.perso_nr > 0 ? String(emp.perso_nr) : "";
 
   return (
     <tr className={`border-t border-border/50 hover:bg-primary/5 transition-colors ${rowBg}`}>
       <td className="px-2 py-1.5 font-medium whitespace-nowrap">
-        {nameParts}
-        {metaStr && <span className="text-xs text-muted-foreground">{metaStr}</span>}
+        {nameBase}
+        {persoStr && <span className="text-xs text-muted-foreground ml-1">{persoStr}</span>}
       </td>
       <td className="text-center px-1 py-1.5 font-semibold tabular-nums bg-primary/5 border-l border-border/40">
         {formatHours(totals.gesamt)}
