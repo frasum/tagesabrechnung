@@ -467,13 +467,36 @@ export default function ZtWochenplan() {
     });
   };
 
+  const isExtended = sfnMode === "extended";
+
   const getEmployeeWeekTotals = (employeeId: string, department?: string) => {
     const empShifts = shifts?.filter((s) => s.employee_id === employeeId && (!department || s.department === department)) ?? [];
+    let sonntagStunden = 0;
+    let feiertag125Stunden = 0;
+    let feiertag150Stunden = 0;
+    if (isExtended) {
+      for (const s of empShifts) {
+        const hrs = Number(s.sunday_holiday_hours);
+        if (hrs <= 0) continue;
+        const isHol = s.is_holiday || (holidays?.has(s.shift_date) ?? false);
+        const isSun = isSunday(parseISO(s.shift_date));
+        if (isHol) {
+          const rate = holidayRatesMap?.get(s.shift_date) ?? 125;
+          if (rate >= 150) feiertag150Stunden += hrs;
+          else feiertag125Stunden += hrs;
+        } else if (isSun) {
+          sonntagStunden += hrs;
+        }
+      }
+    }
     return {
       gesamt: empShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
       soFeiStunden: empShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s), 0),
-      night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s), 0),
+      sonntagStunden,
+      feiertag125Stunden,
+      feiertag150Stunden,
+      evening: empShifts.reduce((sum, s) => sum + (isExtended ? Number(s.evening_hours) : effectiveEveningHours(s)), 0),
+      night: empShifts.reduce((sum, s) => sum + (isExtended ? Number(s.night_hours) : effectiveNightHours(s)), 0),
       urlaubTage: countVacationDays(empShifts),
       krankTage: countSickDays(empShifts),
     };
@@ -567,7 +590,15 @@ export default function ZtWochenplan() {
                   <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-l-2 border-primary/20 border-b border-border text-xs">Ges</th>
                    <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs"><SfnTooltipHeader column="evening" label="20-24" /></th>
                    <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs"><SfnTooltipHeader column="night" label="24-x" /></th>
-                   <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs"><SfnTooltipHeader column="soFei" label="So/Fei" /></th>
+                   {isExtended ? (
+                     <>
+                       <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs"><SfnTooltipHeader column="sonntag" label="So" /></th>
+                       <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs"><SfnTooltipHeader column="feiertag" label="Fei 125%" /></th>
+                       <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs"><SfnTooltipHeader column="feiertag" label="Fei 150%" /></th>
+                     </>
+                   ) : (
+                     <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs"><SfnTooltipHeader column="soFei" label="So/Fei" /></th>
+                   )}
                   <th className="totals-header text-center p-1.5 font-semibold min-w-[35px] border-b border-border text-xs">U</th>
                   <th className="totals-header text-center p-1.5 font-semibold min-w-[35px] border-b border-border text-xs">K</th>
                 </tr>
@@ -762,7 +793,15 @@ export default function ZtWochenplan() {
                         <td className={`text-center p-2 border-l-2 border-primary/20 bg-primary/5 ${totals.gesamt > 0 ? "font-bold text-sm" : "text-xs text-muted-foreground"}`}>{formatHours(totals.gesamt)}</td>
                          <td className="totals-col text-center p-2 text-xs">{totals.evening > 0 ? formatHours(totals.evening) : ""}</td>
                          <td className="totals-col text-center p-2 text-xs">{totals.night > 0 ? formatHours(totals.night) : ""}</td>
-                         <td className="totals-col text-center p-2 text-xs">{totals.soFeiStunden > 0 ? formatHours(totals.soFeiStunden) : ""}</td>
+                         {isExtended ? (
+                           <>
+                             <td className="totals-col text-center p-2 text-xs">{totals.sonntagStunden > 0 ? formatHours(totals.sonntagStunden) : ""}</td>
+                             <td className="totals-col text-center p-2 text-xs">{totals.feiertag125Stunden > 0 ? formatHours(totals.feiertag125Stunden) : ""}</td>
+                             <td className="totals-col text-center p-2 text-xs">{totals.feiertag150Stunden > 0 ? formatHours(totals.feiertag150Stunden) : ""}</td>
+                           </>
+                         ) : (
+                           <td className="totals-col text-center p-2 text-xs">{totals.soFeiStunden > 0 ? formatHours(totals.soFeiStunden) : ""}</td>
+                         )}
                         <td className="totals-col text-center p-2 text-xs text-success font-medium">{totals.urlaubTage > 0 ? totals.urlaubTage.toFixed(2).replace('.', ',') : ""}</td>
                         <td className="totals-col text-center p-2 text-xs text-destructive font-medium">{totals.krankTage > 0 ? totals.krankTage : ""}</td>
                       </tr>
