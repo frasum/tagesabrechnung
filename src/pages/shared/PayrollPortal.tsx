@@ -34,9 +34,9 @@ import { exportWochenplanCsv, exportZusammenfassungCsv, exportBuchhaltungCsv } f
 import type { Shift, PayrollNote, AdvanceEntry } from "@/pages/zeiterfassung/buchhaltung/types";
 import BuchhaltungTableHead from "@/pages/zeiterfassung/buchhaltung/BuchhaltungTableHead";
 import BuchhaltungDeptHeader from "@/pages/zeiterfassung/buchhaltung/BuchhaltungDeptHeader";
+import BuchhaltungRow from "@/pages/zeiterfassung/buchhaltung/BuchhaltungRow";
 import BuchhaltungFooter from "@/pages/zeiterfassung/buchhaltung/BuchhaltungFooter";
 import { useSfnMode, type SfnMode } from "@/hooks/useSfnMode";
-import { effectiveEveningHours, effectiveNightHours } from "@/lib/shiftCalculations";
 
 const PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID;
 const API_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
