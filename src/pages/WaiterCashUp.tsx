@@ -36,6 +36,7 @@ export default function WaiterCashUp() {
 
   // Form state for new waiter
   const [newWaiterName, setNewWaiterName] = useState('');
+  const [newWaiterStaffId, setNewWaiterStaffId] = useState<string | null>(null);
   const [newPosSales, setNewPosSales] = useState(0);
   const [newKassiertBrutto, setNewKassiertBrutto] = useState(0);
   const [newCardTotal, setNewCardTotal] = useState(0);
@@ -95,6 +96,7 @@ export default function WaiterCashUp() {
   const handleEditWaiter = (shift: WaiterShift) => {
     setEditingShiftId(shift.id);
     setNewWaiterName(shift.waiter_name);
+    setNewWaiterStaffId(shift.staff_id || null);
     setNewAdditionalWaiters(shift.additional_waiters || []);
     setNewParticipatesInPool(shift.participates_in_pool ?? true);
     setNewPosSales(shift.pos_sales || 0);
@@ -137,6 +139,7 @@ export default function WaiterCashUp() {
           sessionId: session.id,
           restaurantId: restaurantId!,
           waiter_name: newWaiterName.trim(),
+          staff_id: newWaiterStaffId,
           second_waiter_name: newAdditionalWaiters.length > 0 ? newAdditionalWaiters[0] : null,
           additional_waiters: newAdditionalWaiters,
           participates_in_pool: newParticipatesInPool,
@@ -156,6 +159,7 @@ export default function WaiterCashUp() {
         await createWaiterShift.mutateAsync({
           session_id: session.id,
           waiter_name: newWaiterName.trim(),
+          staff_id: newWaiterStaffId,
           second_waiter_name: newAdditionalWaiters.length > 0 ? newAdditionalWaiters[0] : null,
           additional_waiters: newAdditionalWaiters,
           participates_in_pool: newParticipatesInPool,
@@ -306,7 +310,7 @@ export default function WaiterCashUp() {
                         setNewParticipatesInPool(staffRecord.participates_in_pool ?? true);
                       }
                     }
-                  }} role="waiter" placeholder="Mitarbeiter wählen" excludeNames={waiterShifts.filter((s) => s.id !== editingShiftId).map((s) => s.waiter_name)} restaurantId={restaurantId} />
+                  }} onStaffSelect={(staff) => setNewWaiterStaffId(staff.id)} role="waiter" placeholder="Mitarbeiter wählen" excludeNames={waiterShifts.filter((s) => s.id !== editingShiftId).map((s) => s.waiter_name)} restaurantId={restaurantId} />
                   {newWaiterName && (
                     <div className="flex items-center gap-2 mt-2">
                       <Checkbox
