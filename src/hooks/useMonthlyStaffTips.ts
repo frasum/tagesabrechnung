@@ -228,13 +228,15 @@ async function fetchMonthlyStaffTips(monthsBack: number = 12, restaurantIds?: st
     }
 
     // Convert maps to arrays sorted by tip amount
-    const waiterTips: MonthlyStaffTip[] = Object.entries(waiterTipsMap)
-      .map(([_, data]) => ({ name: data.displayName, hours: data.hours, tip: data.tip }))
-      .sort((a, b) => b.tip - a.tip);
+    const waiterTipsRaw: MonthlyStaffTip[] = Object.entries(waiterTipsMap)
+      .map(([_, data]) => ({ name: data.displayName, hours: data.hours, tip: data.tip }));
 
-    const kitchenTips: MonthlyStaffTip[] = Object.entries(kitchenTipsMap)
-      .map(([_, data]) => ({ name: data.displayName, hours: data.hours, tip: data.tip }))
-      .sort((a, b) => b.tip - a.tip);
+    const kitchenTipsRaw: MonthlyStaffTip[] = Object.entries(kitchenTipsMap)
+      .map(([_, data]) => ({ name: data.displayName, hours: data.hours, tip: data.tip }));
+
+    // Deduplicate by normalized name (handles casing variants like "Pongsri" vs "PONGSRI")
+    const waiterTips = deduplicateByName(waiterTipsRaw, canonicalNames);
+    const kitchenTips = deduplicateByName(kitchenTipsRaw, canonicalNames);
 
     // Parse month for label
     const [year, month] = monthKey.split('-');
