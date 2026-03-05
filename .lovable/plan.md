@@ -1,24 +1,33 @@
 
 
-## Tooltips für erweiterten SFN-Modus anpassen
+## Analyse: Gleiche Nettoauszahlung bei Simple vs. Extended
 
-Aktuell zeigen die Tooltips nur den Zuschlagsprozentsatz. Im erweiterten (§3b) Modus sollen sie zusätzlich erklären, dass die Zuschläge additiv berechnet werden.
+### Ursache
 
-### Änderung in `src/components/zeiterfassung/SfnTooltipHeader.tsx`
+Beim Wechsel des SFN-Modus (Einfach ↔ §3b) passiert Folgendes:
 
-- Neues optionales Prop `sfnMode?: SfnMode` hinzufügen
-- Zwei Tooltip-Text-Sets: eins für "simple", eins für "extended"
-- Im Extended-Modus erklären die Tooltips die additive Logik:
+1. **Die Schichtdaten (`sfnData`) werden korrekt neu geladen** — der React-Query-Key enthält `sfnMode`, also werden die Stunden neu aggregiert.
+2. **Das Berechnungsergebnis (`result`) wird NICHT automatisch aktualisiert.** Es bleibt im State stehen, bis der User erneut auf "Berechnen" klickt. Das heißt: Wenn man den Modus wechselt, zeigt die Seite weiterhin das alte Ergebnis an.
 
-| Spalte | Simple | Extended |
-|--------|--------|----------|
-| 20–24 | 25 % Nachtzuschlag | 25 % Nachtzuschlag (20:00–00:00) — additiv zu So/Fei-Zuschlägen |
-| 24–x | 40 % Nachtzuschlag | 40 % Nachtzuschlag (00:00–04:00) — additiv zu So/Fei-Zuschlägen |
-| So/Fei | 50 % Sonn- und Feiertagszuschlag | *(nicht im Extended-Modus)* |
-| So | *(nicht im Simple-Modus)* | 50 % Sonntagszuschlag (§3b EStG) |
-| Fei | *(nicht im Simple-Modus)* | 125 % Feiertag / 150 % besondere Feiertage (1. Mai, 25./26.12.) |
+Das ist der Hauptfehler: Der User sieht dasselbe Ergebnis, weil es nicht neu berechnet wird.
 
-### Aufrufer anpassen
+Zusätzlich: Falls Peter Pleile in der Periode keine Sonntags-/Feiertagsschichten hat, sind die Ergebnisse tatsächlich identisch, da der Unterschied nur bei So/Fei-Stunden und additiven Nachtzuschlägen greift.
 
-`BuchhaltungTableHead.tsx`, `ZtWochenplan.tsx`, `ZtZusammenfassung.tsx` — das `sfnMode`-Prop an `SfnTooltipHeader` durchreichen, wo es bereits verfügbar ist.
+### Fix
+
+**Datei: `src/pages/zeiterfassung/ZtBruttoNetto.tsx`**
+
+1. **`result` und `error` zurücksetzen, wenn `sfnMode` sich ändert** — ein `useEffect` das bei `sfnMode`-Änderung `setResult(null)` aufruft, damit der User klar sieht, dass er neu berechnen muss.
+
+2. **Alternativ (besser): Automatisch neu berechnen** — wenn sich `sfnData` ändert UND bereits ein Ergebnis vorliegt, automatisch `handleCalculate()` erneut aufrufen.
+
+3. **Visuellen Hinweis anzeigen**, wenn sfnData sich geändert hat aber das Ergebnis noch vom alten Modus stammt (z.B. Badge "Ergebnis veraltet — bitte neu berechnen").
+
+### Empfohlener Ansatz
+
+Option 2 (Auto-Recalc) ist die beste UX: Ein `useEffect` der auf `sfnData` reagiert und, wenn bereits ein `result` existiert, automatisch `handleCalculate()` triggert. So sieht der User sofort das aktualisierte Ergebnis beim Moduswechsel.
+
+```text
+sfnMode wechselt → sfnData Query refetcht → useEffect erkennt neues sfnData + vorhandenes result → handleCalculate() → neues result
+```
 
