@@ -1,17 +1,20 @@
-import { useEffect, useState } from 'react';
-import { RefreshCw, X } from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { RefreshCw, X, Download } from 'lucide-react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 
 export function UpdateNotification() {
   const [showBanner, setShowBanner] = useState(false);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [registrationRef, setRegistrationRef] = useState<ServiceWorkerRegistration | null>(null);
 
   const { updateServiceWorker } = useRegisterSW({
     onRegisteredSW(_swUrl, registration) {
-      // Poll for updates every 60 minutes
       if (registration) {
+        setRegistrationRef(registration);
+        // Poll for updates every 5 minutes
         setInterval(() => {
           registration.update();
-        }, 60 * 60 * 1000);
+        }, 5 * 60 * 1000);
       }
     },
     onRegisterError(error) {
@@ -19,13 +22,23 @@ export function UpdateNotification() {
     },
   });
 
+  const checkForUpdate = useCallback(async () => {
+    if (!registrationRef) return;
+    setCheckingUpdate(true);
+    try {
+      await registrationRef.update();
+    } catch (e) {
+      console.error('Manual update check failed:', e);
+    } finally {
+      setTimeout(() => setCheckingUpdate(false), 1500);
+    }
+  }, [registrationRef]);
+
   useEffect(() => {
-    // Listen for the controlling SW change (= auto-update happened)
     if (!navigator.serviceWorker) return;
 
     const handleControllerChange = () => {
       setShowBanner(true);
-      // Auto-hide after 8 seconds
       setTimeout(() => setShowBanner(false), 8000);
     };
 
@@ -50,5 +63,52 @@ export function UpdateNotification() {
         </button>
       </div>
     </div>
+  );
+}
+
+/** Standalone button to manually trigger an update check – place anywhere in the UI */
+export function ManualUpdateButton() {
+  const [checking, setChecking] = useState(false);
+  const [result, setResult] = useState<'idle' | 'no-update' | 'updating'>('idle');
+
+  const handleCheck = useCallback(async () => {
+    if (!navigator.serviceWorker) return;
+    setChecking(true);
+    setResult('idle');
+    try {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg) {
+        await reg.update();
+        // If a new SW is installing/waiting, an update is available
+        if (reg.installing || reg.waiting) {
+          setResult('updating');
+        } else {
+          setResult('no-update');
+        }
+      }
+    } catch (e) {
+      console.error('Update check failed:', e);
+      setResult('no-update');
+    } finally {
+      setChecking(false);
+      setTimeout(() => setResult('idle'), 4000);
+    }
+  }, []);
+
+  return (
+    <button
+      onClick={handleCheck}
+      disabled={checking}
+      className="flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-muted hover:bg-muted/80 text-muted-foreground transition-colors disabled:opacity-50"
+    >
+      <Download className={`w-4 h-4 ${checking ? 'animate-spin' : ''}`} />
+      {checking
+        ? 'Prüfe...'
+        : result === 'updating'
+          ? 'Update wird installiert…'
+          : result === 'no-update'
+            ? 'Bereits aktuell ✓'
+            : 'Jetzt aktualisieren'}
+    </button>
   );
 }
