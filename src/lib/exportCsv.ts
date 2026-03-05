@@ -1,6 +1,7 @@
 import { DEPARTMENT_ORDER, countVacationDays, countSickDays, getSickDateRanges, getVacationDateRanges, formatSickRanges, effectiveEveningHours, effectiveNightHours } from "./shiftCalculations";
 import { format, parseISO, eachDayOfInterval } from "date-fns";
 import { de } from "date-fns/locale";
+import type { SfnMode } from "@/hooks/useSfnMode";
 
 // --- Generic CSV download helper ---
 
@@ -29,7 +30,7 @@ function downloadCsv(filename: string, headers: string[], rows: (string | number
   URL.revokeObjectURL(url);
 }
 
-// --- Types (matching Excel exports) ---
+// --- Types ---
 
 interface Employee {
   id: string;
@@ -97,10 +98,13 @@ export function exportBuchhaltungCsv(
   periodLabel: string,
   employees: Employee[],
   shifts: Shift[],
-  payrollNotes: PayrollNote[]
+  payrollNotes: PayrollNote[],
+  sfnMode: SfnMode = "simple"
 ) {
+  const additive = sfnMode === "extended";
   const sorted = sortEmployees(employees);
-  const headers = ["Mitarbeiter", "Abteilung", "Gesamt Std.", "Schichten", "20-24", "24-x", "So/Fei", "Urlaub", "Krank", "Vorschuss", "Besonderheiten"];
+  const sfnHeaders = additive ? ["20-24", "24-x", "So", "Fei"] : ["20-24", "24-x", "So/Fei"];
+  const headers = ["Mitarbeiter", "Abteilung", "Gesamt Std.", "Schichten", ...sfnHeaders, "Urlaub", "Krank", "Vorschuss", "Besonderheiten"];
   const rows: (string | number)[][] = [];
 
   for (const emp of sorted) {
@@ -108,8 +112,10 @@ export function exportBuchhaltungCsv(
     const t = {
       gesamt: empShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
       soFeiStunden: empShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s), 0),
-      night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s), 0),
+      sonntagStunden: empShifts.filter(s => !s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+      feiertagStunden: empShifts.filter(s => s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+      evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s, additive), 0),
+      night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s, additive), 0),
       schichten: empShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
       urlaubTage: countVacationDays(empShifts),
       krankTage: countSickDays(empShifts),
@@ -122,19 +128,11 @@ export function exportBuchhaltungCsv(
     const vacText = vacRanges.length > 0 ? `U: ${formatSickRanges(vacRanges).join(", ")}` : "";
     const besText = [note?.besonderheiten, vacText, sickText].filter(Boolean).join(" | ");
 
-    rows.push([
-      empDisplayName(emp),
-      emp.department,
-      t.gesamt,
-      t.schichten,
-      t.evening,
-      t.night,
-      t.soFeiStunden,
-      t.urlaubTage,
-      t.krankTage,
-      note?.vorschuss || 0,
-      besText,
-    ]);
+    const sfnCells = additive
+      ? [t.evening, t.night, t.sonntagStunden, t.feiertagStunden]
+      : [t.evening, t.night, t.soFeiStunden];
+
+    rows.push([empDisplayName(emp), emp.department, t.gesamt, t.schichten, ...sfnCells, t.urlaubTage, t.krankTage, note?.vorschuss || 0, besText]);
   }
 
   downloadCsv(`Buchhaltung_${periodLabel.replace(/\s+/g, "_")}.csv`, headers, rows);
@@ -147,8 +145,10 @@ export function exportZusammenfassungCsv(
   employees: Employee[],
   weeks: Week[],
   shifts: Shift[],
-  externalWeekNumberToIds?: Record<number, string[]>
+  externalWeekNumberToIds?: Record<number, string[]>,
+  sfnMode: SfnMode = "simple"
 ) {
+  const additive = sfnMode === "extended";
   const sorted = sortEmployees(employees);
   const sortedWeeks = [...weeks].sort((a, b) => a.week_number - b.week_number);
 
@@ -162,7 +162,8 @@ export function exportZusammenfassungCsv(
     shifts.some(s => s.employee_id === emp.id && s.department === emp.department && (Number(s.total_hours) > 0 || !!s.absence_type))
   );
 
-  const headers = ["Mitarbeiter", "Abteilung", ...sortedWeeks.map(w => `W${w.week_number}`), "Gesamt", "Schichten", "20-24", "24-x", "So/Fei", "U", "K"];
+  const sfnHeaders = additive ? ["20-24", "24-x", "So", "Fei"] : ["20-24", "24-x", "So/Fei"];
+  const headers = ["Mitarbeiter", "Abteilung", ...sortedWeeks.map(w => `W${w.week_number}`), "Gesamt", "Schichten", ...sfnHeaders, "U", "K"];
   const rows: (string | number)[][] = [];
 
   for (const emp of employeesWithShifts) {
@@ -170,8 +171,10 @@ export function exportZusammenfassungCsv(
     const totals = {
       gesamt: empShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
       soFeiStunden: empShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s), 0),
-      night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s), 0),
+      sonntagStunden: empShifts.filter(s => !s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+      feiertagStunden: empShifts.filter(s => s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+      evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s, additive), 0),
+      night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s, additive), 0),
       schichten: empShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
       urlaubTage: countVacationDays(empShifts),
       krankTage: countSickDays(empShifts),
@@ -184,18 +187,11 @@ export function exportZusammenfassungCsv(
         .reduce((sum, s) => sum + Number(s.total_hours), 0);
     });
 
-    rows.push([
-      empDisplayName(emp),
-      emp.department,
-      ...weekCells,
-      totals.gesamt,
-      totals.schichten,
-      totals.evening,
-      totals.night,
-      totals.soFeiStunden,
-      totals.urlaubTage,
-      totals.krankTage,
-    ]);
+    const sfnCells = additive
+      ? [totals.evening, totals.night, totals.sonntagStunden, totals.feiertagStunden]
+      : [totals.evening, totals.night, totals.soFeiStunden];
+
+    rows.push([empDisplayName(emp), emp.department, ...weekCells, totals.gesamt, totals.schichten, ...sfnCells, totals.urlaubTage, totals.krankTage]);
   }
 
   downloadCsv(`Zusammenfassung_${periodLabel.replace(/\s+/g, "_")}.csv`, headers, rows);
@@ -236,7 +232,6 @@ export function exportWochenplanCsv(
       allHeaders.push("Mitarbeiter", "Abteilung", ...dayHeaders);
     }
 
-    // Add a separator row for each week
     if (wi > 0) {
       allRows.push([`--- Woche ${week.week_number} ---`]);
     }
@@ -250,12 +245,7 @@ export function exportWochenplanCsv(
         if (!shift) return ["", "", "", ""];
         if (shift.absence_type === "urlaub") return ["", "", "", "U"];
         if (shift.absence_type === "krank") return ["", "", "", "K"];
-        return [
-          fmtTime(shift.start_time),
-          fmtTime(shift.end_time),
-          Number(shift.total_hours),
-          "",
-        ];
+        return [fmtTime(shift.start_time), fmtTime(shift.end_time), Number(shift.total_hours), ""];
       });
 
       allRows.push([empDisplayName(emp), emp.department, ...dayCells]);

@@ -181,10 +181,10 @@ export default function ZtBuchhaltung() {
         onCumulatedToggle={() => setCumulated(c => !c)}
         actions={
           <>
-            <Button variant="outline" size="sm" disabled={!selectedPeriodId || !employeesWithShifts.length} onClick={() => { if (!selectedPeriod) return; exportBuchhaltungPdf(selectedPeriod.label + (cumulated ? " (Kumuliert)" : ""), employeesWithShifts, shifts ?? [], payrollNotes ?? []); toast.success("PDF wurde erstellt"); }}>
+            <Button variant="outline" size="sm" disabled={!selectedPeriodId || !employeesWithShifts.length} onClick={() => { if (!selectedPeriod) return; exportBuchhaltungPdf(selectedPeriod.label + (cumulated ? " (Kumuliert)" : ""), employeesWithShifts, shifts ?? [], payrollNotes ?? [], sfnMode); toast.success("PDF wurde erstellt"); }}>
               <Download className="mr-1 h-4 w-4" /> PDF
             </Button>
-            <Button variant="outline" size="sm" disabled={!selectedPeriodId || !employeesWithShifts.length} onClick={() => { if (!selectedPeriod) return; exportBuchhaltungExcel(selectedPeriod.label + (cumulated ? " (Kumuliert)" : ""), employeesWithShifts, shifts ?? [], payrollNotes ?? []); toast.success("Excel wurde erstellt"); }}>
+            <Button variant="outline" size="sm" disabled={!selectedPeriodId || !employeesWithShifts.length} onClick={() => { if (!selectedPeriod) return; exportBuchhaltungExcel(selectedPeriod.label + (cumulated ? " (Kumuliert)" : ""), employeesWithShifts, shifts ?? [], payrollNotes ?? [], sfnMode); toast.success("Excel wurde erstellt"); }}>
               <FileSpreadsheet className="mr-1 h-4 w-4" /> Excel
             </Button>
           </>

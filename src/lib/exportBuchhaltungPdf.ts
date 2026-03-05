@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { formatHours, DEPARTMENT_ORDER, countVacationDays, countSickDays, getSickDateRanges, getVacationDateRanges, formatSickRanges, effectiveEveningHours, effectiveNightHours } from "./shiftCalculations";
+import type { SfnMode } from "@/hooks/useSfnMode";
 
 interface Employee {
   id: string;
@@ -37,8 +38,10 @@ export function exportBuchhaltungPdf(
   periodLabel: string,
   employees: Employee[],
   shifts: Shift[],
-  payrollNotes: PayrollNote[]
+  payrollNotes: PayrollNote[],
+  sfnMode: SfnMode = "simple"
 ) {
+  const additive = sfnMode === "extended";
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
 
   const sorted = [...employees].sort((a, b) => {
@@ -55,23 +58,47 @@ export function exportBuchhaltungPdf(
     return {
       gesamt: empShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
       soFeiStunden: empShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s), 0),
-      night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s), 0),
+      sonntagStunden: empShifts.filter(s => !s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+      feiertagStunden: empShifts.filter(s => s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+      evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s, additive), 0),
+      night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s, additive), 0),
       schichten: empShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
       urlaubTage: countVacationDays(empShifts),
       krankTage: countSickDays(empShifts),
     };
   };
 
+  const sfnHeaders = additive
+    ? ["20-24 Std.", "24-x Std.", "So Std.", "Fei Std."]
+    : ["20-24 Std.", "24-x Std.", "So/Fei Std."];
+  const sfnColCount = sfnHeaders.length;
+
+  function sfnCells(t: ReturnType<typeof getTotals>): string[] {
+    if (additive) {
+      return [
+        t.evening > 0 ? formatHours(t.evening) : "",
+        t.night > 0 ? formatHours(t.night) : "",
+        t.sonntagStunden > 0 ? formatHours(t.sonntagStunden) : "",
+        t.feiertagStunden > 0 ? formatHours(t.feiertagStunden) : "",
+      ];
+    }
+    return [
+      t.evening > 0 ? formatHours(t.evening) : "",
+      t.night > 0 ? formatHours(t.night) : "",
+      t.soFeiStunden > 0 ? formatHours(t.soFeiStunden) : "",
+    ];
+  }
+
   doc.setFontSize(16);
   doc.text(`Buchhaltung – ${periodLabel}`, 14, 15);
 
+  const totalColCount = 4 + sfnColCount + 3; // name + gesamt + schichten + sfn... + U + K + Vorschuss + Besonderheiten
   const rows: any[][] = [];
   let lastDept = "";
 
   for (const emp of sorted) {
     if (emp.department !== lastDept) {
-      rows.push([{ content: emp.department, colSpan: 10, styles: { fontStyle: "bold", fillColor: [230, 230, 230] } }]);
+      rows.push([{ content: emp.department, colSpan: totalColCount, styles: { fontStyle: "bold", fillColor: [230, 230, 230] } }]);
       lastDept = emp.department;
     }
     const t = getTotals(emp.id, emp.department);
@@ -94,9 +121,7 @@ export function exportBuchhaltungPdf(
       nameStr,
       formatHours(t.gesamt),
       String(t.schichten),
-      t.evening > 0 ? formatHours(t.evening) : "",
-      t.night > 0 ? formatHours(t.night) : "",
-      t.soFeiStunden > 0 ? formatHours(t.soFeiStunden) : "",
+      ...sfnCells(t),
       t.urlaubTage > 0 ? t.urlaubTage.toFixed(2).replace('.', ',') : "",
       t.krankTage > 0 ? String(t.krankTage) : "",
       note?.vorschuss ? String(note.vorschuss) : "",
@@ -104,24 +129,29 @@ export function exportBuchhaltungPdf(
     ]);
   }
 
+  const allHeaders = ["Mitarbeiter", "Gesamt Std.", "Schichten", ...sfnHeaders, "U (angr.)", "K", "Vorschuss", "Besonderheiten"];
+
+  const columnStyles: Record<number, any> = { 0: { cellWidth: 60 } };
+  // Gesamt + Schichten
+  columnStyles[1] = { halign: "center", cellWidth: 18 };
+  columnStyles[2] = { halign: "center", cellWidth: 16 };
+  // SFN cols
+  for (let i = 0; i < sfnColCount; i++) {
+    columnStyles[3 + i] = { halign: "center", cellWidth: 16 };
+  }
+  const afterSfn = 3 + sfnColCount;
+  columnStyles[afterSfn] = { halign: "center", cellWidth: 14 }; // U
+  columnStyles[afterSfn + 1] = { halign: "center", cellWidth: 10 }; // K
+  columnStyles[afterSfn + 2] = { halign: "center", cellWidth: 16 }; // Vorschuss
+  columnStyles[afterSfn + 3] = { cellWidth: additive ? 70 : 84 }; // Besonderheiten
+
   autoTable(doc, {
     startY: 20,
-    head: [["Mitarbeiter", "Gesamt Std.", "Schichten", "20-24 Std.", "24-x Std.", "So/Fei Std.", "U (angr.)", "K", "Vorschuss", "Besonderheiten"]],
+    head: [allHeaders],
     body: rows,
     styles: { fontSize: 8, cellPadding: 2 },
     headStyles: { fillColor: [60, 60, 60] },
-    columnStyles: {
-      0: { cellWidth: 60 },
-      1: { halign: "center", cellWidth: 18 },
-      2: { halign: "center", cellWidth: 16 },
-      3: { halign: "center", cellWidth: 16 },
-      4: { halign: "center", cellWidth: 16 },
-      5: { halign: "center", cellWidth: 16 },
-      6: { halign: "center", cellWidth: 14 },
-      7: { halign: "center", cellWidth: 10 },
-      8: { halign: "center", cellWidth: 16 },
-      9: { cellWidth: 84 },
-    },
+    columnStyles,
   });
 
   doc.save(`Buchhaltung_${periodLabel.replace(/\s+/g, "_")}.pdf`);

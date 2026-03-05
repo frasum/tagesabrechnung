@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx";
 import { DEPARTMENT_ORDER, countVacationDays, countSickDays, formatHours, getSickDateRanges, getVacationDateRanges, formatSickRanges, effectiveEveningHours, effectiveNightHours } from "./shiftCalculations";
+import type { SfnMode } from "@/hooks/useSfnMode";
 
 interface Employee {
   id: string;
@@ -36,8 +37,11 @@ export function exportBuchhaltungExcel(
   periodLabel: string,
   employees: Employee[],
   shifts: Shift[],
-  payrollNotes: PayrollNote[]
+  payrollNotes: PayrollNote[],
+  sfnMode: SfnMode = "simple"
 ) {
+  const additive = sfnMode === "extended";
+
   const sorted = [...employees].sort((a, b) => {
     const aIdx = DEPARTMENT_ORDER.indexOf(a.department as any);
     const bIdx = DEPARTMENT_ORDER.indexOf(b.department as any);
@@ -52,23 +56,31 @@ export function exportBuchhaltungExcel(
     return {
       gesamt: empShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
       soFeiStunden: empShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s), 0),
-      night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s), 0),
+      sonntagStunden: empShifts.filter(s => !s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+      feiertagStunden: empShifts.filter(s => s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+      evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s, additive), 0),
+      night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s, additive), 0),
       schichten: empShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
       urlaubTage: countVacationDays(empShifts),
       krankTage: countSickDays(empShifts),
     };
   };
 
+  const sfnHeaders = additive ? ["20-24 Std.", "24-x Std.", "So Std.", "Fei Std."] : ["20-24 Std.", "24-x Std.", "So/Fei Std."];
+  function sfnCells(t: ReturnType<typeof getTotals>): (string | number)[] {
+    if (additive) return [t.evening || "", t.night || "", t.sonntagStunden || "", t.feiertagStunden || ""];
+    return [t.evening || "", t.night || "", t.soFeiStunden || ""];
+  }
+
   const wsData: (string | number)[][] = [];
   wsData.push([`Buchhaltung – ${periodLabel}`]);
   wsData.push([]);
-  wsData.push(["Mitarbeiter", "Gesamt Std.", "Schichten", "20-24 Std.", "24-x Std.", "So/Fei Std.", "U (angr.)", "K", "Vorschuss", "Besonderheiten"]);
+  wsData.push(["Mitarbeiter", "Gesamt Std.", "Schichten", ...sfnHeaders, "U (angr.)", "K", "Vorschuss", "Besonderheiten"]);
 
   let lastDept = "";
   for (const emp of sorted) {
     if (emp.department !== lastDept) {
-      const row: (string | number)[] = new Array(10).fill("");
+      const row: (string | number)[] = new Array(sfnHeaders.length + 7).fill("");
       row[0] = emp.department;
       wsData.push(row);
       lastDept = emp.department;
@@ -90,24 +102,15 @@ export function exportBuchhaltungExcel(
     if (emp.perso_nr && emp.perso_nr > 0) metaParts.push(String(emp.perso_nr));
     const nameStr = metaParts.length > 0 ? `${nameParts} (${metaParts.join(" · ")})` : nameParts;
 
-    wsData.push([
-      nameStr,
-      t.gesamt || "",
-      t.schichten || "",
-      t.evening || "",
-      t.night || "",
-      t.soFeiStunden || "",
-      t.urlaubTage || "",
-      t.krankTage || "",
-      note?.vorschuss || "",
-      besText,
-    ]);
+    wsData.push([nameStr, t.gesamt || "", t.schichten || "", ...sfnCells(t), t.urlaubTage || "", t.krankTage || "", note?.vorschuss || "", besText]);
   }
 
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(wsData);
   ws["!cols"] = [
-    { wch: 35 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 6 }, { wch: 12 }, { wch: 30 },
+    { wch: 35 }, { wch: 12 }, { wch: 10 },
+    ...sfnHeaders.map(() => ({ wch: 12 })),
+    { wch: 10 }, { wch: 6 }, { wch: 12 }, { wch: 30 },
   ];
 
   XLSX.utils.book_append_sheet(wb, ws, "Buchhaltung");

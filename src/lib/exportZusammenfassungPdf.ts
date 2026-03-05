@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { formatHours, DEPARTMENT_ORDER, countVacationDays, countSickDays, effectiveEveningHours, effectiveNightHours } from "./shiftCalculations";
+import type { SfnMode } from "@/hooks/useSfnMode";
 
 interface Employee {
   id: string;
@@ -46,8 +47,10 @@ export function exportZusammenfassungPdf(
   employees: Employee[],
   weeks: Week[],
   shifts: Shift[],
-  externalWeekNumberToIds?: Record<number, string[]>
+  externalWeekNumberToIds?: Record<number, string[]>,
+  sfnMode: SfnMode = "simple"
 ) {
+  const additive = sfnMode === "extended";
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
 
   const sorted = [...employees].sort((a, b) => {
@@ -76,8 +79,10 @@ export function exportZusammenfassungPdf(
     return {
       gesamt: empShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
       soFeiStunden: empShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s), 0),
-      night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s), 0),
+      sonntagStunden: empShifts.filter(s => !s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+      feiertagStunden: empShifts.filter(s => s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+      evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s, additive), 0),
+      night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s, additive), 0),
       schichten: empShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
       urlaubTage: countVacationDays(empShifts),
       krankTage: countSickDays(empShifts),
@@ -96,19 +101,40 @@ export function exportZusammenfassungPdf(
     return {
       gesamt: deptShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
       soFeiStunden: deptShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      evening: deptShifts.reduce((sum, s) => sum + effectiveEveningHours(s), 0),
-      night: deptShifts.reduce((sum, s) => sum + effectiveNightHours(s), 0),
+      sonntagStunden: deptShifts.filter(s => !s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+      feiertagStunden: deptShifts.filter(s => s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+      evening: deptShifts.reduce((sum, s) => sum + effectiveEveningHours(s, additive), 0),
+      night: deptShifts.reduce((sum, s) => sum + effectiveNightHours(s, additive), 0),
       schichten: deptShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
       urlaubTage: countVacationDays(deptShifts),
       krankTage: countSickDays(deptShifts),
     };
   };
 
+  const sfnHeaders = additive ? ["20-24", "24-x", "So", "Fei"] : ["20-24", "24-x", "So/Fei"];
+  const sfnColCount = sfnHeaders.length;
+
   doc.setFontSize(12);
   doc.text(`Zusammenfassung – ${periodLabel}`, 14, 12);
 
-  const head = [["Mitarbeiter", ...sortedWeeks.map(w => `W${w.week_number}`), "Gesamt", "Schichten", "20-24", "24-x", "So/Fei", "U", "K"]];
-  const colCount = sortedWeeks.length + 8;
+  const head = [["Mitarbeiter", ...sortedWeeks.map(w => `W${w.week_number}`), "Gesamt", "Schichten", ...sfnHeaders, "U", "K"]];
+  const colCount = sortedWeeks.length + 4 + sfnColCount;
+
+  function sfnCells(t: ReturnType<typeof getEmpTotals>) {
+    if (additive) {
+      return [
+        t.evening > 0 ? formatHours(t.evening) : "",
+        t.night > 0 ? formatHours(t.night) : "",
+        t.sonntagStunden > 0 ? formatHours(t.sonntagStunden) : "",
+        t.feiertagStunden > 0 ? formatHours(t.feiertagStunden) : "",
+      ];
+    }
+    return [
+      t.evening > 0 ? formatHours(t.evening) : "",
+      t.night > 0 ? formatHours(t.night) : "",
+      t.soFeiStunden > 0 ? formatHours(t.soFeiStunden) : "",
+    ];
+  }
 
   const rows: any[][] = [];
   let lastDept = "";
@@ -132,9 +158,7 @@ export function exportZusammenfassungPdf(
       ...weekCells,
       formatHours(totals.gesamt),
       totals.schichten || "",
-      totals.evening > 0 ? formatHours(totals.evening) : "",
-      totals.night > 0 ? formatHours(totals.night) : "",
-      totals.soFeiStunden > 0 ? formatHours(totals.soFeiStunden) : "",
+      ...sfnCells(totals),
       totals.urlaubTage > 0 ? totals.urlaubTage.toFixed(2).replace(".", ",") : "",
       totals.krankTage > 0 ? String(totals.krankTage) : "",
     ]);
@@ -148,9 +172,7 @@ export function exportZusammenfassungPdf(
         ...sortedWeeks.map(() => ""),
         { content: formatHours(dt.gesamt), styles: { fontStyle: "bold" } },
         { content: dt.schichten || "", styles: { fontStyle: "bold" } },
-        dt.evening > 0 ? formatHours(dt.evening) : "",
-        dt.night > 0 ? formatHours(dt.night) : "",
-        dt.soFeiStunden > 0 ? formatHours(dt.soFeiStunden) : "",
+        ...sfnCells(dt),
         dt.urlaubTage > 0 ? dt.urlaubTage.toFixed(2).replace(".", ",") : "",
         dt.krankTage > 0 ? String(dt.krankTage) : "",
       ]);
@@ -162,32 +184,34 @@ export function exportZusammenfassungPdf(
   const grand = {
     gesamt: allShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
     soFeiStunden: allShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-    evening: allShifts.reduce((sum, s) => sum + effectiveEveningHours(s), 0),
-    night: allShifts.reduce((sum, s) => sum + effectiveNightHours(s), 0),
+    sonntagStunden: allShifts.filter(s => !s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+    feiertagStunden: allShifts.filter(s => s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+    evening: allShifts.reduce((sum, s) => sum + effectiveEveningHours(s, additive), 0),
+    night: allShifts.reduce((sum, s) => sum + effectiveNightHours(s, additive), 0),
     schichten: allShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
     urlaubTage: countVacationDays(allShifts),
     krankTage: countSickDays(allShifts),
   };
+
+  const grandSfn = sfnCells(grand).map(c => ({ content: c, styles: { fillColor: [200, 200, 200] as [number, number, number] } }));
 
   rows.push([
     { content: "GESAMT", styles: { fontStyle: "bold", fillColor: [200, 200, 200] } },
     ...sortedWeeks.map(() => ({ content: "", styles: { fillColor: [200, 200, 200] } })),
     { content: formatHours(grand.gesamt), styles: { fontStyle: "bold", fillColor: [200, 200, 200] } },
     { content: grand.schichten || "", styles: { fontStyle: "bold", fillColor: [200, 200, 200] } },
-    { content: grand.evening > 0 ? formatHours(grand.evening) : "", styles: { fillColor: [200, 200, 200] } },
-    { content: grand.night > 0 ? formatHours(grand.night) : "", styles: { fillColor: [200, 200, 200] } },
-    { content: grand.soFeiStunden > 0 ? formatHours(grand.soFeiStunden) : "", styles: { fillColor: [200, 200, 200] } },
+    ...grandSfn,
     { content: grand.urlaubTage > 0 ? grand.urlaubTage.toFixed(2).replace(".", ",") : "", styles: { fillColor: [200, 200, 200] } },
     { content: grand.krankTage > 0 ? String(grand.krankTage) : "", styles: { fillColor: [200, 200, 200] } },
   ]);
 
-  const weekColWidth = Math.min(16, (297 - 14 - 14 - 45 - 7 * 13) / sortedWeeks.length);
+  const weekColWidth = Math.min(16, (297 - 14 - 14 - 45 - (sfnColCount + 4) * 13) / sortedWeeks.length);
   const columnStyles: Record<number, any> = { 0: { cellWidth: 45 } };
   sortedWeeks.forEach((_, i) => {
     columnStyles[i + 1] = { halign: "center", cellWidth: weekColWidth };
   });
   const summaryStart = sortedWeeks.length + 1;
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < sfnColCount + 4; i++) {
     columnStyles[summaryStart + i] = { halign: "center", cellWidth: 12 };
   }
 

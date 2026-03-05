@@ -209,10 +209,10 @@ export default function ZtZusammenfassung() {
         onCumulatedToggle={() => setCumulated(c => !c)}
         actions={
           <>
-            <Button variant="outline" size="sm" disabled={!employeesWithShifts.length} onClick={() => { if (selectedPeriod && weeks && shifts) { exportZusammenfassungPdf(selectedPeriod.label + (cumulated ? " (Alle Restaurants)" : ""), employeesWithShifts, weeks, shifts, cumulated ? cumData.weekNumberToAllIds : undefined); } }}>
+            <Button variant="outline" size="sm" disabled={!employeesWithShifts.length} onClick={() => { if (selectedPeriod && weeks && shifts) { exportZusammenfassungPdf(selectedPeriod.label + (cumulated ? " (Alle Restaurants)" : ""), employeesWithShifts, weeks, shifts, cumulated ? cumData.weekNumberToAllIds : undefined, sfnMode); } }}>
               <FileDown className="mr-1 h-4 w-4" /> PDF
             </Button>
-            <Button variant="outline" size="sm" disabled={!employeesWithShifts.length} onClick={() => { if (selectedPeriod && weeks && shifts) { exportZusammenfassungExcel(selectedPeriod.label + (cumulated ? " (Alle Restaurants)" : ""), employeesWithShifts, weeks, shifts, cumulated ? cumData.weekNumberToAllIds : undefined); } }}>
+            <Button variant="outline" size="sm" disabled={!employeesWithShifts.length} onClick={() => { if (selectedPeriod && weeks && shifts) { exportZusammenfassungExcel(selectedPeriod.label + (cumulated ? " (Alle Restaurants)" : ""), employeesWithShifts, weeks, shifts, cumulated ? cumData.weekNumberToAllIds : undefined, sfnMode); } }}>
               <FileSpreadsheet className="mr-1 h-4 w-4" /> Excel
             </Button>
           </>
