@@ -1,35 +1,23 @@
 
 
-## Plan: SFN-Modus Toggle mit Beschreibungstexten
+## Problem
 
-### Änderungen
+The holiday tooltip on date headers (e.g. "Fr. 01.05") in the Wochenplan table is clipped/unreadable because the tooltip renders inside a scroll container with `overflow: hidden/auto`, causing it to be cut off.
 
-#### 1. Neuer Hook: `src/hooks/useSfnMode.ts`
-- `localStorage`-basierter State: `"simple"` (default) oder `"extended"`
-- Exportiert `{ sfnMode, setSfnMode }`
+## Root Cause
 
-#### 2. UI: Toggle mit Beschreibung im `ZtLayout.tsx`
-- Unterhalb der Tab-Navigation ein kompaktes Panel mit:
-  - **Switch**-Komponente: "Einfach" / "Erweitert (§3b)"
-  - **Beschreibungstext** der sich je nach Modus ändert:
+In `ZtWochenplan.tsx` (lines 552-558), the `<TooltipContent>` renders inside a `<div>` with `overflow-x-auto overflow-y-auto` (line 535). The tooltip content gets clipped by the container boundaries.
 
-**Einfach (aktiv):**
-> Sonntage und Feiertage werden gleich behandelt (50 % Zuschlag). Nachtzuschläge (25 % ab 20:00, 40 % von 00:00–04:00) werden bei Überschneidung mit So/Fei-Stunden nicht zusätzlich berechnet.
+## Solution
 
-**Erweitert §3b (aktiv):**
-> Zuschläge nach §3b EStG: Sonntag 50 %, Feiertag 125 % (besondere Feiertage 150 %). Nachtzuschläge werden additiv berechnet — sie stapeln sich mit Sonntags- und Feiertagszuschlägen.
+Replace the `Tooltip` with a `Popover` (or use `HoverCard`) for holiday date headers, which renders via a portal and escapes scroll containers. Alternatively, add explicit portal rendering to the `TooltipContent`.
 
-- Styling: Kleine Schrift (`text-xs text-muted-foreground`), dezent unter dem Toggle, maximal 2 Zeilen.
-- Der Toggle ist nur für Admins sichtbar (oder immer sichtbar, je nach Wunsch).
+### Changes
 
-#### 3. Modus an Unterseiten durchreichen
-- `ZtLayout` gibt den Modus via React Context oder als Outlet-Context an die Kind-Routen weiter, damit Zusammenfassung, Buchhaltung und Brutto/Netto darauf reagieren können (Vorbereitung für die Extended-Logik).
+**`src/pages/zeiterfassung/ZtWochenplan.tsx`** (lines 551-559):
+- Replace the `Tooltip` / `TooltipContent` with a `HoverCard` / `HoverCardContent` (already used elsewhere in the codebase, e.g. `BuchhaltungRow.tsx` for sick days).
+- Use `side="bottom"` and ensure the content renders via a portal (HoverCard does this by default).
+- This matches the existing pattern used for the sick-days hover in `BuchhaltungRow.tsx`.
 
-### Betroffene Dateien
-| Datei | Änderung |
-|---|---|
-| `src/hooks/useSfnMode.ts` | Neu: localStorage Hook |
-| `src/pages/zeiterfassung/ZtLayout.tsx` | Toggle + Beschreibung + Outlet-Context |
-
-**Hinweis**: Die eigentliche Extended-Berechnungslogik (additive Zuschläge, differenzierte Feiertage, DB-Migration) wird in einem Folgeschritt implementiert. Dieser Schritt erstellt nur den Toggle mit den Beschreibungen.
+The change is minimal: swap `Tooltip`→`HoverCard`, `TooltipTrigger`→`HoverCardTrigger`, `TooltipContent`→`HoverCardContent` for the holiday name display on date headers.
 
