@@ -41,6 +41,7 @@ export interface WaiterShift {
   id: string;
   session_id: string;
   waiter_name: string;
+  staff_id: string | null;
   second_waiter_name: string | null;
   additional_waiters: string[];
   pos_sales: number;
@@ -71,6 +72,7 @@ export interface KitchenShift {
   id: string;
   session_id: string;
   staff_name: string;
+  staff_id: string | null;
   shift_start: string;
   shift_end: string;
   hours_worked: number;

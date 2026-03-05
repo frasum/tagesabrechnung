@@ -7,6 +7,7 @@ export type StaffSelectRole = StaffRole | 'all';
 interface StaffSelectProps {
   value: string;
   onValueChange: (value: string) => void;
+  onStaffSelect?: (staff: { id: string; name: string }) => void;
   role: StaffSelectRole;
   placeholder?: string;
   disabled?: boolean;
@@ -17,6 +18,7 @@ interface StaffSelectProps {
 export function StaffSelect({ 
   value, 
   onValueChange, 
+  onStaffSelect,
   role, 
   placeholder = 'Mitarbeiter wählen',
   disabled = false,
@@ -30,11 +32,21 @@ export function StaffSelect({
   const filteredStaff = excludeNames.length > 0
     ? staffList.filter((s) => !excludeNames.includes(s.name))
     : staffList;
+
+  const handleValueChange = (name: string) => {
+    onValueChange(name);
+    if (onStaffSelect) {
+      const staff = staffList.find(s => s.name === name);
+      if (staff) {
+        onStaffSelect({ id: staff.id, name: staff.name });
+      }
+    }
+  };
   
   const Icon = role === 'all' ? Users : role === 'kitchen' ? ChefHat : User;
 
   return (
-    <Select value={value} onValueChange={onValueChange} disabled={disabled || isLoading}>
+    <Select value={value} onValueChange={handleValueChange} disabled={disabled || isLoading}>
       <SelectTrigger>
         <div className="flex items-center gap-2">
           <Icon className="w-4 h-4 text-muted-foreground" />
