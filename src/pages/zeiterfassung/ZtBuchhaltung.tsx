@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { ZtToolbar } from "@/components/zeiterfassung/ZtToolbar";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,6 +34,8 @@ export default function ZtBuchhaltung() {
   const sfnMode = (outletContext?.sfnMode as "simple" | "extended") ?? "simple";
   const isExtended = sfnMode === "extended";
   const { data: holidayRates } = useHolidayRates();
+  const { hasPermission } = useAuth();
+  const showSfn = hasPermission('admin');
 
   const selectedPeriod = periods?.find(p => p.id === selectedPeriodId);
   const cumData = useCumulatedZtData(cumulated, selectedPeriod);
@@ -196,7 +199,7 @@ export default function ZtBuchhaltung() {
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm table-fixed">
-            <BuchhaltungTableHead sfnMode={sfnMode} />
+            <BuchhaltungTableHead sfnMode={sfnMode} showSfn={showSfn} />
             <tbody>
               {employeesWithShifts.map((emp) => {
                 const showDeptHeader = emp.department !== lastDept;
@@ -210,7 +213,7 @@ export default function ZtBuchhaltung() {
 
                 return (
                   <React.Fragment key={`${emp.id}-${emp.department}-${selectedPeriodId}`}>
-                    {showDeptHeader && <BuchhaltungDeptHeader department={emp.department} sfnMode={sfnMode} />}
+                    {showDeptHeader && <BuchhaltungDeptHeader department={emp.department} sfnMode={sfnMode} showSfn={showSfn} />}
                     <BuchhaltungRow
                       emp={emp}
                       totals={totals}
@@ -220,13 +223,14 @@ export default function ZtBuchhaltung() {
                       isEven={isEven}
                       isLocked={isPeriodLocked}
                       sfnMode={sfnMode}
+                      showSfn={showSfn}
                       onUpsertNote={(params) => upsertNote.mutate(params)}
                     />
                   </React.Fragment>
                 );
               })}
             </tbody>
-            {employeesWithShifts.length > 0 && <BuchhaltungFooter grandTotals={grandTotals} sfnMode={sfnMode} />}
+            {employeesWithShifts.length > 0 && <BuchhaltungFooter grandTotals={grandTotals} sfnMode={sfnMode} showSfn={showSfn} />}
           </table>
         </div>
       </Card>

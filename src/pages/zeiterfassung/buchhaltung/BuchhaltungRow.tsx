@@ -17,10 +17,11 @@ interface BuchhaltungRowProps {
   isEven: boolean;
   isLocked?: boolean;
   sfnMode?: SfnMode;
+  showSfn?: boolean;
   onUpsertNote: (params: { employee_id: string; field: string; value: any }) => void;
 }
 
-export default function BuchhaltungRow({ emp, totals, note, shifts, advances, isEven, isLocked, sfnMode = "simple", onUpsertNote }: BuchhaltungRowProps) {
+export default function BuchhaltungRow({ emp, totals, note, shifts, advances, isEven, isLocked, sfnMode = "simple", showSfn = true, onUpsertNote }: BuchhaltungRowProps) {
   const rowBg = isEven ? "bg-muted/30" : "";
   const isExtended = sfnMode === "extended";
 
@@ -50,16 +51,16 @@ export default function BuchhaltungRow({ emp, totals, note, shifts, advances, is
         {formatHours(totals.gesamt)}
       </td>
       <td className="text-center px-1 py-1.5 tabular-nums">{displayNum(totals.schichten)}</td>
-      <td className="text-center px-1 py-1.5 tabular-nums">{displayNum(totals.evening, formatHours)}</td>
-      <td className="text-center px-1 py-1.5 tabular-nums">{displayNum(totals.night, formatHours)}</td>
-      {isExtended ? (
+      {showSfn && <td className="text-center px-1 py-1.5 tabular-nums">{displayNum(totals.evening, formatHours)}</td>}
+      {showSfn && <td className="text-center px-1 py-1.5 tabular-nums">{displayNum(totals.night, formatHours)}</td>}
+      {showSfn && (isExtended ? (
         <>
           <td className="text-center px-1 py-1.5 tabular-nums">{displayNum(totals.sonntagStunden, formatHours)}</td>
           <td className="text-center px-1 py-1.5 tabular-nums">{displayNum(totals.feiertagStunden, formatHours)}</td>
         </>
       ) : (
         <td className="text-center px-1 py-1.5 tabular-nums">{displayNum(totals.soFeiStunden, formatHours)}</td>
-      )}
+      ))}
       <td className="text-center px-1 py-1.5 tabular-nums text-green-600 font-medium border-l border-border/40">
         {totals.urlaubTage > 0 ? totals.urlaubTage.toFixed(2).replace('.', ',') : "–"}
       </td>

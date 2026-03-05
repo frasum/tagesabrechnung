@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import SfnTooltipHeader from "@/components/zeiterfassung/SfnTooltipHeader";
 import { useRestaurant, useRestaurants } from "@/hooks/useRestaurant";
+import { useAuth } from "@/contexts/AuthContext";
 import { useZt } from "@/contexts/ZtContext";
 import { useRestaurantEmployees, type RestaurantEmployee } from "@/hooks/useRestaurantEmployees";
 import { useCumulatedZtData } from "@/hooks/useCumulatedZtData";
@@ -102,6 +103,8 @@ export default function ZtWochenplan() {
   const outletContext = useOutletContext<{ sfnMode?: string }>();
   const sfnMode = (outletContext?.sfnMode as "simple" | "extended") ?? "simple";
   const { data: holidayRatesMap } = useHolidayRates();
+  const { hasPermission } = useAuth();
+  const showSfn = hasPermission('admin');
 
   const [cumulated, setCumulated] = useState(false);
 
@@ -587,10 +590,10 @@ export default function ZtWochenplan() {
                       </th>
                     );
                   })}
-                  <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-l-2 border-primary/20 border-b border-border text-xs">Ges</th>
-                   <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs"><SfnTooltipHeader column="evening" label="20-24" /></th>
-                   <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs"><SfnTooltipHeader column="night" label="24-x" /></th>
-                   {isExtended ? (
+                   <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-l-2 border-primary/20 border-b border-border text-xs">Ges</th>
+                   {showSfn && <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs"><SfnTooltipHeader column="evening" label="20-24" /></th>}
+                   {showSfn && <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs"><SfnTooltipHeader column="night" label="24-x" /></th>}
+                   {showSfn && (isExtended ? (
                      <>
                        <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs"><SfnTooltipHeader column="sonntag" label="So" /></th>
                        <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs"><SfnTooltipHeader column="feiertag" label="Fei 125%" /></th>
@@ -598,7 +601,7 @@ export default function ZtWochenplan() {
                      </>
                    ) : (
                      <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs"><SfnTooltipHeader column="soFei" label="So/Fei" /></th>
-                   )}
+                   ))}
                   <th className="totals-header text-center p-1.5 font-semibold min-w-[35px] border-b border-border text-xs">U</th>
                   <th className="totals-header text-center p-1.5 font-semibold min-w-[35px] border-b border-border text-xs">K</th>
                 </tr>
@@ -791,9 +794,9 @@ export default function ZtWochenplan() {
                           );
                         })}
                         <td className={`text-center p-2 border-l-2 border-primary/20 bg-primary/5 ${totals.gesamt > 0 ? "font-bold text-sm" : "text-xs text-muted-foreground"}`}>{formatHours(totals.gesamt)}</td>
-                         <td className="totals-col text-center p-2 text-xs">{totals.evening > 0 ? formatHours(totals.evening) : ""}</td>
-                         <td className="totals-col text-center p-2 text-xs">{totals.night > 0 ? formatHours(totals.night) : ""}</td>
-                         {isExtended ? (
+                         {showSfn && <td className="totals-col text-center p-2 text-xs">{totals.evening > 0 ? formatHours(totals.evening) : ""}</td>}
+                         {showSfn && <td className="totals-col text-center p-2 text-xs">{totals.night > 0 ? formatHours(totals.night) : ""}</td>}
+                         {showSfn && (isExtended ? (
                            <>
                              <td className="totals-col text-center p-2 text-xs">{totals.sonntagStunden > 0 ? formatHours(totals.sonntagStunden) : ""}</td>
                              <td className="totals-col text-center p-2 text-xs">{totals.feiertag125Stunden > 0 ? formatHours(totals.feiertag125Stunden) : ""}</td>
@@ -801,7 +804,7 @@ export default function ZtWochenplan() {
                            </>
                          ) : (
                            <td className="totals-col text-center p-2 text-xs">{totals.soFeiStunden > 0 ? formatHours(totals.soFeiStunden) : ""}</td>
-                         )}
+                         ))}
                         <td className="totals-col text-center p-2 text-xs text-success font-medium">{totals.urlaubTage > 0 ? totals.urlaubTage.toFixed(2).replace('.', ',') : ""}</td>
                         <td className="totals-col text-center p-2 text-xs text-destructive font-medium">{totals.krankTage > 0 ? totals.krankTage : ""}</td>
                       </tr>

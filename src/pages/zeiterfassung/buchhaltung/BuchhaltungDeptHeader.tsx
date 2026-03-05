@@ -5,10 +5,12 @@ import type { SfnMode } from "@/hooks/useSfnMode";
 interface BuchhaltungDeptHeaderProps {
   department: string;
   sfnMode?: SfnMode;
+  showSfn?: boolean;
 }
 
-export default function BuchhaltungDeptHeader({ department, sfnMode = "simple" }: BuchhaltungDeptHeaderProps) {
-  const colCount = sfnMode === "extended" ? 11 : 10;
+export default function BuchhaltungDeptHeader({ department, sfnMode = "simple", showSfn = true }: BuchhaltungDeptHeaderProps) {
+  const sfnCols = showSfn ? (sfnMode === "extended" ? 4 : 3) : 0;
+  const colCount = 7 + sfnCols; // Mitarbeiter + Gesamt + Schichten + U + K + Vorschuss + Besonderheiten + SFN cols
   return (
     <tr>
       <td
