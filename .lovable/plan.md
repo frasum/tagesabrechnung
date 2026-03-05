@@ -1,23 +1,38 @@
 
 
-## Problem
+## Zuschlagsspalten nur für Admins sichtbar
 
-The holiday tooltip on date headers (e.g. "Fr. 01.05") in the Wochenplan table is clipped/unreadable because the tooltip renders inside a scroll container with `overflow: hidden/auto`, causing it to be cut off.
+Die SFN-Zuschlagsspalten (20-24, 24-x, So/Fei bzw. So, Fei 125%, Fei 150%) sollen komplett ausgeblendet werden für Nutzer mit Manager- oder Staff-Berechtigung. Nur Admins sehen diese Spalten.
 
-## Root Cause
+### Betroffene Dateien
 
-In `ZtWochenplan.tsx` (lines 552-558), the `<TooltipContent>` renders inside a `<div>` with `overflow-x-auto overflow-y-auto` (line 535). The tooltip content gets clipped by the container boundaries.
+**1. `src/pages/zeiterfassung/ZtWochenplan.tsx`**
+- `useAuth` importieren und `hasPermission('admin')` prüfen
+- `const showSfn = hasPermission('admin');`
+- Header: Die 3-5 SFN-Spalten (20-24, 24-x, So/Fei) nur rendern wenn `showSfn`
+- Body: Die entsprechenden `<td>`-Zellen für evening, night, soFei/sonntag/feiertag nur rendern wenn `showSfn`
 
-## Solution
+**2. `src/pages/zeiterfassung/ZtZusammenfassung.tsx`**
+- `hasPermission` ist bereits verfügbar via `useAuth`
+- `const showSfn = hasPermission('admin');`
+- Header, Employee-Rows, Department-Subtotals und Grand-Total-Footer: SFN-Spalten bedingt rendern
+- `colSpan` für Department-Header anpassen
 
-Replace the `Tooltip` with a `Popover` (or use `HoverCard`) for holiday date headers, which renders via a portal and escapes scroll containers. Alternatively, add explicit portal rendering to the `TooltipContent`.
+**3. `src/pages/zeiterfassung/buchhaltung/BuchhaltungTableHead.tsx`**
+- Neues Prop `showSfn?: boolean` hinzufügen
+- SFN-Spalten (20-24, 24-x, So/Fei) und zugehörige `<col>`-Definitionen bedingt rendern
 
-### Changes
+**4. `src/pages/zeiterfassung/buchhaltung/BuchhaltungRow.tsx`**
+- Neues Prop `showSfn?: boolean` hinzufügen
+- Die 3-5 SFN-`<td>`-Zellen bedingt rendern
 
-**`src/pages/zeiterfassung/ZtWochenplan.tsx`** (lines 551-559):
-- Replace the `Tooltip` / `TooltipContent` with a `HoverCard` / `HoverCardContent` (already used elsewhere in the codebase, e.g. `BuchhaltungRow.tsx` for sick days).
-- Use `side="bottom"` and ensure the content renders via a portal (HoverCard does this by default).
-- This matches the existing pattern used for the sick-days hover in `BuchhaltungRow.tsx`.
+**5. `src/pages/zeiterfassung/buchhaltung/BuchhaltungFooter.tsx`** (falls vorhanden mit SFN-Spalten)
+- Prüfen und ggf. `showSfn` Prop durchreichen
 
-The change is minimal: swap `Tooltip`→`HoverCard`, `TooltipTrigger`→`HoverCardTrigger`, `TooltipContent`→`HoverCardContent` for the holiday name display on date headers.
+**6. `src/pages/zeiterfassung/ZtBuchhaltung.tsx`**
+- `useAuth` importieren, `showSfn` berechnen und an `BuchhaltungTableHead`, `BuchhaltungRow`, `BuchhaltungFooter` weitergeben
+
+### Logik
+- `showSfn = hasPermission('admin')` — nur Admins sehen die Zuschlagsspalten
+- Alle anderen Spalten (Gesamt, Schichten, U, K, Vorschuss, Besonderheiten) bleiben für alle sichtbar
 
