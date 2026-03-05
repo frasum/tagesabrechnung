@@ -98,7 +98,7 @@ export function useUpdateWaiterShiftWithAudit() {
         .eq('id', sessionId)
         .single();
       if (session) {
-        syncWaiterShiftToZt({
+        const syncResult = await syncWaiterShiftToZt({
           waiterName: newData.waiter_name,
           additionalWaiters: newData.additional_waiters || [],
           sessionDate: session.session_date,
@@ -106,6 +106,7 @@ export function useUpdateWaiterShiftWithAudit() {
           shiftEnd: newData.shift_end || '22:00',
           restaurantId,
         });
+        return syncResult;
       }
     },
   });
