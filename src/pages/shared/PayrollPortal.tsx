@@ -472,13 +472,11 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
 
         <TabsContent value="zusammenfassung">
           <PayrollZusammenfassungTab
-            key={`zus-${sfnMode}`}
             weeks={weeks}
             shifts={filteredShifts}
             employees={employeesWithShifts}
             periodLabel={period.label}
             weekNumberToAllIds={effectiveWeekNumberToAllIds}
-            sfnMode={sfnMode}
           />
         </TabsContent>
 
@@ -866,14 +864,14 @@ function PayrollWochenplanTab({ weeks, shifts, employees, holidays, periodLabel,
 
 // =================== Zusammenfassung Tab ===================
 
-function PayrollZusammenfassungTab({ weeks, shifts, employees, periodLabel, weekNumberToAllIds, sfnMode = "simple" }: {
+function PayrollZusammenfassungTab({ weeks, shifts, employees, periodLabel, weekNumberToAllIds }: {
   weeks: any[];
   shifts: Shift[];
   employees: any[];
   periodLabel: string;
   weekNumberToAllIds: Record<number, string[]>;
-  sfnMode?: SfnMode;
 }) {
+  const { sfnMode } = useSfnMode();
   const additive = sfnMode === "extended";
   const isExtended = sfnMode === "extended";
 
@@ -900,7 +898,9 @@ function PayrollZusammenfassungTab({ weeks, shifts, employees, periodLabel, week
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end gap-1">
+      <div className="flex items-center justify-between">
+        <Badge variant="outline" className="text-xs">{isExtended ? "§3b EStG (erweitert)" : "Einfach"}</Badge>
+        <div className="flex gap-1">
         <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => exportZusammenfassungPdf(periodLabel, employees, weeks, shifts as any, weekNumberToAllIds)}>
           <FileDown className="mr-1 h-4 w-4" /> PDF
         </Button>
@@ -910,6 +910,7 @@ function PayrollZusammenfassungTab({ weeks, shifts, employees, periodLabel, week
         <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportZusammenfassungCsv(periodLabel, employees, weeks, shifts as any, weekNumberToAllIds); toast.success("CSV erstellt"); }}>
           <FileDown className="mr-1 h-4 w-4" /> CSV
         </Button>
+        </div>
       </div>
 
       <div className="overflow-x-auto border rounded-lg">

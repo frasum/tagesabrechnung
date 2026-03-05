@@ -1,27 +1,24 @@
 
 
-## Diagnose: SFN-Modus in der Lohnbüro-Zusammenfassung
+## Tooltips für erweiterten SFN-Modus anpassen
 
-### Befund
+Aktuell zeigen die Tooltips nur den Zuschlagsprozentsatz. Im erweiterten (§3b) Modus sollen sie zusätzlich erklären, dass die Zuschläge additiv berechnet werden.
 
-Der Code in `PayrollZusammenfassungTab` (Zeilen 869-984) sieht korrekt aus — `isExtended` steuert die Spaltenanzahl in Header und Body. Trotzdem funktioniert der Umschalter nicht im Zusammenfassung-Tab des Lohnbüro-Portals.
+### Änderung in `src/components/zeiterfassung/SfnTooltipHeader.tsx`
 
-### Hypothese
+- Neues optionales Prop `sfnMode?: SfnMode` hinzufügen
+- Zwei Tooltip-Text-Sets: eins für "simple", eins für "extended"
+- Im Extended-Modus erklären die Tooltips die additive Logik:
 
-Die `key`-basierte Remount-Strategie (`key={`zus-${sfnMode}`}`) auf dem Komponenten-Aufruf innerhalb von `TabsContent` greift möglicherweise nicht zuverlässig, da Radix `TabsContent` inaktive Tabs unmountet — beim Wechsel von Buchhaltung (wo der Toggle funktioniert) zurück auf Zusammenfassung wird die Komponente ohnehin neu gemountet, aber **mit der default-Prop** `sfnMode = "simple"`, falls die Prop-Übergabe versagt.
+| Spalte | Simple | Extended |
+|--------|--------|----------|
+| 20–24 | 25 % Nachtzuschlag | 25 % Nachtzuschlag (20:00–00:00) — additiv zu So/Fei-Zuschlägen |
+| 24–x | 40 % Nachtzuschlag | 40 % Nachtzuschlag (00:00–04:00) — additiv zu So/Fei-Zuschlägen |
+| So/Fei | 50 % Sonn- und Feiertagszuschlag | *(nicht im Extended-Modus)* |
+| So | *(nicht im Simple-Modus)* | 50 % Sonntagszuschlag (§3b EStG) |
+| Fei | *(nicht im Simple-Modus)* | 125 % Feiertag / 150 % besondere Feiertage (1. Mai, 25./26.12.) |
 
-Zusätzlich hat `PayrollZusammenfassungTab` kein visuelles Feedback, ob der Modus ankommt (im Gegensatz zu Buchhaltung, die jetzt eine Badge hat).
+### Aufrufer anpassen
 
-### Lösung (3 Schritte)
-
-1. **Debug-Badge in `PayrollZusammenfassungTab` hinzufügen** — identisch zur Buchhaltung-Tab, um sofort visuell zu sehen, welcher Modus aktiv ist.
-
-2. **`useSfnMode()` direkt in `PayrollZusammenfassungTab` aufrufen** statt sich auf die Prop-Übergabe zu verlassen. Da der Hook `useState` mit localStorage-Initializer verwendet, liest die Komponente den Modus bei jedem Mount korrekt. Das eliminiert jede mögliche Prop-Durchreichungs-Problematik.
-
-3. **Gleiche Änderung in `ZtZusammenfassung.tsx`** — auch dort `useSfnMode()` direkt aufrufen statt über `useOutletContext`, da die reguläre Zusammenfassungs-Seite das gleiche Problem haben könnte.
-
-### Betroffene Dateien
-
-- `src/pages/shared/PayrollPortal.tsx` — `PayrollZusammenfassungTab`: Hook direkt aufrufen + Badge hinzufügen
-- `src/pages/zeiterfassung/ZtZusammenfassung.tsx` — `useSfnMode()` direkt aufrufen als Fallback/Absicherung
+`BuchhaltungTableHead.tsx`, `ZtWochenplan.tsx`, `ZtZusammenfassung.tsx` — das `sfnMode`-Prop an `SfnTooltipHeader` durchreichen, wo es bereits verfügbar ist.
 

@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { useOutletContext } from "react-router-dom";
 import SfnTooltipHeader from "@/components/zeiterfassung/SfnTooltipHeader";
 import { format, parseISO } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
@@ -18,6 +17,7 @@ import { useCumulatedZtData } from "@/hooks/useCumulatedZtData";
 import { useAuth } from "@/contexts/AuthContext";
 import { useHolidayRates } from "@/hooks/useHolidayRates";
 import ShiftTimeOverride from "@/components/zeiterfassung/ShiftTimeOverride";
+import { useSfnMode } from "@/hooks/useSfnMode";
 
 type Shift = {
   id: string;
@@ -44,8 +44,7 @@ export default function ZtZusammenfassung() {
   const [cumulated, setCumulated] = useState(false);
   const { hasPermission } = useAuth();
   const { data: holidayRates } = useHolidayRates();
-  const outletContext = useOutletContext<{ sfnMode?: string }>();
-  const sfnMode = (outletContext?.sfnMode as "simple" | "extended") ?? "simple";
+  const { sfnMode } = useSfnMode();
   const isExtended = sfnMode === "extended";
   const showSfn = hasPermission('admin');
 
