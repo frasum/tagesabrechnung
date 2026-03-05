@@ -909,8 +909,8 @@ function PayrollZusammenfassungTab({ weeks, shifts, employees, periodLabel, week
         </Button>
       </div>
 
-      <div className="overflow-x-auto border rounded-lg">
-        <table key={sfnMode} className="w-full text-sm">
+      <div key={`zus-${sfnMode}`} className="overflow-x-auto border rounded-lg">
+        <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted">
               <th className="text-left p-2 font-medium">Mitarbeiter</th>
@@ -1016,22 +1016,25 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
   let lastDept: string | null = null;
 
   return (
-    <div className="space-y-3">
-      <div className="flex justify-end gap-1">
-        <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungPdf(periodLabel, employees, shifts, payrollNotes, sfnMode, holidayRates); toast.success("PDF erstellt"); }}>
-          <FileDown className="mr-1 h-4 w-4" /> PDF
-        </Button>
-        <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungExcel(periodLabel, employees, shifts, payrollNotes, sfnMode, holidayRates); toast.success("Excel erstellt"); }}>
-          <FileSpreadsheet className="mr-1 h-4 w-4" /> Excel
-        </Button>
-        <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungCsv(periodLabel, employees, shifts, payrollNotes, sfnMode, holidayRates); toast.success("CSV erstellt"); }}>
-          <FileDown className="mr-1 h-4 w-4" /> CSV
-        </Button>
+    <div key={`buch-${sfnMode}`} className="space-y-3">
+      <div className="flex items-center justify-between">
+        <Badge variant="outline" className="text-xs">Modus: {sfnMode === "extended" ? "§3b EStG (erweitert)" : "Einfach"}</Badge>
+        <div className="flex gap-1">
+          <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungPdf(periodLabel, employees, shifts, payrollNotes, sfnMode, holidayRates); toast.success("PDF erstellt"); }}>
+            <FileDown className="mr-1 h-4 w-4" /> PDF
+          </Button>
+          <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungExcel(periodLabel, employees, shifts, payrollNotes, sfnMode, holidayRates); toast.success("Excel erstellt"); }}>
+            <FileSpreadsheet className="mr-1 h-4 w-4" /> Excel
+          </Button>
+          <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungCsv(periodLabel, employees, shifts, payrollNotes, sfnMode, holidayRates); toast.success("CSV erstellt"); }}>
+            <FileDown className="mr-1 h-4 w-4" /> CSV
+          </Button>
+        </div>
       </div>
 
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-          <table key={sfnMode} className="w-full text-sm table-fixed">
+          <table className="w-full text-sm table-fixed">
             <BuchhaltungTableHead sfnMode={sfnMode} />
             <tbody>
               {employees.map(emp => {
