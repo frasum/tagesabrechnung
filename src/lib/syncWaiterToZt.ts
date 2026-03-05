@@ -28,6 +28,8 @@ async function findWeekForDate(date: string, restaurantId: string): Promise<stri
 }
 
 async function findStaffByName(name: string, restaurantId: string, department: 'Küche' | 'GL' | 'Service' = 'Service'): Promise<string | null> {
+  const nameLower = name.toLowerCase();
+
   // 1. Try exact department match
   const { data } = await supabase
     .from('staff_restaurants')
@@ -36,7 +38,7 @@ async function findStaffByName(name: string, restaurantId: string, department: '
     .eq('zt_department', department);
 
   if (data) {
-    const match = data.find((sr: any) => sr.staff?.name === name);
+    const match = data.find((sr: any) => sr.staff?.name?.toLowerCase() === nameLower);
     if (match?.staff_id) return match.staff_id;
   }
 
@@ -47,7 +49,7 @@ async function findStaffByName(name: string, restaurantId: string, department: '
     .eq('restaurant_id', restaurantId);
 
   if (!fallbackData) return null;
-  const fallbackMatch = fallbackData.find((sr: any) => sr.staff?.name === name);
+  const fallbackMatch = fallbackData.find((sr: any) => sr.staff?.name?.toLowerCase() === nameLower);
   return fallbackMatch?.staff_id ?? null;
 }
 
@@ -118,7 +120,10 @@ async function upsertZtShift(params: {
 export async function syncWaiterShiftToZt(params: SyncParams) {
   try {
     const weekId = await findWeekForDate(params.sessionDate, params.restaurantId);
-    if (!weekId) return;
+    if (!weekId) {
+      console.warn(`ZT-Sync: Keine passende Woche für ${params.sessionDate} gefunden`);
+      return;
+    }
 
     const dateObj = new Date(params.sessionDate + 'T12:00:00');
     const isSunday = dateObj.getDay() === 0;
@@ -126,10 +131,14 @@ export async function syncWaiterShiftToZt(params: SyncParams) {
     const isSundayOrHoliday = isSunday || holiday;
 
     const allWaiters = [params.waiterName, ...params.additionalWaiters];
+    const notFound: string[] = [];
 
     await Promise.all(allWaiters.map(async (name) => {
       const employeeId = await findStaffByName(name, params.restaurantId);
-      if (!employeeId) return;
+      if (!employeeId) {
+        notFound.push(name);
+        return;
+      }
 
       await upsertZtShift({
         weekId,
@@ -141,6 +150,10 @@ export async function syncWaiterShiftToZt(params: SyncParams) {
         isHoliday: holiday,
       });
     }));
+
+    if (notFound.length > 0) {
+      console.warn(`ZT-Sync: Mitarbeiter nicht gefunden: ${notFound.join(', ')}`);
+    }
   } catch (err) {
     console.error('syncWaiterShiftToZt error:', err);
   }
