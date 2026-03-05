@@ -414,12 +414,72 @@ export default function ZtWochenplan() {
     });
   };
 
-  const handleAbsenceRange = () => {
-    const weeksToUse = effectiveWeeks;
-    if (!weeksToUse?.length) return;
+  const handleAbsenceRange = async () => {
     const { employeeId, absenceType, startDate, endDate, department } = absenceDialog;
     const rangeEnd = endDate || startDate;
     const days = eachDayOfInterval({ start: startDate, end: rangeEnd });
+
+    const startStr = format(startDate, "yyyy-MM-dd");
+    const endStr = format(rangeEnd, "yyyy-MM-dd");
+
+    // Load ALL weeks across ALL periods that cover the absence range
+    const { data: coveringPeriods, error: pErr } = await supabase
+      .from("scheduling_periods")
+      .select("id")
+      .eq("restaurant_id", restaurantId)
+      .lte("start_date", endStr)
+      .gte("end_date", startStr);
+
+    if (pErr || !coveringPeriods?.length) {
+      toast.error("Keine Abrechnungsperioden für diesen Zeitraum gefunden.");
+      return;
+    }
+
+    let allCoveringPeriodIds = coveringPeriods.map(p => p.id);
+
+    // In cumulated mode, also load periods from other restaurants with matching dates
+    if (cumulated) {
+      const { data: allMatchingPeriods } = await supabase
+        .from("scheduling_periods")
+        .select("id")
+        .lte("start_date", endStr)
+        .gte("end_date", startStr);
+      if (allMatchingPeriods?.length) {
+        allCoveringPeriodIds = [...new Set([...allCoveringPeriodIds, ...allMatchingPeriods.map(p => p.id)])];
+      }
+    }
+
+    const { data: allCoveringWeeks, error: wErr } = await supabase
+      .from("weeks")
+      .select("*")
+      .in("period_id", allCoveringPeriodIds)
+      .order("week_number");
+
+    if (wErr || !allCoveringWeeks?.length) {
+      toast.error("Keine Wochen für diesen Zeitraum gefunden.");
+      return;
+    }
+
+    // Deduplicate weeks by week_number (use first occurrence) for non-cumulated mode
+    const weeksToUse = cumulated
+      ? (() => {
+          const seen = new Set<string>();
+          const deduped: typeof allCoveringWeeks = [];
+          for (const w of allCoveringWeeks) {
+            const key = `${w.start_date}-${w.end_date}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            deduped.push(w);
+          }
+          return deduped;
+        })()
+      : allCoveringWeeks.filter(w => coveringPeriods.some(p => p.id === w.period_id));
+
+    // Build a lookup: week_number → all week IDs (for cumulated mode)
+    const weekNumToIds: Record<number, string[]> = {};
+    for (const w of allCoveringWeeks) {
+      (weekNumToIds[w.week_number] ??= []).push(w.id);
+    }
 
     let skipped = 0;
     for (const day of days) {
@@ -431,11 +491,21 @@ export default function ZtWochenplan() {
       });
       if (!week) { skipped++; continue; }
 
-      // In cumulated mode, find the right week_id
+      // In cumulated mode, find the right week_id for this employee
       let weekId = week.id;
       if (cumulated) {
-        const found = findWeekIdForEmployee(employeeId, week.week_number);
-        if (found) weekId = found;
+        const weekIdsForNumber = weekNumToIds[week.week_number] ?? [];
+        if (weekIdsForNumber.length > 1) {
+          // Try to find via existing shift or current restaurant week
+          const existingShift = shifts?.find(s => s.employee_id === employeeId && weekIdsForNumber.includes(s.week_id));
+          if (existingShift) {
+            weekId = existingShift.week_id;
+          } else {
+            const currentRestWeek = weeks?.find(w => w.week_number === week.week_number);
+            if (currentRestWeek && weekIdsForNumber.includes(currentRestWeek.id)) weekId = currentRestWeek.id;
+            else weekId = weekIdsForNumber[0];
+          }
+        }
       }
 
       upsertShift.mutate({
@@ -449,7 +519,7 @@ export default function ZtWochenplan() {
         department: department,
       });
     }
-    if (skipped > 0) toast.warning(`${skipped} Tag(e) lagen außerhalb der Periode.`);
+    if (skipped > 0) toast.warning(`${skipped} Tag(e) lagen außerhalb der verfügbaren Wochen.`);
     const count = days.length - skipped;
     toast.success(`${absenceType === 'urlaub' ? 'Urlaub' : 'Krank'} für ${count} Tag(e) eingetragen.`);
     setAbsenceDialog(prev => ({ ...prev, open: false }));
