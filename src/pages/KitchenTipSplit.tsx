@@ -36,6 +36,7 @@ export default function KitchenTipSplit() {
 
   // Form state
   const [staffName, setStaffName] = useState('');
+  const [staffId, setStaffId] = useState<string | null>(null);
   const [shiftStart, setShiftStart] = useState('15:00');
   const [shiftEnd, setShiftEnd] = useState('23:30');
 
@@ -85,12 +86,14 @@ export default function KitchenTipSplit() {
       await createKitchenShift.mutateAsync({
         session_id: session.id,
         staff_name: staffName.trim(),
+        staff_id: staffId,
         shift_start: shiftStart,
         shift_end: shiftEnd,
         restaurantId: restaurantId || undefined,
       });
 
       setStaffName('');
+      setStaffId(null);
       toast({ title: 'Küchenmitarbeiter hinzugefügt' });
     } catch (error) {
       toast({ title: 'Fehler', variant: 'destructive' });
@@ -196,6 +199,7 @@ export default function KitchenTipSplit() {
                     <StaffSelect
                       value={staffName}
                       onValueChange={setStaffName}
+                      onStaffSelect={(s) => setStaffId(s.id)}
                       role="kitchen"
                       placeholder="Mitarbeiter wählen"
                       excludeNames={kitchenShifts.map((s) => s.staff_name)}

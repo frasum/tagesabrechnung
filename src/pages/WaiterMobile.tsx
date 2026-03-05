@@ -128,6 +128,7 @@ export default function WaiterMobile() {
           id: myShift.id,
           sessionId,
           restaurantId: restaurantId!,
+          staff_id: user?.staffId || myShift.staff_id || null,
           second_waiter_name: secondWaiterName === 'none' ? null : secondWaiterName,
           additional_waiters: additionalWaiters,
           ...formData,
@@ -137,6 +138,7 @@ export default function WaiterMobile() {
         await createWaiterShift.mutateAsync({
           session_id: sessionId,
           waiter_name: staffName,
+          staff_id: user?.staffId || null,
           second_waiter_name: secondWaiterName === 'none' ? null : secondWaiterName,
           additional_waiters: additionalWaiters,
           participates_in_pool: true,

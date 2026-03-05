@@ -101,6 +101,7 @@ export function useUpdateWaiterShiftWithAudit() {
       if (session) {
         const syncResult = await syncWaiterShiftToZt({
           waiterName: newData.waiter_name,
+          staffId: newData.staff_id || null,
           additionalWaiters: newData.additional_waiters || [],
           sessionDate: session.session_date,
           shiftStart: newData.shift_start || '16:00',

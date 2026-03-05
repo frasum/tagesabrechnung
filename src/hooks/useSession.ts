@@ -175,6 +175,7 @@ export function useCreateWaiterShift() {
       if (session) {
         syncWaiterShiftToZt({
           waiterName: data.waiter_name,
+          staffId: (data as any).staff_id || null,
           additionalWaiters: data.additional_waiters || [],
           sessionDate: session.session_date,
           shiftStart: data.shift_start || '16:00',
@@ -349,6 +350,7 @@ export function useCreateKitchenShift() {
         if (session) {
           syncKitchenShiftToZt({
             staffName: insertData.staff_name,
+            staffId: (insertData as any).staff_id || null,
             sessionDate: session.session_date,
             shiftStart: insertData.shift_start,
             shiftEnd: insertData.shift_end,

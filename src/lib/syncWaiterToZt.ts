@@ -9,6 +9,7 @@ import { logSyncError } from '@/hooks/useSyncLogs';
 
 interface SyncParams {
   waiterName: string;
+  staffId?: string | null;
   additionalWaiters: string[];
   sessionDate: string;       // yyyy-MM-dd
   shiftStart: string;        // HH:mm
@@ -158,8 +159,23 @@ export async function syncWaiterShiftToZt(params: SyncParams): Promise<SyncResul
 
     const allWaiters = [params.waiterName, ...params.additionalWaiters];
 
-    await Promise.all(allWaiters.map(async (name) => {
-      const employeeId = await findStaffByName(name, params.restaurantId);
+    await Promise.all(allWaiters.map(async (name, index) => {
+      // Use staff_id directly for the primary waiter if available
+      let employeeId: string | null = null;
+      if (index === 0 && params.staffId) {
+        // Verify staff_id is assigned to this restaurant
+        const { data: sr } = await supabase
+          .from('staff_restaurants')
+          .select('staff_id')
+          .eq('staff_id', params.staffId)
+          .eq('restaurant_id', params.restaurantId)
+          .maybeSingle();
+        employeeId = sr?.staff_id ?? null;
+      }
+      // Fallback to name matching
+      if (!employeeId) {
+        employeeId = await findStaffByName(name, params.restaurantId);
+      }
       if (!employeeId) {
         const reason = 'Mitarbeiter nicht in der Personalverwaltung gefunden';
         result.failed.push({ name, reason });
@@ -188,6 +204,7 @@ export async function syncWaiterShiftToZt(params: SyncParams): Promise<SyncResul
 
 interface KitchenSyncParams {
   staffName: string;
+  staffId?: string | null;
   sessionDate: string;
   shiftStart: string;
   shiftEnd: string;
@@ -205,7 +222,19 @@ export async function syncKitchenShiftToZt(params: KitchenSyncParams): Promise<S
       return result;
     }
 
-    const employeeId = await findStaffByName(params.staffName, params.restaurantId, 'Küche');
+    let employeeId: string | null = null;
+    if (params.staffId) {
+      const { data: sr } = await supabase
+        .from('staff_restaurants')
+        .select('staff_id')
+        .eq('staff_id', params.staffId)
+        .eq('restaurant_id', params.restaurantId)
+        .maybeSingle();
+      employeeId = sr?.staff_id ?? null;
+    }
+    if (!employeeId) {
+      employeeId = await findStaffByName(params.staffName, params.restaurantId, 'Küche');
+    }
     if (!employeeId) {
       const reason = 'Mitarbeiter nicht in der Personalverwaltung gefunden';
       result.failed.push({ name: params.staffName, reason });
