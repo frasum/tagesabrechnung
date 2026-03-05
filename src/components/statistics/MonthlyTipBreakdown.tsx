@@ -308,7 +308,7 @@ export function MonthlyTipBreakdown() {
             />
             <TipTable
               data={selectedMonthData?.waiterTips || []}
-              showHours={false}
+              showHours={true}
             />
           </TabsContent>
 
