@@ -16,6 +16,11 @@ interface SyncParams {
   restaurantId: string;
 }
 
+export interface SyncResult {
+  synced: string[];
+  failed: { name: string; reason: string }[];
+}
+
 async function findWeekForDate(date: string, restaurantId: string): Promise<string | null> {
   const { data } = await supabase
     .from('weeks')
