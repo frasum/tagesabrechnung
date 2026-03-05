@@ -857,13 +857,17 @@ function PayrollWochenplanTab({ weeks, shifts, employees, holidays, periodLabel,
 
 // =================== Zusammenfassung Tab ===================
 
-function PayrollZusammenfassungTab({ weeks, shifts, employees, periodLabel, weekNumberToAllIds }: {
+function PayrollZusammenfassungTab({ weeks, shifts, employees, periodLabel, weekNumberToAllIds, sfnMode = "simple" }: {
   weeks: any[];
   shifts: Shift[];
   employees: any[];
   periodLabel: string;
   weekNumberToAllIds: Record<number, string[]>;
+  sfnMode?: SfnMode;
 }) {
+  const additive = sfnMode === "extended";
+  const isExtended = sfnMode === "extended";
+
   const getWeeklyHours = (empId: string, weekNumber: number, department?: string) => {
     const wIds = weekNumberToAllIds[weekNumber] ?? weeks.filter(w => w.week_number === weekNumber).map(w => w.id);
     return shifts.filter(s => s.employee_id === empId && wIds.includes(s.week_id) && (!department || s.department === department))
@@ -875,8 +879,10 @@ function PayrollZusammenfassungTab({ weeks, shifts, employees, periodLabel, week
     return {
       gesamt: empShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
       soFeiStunden: empShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      evening: empShifts.reduce((sum, s) => sum + Number(s.evening_hours), 0),
-      night: empShifts.reduce((sum, s) => sum + Number(s.night_hours), 0),
+      sonntagStunden: empShifts.filter(s => !s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+      feiertagStunden: empShifts.filter(s => s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
+      evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s, additive), 0),
+      night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s, additive), 0),
       schichten: empShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
       urlaubTage: countVacationDays(empShifts),
       krankTage: countSickDays(empShifts),
@@ -905,9 +911,16 @@ function PayrollZusammenfassungTab({ weeks, shifts, employees, periodLabel, week
               {weeks.map(w => <th key={w.id} className="text-center p-2 font-medium whitespace-nowrap">W{w.week_number}</th>)}
               <th className="text-center p-2 font-medium">Gesamt</th>
               <th className="text-center p-2 font-medium">Schichten</th>
-               <th className="text-center p-2 font-medium"><SfnTooltipHeader column="evening" label="20-24" /></th>
-               <th className="text-center p-2 font-medium"><SfnTooltipHeader column="night" label="24-x" /></th>
-               <th className="text-center p-2 font-medium"><SfnTooltipHeader column="soFei" label="So/Fei" /></th>
+               <th className="text-center p-2 font-medium"><SfnTooltipHeader column="evening" label="20-24" sfnMode={sfnMode} /></th>
+               <th className="text-center p-2 font-medium"><SfnTooltipHeader column="night" label="24-x" sfnMode={sfnMode} /></th>
+               {isExtended ? (
+                 <>
+                   <th className="text-center p-2 font-medium"><SfnTooltipHeader column="sonntag" label="So" sfnMode={sfnMode} /></th>
+                   <th className="text-center p-2 font-medium"><SfnTooltipHeader column="feiertag" label="Fei" sfnMode={sfnMode} /></th>
+                 </>
+               ) : (
+                 <th className="text-center p-2 font-medium"><SfnTooltipHeader column="soFei" label="So/Fei" sfnMode={sfnMode} /></th>
+               )}
               <th className="text-center p-2 font-medium">U</th>
               <th className="text-center p-2 font-medium">K</th>
             </tr>
@@ -920,9 +933,9 @@ function PayrollZusammenfassungTab({ weeks, shifts, employees, periodLabel, week
 
               return (
                 <React.Fragment key={`${emp.id}-${emp.department}`}>
-                  {showDeptHeader && (
+                   {showDeptHeader && (
                     <tr>
-                      <td colSpan={weeks.length + 8} className={`p-2 font-bold text-xs uppercase tracking-wide ${getDepartmentBgClass(emp.department)}`}>
+                      <td colSpan={weeks.length + (isExtended ? 9 : 8)} className={`p-2 font-bold text-xs uppercase tracking-wide ${getDepartmentBgClass(emp.department)}`}>
                         {emp.department}
                       </td>
                     </tr>
@@ -940,7 +953,14 @@ function PayrollZusammenfassungTab({ weeks, shifts, employees, periodLabel, week
                     <td className="text-center p-2">{totals.schichten || ""}</td>
                      <td className="text-center p-2">{totals.evening > 0 ? formatHours(totals.evening) : ""}</td>
                      <td className="text-center p-2">{totals.night > 0 ? formatHours(totals.night) : ""}</td>
-                     <td className="text-center p-2">{totals.soFeiStunden > 0 ? formatHours(totals.soFeiStunden) : ""}</td>
+                     {isExtended ? (
+                       <>
+                         <td className="text-center p-2">{totals.sonntagStunden > 0 ? formatHours(totals.sonntagStunden) : ""}</td>
+                         <td className="text-center p-2">{totals.feiertagStunden > 0 ? formatHours(totals.feiertagStunden) : ""}</td>
+                       </>
+                     ) : (
+                       <td className="text-center p-2">{totals.soFeiStunden > 0 ? formatHours(totals.soFeiStunden) : ""}</td>
+                     )}
                     <td className="text-center p-2 text-green-600 font-medium">{totals.urlaubTage > 0 ? totals.urlaubTage.toFixed(2).replace(".", ",") : ""}</td>
                     <td className="text-center p-2 text-red-600 font-medium">{totals.krankTage > 0 ? totals.krankTage : ""}</td>
                   </tr>
@@ -956,7 +976,7 @@ function PayrollZusammenfassungTab({ weeks, shifts, employees, periodLabel, week
 
 // =================== Buchhaltung Tab ===================
 
-function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, periodLabel, isLocked, onUpsertNote }: {
+function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, periodLabel, isLocked, onUpsertNote, sfnMode = "simple" }: {
   shifts: Shift[];
   employees: any[];
   payrollNotes: PayrollNote[];
@@ -964,7 +984,10 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
   periodLabel: string;
   isLocked: boolean;
   onUpsertNote: (p: { employee_id: string; field: string; value: any }) => void;
+  sfnMode?: SfnMode;
 }) {
+  const additive = sfnMode === "extended";
+  const isExtended = sfnMode === "extended";
   const advancesByName = useMemo(() => {
     const map: Record<string, AdvanceEntry[]> = {};
     advances.forEach(a => { (map[a.staff_name] ??= []).push(a); });
@@ -974,7 +997,7 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
   const grandTotals = useMemo(() => {
     const t = { gesamt: 0, schichten: 0, soFeiStunden: 0, sonntagStunden: 0, feiertagStunden: 0, evening: 0, night: 0, urlaubTage: 0, krankTage: 0 };
     employees.forEach(emp => {
-      const row = getEmployeeTotals(emp.id, shifts, emp.department);
+      const row = getEmployeeTotals(emp.id, shifts, emp.department, additive);
       t.gesamt += row.gesamt; t.schichten += row.schichten; t.soFeiStunden += row.soFeiStunden;
       t.sonntagStunden += row.sonntagStunden; t.feiertagStunden += row.feiertagStunden;
       t.evening += row.evening; t.night += row.night; t.urlaubTage += row.urlaubTage; t.krankTage += row.krankTage;
