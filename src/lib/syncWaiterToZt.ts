@@ -180,13 +180,24 @@ interface KitchenSyncParams {
   restaurantId: string;
 }
 
-export async function syncKitchenShiftToZt(params: KitchenSyncParams) {
+export async function syncKitchenShiftToZt(params: KitchenSyncParams): Promise<SyncResult> {
+  const result: SyncResult = { synced: [], failed: [] };
   try {
     const weekId = await findWeekForDate(params.sessionDate, params.restaurantId);
-    if (!weekId) return;
+    if (!weekId) {
+      const reason = 'Keine passende Woche/Periode für dieses Datum gefunden';
+      result.failed.push({ name: params.staffName, reason });
+      await logSyncError({ restaurantId: params.restaurantId, sessionDate: params.sessionDate, staffName: params.staffName, reason, source: 'kitchen' });
+      return result;
+    }
 
     const employeeId = await findStaffByName(params.staffName, params.restaurantId, 'Küche');
-    if (!employeeId) return;
+    if (!employeeId) {
+      const reason = 'Mitarbeiter nicht in der Personalverwaltung gefunden';
+      result.failed.push({ name: params.staffName, reason });
+      await logSyncError({ restaurantId: params.restaurantId, sessionDate: params.sessionDate, staffName: params.staffName, reason, source: 'kitchen' });
+      return result;
+    }
 
     const dateObj = new Date(params.sessionDate + 'T12:00:00');
     const isSunday = dateObj.getDay() === 0;
@@ -203,8 +214,11 @@ export async function syncKitchenShiftToZt(params: KitchenSyncParams) {
       isHoliday: holiday,
       department: 'Küche',
     });
+    result.synced.push(params.staffName);
+    return result;
   } catch (err) {
     console.error('syncKitchenShiftToZt error:', err);
+    return result;
   }
 }
 
