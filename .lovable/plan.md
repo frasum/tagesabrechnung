@@ -1,21 +1,24 @@
 
 
-## Problem: Falsche Spaltenreihenfolge und Duplikat in der Lohnbüro-Buchhaltung
+## Tooltips für erweiterten SFN-Modus anpassen
 
-### Analyse
+Aktuell zeigen die Tooltips nur den Zuschlagsprozentsatz. Im erweiterten (§3b) Modus sollen sie zusätzlich erklären, dass die Zuschläge additiv berechnet werden.
 
-In `PayrollBuchhaltungTab` (Zeilen 1028–1033 in `PayrollPortal.tsx`) gibt es zwei Fehler:
+### Änderung in `src/components/zeiterfassung/SfnTooltipHeader.tsx`
 
-1. **Duplikat**: Zeile 1031 und 1032 zeigen **beide** `totals.evening` — die Spalte wird doppelt angezeigt.
-2. **Falsche Reihenfolge**: Die Header-Komponente `BuchhaltungTableHead` erwartet die Reihenfolge: **Gesamt → Schichten → 20–24 → 24–x → So/Fei → U → K → Vorschuss → Besonderheiten**. Aber die Daten-Spalten sind: Gesamt → Schichten → So/Fei → Evening → Evening(Duplikat!) → Night → U → K → Vorschuss → Besonderheiten.
+- Neues optionales Prop `sfnMode?: SfnMode` hinzufügen
+- Zwei Tooltip-Text-Sets: eins für "simple", eins für "extended"
+- Im Extended-Modus erklären die Tooltips die additive Logik:
 
-### Fix
+| Spalte | Simple | Extended |
+|--------|--------|----------|
+| 20–24 | 25 % Nachtzuschlag | 25 % Nachtzuschlag (20:00–00:00) — additiv zu So/Fei-Zuschlägen |
+| 24–x | 40 % Nachtzuschlag | 40 % Nachtzuschlag (00:00–04:00) — additiv zu So/Fei-Zuschlägen |
+| So/Fei | 50 % Sonn- und Feiertagszuschlag | *(nicht im Extended-Modus)* |
+| So | *(nicht im Simple-Modus)* | 50 % Sonntagszuschlag (§3b EStG) |
+| Fei | *(nicht im Simple-Modus)* | 125 % Feiertag / 150 % besondere Feiertage (1. Mai, 25./26.12.) |
 
-In `PayrollPortal.tsx` die Zeilen 1028–1033 korrigieren, sodass die Daten-Spalten mit den Headern übereinstimmen:
+### Aufrufer anpassen
 
-```
-Gesamt → Schichten → Evening(20-24) → Night(24-x) → SoFei → U → K → Vorschuss → Besonderheiten
-```
-
-Das ist eine reine Spaltenreihenfolge-Korrektur — 3 Zeilen ändern, Duplikat entfernen.
+`BuchhaltungTableHead.tsx`, `ZtWochenplan.tsx`, `ZtZusammenfassung.tsx` — das `sfnMode`-Prop an `SfnTooltipHeader` durchreichen, wo es bereits verfügbar ist.
 

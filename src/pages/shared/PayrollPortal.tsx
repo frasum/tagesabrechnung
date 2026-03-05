@@ -1027,10 +1027,9 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
                       </td>
                       <td className="text-center px-1 py-1.5 font-semibold tabular-nums bg-primary/5 border-l border-border/40">{formatHours(totals.gesamt)}</td>
                        <td className="text-center px-1 py-1.5 tabular-nums">{totals.schichten || "–"}</td>
-                       <td className="text-center px-1 py-1.5 tabular-nums">{totals.soFeiStunden > 0 ? formatHours(totals.soFeiStunden) : "–"}</td>
-                      <td className="text-center px-1 py-1.5 tabular-nums">{totals.evening > 0 ? formatHours(totals.evening) : "–"}</td>
                       <td className="text-center px-1 py-1.5 tabular-nums">{totals.evening > 0 ? formatHours(totals.evening) : "–"}</td>
                       <td className="text-center px-1 py-1.5 tabular-nums">{totals.night > 0 ? formatHours(totals.night) : "–"}</td>
+                      <td className="text-center px-1 py-1.5 tabular-nums">{totals.soFeiStunden > 0 ? formatHours(totals.soFeiStunden) : "–"}</td>
                       <td className="text-center px-1 py-1.5 tabular-nums text-green-600 font-medium border-l border-border/40">
                         {totals.urlaubTage > 0 ? totals.urlaubTage.toFixed(2).replace(".", ",") : "–"}
                       </td>
