@@ -14,7 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Calculator, Info, AlertTriangle, CheckCircle, AlertCircle } from "lucide-react";
+import { Calculator, Info, AlertTriangle, CheckCircle, AlertCircle, TrendingUp, TrendingDown } from "lucide-react";
 import { SFN_RATES } from "@/lib/sfnRates";
 import { GERMAN_STATES, TAX_CLASSES, type PayrollResult } from "@/types/payroll";
 import { useZt } from "@/contexts/ZtContext";
