@@ -216,7 +216,7 @@ export function useStatistics(timeRange: TimeRange = 'month', customRange?: Cust
 
       // Calculate waiter tip stats per person using pool system
       // For each session, calculate the pool and distribute equally
-      const waiterTipMap: Record<string, { totalPoolShare: number; shiftsCount: number }> = {};
+      const waiterTipMap: Record<string, { totalPoolShare: number; shiftsCount: number; displayName: string }> = {};
       
       (sessions || []).forEach(session => {
         const sessionShifts = shiftsBySession[session.id] || [];
