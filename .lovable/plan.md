@@ -1,42 +1,24 @@
 
 
-## Problem
+## Tooltips für erweiterten SFN-Modus anpassen
 
-"Tu" und "ANDI" haben keine eigenen `waiter_shifts`-Einträge — sie tauchen nur als Namen im `additional_waiters`-Array anderer Kellner-Schichten auf. Da `additional_waiters` nur ein Text-Array ist ohne eigene `hours_worked`, werden ihnen 0 Stunden zugeordnet.
+Aktuell zeigen die Tooltips nur den Zuschlagsprozentsatz. Im erweiterten (§3b) Modus sollen sie zusätzlich erklären, dass die Zuschläge additiv berechnet werden.
 
-Beispieldaten März 2026:
-- Jasmin (6.43 Std.) → additional_waiters: ["Tu"]
-- Pim (6.57 Std.) → additional_waiters: ["Tu"]  
-- YUMMY (7.15 Std.) → additional_waiters: ["ANDI"]
+### Änderung in `src/components/zeiterfassung/SfnTooltipHeader.tsx`
 
-Tu und ANDI haben gearbeitet, aber ihre Stunden stehen nur auf der Hauptschicht.
+- Neues optionales Prop `sfnMode?: SfnMode` hinzufügen
+- Zwei Tooltip-Text-Sets: eins für "simple", eins für "extended"
+- Im Extended-Modus erklären die Tooltips die additive Logik:
 
-## Lösung
+| Spalte | Simple | Extended |
+|--------|--------|----------|
+| 20–24 | 25 % Nachtzuschlag | 25 % Nachtzuschlag (20:00–00:00) — additiv zu So/Fei-Zuschlägen |
+| 24–x | 40 % Nachtzuschlag | 40 % Nachtzuschlag (00:00–04:00) — additiv zu So/Fei-Zuschlägen |
+| So/Fei | 50 % Sonn- und Feiertagszuschlag | *(nicht im Extended-Modus)* |
+| So | *(nicht im Simple-Modus)* | 50 % Sonntagszuschlag (§3b EStG) |
+| Fei | *(nicht im Simple-Modus)* | 125 % Feiertag / 150 % besondere Feiertage (1. Mai, 25./26.12.) |
 
-**Die Stunden der Hauptschicht dem zusätzlichen Mitarbeiter zurechnen**, da sie dieselbe Schicht gearbeitet haben.
+### Aufrufer anpassen
 
-### Änderung in `src/hooks/useMonthlyStaffTips.ts`
-
-In der `additional_waiters`-Verarbeitung (Zeilen 144-152) die `hours_worked` des primären Kellners auch dem zusätzlichen Kellner zuordnen:
-
-```typescript
-// Zeile 143-152: Additional waiters
-const additionalWaiters: string[] = (ws as any).additional_waiters || [];
-for (const name of additionalWaiters) {
-  const normalizedName = name.toLowerCase().trim();
-  const aKey = nameToStaffId[normalizedName] || normalizedName;
-  if (!waiterTipsMap[aKey]) {
-    waiterTipsMap[aKey] = { tip: 0, hours: 0, displayName: name };
-  }
-  waiterTipsMap[aKey].tip += tipPerWaiter;
-  waiterTipsMap[aKey].hours += waiterHours;  // ← NEU: gleiche Stunden wie Hauptkellner
-}
-```
-
-```text
-Vorher:  Tu → { tip: 302, hours: 0.0 }   (nur TG aus additional_waiters, keine Stunden)
-Nachher: Tu → { tip: 302, hours: ~19.7 }  (Stunden der jeweiligen Hauptschichten übernommen)
-```
-
-Eine minimale Änderung — nur eine Zeile hinzufügen.
+`BuchhaltungTableHead.tsx`, `ZtWochenplan.tsx`, `ZtZusammenfassung.tsx` — das `sfnMode`-Prop an `SfnTooltipHeader` durchreichen, wo es bereits verfügbar ist.
 

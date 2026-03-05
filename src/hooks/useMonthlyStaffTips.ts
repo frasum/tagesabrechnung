@@ -148,8 +148,9 @@ async function fetchMonthlyStaffTips(monthsBack: number = 12, restaurantIds?: st
             if (!waiterTipsMap[aKey]) {
               waiterTipsMap[aKey] = { tip: 0, hours: 0, displayName: name };
             }
-            waiterTipsMap[aKey].tip += tipPerWaiter;
-          }
+          waiterTipsMap[aKey].tip += tipPerWaiter;
+          waiterTipsMap[aKey].hours += waiterHours;
+        }
         });
       }
     }
