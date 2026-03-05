@@ -472,6 +472,8 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
 
         <TabsContent value="zusammenfassung">
           <PayrollZusammenfassungTab
+            key={`zus-${sfnMode}`}
+            sfnMode={sfnMode}
             weeks={weeks}
             shifts={filteredShifts}
             employees={employeesWithShifts}
@@ -864,14 +866,14 @@ function PayrollWochenplanTab({ weeks, shifts, employees, holidays, periodLabel,
 
 // =================== Zusammenfassung Tab ===================
 
-function PayrollZusammenfassungTab({ weeks, shifts, employees, periodLabel, weekNumberToAllIds }: {
+function PayrollZusammenfassungTab({ sfnMode, weeks, shifts, employees, periodLabel, weekNumberToAllIds }: {
+  sfnMode: SfnMode;
   weeks: any[];
   shifts: Shift[];
   employees: any[];
   periodLabel: string;
   weekNumberToAllIds: Record<number, string[]>;
 }) {
-  const { sfnMode } = useSfnMode();
   const additive = sfnMode === "extended";
   const isExtended = sfnMode === "extended";
 
