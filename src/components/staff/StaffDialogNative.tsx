@@ -293,17 +293,6 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
               />
             </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="staff-personr">Personalnummer</Label>
-            <Input
-              id="staff-personr"
-               type="text"
-               inputMode="numeric"
-              value={persoNr}
-              onChange={(e) => setPersoNr(e.target.value)}
-              placeholder="z.B. 1001"
-            />
-          </div>
 
           {/* Restaurants with department checkboxes */}
           <div className="space-y-3">
@@ -409,6 +398,10 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
               <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-4 pt-3">
+              <div className="space-y-1">
+                <Label htmlFor="staff-personr" className="text-xs">Personalnummer</Label>
+                <Input id="staff-personr" type="text" inputMode="numeric" value={persoNr} onChange={(e) => setPersoNr(e.target.value)} placeholder="z.B. 1001" />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label htmlFor="pay-hourly-rate" className="text-xs">Stundenlohn (€)</Label>
