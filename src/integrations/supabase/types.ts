@@ -278,6 +278,7 @@ export type Database = {
           session_id: string
           shift_end: string
           shift_start: string
+          staff_id: string | null
           staff_name: string
         }
         Insert: {
@@ -287,6 +288,7 @@ export type Database = {
           session_id: string
           shift_end: string
           shift_start: string
+          staff_id?: string | null
           staff_name: string
         }
         Update: {
@@ -296,6 +298,7 @@ export type Database = {
           session_id?: string
           shift_end?: string
           shift_start?: string
+          staff_id?: string | null
           staff_name?: string
         }
         Relationships: [
@@ -304,6 +307,13 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kitchen_shifts_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
             referencedColumns: ["id"]
           },
         ]
@@ -1012,6 +1022,7 @@ export type Database = {
           session_id: string
           shift_end: string | null
           shift_start: string | null
+          staff_id: string | null
           submitted_at: string | null
           updated_at: string | null
           waiter_name: string
@@ -1034,6 +1045,7 @@ export type Database = {
           session_id: string
           shift_end?: string | null
           shift_start?: string | null
+          staff_id?: string | null
           submitted_at?: string | null
           updated_at?: string | null
           waiter_name: string
@@ -1056,6 +1068,7 @@ export type Database = {
           session_id?: string
           shift_end?: string | null
           shift_start?: string | null
+          staff_id?: string | null
           submitted_at?: string | null
           updated_at?: string | null
           waiter_name?: string
@@ -1066,6 +1079,13 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "waiter_shifts_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
             referencedColumns: ["id"]
           },
         ]
