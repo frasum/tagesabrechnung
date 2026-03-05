@@ -105,14 +105,22 @@ export function useStatistics(timeRange: TimeRange = 'month', customRange?: Cust
       let kitchenShifts: any[] = [];
 
       if (sessionIds.length > 0) {
-        const [shiftsResult, expResult, kitchenResult] = await Promise.all([
+        const [shiftsResult, expResult, kitchenResult, staffResult] = await Promise.all([
           supabase.from('waiter_shifts').select('session_id, waiter_name, pos_sales, kassiert_brutto, card_total, hilf_mahl, open_invoices, cash_handed_in, differenz, kitchen_tip, participates_in_pool, second_waiter_name, additional_waiters').in('session_id', sessionIds),
           supabase.from('expenses').select('session_id, amount').in('session_id', sessionIds),
           supabase.from('kitchen_shifts').select('session_id, staff_name, hours_worked').in('session_id', sessionIds),
+          supabase.from('staff').select('name'),
         ]);
         waiterShifts = shiftsResult.data || [];
         expenses = expResult.data || [];
         kitchenShifts = kitchenResult.data || [];
+        
+        // Build canonical name map for deduplication
+        if (staffResult.data) {
+          for (const s of staffResult.data) {
+            canonicalNames[s.name.toLowerCase().trim()] = s.name;
+          }
+        }
       }
 
       // Group waiter shifts and expenses by session
