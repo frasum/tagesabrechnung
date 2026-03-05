@@ -98,7 +98,7 @@ async function fetchMonthlyStaffTips(monthsBack: number = 12, restaurantIds?: st
     // Calculate waiter tips per session, then aggregate per waiter
     const waiterTipsMap: Record<string, { tip: number; hours: number; displayName: string }> = {};
     const waiterKey = (ws: { staff_id?: string | null; waiter_name: string }) =>
-      ws.staff_id || ws.waiter_name.toLowerCase().trim();
+      ws.staff_id || nameToStaffId[ws.waiter_name.toLowerCase().trim()] || ws.waiter_name.toLowerCase().trim();
     
     // Group waiter shifts by session to calculate pool per session
     const waiterShiftsBySession: Record<string, typeof monthWaiterShifts> = {};
@@ -157,7 +157,7 @@ async function fetchMonthlyStaffTips(monthsBack: number = 12, restaurantIds?: st
     // Calculate kitchen tips proportionally by hours
     const kitchenTipsMap: Record<string, { hours: number; tip: number; displayName: string }> = {};
     const kitchenKey = (ks: { staff_id?: string | null; staff_name: string }) =>
-      ks.staff_id || ks.staff_name.toLowerCase().trim();
+      ks.staff_id || nameToStaffId[ks.staff_name.toLowerCase().trim()] || ks.staff_name.toLowerCase().trim();
     
     // Group kitchen shifts by session
     const kitchenShiftsBySession: Record<string, typeof monthKitchenShifts> = {};
