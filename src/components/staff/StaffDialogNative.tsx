@@ -292,6 +292,7 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
                 placeholder="Max"
               />
             </div>
+          </div>
 
           {/* Restaurants with department checkboxes */}
           <div className="space-y-3">
