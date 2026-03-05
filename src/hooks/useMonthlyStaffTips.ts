@@ -94,7 +94,7 @@ async function fetchMonthlyStaffTips(monthsBack: number = 12, restaurantIds?: st
     const monthKitchenShifts = kitchenShifts.filter(ks => sessionIdsInMonth.includes(ks.session_id));
 
     // Calculate waiter tips per session, then aggregate per waiter
-    const waiterTipsMap: Record<string, number> = {};
+    const waiterTipsMap: Record<string, { tip: number; hours: number }> = {};
     
     // Group waiter shifts by session to calculate pool per session
     const waiterShiftsBySession: Record<string, typeof monthWaiterShifts> = {};
@@ -126,19 +126,22 @@ async function fetchMonthlyStaffTips(monthsBack: number = 12, restaurantIds?: st
           // Skip waiters who don't participate in pool
           if (!ws.participates_in_pool) return;
           
+          const waiterHours = ws.hours_worked || 0;
+          
           // Primary waiter
           if (!waiterTipsMap[ws.waiter_name]) {
-            waiterTipsMap[ws.waiter_name] = 0;
+            waiterTipsMap[ws.waiter_name] = { tip: 0, hours: 0 };
           }
-          waiterTipsMap[ws.waiter_name] += tipPerWaiter;
+          waiterTipsMap[ws.waiter_name].tip += tipPerWaiter;
+          waiterTipsMap[ws.waiter_name].hours += waiterHours;
           
-          // Additional waiters
+          // Additional waiters (no hours tracked for them)
           const additionalWaiters: string[] = (ws as any).additional_waiters || [];
           for (const name of additionalWaiters) {
             if (!waiterTipsMap[name]) {
-              waiterTipsMap[name] = 0;
+              waiterTipsMap[name] = { tip: 0, hours: 0 };
             }
-            waiterTipsMap[name] += tipPerWaiter;
+            waiterTipsMap[name].tip += tipPerWaiter;
           }
         });
       }
@@ -197,7 +200,7 @@ async function fetchMonthlyStaffTips(monthsBack: number = 12, restaurantIds?: st
 
     // Convert maps to arrays sorted by tip amount
     const waiterTips: MonthlyStaffTip[] = Object.entries(waiterTipsMap)
-      .map(([name, tip]) => ({ name, hours: 0, tip }))
+      .map(([name, data]) => ({ name, hours: data.hours, tip: data.tip }))
       .sort((a, b) => b.tip - a.tip);
 
     const kitchenTips: MonthlyStaffTip[] = Object.entries(kitchenTipsMap)

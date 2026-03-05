@@ -51,6 +51,7 @@ interface CustomTooltipProps {
 const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
+    const tipPerHour = data.hours > 0 ? data.tip / data.hours : null;
     return (
       <div className="bg-popover border border-border rounded-lg p-3 shadow-lg">
         <p className="font-medium text-foreground">{data.name}</p>
@@ -60,6 +61,11 @@ const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
         {data.hours > 0 && (
           <p className="text-sm text-muted-foreground tabular-nums">
             {formatHours(data.hours)}
+          </p>
+        )}
+        {tipPerHour !== null && (
+          <p className="text-sm text-muted-foreground tabular-nums">
+            {formatCurrency(tipPerHour)}/Std.
           </p>
         )}
       </div>
@@ -130,6 +136,7 @@ function TipTable({ data, showHours }: TipTableProps) {
 
   const total = data.reduce((sum, d) => sum + d.tip, 0);
   const totalHours = data.reduce((sum, d) => sum + d.hours, 0);
+  const hasAnyHours = data.some(d => d.hours > 0);
 
   return (
     <>
@@ -141,23 +148,32 @@ function TipTable({ data, showHours }: TipTableProps) {
               <TableHead>Name</TableHead>
               {showHours && <TableHead className="text-right">Stunden</TableHead>}
               <TableHead className="text-right">Trinkgeld</TableHead>
+              {hasAnyHours && <TableHead className="text-right">TG/Std.</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.map((staff, index) => (
-              <TableRow key={staff.name}>
-                <TableCell className="text-muted-foreground">{index + 1}</TableCell>
-                <TableCell className="font-medium">{staff.name}</TableCell>
-                {showHours && (
-                  <TableCell className="text-right tabular-nums">
-                    {formatHours(staff.hours)}
+            {data.map((staff, index) => {
+              const tipPerHour = staff.hours > 0 ? staff.tip / staff.hours : null;
+              return (
+                <TableRow key={staff.name}>
+                  <TableCell className="text-muted-foreground">{index + 1}</TableCell>
+                  <TableCell className="font-medium">{staff.name}</TableCell>
+                  {showHours && (
+                    <TableCell className="text-right tabular-nums">
+                      {formatHours(staff.hours)}
+                    </TableCell>
+                  )}
+                  <TableCell className="text-right tabular-nums font-medium text-success">
+                    {formatCurrency(staff.tip)}
                   </TableCell>
-                )}
-                <TableCell className="text-right tabular-nums font-medium text-success">
-                  {formatCurrency(staff.tip)}
-                </TableCell>
-              </TableRow>
-            ))}
+                  {hasAnyHours && (
+                    <TableCell className="text-right tabular-nums text-muted-foreground">
+                      {tipPerHour !== null ? formatCurrency(tipPerHour) : '—'}
+                    </TableCell>
+                  )}
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
@@ -172,6 +188,11 @@ function TipTable({ data, showHours }: TipTableProps) {
           <span className="tabular-nums font-semibold text-success">
             {formatCurrency(total)}
           </span>
+          {hasAnyHours && totalHours > 0 && (
+            <span className="tabular-nums font-medium text-muted-foreground">
+              {formatCurrency(total / totalHours)}/Std.
+            </span>
+          )}
         </div>
       </div>
     </>
@@ -287,7 +308,7 @@ export function MonthlyTipBreakdown() {
             />
             <TipTable
               data={selectedMonthData?.waiterTips || []}
-              showHours={false}
+              showHours={true}
             />
           </TabsContent>
 
