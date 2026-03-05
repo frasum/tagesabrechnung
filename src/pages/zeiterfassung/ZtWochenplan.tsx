@@ -19,7 +19,7 @@ import { ZtToolbar } from "@/components/zeiterfassung/ZtToolbar";
 import { exportWochenplanPdf } from "@/lib/exportWochenplanPdf";
 import { exportWochenplanExcel } from "@/lib/exportWochenplanExcel";
 import { cn } from "@/lib/utils";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import SfnTooltipHeader from "@/components/zeiterfassung/SfnTooltipHeader";
 import { useRestaurant, useRestaurants } from "@/hooks/useRestaurant";
@@ -669,16 +669,16 @@ export default function ZtWochenplan() {
                               ) : conflict ? (
                                 <>
                                   <td colSpan={2} className={`p-0.5 text-center bg-amber-50 dark:bg-amber-900/20 ${sunClass} ${sepClass}`}>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
+                                    <HoverCard openDelay={200}>
+                                      <HoverCardTrigger asChild>
                                         <div className="inline-flex items-center justify-center h-7 w-full rounded text-xs text-muted-foreground cursor-not-allowed opacity-60">
                                           ✕
                                         </div>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
+                                      </HoverCardTrigger>
+                                      <HoverCardContent side="bottom" className="w-auto min-w-[140px] p-3 text-xs">
                                         <p>Bereits in {conflict.department || "anderem Restaurant"} eingetragen</p>
-                                      </TooltipContent>
-                                    </Tooltip>
+                                      </HoverCardContent>
+                                    </HoverCard>
                                   </td>
                                 </>
                               ) : (
