@@ -103,6 +103,7 @@ export function useStatistics(timeRange: TimeRange = 'month', customRange?: Cust
       let waiterShifts: any[] = [];
       let expenses: any[] = [];
       let kitchenShifts: any[] = [];
+      const canonicalNames: Record<string, string> = {};
 
       if (sessionIds.length > 0) {
         const [shiftsResult, expResult, kitchenResult, staffResult] = await Promise.all([
