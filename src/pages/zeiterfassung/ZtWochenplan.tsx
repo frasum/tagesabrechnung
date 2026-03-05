@@ -20,6 +20,7 @@ import { exportWochenplanPdf } from "@/lib/exportWochenplanPdf";
 import { exportWochenplanExcel } from "@/lib/exportWochenplanExcel";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import SfnTooltipHeader from "@/components/zeiterfassung/SfnTooltipHeader";
 import { useRestaurant, useRestaurants } from "@/hooks/useRestaurant";
 import { useZt } from "@/contexts/ZtContext";
@@ -549,14 +550,14 @@ export default function ZtWochenplan() {
                         className={`text-center p-1.5 font-semibold min-w-[120px] border-b border-border text-xs ${dayIdx > 0 ? "day-separator" : ""} ${holidayDays.has(dateStr) ? "sunday-col" : ""} ${!activeDates.has(dateStr) ? "inactive-day" : ""}`}
                       >
                         {holidayName ? (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
+                          <HoverCard openDelay={200}>
+                            <HoverCardTrigger asChild>
                               <span className="text-destructive font-bold cursor-help">{format(day, "EE", { locale: de })} {format(day, "dd.MM")}</span>
-                            </TooltipTrigger>
-                            <TooltipContent>
+                            </HoverCardTrigger>
+                            <HoverCardContent side="bottom" className="w-auto min-w-[120px] p-3 text-xs">
                               <p>{holidayName}</p>
-                            </TooltipContent>
-                          </Tooltip>
+                            </HoverCardContent>
+                          </HoverCard>
                         ) : (
                           <span className={`${!activeDates.has(dateStr) ? "text-muted-foreground" : ""}`}>{format(day, "EE", { locale: de })} {format(day, "dd.MM")}</span>
                         )}
