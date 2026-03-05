@@ -118,6 +118,17 @@ export default function ZtBruttoNetto() {
     shift_date: string;
   }
 
+  interface SfnAggResult {
+    totalHours: number;
+    night25Hours: number;
+    night40Hours: number;
+    sundayHours: number;
+    holidayHours: number;
+    holiday150Hours: number;
+    eveningHours: number;
+    shiftCount: number;
+  }
+
   // Fetch bavarian holidays for the period (needed for extended mode)
   const { data: holidays } = useQuery({
     queryKey: ["bavarian-holidays-payroll", dateFrom, dateTo],
@@ -130,12 +141,75 @@ export default function ZtBruttoNetto() {
       if (error) throw error;
       return new Map(data.map(h => [h.holiday_date, h.surcharge_rate]));
     },
-    enabled: isExtended && !!dateFrom && !!dateTo,
+    enabled: !!dateFrom && !!dateTo,
   });
 
-  // Fetch SFN shift data
-  const { data: sfnData } = useQuery({
-    queryKey: ["sfn-shifts", employeeId, dateFrom, dateTo, sfnMode],
+  function aggregateSimple(data: SfnShiftRow[]): SfnAggResult {
+    const agg = { total: 0, night: 0, nightDeep: 0, sunday: 0, evening: 0, sundayEvening: 0, sundayNightDeep: 0 };
+    for (const s of data) {
+      agg.total += s.total_hours || 0;
+      agg.night += s.night_hours || 0;
+      agg.nightDeep += s.night_deep_hours || 0;
+      agg.evening += s.evening_hours || 0;
+      const isSundayOrHoliday = (s.sunday_holiday_hours || 0) > 0;
+      if (isSundayOrHoliday) {
+        agg.sundayEvening += s.evening_hours || 0;
+        agg.sundayNightDeep += s.night_deep_hours || 0;
+      }
+      agg.sunday += s.sunday_holiday_hours || 0;
+    }
+    const rawNight25 = (agg.evening - agg.sundayEvening) + Math.max(0, (agg.night - agg.nightDeep));
+    const rawNight40 = agg.nightDeep - agg.sundayNightDeep;
+    return {
+      totalHours: Math.round(agg.total * 100) / 100,
+      night25Hours: Math.round(Math.max(0, rawNight25) * 100) / 100,
+      night40Hours: Math.round(Math.max(0, rawNight40) * 100) / 100,
+      sundayHours: Math.round(agg.sunday * 100) / 100,
+      holidayHours: 0,
+      holiday150Hours: 0,
+      eveningHours: Math.round(agg.evening * 100) / 100,
+      shiftCount: data.length,
+    };
+  }
+
+  function aggregateExtended(data: SfnShiftRow[], hols: Map<string, number>): SfnAggResult {
+    const agg = { total: 0, night: 0, nightDeep: 0, evening: 0, sunday: 0, holiday: 0, holiday150: 0 };
+    for (const s of data) {
+      agg.total += s.total_hours || 0;
+      agg.night += s.night_hours || 0;
+      agg.nightDeep += s.night_deep_hours || 0;
+      agg.evening += s.evening_hours || 0;
+      const soFeiHours = s.sunday_holiday_hours || 0;
+      if (soFeiHours > 0) {
+        if (s.is_holiday && hols) {
+          const rate = hols.get(s.shift_date) ?? 1.25;
+          if (rate >= 1.50) {
+            agg.holiday150 += soFeiHours;
+          } else {
+            agg.holiday += soFeiHours;
+          }
+        } else {
+          agg.sunday += soFeiHours;
+        }
+      }
+    }
+    const night25 = agg.evening + Math.max(0, agg.night - agg.nightDeep);
+    const night40 = agg.nightDeep;
+    return {
+      totalHours: Math.round(agg.total * 100) / 100,
+      night25Hours: Math.round(Math.max(0, night25) * 100) / 100,
+      night40Hours: Math.round(Math.max(0, night40) * 100) / 100,
+      sundayHours: Math.round(agg.sunday * 100) / 100,
+      holidayHours: Math.round(agg.holiday * 100) / 100,
+      holiday150Hours: Math.round(agg.holiday150 * 100) / 100,
+      eveningHours: Math.round(agg.evening * 100) / 100,
+      shiftCount: data.length,
+    };
+  }
+
+  // Fetch SFN shift data — compute BOTH modes for comparison
+  const { data: sfnBoth } = useQuery({
+    queryKey: ["sfn-shifts-both", employeeId, dateFrom, dateTo, holidays ? "h" : ""],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("zt_shifts")
@@ -147,74 +221,15 @@ export default function ZtBruttoNetto() {
         .returns<SfnShiftRow[]>();
       if (error) throw error;
 
-      if (isExtended) {
-        // Extended §3b: split So/Fei, additive night surcharges
-        const agg = { total: 0, night: 0, nightDeep: 0, evening: 0, sunday: 0, holiday: 0, holiday150: 0 };
-        for (const s of data) {
-          agg.total += s.total_hours || 0;
-          agg.night += s.night_hours || 0;
-          agg.nightDeep += s.night_deep_hours || 0;
-          agg.evening += s.evening_hours || 0;
-
-          const soFeiHours = s.sunday_holiday_hours || 0;
-          if (soFeiHours > 0) {
-            if (s.is_holiday && holidays) {
-              const rate = holidays.get(s.shift_date) ?? 1.25;
-              if (rate >= 1.50) {
-                agg.holiday150 += soFeiHours;
-              } else {
-                agg.holiday += soFeiHours;
-              }
-            } else {
-              // Sunday (not holiday)
-              agg.sunday += soFeiHours;
-            }
-          }
-        }
-        // Additive: night surcharges are NOT reduced by So/Fei overlap
-        const night25 = agg.evening + Math.max(0, agg.night - agg.nightDeep);
-        const night40 = agg.nightDeep;
-        return {
-          totalHours: Math.round(agg.total * 100) / 100,
-          night25Hours: Math.round(Math.max(0, night25) * 100) / 100,
-          night40Hours: Math.round(Math.max(0, night40) * 100) / 100,
-          sundayHours: Math.round(agg.sunday * 100) / 100,
-          holidayHours: Math.round(agg.holiday * 100) / 100,
-          holiday150Hours: Math.round(agg.holiday150 * 100) / 100,
-          eveningHours: Math.round(agg.evening * 100) / 100,
-          shiftCount: data.length,
-        };
-      } else {
-        // Simple mode: all So/Fei at 50%, deduct night overlap
-        const agg = { total: 0, night: 0, nightDeep: 0, sunday: 0, evening: 0, sundayEvening: 0, sundayNightDeep: 0 };
-        for (const s of data) {
-          agg.total += s.total_hours || 0;
-          agg.night += s.night_hours || 0;
-          agg.nightDeep += s.night_deep_hours || 0;
-          agg.evening += s.evening_hours || 0;
-          const isSundayOrHoliday = (s.sunday_holiday_hours || 0) > 0;
-          if (isSundayOrHoliday) {
-            agg.sundayEvening += s.evening_hours || 0;
-            agg.sundayNightDeep += s.night_deep_hours || 0;
-          }
-          agg.sunday += s.sunday_holiday_hours || 0;
-        }
-        const rawNight25 = (agg.evening - agg.sundayEvening) + Math.max(0, (agg.night - agg.nightDeep));
-        const rawNight40 = agg.nightDeep - agg.sundayNightDeep;
-        return {
-          totalHours: Math.round(agg.total * 100) / 100,
-          night25Hours: Math.round(Math.max(0, rawNight25) * 100) / 100,
-          night40Hours: Math.round(Math.max(0, rawNight40) * 100) / 100,
-          sundayHours: Math.round(agg.sunday * 100) / 100,
-          holidayHours: 0,
-          holiday150Hours: 0,
-          eveningHours: Math.round(agg.evening * 100) / 100,
-          shiftCount: data.length,
-        };
-      }
+      const simple = aggregateSimple(data);
+      const extended = aggregateExtended(data, holidays ?? new Map());
+      return { simple, extended };
     },
-    enabled: !!employeeId && !!dateFrom && !!dateTo && (!isExtended || holidays !== undefined),
+    enabled: !!employeeId && !!dateFrom && !!dateTo && holidays !== undefined,
   });
+
+  const sfnData = sfnBoth ? (isExtended ? sfnBoth.extended : sfnBoth.simple) : undefined;
+  const sfnOther = sfnBoth ? (isExtended ? sfnBoth.simple : sfnBoth.extended) : undefined;
 
   const hasSfnData = sfnData && sfnData.shiftCount > 0;
 
@@ -434,34 +449,74 @@ export default function ZtBruttoNetto() {
             </div>
 
             {hasSfnData ? (
-              <div className="rounded-lg border border-border bg-muted/50 p-4 space-y-2">
+              <div className="rounded-lg border border-border bg-muted/50 p-4 space-y-3">
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <Info className="h-4 w-4 text-primary" />
                   Aus {sfnData.shiftCount} Schichten im Zeitraum:
                 </div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div>Gesamtstunden: <strong>{sfnData.totalHours.toFixed(2).replace(".", ",")} h</strong></div>
-                  <div>Nachtstunden 25%: <strong>{sfnData.night25Hours.toFixed(2).replace(".", ",")} h</strong></div>
-                  <div>Nachtstunden 40%: <strong>{sfnData.night40Hours.toFixed(2).replace(".", ",")} h</strong></div>
-                  {isExtended ? (
-                    <>
-                      <div>Sonntagsstunden: <strong>{sfnData.sundayHours.toFixed(2).replace(".", ",")} h</strong></div>
-                      {sfnData.holidayHours > 0 && (
-                        <div>Feiertag 125%: <strong>{sfnData.holidayHours.toFixed(2).replace(".", ",")} h</strong></div>
-                      )}
-                      {sfnData.holiday150Hours > 0 && (
-                        <div>Feiertag 150%: <strong>{sfnData.holiday150Hours.toFixed(2).replace(".", ",")} h</strong></div>
-                      )}
-                    </>
-                  ) : (
-                    <div>So/Fei-Stunden: <strong>{sfnData.sundayHours.toFixed(2).replace(".", ",")} h</strong></div>
-                  )}
-                </div>
-                <Separator />
+
+                {/* Comparison table */}
+                {sfnOther && (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-border">
+                          <th className="text-left py-1.5 pr-2 font-medium text-muted-foreground">Kategorie</th>
+                          <th className="text-right py-1.5 px-2 font-medium">
+                            <span className={isExtended ? "text-muted-foreground" : "text-primary font-semibold"}>Einfach</span>
+                          </th>
+                          <th className="text-right py-1.5 pl-2 font-medium">
+                            <span className={isExtended ? "text-primary font-semibold" : "text-muted-foreground"}>§3b</span>
+                          </th>
+                          <th className="text-right py-1.5 pl-2 font-medium text-muted-foreground">Δ</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(() => {
+                          const simple = isExtended ? sfnOther : sfnData;
+                          const extended = isExtended ? sfnData : sfnOther;
+                          const rows = [
+                            { label: "Nacht 25 %", s: simple.night25Hours, e: extended.night25Hours },
+                            { label: "Nacht 40 %", s: simple.night40Hours, e: extended.night40Hours },
+                            { label: "So/Fei", s: simple.sundayHours, e: null as number | null },
+                            { label: "Sonntag 50 %", s: null as number | null, e: extended.sundayHours },
+                            { label: "Feiertag 125 %", s: null as number | null, e: extended.holidayHours },
+                            { label: "Feiertag 150 %", s: null as number | null, e: extended.holiday150Hours },
+                          ];
+                          const fmtH = (n: number) => n.toFixed(2).replace(".", ",");
+                          const hasDiff = rows.some(r => r.s !== null && r.e !== null && r.s !== r.e);
+                          return rows
+                            .filter(r => (r.s !== null && r.s > 0) || (r.e !== null && r.e > 0))
+                            .map((r, i) => {
+                              const diff = r.s !== null && r.e !== null ? r.e - r.s : null;
+                              const diffColor = diff !== null && diff !== 0
+                                ? diff > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                                : "text-muted-foreground";
+                              return (
+                                <tr key={i} className="border-b border-border/50">
+                                  <td className="py-1.5 pr-2 text-muted-foreground">{r.label}</td>
+                                  <td className={`text-right py-1.5 px-2 tabular-nums ${!isExtended ? "font-semibold" : ""}`}>
+                                    {r.s !== null ? `${fmtH(r.s)} h` : "—"}
+                                  </td>
+                                  <td className={`text-right py-1.5 pl-2 tabular-nums ${isExtended ? "font-semibold" : ""}`}>
+                                    {r.e !== null ? `${fmtH(r.e)} h` : "—"}
+                                  </td>
+                                  <td className={`text-right py-1.5 pl-2 tabular-nums ${diffColor}`}>
+                                    {diff !== null && diff !== 0 ? `${diff > 0 ? "+" : ""}${fmtH(diff)}` : "—"}
+                                  </td>
+                                </tr>
+                              );
+                            });
+                        })()}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
                 <div className="text-xs text-muted-foreground">
                   {isExtended
-                    ? "§3b EStG: Nacht 25% (20–00, 04–06), Nacht 40% (00–04), So 50%, Fei 125%, bes. Fei 150% — additiv"
-                    : `Zuschlagssätze: Nacht 25% (20–00, 04–06 Uhr), Nacht 40% (00–04 Uhr), So/Fei ${SFN_RATES.sunday * 100}%`}
+                    ? "§3b EStG: Zuschläge additiv — Nacht + So/Fei stapeln sich"
+                    : "Einfach: Nachtzuschläge werden bei So/Fei-Überlappung abgezogen"}
                 </div>
               </div>
             ) : employeeId && dateFrom && dateTo ? (
