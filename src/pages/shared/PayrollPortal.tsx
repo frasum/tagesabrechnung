@@ -67,7 +67,6 @@ type CumulatedData = {
 export default function PayrollPortal() {
   const [pin, setPin] = useState(() => sessionStorage.getItem("payroll_pin") ?? "");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const { sfnMode, setSfnMode } = useSfnMode();
 
   useEffect(() => {
     const prev = document.title;
@@ -299,6 +298,7 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
   const [activeTab, setActiveTab] = useState("wochenplan");
   const [selectedWeekId, setSelectedWeekId] = useState<string>("");
   const [selectedRestaurant, setSelectedRestaurant] = useState<string>("all");
+  const { sfnMode, setSfnMode } = useSfnMode();
 
   const { period, weeks, shifts, employees, payrollNotes, advances, holidays, weekNumberToAllIds, weekToRestaurant, matchingPeriods } = data;
   const holidayMap = new Map(holidays.map(h => [h.holiday_date, h.name]));
