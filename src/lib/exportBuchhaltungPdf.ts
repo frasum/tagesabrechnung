@@ -127,11 +127,10 @@ export function exportBuchhaltungPdf(
     const vacText = vacRanges.length > 0 ? `U: ${formatSickRanges(vacRanges).join(", ")}` : "";
     const besText = [note?.besonderheiten, vacText, sickText].filter(Boolean).join(" | ");
 
-    const nameParts = [emp.first_name, emp.last_name].filter(Boolean).join(" ") || emp.name;
-    const metaParts: string[] = [];
-    if (emp.nickname) metaParts.push(emp.nickname);
-    if (emp.perso_nr && emp.perso_nr > 0) metaParts.push(String(emp.perso_nr));
-    const nameStr = metaParts.length > 0 ? `${nameParts} (${metaParts.join(" · ")})` : nameParts;
+    const nameBase = emp.first_name || emp.last_name
+      ? [emp.first_name, emp.nickname ? `(${emp.nickname})` : null, emp.last_name].filter(Boolean).join(" ")
+      : emp.name;
+    const nameStr = emp.perso_nr && emp.perso_nr > 0 ? `${nameBase} ${emp.perso_nr}` : nameBase;
 
     rows.push([
       nameStr,

@@ -1,41 +1,24 @@
 
 
-## Namensanzeige: Spitzname nicht doppelt, Personalnummer ohne Klammer
+## Tooltips für erweiterten SFN-Modus anpassen
 
-### Problem
-Aktuell: `Kriankrai (APPEL) Klakhaeng (APPEL · 117)` — der Spitzname erscheint zweimal. Der Spitzname ist bereits im Namensteil `first_name (NICKNAME) last_name` integriert, wird aber nochmal in den Metadaten wiederholt.
+Aktuell zeigen die Tooltips nur den Zuschlagsprozentsatz. Im erweiterten (§3b) Modus sollen sie zusätzlich erklären, dass die Zuschläge additiv berechnet werden.
 
-### Gewünschtes Format
-`Kriankrai (APPEL) Klakhaeng 117` — nur die Personalnummer, ohne Klammer, als kleine Ergänzung.
+### Änderung in `src/components/zeiterfassung/SfnTooltipHeader.tsx`
 
-### Änderungen
+- Neues optionales Prop `sfnMode?: SfnMode` hinzufügen
+- Zwei Tooltip-Text-Sets: eins für "simple", eins für "extended"
+- Im Extended-Modus erklären die Tooltips die additive Logik:
 
-**Gleiche Logik in 4 Stellen:**
+| Spalte | Simple | Extended |
+|--------|--------|----------|
+| 20–24 | 25 % Nachtzuschlag | 25 % Nachtzuschlag (20:00–00:00) — additiv zu So/Fei-Zuschlägen |
+| 24–x | 40 % Nachtzuschlag | 40 % Nachtzuschlag (00:00–04:00) — additiv zu So/Fei-Zuschlägen |
+| So/Fei | 50 % Sonn- und Feiertagszuschlag | *(nicht im Extended-Modus)* |
+| So | *(nicht im Simple-Modus)* | 50 % Sonntagszuschlag (§3b EStG) |
+| Fei | *(nicht im Simple-Modus)* | 125 % Feiertag / 150 % besondere Feiertage (1. Mai, 25./26.12.) |
 
-1. **`src/pages/zeiterfassung/buchhaltung/BuchhaltungRow.tsx`** (Zeilen 38-48)
-   - Namensaufbau: `first_name (NICKNAME) last_name` statt `first_name last_name (NICKNAME · perso_nr)`
-   - Perso-Nr als eigenes `<span>` ohne Klammer danach
+### Aufrufer anpassen
 
-2. **`src/pages/shared/SharedZtView.tsx`** (Zeilen 840-853)
-   - Identische Anpassung
-
-3. **`src/pages/shared/PayrollPortal.tsx`** Zusammenfassungs-Tab (Zeile 956-958)
-   - Bereits im Format `nickname - Vorname Nachname` → Vereinheitlichen
-
-4. **`src/pages/zeiterfassung/ZtZusammenfassung.tsx`** (Zeile 266-268)
-   - Bereits im Format `perso_nr nickname - Vorname Nachname` → Vereinheitlichen
-
-**Neues einheitliches Format:**
-```
-Vorname (SPITZNAME) Nachname  117
-```
-- Nickname nur in Klammern zwischen Vor- und Nachname (wenn vorhanden)
-- Personalnummer als kleine Zahl ohne Klammer am Ende
-- Falls kein `first_name`/`last_name`: Fallback auf `name`
-
-**Auch in PDF/Excel-Exporten anpassen:**
-
-5. **`src/lib/exportZusammenfassungPdf.ts`** (Zeile 182)
-6. **`src/lib/exportZusammenfassungExcel.ts`** (Zeile 124)
-7. **`src/lib/exportBuchhaltungPdf.ts`** + **`src/lib/exportBuchhaltungExcel.ts`** — prüfen und angleichen
+`BuchhaltungTableHead.tsx`, `ZtWochenplan.tsx`, `ZtZusammenfassung.tsx` — das `sfnMode`-Prop an `SfnTooltipHeader` durchreichen, wo es bereits verfügbar ist.
 
