@@ -147,13 +147,12 @@ export default function ZtBuchhaltung() {
   );
 
   const grandTotals = useMemo(() => {
-    const t = { gesamt: 0, schichten: 0, sonntagStunden: 0, feiertagStunden: 0, evening: 0, night: 0, urlaubTage: 0, krankTage: 0 };
+    const t = { gesamt: 0, schichten: 0, soFeiStunden: 0, evening: 0, night: 0, urlaubTage: 0, krankTage: 0 };
     employeesWithShifts.forEach((emp) => {
       const row = getEmployeeTotals(emp.id, shifts ?? [], emp.department);
       t.gesamt += row.gesamt;
       t.schichten += row.schichten;
-      t.sonntagStunden += row.sonntagStunden;
-      t.feiertagStunden += row.feiertagStunden;
+      t.soFeiStunden += row.soFeiStunden;
       t.evening += row.evening;
       t.night += row.night;
       t.urlaubTage += row.urlaubTage;

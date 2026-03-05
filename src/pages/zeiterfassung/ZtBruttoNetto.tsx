@@ -127,7 +127,7 @@ export default function ZtBruttoNetto() {
         .returns<SfnShiftRow[]>();
       if (error) throw error;
 
-      const agg = { total: 0, night: 0, nightDeep: 0, sunday: 0, holiday: 0, evening: 0, sundayEvening: 0, sundayNightDeep: 0 };
+      const agg = { total: 0, night: 0, nightDeep: 0, sunday: 0, evening: 0, sundayEvening: 0, sundayNightDeep: 0 };
       for (const s of data) {
         agg.total += s.total_hours || 0;
         agg.night += s.night_hours || 0;
@@ -138,11 +138,8 @@ export default function ZtBruttoNetto() {
           agg.sundayEvening += s.evening_hours || 0;
           agg.sundayNightDeep += s.night_deep_hours || 0;
         }
-        if (s.is_holiday) {
-          agg.holiday += s.sunday_holiday_hours || 0;
-        } else {
-          agg.sunday += s.sunday_holiday_hours || 0;
-        }
+        // All sunday_holiday_hours go into sunday (50%) — no separate holiday category
+        agg.sunday += s.sunday_holiday_hours || 0;
       }
       // Night 25% = evening (20-00) + shallow night (04-06) MINUS sunday/holiday evening overlap
       // Night 40% = deep night (00-04) MINUS sunday/holiday deep night overlap
@@ -153,7 +150,7 @@ export default function ZtBruttoNetto() {
         night25Hours: Math.round(Math.max(0, rawNight25) * 100) / 100,
         night40Hours: Math.round(Math.max(0, rawNight40) * 100) / 100,
         sundayHours: Math.round(agg.sunday * 100) / 100,
-        holidayHours: Math.round(agg.holiday * 100) / 100,
+        holidayHours: 0,
         eveningHours: Math.round(agg.evening * 100) / 100,
         shiftCount: data.length,
       };
@@ -365,12 +362,11 @@ export default function ZtBruttoNetto() {
                   <div>Gesamtstunden: <strong>{sfnData.totalHours.toFixed(2).replace(".", ",")} h</strong></div>
                   <div>Nachtstunden 25%: <strong>{sfnData.night25Hours.toFixed(2).replace(".", ",")} h</strong></div>
                   <div>Nachtstunden 40%: <strong>{sfnData.night40Hours.toFixed(2).replace(".", ",")} h</strong></div>
-                  <div>Sonntagsstunden: <strong>{sfnData.sundayHours.toFixed(2).replace(".", ",")} h</strong></div>
-                  <div>Feiertagsstunden: <strong>{sfnData.holidayHours.toFixed(2).replace(".", ",")} h</strong></div>
+                  <div>So/Fei-Stunden: <strong>{sfnData.sundayHours.toFixed(2).replace(".", ",")} h</strong></div>
                 </div>
                 <Separator />
                 <div className="text-xs text-muted-foreground">
-                  Zuschlagssätze: Nacht 25% (20–00, 04–06 Uhr), Nacht 40% (00–04 Uhr), Sonntag {SFN_RATES.sunday * 100}%, Feiertag {SFN_RATES.holiday * 100}%
+                  Zuschlagssätze: Nacht 25% (20–00, 04–06 Uhr), Nacht 40% (00–04 Uhr), So/Fei {SFN_RATES.sunday * 100}%
                 </div>
               </div>
             ) : employeeId && dateFrom && dateTo ? (

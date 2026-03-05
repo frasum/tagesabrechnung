@@ -21,7 +21,6 @@ interface BuchhaltungRowProps {
 export default function BuchhaltungRow({ emp, totals, note, shifts, advances, isEven, isLocked, onUpsertNote }: BuchhaltungRowProps) {
   const rowBg = isEven ? "bg-muted/30" : "";
 
-  // Auto-computed advance values
   const advanceSum = advances.reduce((s, a) => s + a.amount, 0);
   const advanceText = advances
     .map(a => `Vorschuss ${format(parseISO(a.date), "dd.MM.")}: ${a.amount.toFixed(2).replace(".", ",")} €`)
@@ -32,7 +31,6 @@ export default function BuchhaltungRow({ emp, totals, note, shifts, advances, is
   const vacText = vacRanges.length > 0 ? `U: ${formatSickRanges(vacRanges).join(", ")}` : "";
   const besonderheitenValue = [advanceText, vacText, note?.besonderheiten].filter(Boolean).join(" | ");
 
-  // Build display name
   const nameParts = [emp.first_name, emp.last_name].filter(Boolean).join(" ") || emp.name;
   const metaParts: string[] = [];
   if (emp.nickname) metaParts.push(emp.nickname);
@@ -51,8 +49,7 @@ export default function BuchhaltungRow({ emp, totals, note, shifts, advances, is
       <td className="text-center px-1 py-1.5 tabular-nums">{displayNum(totals.schichten)}</td>
       <td className="text-center px-1 py-1.5 tabular-nums">{displayNum(totals.evening, formatHours)}</td>
       <td className="text-center px-1 py-1.5 tabular-nums">{displayNum(totals.night, formatHours)}</td>
-      <td className="text-center px-1 py-1.5 tabular-nums">{displayNum(totals.sonntagStunden, formatHours)}</td>
-      <td className="text-center px-1 py-1.5 tabular-nums">{displayNum(totals.feiertagStunden, formatHours)}</td>
+      <td className="text-center px-1 py-1.5 tabular-nums">{displayNum(totals.soFeiStunden, formatHours)}</td>
       <td className="text-center px-1 py-1.5 tabular-nums text-green-600 font-medium border-l border-border/40">
         {totals.urlaubTage > 0 ? totals.urlaubTage.toFixed(2).replace('.', ',') : "–"}
       </td>

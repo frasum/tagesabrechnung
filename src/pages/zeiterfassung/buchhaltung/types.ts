@@ -1,7 +1,6 @@
 export interface EmployeeTotals {
   gesamt: number;
-  sonntagStunden: number;
-  feiertagStunden: number;
+  soFeiStunden: number;
   evening: number;
   night: number;
   schichten: number;

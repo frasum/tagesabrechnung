@@ -51,8 +51,7 @@ export function exportBuchhaltungExcel(
     const empShifts = shifts.filter((s) => s.employee_id === empId && (!department || s.department === department));
     return {
       gesamt: empShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
-      sonntagStunden: empShifts.reduce((sum, s) => sum + (s.is_holiday ? 0 : Number(s.sunday_holiday_hours)), 0),
-      feiertagStunden: empShifts.reduce((sum, s) => sum + (s.is_holiday ? Number(s.sunday_holiday_hours) : 0), 0),
+      soFeiStunden: empShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
       evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s), 0),
       night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s), 0),
       schichten: empShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
@@ -64,12 +63,12 @@ export function exportBuchhaltungExcel(
   const wsData: (string | number)[][] = [];
   wsData.push([`Buchhaltung – ${periodLabel}`]);
   wsData.push([]);
-  wsData.push(["Mitarbeiter", "Gesamt Std.", "Schichten", "20-24 Std.", "24-x Std.", "So Std.", "Fei Std.", "U (angr.)", "K", "Vorschuss", "Besonderheiten"]);
+  wsData.push(["Mitarbeiter", "Gesamt Std.", "Schichten", "20-24 Std.", "24-x Std.", "So/Fei Std.", "U (angr.)", "K", "Vorschuss", "Besonderheiten"]);
 
   let lastDept = "";
   for (const emp of sorted) {
     if (emp.department !== lastDept) {
-      const row: (string | number)[] = new Array(11).fill("");
+      const row: (string | number)[] = new Array(10).fill("");
       row[0] = emp.department;
       wsData.push(row);
       lastDept = emp.department;
@@ -97,8 +96,7 @@ export function exportBuchhaltungExcel(
       t.schichten || "",
       t.evening || "",
       t.night || "",
-      t.sonntagStunden || "",
-      t.feiertagStunden || "",
+      t.soFeiStunden || "",
       t.urlaubTage || "",
       t.krankTage || "",
       note?.vorschuss || "",
@@ -109,7 +107,7 @@ export function exportBuchhaltungExcel(
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(wsData);
   ws["!cols"] = [
-    { wch: 35 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 6 }, { wch: 12 }, { wch: 30 },
+    { wch: 35 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 6 }, { wch: 12 }, { wch: 30 },
   ];
 
   XLSX.utils.book_append_sheet(wb, ws, "Buchhaltung");

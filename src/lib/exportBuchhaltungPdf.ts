@@ -54,8 +54,7 @@ export function exportBuchhaltungPdf(
     const empShifts = shifts.filter((s) => s.employee_id === empId && (!department || s.department === department));
     return {
       gesamt: empShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
-      sonntagStunden: empShifts.reduce((sum, s) => sum + (s.is_holiday ? 0 : Number(s.sunday_holiday_hours)), 0),
-      feiertagStunden: empShifts.reduce((sum, s) => sum + (s.is_holiday ? Number(s.sunday_holiday_hours) : 0), 0),
+      soFeiStunden: empShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
       evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s), 0),
       night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s), 0),
       schichten: empShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
@@ -72,7 +71,7 @@ export function exportBuchhaltungPdf(
 
   for (const emp of sorted) {
     if (emp.department !== lastDept) {
-      rows.push([{ content: emp.department, colSpan: 11, styles: { fontStyle: "bold", fillColor: [230, 230, 230] } }]);
+      rows.push([{ content: emp.department, colSpan: 10, styles: { fontStyle: "bold", fillColor: [230, 230, 230] } }]);
       lastDept = emp.department;
     }
     const t = getTotals(emp.id, emp.department);
@@ -97,8 +96,7 @@ export function exportBuchhaltungPdf(
       String(t.schichten),
       t.evening > 0 ? formatHours(t.evening) : "",
       t.night > 0 ? formatHours(t.night) : "",
-      t.sonntagStunden > 0 ? formatHours(t.sonntagStunden) : "",
-      t.feiertagStunden > 0 ? formatHours(t.feiertagStunden) : "",
+      t.soFeiStunden > 0 ? formatHours(t.soFeiStunden) : "",
       t.urlaubTage > 0 ? t.urlaubTage.toFixed(2).replace('.', ',') : "",
       t.krankTage > 0 ? String(t.krankTage) : "",
       note?.vorschuss ? String(note.vorschuss) : "",
@@ -108,7 +106,7 @@ export function exportBuchhaltungPdf(
 
   autoTable(doc, {
     startY: 20,
-    head: [["Mitarbeiter", "Gesamt Std.", "Schichten", "20-24 Std.", "24-x Std.", "So Std.", "Fei Std.", "U (angr.)", "K", "Vorschuss", "Besonderheiten"]],
+    head: [["Mitarbeiter", "Gesamt Std.", "Schichten", "20-24 Std.", "24-x Std.", "So/Fei Std.", "U (angr.)", "K", "Vorschuss", "Besonderheiten"]],
     body: rows,
     styles: { fontSize: 8, cellPadding: 2 },
     headStyles: { fillColor: [60, 60, 60] },
@@ -119,11 +117,10 @@ export function exportBuchhaltungPdf(
       3: { halign: "center", cellWidth: 16 },
       4: { halign: "center", cellWidth: 16 },
       5: { halign: "center", cellWidth: 16 },
-      6: { halign: "center", cellWidth: 16 },
-      7: { halign: "center", cellWidth: 14 },
-      8: { halign: "center", cellWidth: 10 },
-      9: { halign: "center", cellWidth: 16 },
-      10: { cellWidth: 68 },
+      6: { halign: "center", cellWidth: 14 },
+      7: { halign: "center", cellWidth: 10 },
+      8: { halign: "center", cellWidth: 16 },
+      9: { cellWidth: 84 },
     },
   });
 
