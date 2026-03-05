@@ -225,6 +225,29 @@ export default function ZtBruttoNetto() {
     }
   }, [sfnData]);
 
+  // Auto-recalculate when sfnMode changes (sfnData refetches → trigger recalc if result exists)
+  const [prevSfnMode, setPrevSfnMode] = useState(sfnMode);
+  useEffect(() => {
+    if (sfnMode !== prevSfnMode) {
+      setPrevSfnMode(sfnMode);
+      // Reset stale result immediately so user sees it's recalculating
+      if (result) {
+        setResult(null);
+        setError(null);
+      }
+    }
+  }, [sfnMode, prevSfnMode, result]);
+
+  // When sfnData arrives after a mode switch and we had a result before, auto-recalculate
+  useEffect(() => {
+    if (sfnData && !result && !calculating && employeeId && (grossMonthly || (hourlyRate && monthlyHours))) {
+      // Only auto-calc if we previously had a result (mode switch cleared it)
+      // We detect this by checking prevSfnMode was just updated
+      handleCalculate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sfnData]);
+
   // Derive calculation year/month from dateTo (end_date falls in the correct payroll month)
   const calculationYear = dateTo ? new Date(dateTo).getFullYear() : undefined;
   const calculationMonth = dateTo ? new Date(dateTo).getMonth() + 1 : undefined;
