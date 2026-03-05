@@ -471,6 +471,7 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
 
         <TabsContent value="zusammenfassung">
           <PayrollZusammenfassungTab
+            key={`zus-${sfnMode}`}
             weeks={weeks}
             shifts={filteredShifts}
             employees={employeesWithShifts}
@@ -482,6 +483,7 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
 
         <TabsContent value="buchhaltung">
           <PayrollBuchhaltungTab
+            key={`buch-${sfnMode}`}
             shifts={filteredShifts}
             employees={employeesWithShifts}
             payrollNotes={filteredPayrollNotes}
@@ -909,7 +911,7 @@ function PayrollZusammenfassungTab({ weeks, shifts, employees, periodLabel, week
         </Button>
       </div>
 
-      <div key={`zus-${sfnMode}`} className="overflow-x-auto border rounded-lg">
+      <div className="overflow-x-auto border rounded-lg">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted">
@@ -1016,7 +1018,7 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
   let lastDept: string | null = null;
 
   return (
-    <div key={`buch-${sfnMode}`} className="space-y-3">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
         <Badge variant="outline" className="text-xs">Modus: {sfnMode === "extended" ? "§3b EStG (erweitert)" : "Einfach"}</Badge>
         <div className="flex gap-1">
