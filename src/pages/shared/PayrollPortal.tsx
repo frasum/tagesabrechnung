@@ -1051,65 +1051,20 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
                 const empShifts = shifts.filter(s => s.employee_id === emp.id && s.department === emp.department);
                 const empAdvances = advancesByName[emp.name] ?? [];
 
-                const advanceSum = empAdvances.reduce((s, a) => s + a.amount, 0);
-                const advanceText = empAdvances.map(a => `Vorschuss ${format(parseISO(a.date), "dd.MM.")}: ${a.amount.toFixed(2).replace(".", ",")} €`).join("; ");
-                const vorschussValue = advanceSum > 0 ? advanceSum : (note?.vorschuss ?? 0);
-                const vacRanges = getVacationDateRanges(empShifts);
-                const vacText = vacRanges.length > 0 ? `U: ${formatSickRanges(vacRanges).join(", ")}` : "";
-                const besonderheitenValue = [advanceText, vacText, note?.besonderheiten].filter(Boolean).join(" | ");
-
-                const nameParts = [emp.first_name, emp.last_name].filter(Boolean).join(" ") || emp.name;
-                const metaParts: string[] = [];
-                if (emp.nickname) metaParts.push(emp.nickname);
-                if (emp.perso_nr && emp.perso_nr > 0) metaParts.push(String(emp.perso_nr));
-                const metaStr = metaParts.length > 0 ? ` (${metaParts.join(" · ")})` : "";
-                const rowBg = isEven ? "bg-muted/30" : "";
-
                 return (
                   <React.Fragment key={`${emp.id}-${emp.department}`}>
                     {showDeptHeader && <BuchhaltungDeptHeader department={emp.department} sfnMode={sfnMode} />}
-                    <tr className={`border-t border-border/50 hover:bg-primary/5 transition-colors ${rowBg}`}>
-                      <td className="px-2 py-1.5 font-medium whitespace-nowrap">
-                        {nameParts}
-                        {metaStr && <span className="text-xs text-muted-foreground">{metaStr}</span>}
-                      </td>
-                      <td className="text-center px-1 py-1.5 font-semibold tabular-nums bg-primary/5 border-l border-border/40">{formatHours(totals.gesamt)}</td>
-                       <td className="text-center px-1 py-1.5 tabular-nums">{totals.schichten || "–"}</td>
-                      <td className="text-center px-1 py-1.5 tabular-nums">{totals.evening > 0 ? formatHours(totals.evening) : "–"}</td>
-                      <td className="text-center px-1 py-1.5 tabular-nums">{totals.night > 0 ? formatHours(totals.night) : "–"}</td>
-                      {isExtended ? (
-                        <>
-                          <td className="text-center px-1 py-1.5 tabular-nums">{totals.sonntagStunden > 0 ? formatHours(totals.sonntagStunden) : "–"}</td>
-                          <td className="text-center px-1 py-1.5 tabular-nums">{totals.feiertagStunden > 0 ? formatHours(totals.feiertagStunden) : "–"}</td>
-                        </>
-                      ) : (
-                        <td className="text-center px-1 py-1.5 tabular-nums">{totals.soFeiStunden > 0 ? formatHours(totals.soFeiStunden) : "–"}</td>
-                      )}
-                      <td className="text-center px-1 py-1.5 tabular-nums text-green-600 font-medium border-l border-border/40">
-                        {totals.urlaubTage > 0 ? totals.urlaubTage.toFixed(2).replace(".", ",") : "–"}
-                      </td>
-                      <td className="text-center px-1 py-1.5 tabular-nums text-destructive font-medium">
-                        {totals.krankTage > 0 ? totals.krankTage : "–"}
-                      </td>
-                      <td className="p-1 border-l border-border/40">
-                        <Input
-                          type="text"
-                          inputMode="numeric"
-                          className="time-input-clean h-7 text-xs w-[65px] mx-auto text-center"
-                          defaultValue={vorschussValue}
-                          disabled={isLocked || advanceSum > 0}
-                          onBlur={(e) => onUpsertNote({ employee_id: emp.id, field: "vorschuss", value: Number(e.target.value) })}
-                        />
-                      </td>
-                      <td className="p-1">
-                        <Textarea
-                          className="time-input-clean text-xs min-h-[28px] h-7 resize-none"
-                          defaultValue={besonderheitenValue}
-                          disabled={isLocked}
-                          onBlur={(e) => onUpsertNote({ employee_id: emp.id, field: "besonderheiten", value: e.target.value })}
-                        />
-                      </td>
-                    </tr>
+                    <BuchhaltungRow
+                      emp={emp}
+                      totals={totals}
+                      note={note as PayrollNote | undefined}
+                      shifts={empShifts}
+                      advances={empAdvances}
+                      isEven={isEven}
+                      isLocked={isLocked}
+                      sfnMode={sfnMode}
+                      onUpsertNote={onUpsertNote}
+                    />
                   </React.Fragment>
                 );
               })}
