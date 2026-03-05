@@ -19,6 +19,22 @@ export interface MonthlyTipData {
   totalKitchenHours: number;
 }
 
+function deduplicateByName(
+  entries: { name: string; tip: number; hours: number }[],
+  staffNames: Record<string, string>
+): { name: string; tip: number; hours: number }[] {
+  const merged: Record<string, { name: string; tip: number; hours: number }> = {};
+  for (const entry of entries) {
+    const key = entry.name.toLowerCase().trim();
+    if (!merged[key]) {
+      merged[key] = { name: staffNames[key] || entry.name, tip: 0, hours: 0 };
+    }
+    merged[key].tip += entry.tip;
+    merged[key].hours += entry.hours;
+  }
+  return Object.values(merged).sort((a, b) => b.tip - a.tip);
+}
+
 async function fetchMonthlyStaffTips(monthsBack: number = 12, restaurantIds?: string[]): Promise<MonthlyTipData[]> {
   const now = new Date();
   const monthsData: MonthlyTipData[] = [];
