@@ -92,6 +92,23 @@ function empDisplayName(emp: Employee): string {
   return meta.length > 0 ? `${nameParts} (${meta.join(" · ")})` : nameParts;
 }
 
+function computeSfn(empShifts: Shift[], additive: boolean, holidayRates?: Map<string, number>) {
+  let sonntagStunden = 0, feiertag125 = 0, feiertag150 = 0, soFeiStunden = 0;
+  for (const s of empShifts) {
+    const hrs = Number(s.sunday_holiday_hours);
+    soFeiStunden += hrs;
+    if (s.is_holiday) {
+      const rate = holidayRates?.get(s.shift_date) ?? 1.25;
+      if (rate >= 1.50) feiertag150 += hrs; else feiertag125 += hrs;
+    } else sonntagStunden += hrs;
+  }
+  return {
+    evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s, additive), 0),
+    night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s, additive), 0),
+    soFeiStunden, sonntagStunden, feiertag125, feiertag150,
+  };
+}
+
 // ============ 1. Buchhaltung CSV ============
 
 export function exportBuchhaltungCsv(
@@ -99,23 +116,21 @@ export function exportBuchhaltungCsv(
   employees: Employee[],
   shifts: Shift[],
   payrollNotes: PayrollNote[],
-  sfnMode: SfnMode = "simple"
+  sfnMode: SfnMode = "simple",
+  holidayRates?: Map<string, number>
 ) {
   const additive = sfnMode === "extended";
   const sorted = sortEmployees(employees);
-  const sfnHeaders = additive ? ["20-24", "24-x", "So", "Fei"] : ["20-24", "24-x", "So/Fei"];
+  const sfnHeaders = additive ? ["20-24", "24-x", "So", "Fei 125%", "Fei 150%"] : ["20-24", "24-x", "So/Fei"];
   const headers = ["Mitarbeiter", "Abteilung", "Gesamt Std.", "Schichten", ...sfnHeaders, "Urlaub", "Krank", "Vorschuss", "Besonderheiten"];
   const rows: (string | number)[][] = [];
 
   for (const emp of sorted) {
     const empShifts = shifts.filter(s => s.employee_id === emp.id && s.department === emp.department);
+    const sfn = computeSfn(empShifts, additive, holidayRates);
     const t = {
+      ...sfn,
       gesamt: empShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
-      soFeiStunden: empShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      sonntagStunden: empShifts.filter(s => !s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      feiertagStunden: empShifts.filter(s => s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s, additive), 0),
-      night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s, additive), 0),
       schichten: empShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
       urlaubTage: countVacationDays(empShifts),
       krankTage: countSickDays(empShifts),
@@ -129,7 +144,7 @@ export function exportBuchhaltungCsv(
     const besText = [note?.besonderheiten, vacText, sickText].filter(Boolean).join(" | ");
 
     const sfnCells = additive
-      ? [t.evening, t.night, t.sonntagStunden, t.feiertagStunden]
+      ? [t.evening, t.night, t.sonntagStunden, t.feiertag125, t.feiertag150]
       : [t.evening, t.night, t.soFeiStunden];
 
     rows.push([empDisplayName(emp), emp.department, t.gesamt, t.schichten, ...sfnCells, t.urlaubTage, t.krankTage, note?.vorschuss || 0, besText]);
@@ -146,7 +161,8 @@ export function exportZusammenfassungCsv(
   weeks: Week[],
   shifts: Shift[],
   externalWeekNumberToIds?: Record<number, string[]>,
-  sfnMode: SfnMode = "simple"
+  sfnMode: SfnMode = "simple",
+  holidayRates?: Map<string, number>
 ) {
   const additive = sfnMode === "extended";
   const sorted = sortEmployees(employees);
@@ -162,19 +178,16 @@ export function exportZusammenfassungCsv(
     shifts.some(s => s.employee_id === emp.id && s.department === emp.department && (Number(s.total_hours) > 0 || !!s.absence_type))
   );
 
-  const sfnHeaders = additive ? ["20-24", "24-x", "So", "Fei"] : ["20-24", "24-x", "So/Fei"];
+  const sfnHeaders = additive ? ["20-24", "24-x", "So", "Fei 125%", "Fei 150%"] : ["20-24", "24-x", "So/Fei"];
   const headers = ["Mitarbeiter", "Abteilung", ...sortedWeeks.map(w => `W${w.week_number}`), "Gesamt", "Schichten", ...sfnHeaders, "U", "K"];
   const rows: (string | number)[][] = [];
 
   for (const emp of employeesWithShifts) {
     const empShifts = shifts.filter(s => s.employee_id === emp.id && s.department === emp.department);
+    const sfn = computeSfn(empShifts, additive, holidayRates);
     const totals = {
+      ...sfn,
       gesamt: empShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
-      soFeiStunden: empShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      sonntagStunden: empShifts.filter(s => !s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      feiertagStunden: empShifts.filter(s => s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s, additive), 0),
-      night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s, additive), 0),
       schichten: empShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
       urlaubTage: countVacationDays(empShifts),
       krankTage: countSickDays(empShifts),
@@ -188,7 +201,7 @@ export function exportZusammenfassungCsv(
     });
 
     const sfnCells = additive
-      ? [totals.evening, totals.night, totals.sonntagStunden, totals.feiertagStunden]
+      ? [totals.evening, totals.night, totals.sonntagStunden, totals.feiertag125, totals.feiertag150]
       : [totals.evening, totals.night, totals.soFeiStunden];
 
     rows.push([empDisplayName(emp), emp.department, ...weekCells, totals.gesamt, totals.schichten, ...sfnCells, totals.urlaubTage, totals.krankTage]);

@@ -32,13 +32,31 @@ interface Shift {
   department: string | null;
 }
 
+function computeSfn(empShifts: Shift[], additive: boolean, holidayRates?: Map<string, number>) {
+  let sonntagStunden = 0, feiertag125 = 0, feiertag150 = 0, soFeiStunden = 0;
+  for (const s of empShifts) {
+    const hrs = Number(s.sunday_holiday_hours);
+    soFeiStunden += hrs;
+    if (s.is_holiday) {
+      const rate = holidayRates?.get(s.shift_date) ?? 1.25;
+      if (rate >= 1.50) feiertag150 += hrs; else feiertag125 += hrs;
+    } else sonntagStunden += hrs;
+  }
+  return {
+    evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s, additive), 0),
+    night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s, additive), 0),
+    soFeiStunden, sonntagStunden, feiertag125, feiertag150,
+  };
+}
+
 export function exportZusammenfassungExcel(
   periodLabel: string,
   employees: Employee[],
   weeks: Week[],
   shifts: Shift[],
   externalWeekNumberToIds?: Record<number, string[]>,
-  sfnMode: SfnMode = "simple"
+  sfnMode: SfnMode = "simple",
+  holidayRates?: Map<string, number>
 ) {
   const additive = sfnMode === "extended";
 
@@ -70,39 +88,20 @@ export function exportZusammenfassungExcel(
       .reduce((sum, s) => sum + Number(s.total_hours), 0);
   };
 
-  const getEmpTotals = (empId: string, department?: string) => {
-    const empShifts = shifts.filter((s) => s.employee_id === empId && (!department || s.department === department));
+  const getData = (empShifts: Shift[]) => {
+    const sfn = computeSfn(empShifts, additive, holidayRates);
     return {
+      ...sfn,
       gesamt: empShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
-      soFeiStunden: empShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      sonntagStunden: empShifts.filter(s => !s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      feiertagStunden: empShifts.filter(s => s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s, additive), 0),
-      night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s, additive), 0),
       schichten: empShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
       urlaubTage: countVacationDays(empShifts),
       krankTage: countSickDays(empShifts),
     };
   };
 
-  const getDeptTotals = (department: string) => {
-    const deptShifts = shifts.filter((s) => s.department === department);
-    return {
-      gesamt: deptShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
-      soFeiStunden: deptShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      sonntagStunden: deptShifts.filter(s => !s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      feiertagStunden: deptShifts.filter(s => s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      evening: deptShifts.reduce((sum, s) => sum + effectiveEveningHours(s, additive), 0),
-      night: deptShifts.reduce((sum, s) => sum + effectiveNightHours(s, additive), 0),
-      schichten: deptShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
-      urlaubTage: countVacationDays(deptShifts),
-      krankTage: countSickDays(deptShifts),
-    };
-  };
-
-  const sfnHeaders = additive ? ["20-24", "24-x", "So", "Fei"] : ["20-24", "24-x", "So/Fei"];
-  function sfnCells(t: ReturnType<typeof getEmpTotals>): (string | number)[] {
-    if (additive) return [t.evening || "", t.night || "", t.sonntagStunden || "", t.feiertagStunden || ""];
+  const sfnHeaders = additive ? ["20-24", "24-x", "So", "Fei 125%", "Fei 150%"] : ["20-24", "24-x", "So/Fei"];
+  function sfnCells(t: ReturnType<typeof getData>): (string | number)[] {
+    if (additive) return [t.evening || "", t.night || "", t.sonntagStunden || "", t.feiertag125 || "", t.feiertag150 || ""];
     return [t.evening || "", t.night || "", t.soFeiStunden || ""];
   }
 
@@ -120,7 +119,8 @@ export function exportZusammenfassungExcel(
       lastDept = emp.department;
     }
 
-    const totals = getEmpTotals(emp.id, emp.department);
+    const empShifts = shifts.filter(s => s.employee_id === emp.id && s.department === emp.department);
+    const totals = getData(empShifts);
     const displayName = `${emp.perso_nr ? emp.perso_nr + " " : ""}${emp.nickname ? emp.nickname + " - " : ""}${[emp.first_name, emp.last_name].filter(Boolean).join(" ") || emp.name}`;
 
     const weekCells = sortedWeeks.map(w => {
@@ -133,24 +133,14 @@ export function exportZusammenfassungExcel(
     const idx = employeesWithShifts.indexOf(emp);
     const nextDept = idx < employeesWithShifts.length - 1 ? employeesWithShifts[idx + 1].department : null;
     if (emp.department !== nextDept) {
-      const dt = getDeptTotals(emp.department);
+      const deptShifts = shifts.filter(s => s.department === emp.department);
+      const dt = getData(deptShifts);
       wsData.push([`Summe ${emp.department}`, ...sortedWeeks.map(() => "" as string | number), dt.gesamt, dt.schichten || "", ...sfnCells(dt), dt.urlaubTage || "", dt.krankTage || ""]);
     }
   }
 
   // Grand total
-  const grand = {
-    gesamt: shifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
-    soFeiStunden: shifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-    sonntagStunden: shifts.filter(s => !s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-    feiertagStunden: shifts.filter(s => s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-    evening: shifts.reduce((sum, s) => sum + effectiveEveningHours(s, additive), 0),
-    night: shifts.reduce((sum, s) => sum + effectiveNightHours(s, additive), 0),
-    schichten: shifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
-    urlaubTage: countVacationDays(shifts),
-    krankTage: countSickDays(shifts),
-  };
-
+  const grand = getData(shifts);
   wsData.push(["GESAMT", ...sortedWeeks.map(() => "" as string | number), grand.gesamt, grand.schichten || "", ...sfnCells(grand), grand.urlaubTage || "", grand.krankTage || ""]);
 
   const wb = XLSX.utils.book_new();

@@ -33,12 +33,30 @@ interface PayrollNote {
   besonderheiten: string | null;
 }
 
+function computeSfn(empShifts: Shift[], additive: boolean, holidayRates?: Map<string, number>) {
+  let sonntagStunden = 0, feiertag125 = 0, feiertag150 = 0, soFeiStunden = 0;
+  for (const s of empShifts) {
+    const hrs = Number(s.sunday_holiday_hours);
+    soFeiStunden += hrs;
+    if (s.is_holiday) {
+      const rate = holidayRates?.get(s.shift_date ?? "") ?? 1.25;
+      if (rate >= 1.50) feiertag150 += hrs; else feiertag125 += hrs;
+    } else sonntagStunden += hrs;
+  }
+  return {
+    evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s, additive), 0),
+    night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s, additive), 0),
+    soFeiStunden, sonntagStunden, feiertag125, feiertag150,
+  };
+}
+
 export function exportBuchhaltungExcel(
   periodLabel: string,
   employees: Employee[],
   shifts: Shift[],
   payrollNotes: PayrollNote[],
-  sfnMode: SfnMode = "simple"
+  sfnMode: SfnMode = "simple",
+  holidayRates?: Map<string, number>
 ) {
   const additive = sfnMode === "extended";
 
@@ -51,24 +69,21 @@ export function exportBuchhaltungExcel(
     return nameA.localeCompare(nameB, "de");
   });
 
-  const getTotals = (empId: string, department?: string) => {
+  const getData = (empId: string, department?: string) => {
     const empShifts = shifts.filter((s) => s.employee_id === empId && (!department || s.department === department));
+    const sfn = computeSfn(empShifts, additive, holidayRates);
     return {
+      ...sfn,
       gesamt: empShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
-      soFeiStunden: empShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      sonntagStunden: empShifts.filter(s => !s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      feiertagStunden: empShifts.filter(s => s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s, additive), 0),
-      night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s, additive), 0),
       schichten: empShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
       urlaubTage: countVacationDays(empShifts),
       krankTage: countSickDays(empShifts),
     };
   };
 
-  const sfnHeaders = additive ? ["20-24 Std.", "24-x Std.", "So Std.", "Fei Std."] : ["20-24 Std.", "24-x Std.", "So/Fei Std."];
-  function sfnCells(t: ReturnType<typeof getTotals>): (string | number)[] {
-    if (additive) return [t.evening || "", t.night || "", t.sonntagStunden || "", t.feiertagStunden || ""];
+  const sfnHeaders = additive ? ["20-24 Std.", "24-x Std.", "So Std.", "Fei 125%", "Fei 150%"] : ["20-24 Std.", "24-x Std.", "So/Fei Std."];
+  function sfnCells(t: ReturnType<typeof getData>): (string | number)[] {
+    if (additive) return [t.evening || "", t.night || "", t.sonntagStunden || "", t.feiertag125 || "", t.feiertag150 || ""];
     return [t.evening || "", t.night || "", t.soFeiStunden || ""];
   }
 
@@ -86,7 +101,7 @@ export function exportBuchhaltungExcel(
       lastDept = emp.department;
     }
 
-    const t = getTotals(emp.id, emp.department);
+    const t = getData(emp.id, emp.department);
     const note = payrollNotes.find((n) => n.employee_id === emp.id);
 
     const empShifts = shifts.filter((s) => s.employee_id === emp.id && s.department === emp.department);

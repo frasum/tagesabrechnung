@@ -16,6 +16,7 @@ import { exportZusammenfassungPdf } from "@/lib/exportZusammenfassungPdf";
 import { exportZusammenfassungExcel } from "@/lib/exportZusammenfassungExcel";
 import { useCumulatedZtData } from "@/hooks/useCumulatedZtData";
 import { useAuth } from "@/contexts/AuthContext";
+import { useHolidayRates } from "@/hooks/useHolidayRates";
 import ShiftTimeOverride from "@/components/zeiterfassung/ShiftTimeOverride";
 
 type Shift = {
@@ -42,6 +43,7 @@ export default function ZtZusammenfassung() {
   const { data: restaurantEmployees } = useRestaurantEmployees(restaurantId);
   const [cumulated, setCumulated] = useState(false);
   const { hasPermission } = useAuth();
+  const { data: holidayRates } = useHolidayRates();
   const outletContext = useOutletContext<{ sfnMode?: string }>();
   const sfnMode = (outletContext?.sfnMode as "simple" | "extended") ?? "simple";
   const isExtended = sfnMode === "extended";
@@ -209,10 +211,10 @@ export default function ZtZusammenfassung() {
         onCumulatedToggle={() => setCumulated(c => !c)}
         actions={
           <>
-            <Button variant="outline" size="sm" disabled={!employeesWithShifts.length} onClick={() => { if (selectedPeriod && weeks && shifts) { exportZusammenfassungPdf(selectedPeriod.label + (cumulated ? " (Alle Restaurants)" : ""), employeesWithShifts, weeks, shifts, cumulated ? cumData.weekNumberToAllIds : undefined, sfnMode); } }}>
+            <Button variant="outline" size="sm" disabled={!employeesWithShifts.length} onClick={() => { if (selectedPeriod && weeks && shifts) { exportZusammenfassungPdf(selectedPeriod.label + (cumulated ? " (Alle Restaurants)" : ""), employeesWithShifts, weeks, shifts, cumulated ? cumData.weekNumberToAllIds : undefined, sfnMode, holidayRates); } }}>
               <FileDown className="mr-1 h-4 w-4" /> PDF
             </Button>
-            <Button variant="outline" size="sm" disabled={!employeesWithShifts.length} onClick={() => { if (selectedPeriod && weeks && shifts) { exportZusammenfassungExcel(selectedPeriod.label + (cumulated ? " (Alle Restaurants)" : ""), employeesWithShifts, weeks, shifts, cumulated ? cumData.weekNumberToAllIds : undefined, sfnMode); } }}>
+            <Button variant="outline" size="sm" disabled={!employeesWithShifts.length} onClick={() => { if (selectedPeriod && weeks && shifts) { exportZusammenfassungExcel(selectedPeriod.label + (cumulated ? " (Alle Restaurants)" : ""), employeesWithShifts, weeks, shifts, cumulated ? cumData.weekNumberToAllIds : undefined, sfnMode, holidayRates); } }}>
               <FileSpreadsheet className="mr-1 h-4 w-4" /> Excel
             </Button>
           </>

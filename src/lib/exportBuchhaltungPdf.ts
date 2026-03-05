@@ -34,12 +34,30 @@ interface PayrollNote {
   besonderheiten: string | null;
 }
 
+function computeSfn(empShifts: Shift[], additive: boolean, holidayRates?: Map<string, number>) {
+  let sonntagStunden = 0, feiertag125 = 0, feiertag150 = 0, soFeiStunden = 0;
+  for (const s of empShifts) {
+    const hrs = Number(s.sunday_holiday_hours);
+    soFeiStunden += hrs;
+    if (s.is_holiday) {
+      const rate = holidayRates?.get(s.shift_date ?? "") ?? 1.25;
+      if (rate >= 1.50) feiertag150 += hrs; else feiertag125 += hrs;
+    } else sonntagStunden += hrs;
+  }
+  return {
+    evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s, additive), 0),
+    night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s, additive), 0),
+    soFeiStunden, sonntagStunden, feiertag125, feiertag150,
+  };
+}
+
 export function exportBuchhaltungPdf(
   periodLabel: string,
   employees: Employee[],
   shifts: Shift[],
   payrollNotes: PayrollNote[],
-  sfnMode: SfnMode = "simple"
+  sfnMode: SfnMode = "simple",
+  holidayRates?: Map<string, number>
 ) {
   const additive = sfnMode === "extended";
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
@@ -53,15 +71,12 @@ export function exportBuchhaltungPdf(
     return nameA.localeCompare(nameB, "de");
   });
 
-  const getTotals = (empId: string, department?: string) => {
+  const getData = (empId: string, department?: string) => {
     const empShifts = shifts.filter((s) => s.employee_id === empId && (!department || s.department === department));
+    const sfn = computeSfn(empShifts, additive, holidayRates);
     return {
+      ...sfn,
       gesamt: empShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
-      soFeiStunden: empShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      sonntagStunden: empShifts.filter(s => !s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      feiertagStunden: empShifts.filter(s => s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      evening: empShifts.reduce((sum, s) => sum + effectiveEveningHours(s, additive), 0),
-      night: empShifts.reduce((sum, s) => sum + effectiveNightHours(s, additive), 0),
       schichten: empShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
       urlaubTage: countVacationDays(empShifts),
       krankTage: countSickDays(empShifts),
@@ -69,17 +84,18 @@ export function exportBuchhaltungPdf(
   };
 
   const sfnHeaders = additive
-    ? ["20-24 Std.", "24-x Std.", "So Std.", "Fei Std."]
+    ? ["20-24 Std.", "24-x Std.", "So Std.", "Fei 125%", "Fei 150%"]
     : ["20-24 Std.", "24-x Std.", "So/Fei Std."];
   const sfnColCount = sfnHeaders.length;
 
-  function sfnCells(t: ReturnType<typeof getTotals>): string[] {
+  function sfnCells(t: ReturnType<typeof getData>): string[] {
     if (additive) {
       return [
         t.evening > 0 ? formatHours(t.evening) : "",
         t.night > 0 ? formatHours(t.night) : "",
         t.sonntagStunden > 0 ? formatHours(t.sonntagStunden) : "",
-        t.feiertagStunden > 0 ? formatHours(t.feiertagStunden) : "",
+        t.feiertag125 > 0 ? formatHours(t.feiertag125) : "",
+        t.feiertag150 > 0 ? formatHours(t.feiertag150) : "",
       ];
     }
     return [
@@ -92,7 +108,7 @@ export function exportBuchhaltungPdf(
   doc.setFontSize(16);
   doc.text(`Buchhaltung – ${periodLabel}`, 14, 15);
 
-  const totalColCount = 4 + sfnColCount + 3; // name + gesamt + schichten + sfn... + U + K + Vorschuss + Besonderheiten
+  const totalColCount = 4 + sfnColCount + 3;
   const rows: any[][] = [];
   let lastDept = "";
 
@@ -101,7 +117,7 @@ export function exportBuchhaltungPdf(
       rows.push([{ content: emp.department, colSpan: totalColCount, styles: { fontStyle: "bold", fillColor: [230, 230, 230] } }]);
       lastDept = emp.department;
     }
-    const t = getTotals(emp.id, emp.department);
+    const t = getData(emp.id, emp.department);
     const note = payrollNotes.find((n) => n.employee_id === emp.id);
 
     const empShifts = shifts.filter((s) => s.employee_id === emp.id && s.department === emp.department);
@@ -132,18 +148,16 @@ export function exportBuchhaltungPdf(
   const allHeaders = ["Mitarbeiter", "Gesamt Std.", "Schichten", ...sfnHeaders, "U (angr.)", "K", "Vorschuss", "Besonderheiten"];
 
   const columnStyles: Record<number, any> = { 0: { cellWidth: 60 } };
-  // Gesamt + Schichten
   columnStyles[1] = { halign: "center", cellWidth: 18 };
   columnStyles[2] = { halign: "center", cellWidth: 16 };
-  // SFN cols
   for (let i = 0; i < sfnColCount; i++) {
-    columnStyles[3 + i] = { halign: "center", cellWidth: 16 };
+    columnStyles[3 + i] = { halign: "center", cellWidth: 14 };
   }
   const afterSfn = 3 + sfnColCount;
-  columnStyles[afterSfn] = { halign: "center", cellWidth: 14 }; // U
-  columnStyles[afterSfn + 1] = { halign: "center", cellWidth: 10 }; // K
-  columnStyles[afterSfn + 2] = { halign: "center", cellWidth: 16 }; // Vorschuss
-  columnStyles[afterSfn + 3] = { cellWidth: additive ? 70 : 84 }; // Besonderheiten
+  columnStyles[afterSfn] = { halign: "center", cellWidth: 14 };
+  columnStyles[afterSfn + 1] = { halign: "center", cellWidth: 10 };
+  columnStyles[afterSfn + 2] = { halign: "center", cellWidth: 16 };
+  columnStyles[afterSfn + 3] = { cellWidth: additive ? 56 : 84 };
 
   autoTable(doc, {
     startY: 20,
