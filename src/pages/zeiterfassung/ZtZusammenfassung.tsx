@@ -232,15 +232,15 @@ export default function ZtZusammenfassung() {
               ))}
               <th className="text-center p-2 font-medium">Gesamt</th>
               <th className="text-center p-2 font-medium">Schichten</th>
-               {showSfn && <th className="text-center p-2 font-medium"><SfnTooltipHeader column="evening" label="20-24" /></th>}
-               {showSfn && <th className="text-center p-2 font-medium"><SfnTooltipHeader column="night" label="24-x" /></th>}
+               {showSfn && <th className="text-center p-2 font-medium"><SfnTooltipHeader column="evening" label="20-24" sfnMode={sfnMode} /></th>}
+               {showSfn && <th className="text-center p-2 font-medium"><SfnTooltipHeader column="night" label="24-x" sfnMode={sfnMode} /></th>}
                {showSfn && (isExtended ? (
                  <>
-                   <th className="text-center p-2 font-medium"><SfnTooltipHeader column="sonntag" label="So" /></th>
-                   <th className="text-center p-2 font-medium"><SfnTooltipHeader column="feiertag" label="Fei" /></th>
+                   <th className="text-center p-2 font-medium"><SfnTooltipHeader column="sonntag" label="So" sfnMode={sfnMode} /></th>
+                   <th className="text-center p-2 font-medium"><SfnTooltipHeader column="feiertag" label="Fei" sfnMode={sfnMode} /></th>
                  </>
                ) : (
-                 <th className="text-center p-2 font-medium"><SfnTooltipHeader column="soFei" label="So/Fei" /></th>
+                 <th className="text-center p-2 font-medium"><SfnTooltipHeader column="soFei" label="So/Fei" sfnMode={sfnMode} /></th>
                ))}
               <th className="text-center p-2 font-medium">U</th>
               <th className="text-center p-2 font-medium">K</th>

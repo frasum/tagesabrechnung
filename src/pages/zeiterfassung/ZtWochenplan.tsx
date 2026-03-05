@@ -591,16 +591,16 @@ export default function ZtWochenplan() {
                     );
                   })}
                    <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-l-2 border-primary/20 border-b border-border text-xs">Ges</th>
-                   {showSfn && <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs"><SfnTooltipHeader column="evening" label="20-24" /></th>}
-                   {showSfn && <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs"><SfnTooltipHeader column="night" label="24-x" /></th>}
+                   {showSfn && <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs"><SfnTooltipHeader column="evening" label="20-24" sfnMode={sfnMode} /></th>}
+                   {showSfn && <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs"><SfnTooltipHeader column="night" label="24-x" sfnMode={sfnMode} /></th>}
                    {showSfn && (isExtended ? (
                      <>
-                       <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs"><SfnTooltipHeader column="sonntag" label="So" /></th>
-                       <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs"><SfnTooltipHeader column="feiertag" label="Fei 125%" /></th>
-                       <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs"><SfnTooltipHeader column="feiertag" label="Fei 150%" /></th>
+                       <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs"><SfnTooltipHeader column="sonntag" label="So" sfnMode={sfnMode} /></th>
+                       <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs"><SfnTooltipHeader column="feiertag" label="Fei 125%" sfnMode={sfnMode} /></th>
+                       <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs"><SfnTooltipHeader column="feiertag" label="Fei 150%" sfnMode={sfnMode} /></th>
                      </>
                    ) : (
-                     <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs"><SfnTooltipHeader column="soFei" label="So/Fei" /></th>
+                     <th className="totals-header text-center p-1.5 font-semibold min-w-[50px] border-b border-border text-xs"><SfnTooltipHeader column="soFei" label="So/Fei" sfnMode={sfnMode} /></th>
                    ))}
                   <th className="totals-header text-center p-1.5 font-semibold min-w-[35px] border-b border-border text-xs">U</th>
                   <th className="totals-header text-center p-1.5 font-semibold min-w-[35px] border-b border-border text-xs">K</th>
