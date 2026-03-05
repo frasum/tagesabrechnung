@@ -1250,6 +1250,44 @@ export type Database = {
           },
         ]
       }
+      zt_sync_logs: {
+        Row: {
+          created_at: string
+          id: string
+          reason: string
+          restaurant_id: string
+          session_date: string
+          source: string
+          staff_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reason: string
+          restaurant_id: string
+          session_date: string
+          source?: string
+          staff_name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reason?: string
+          restaurant_id?: string
+          session_date?: string
+          source?: string
+          staff_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zt_sync_logs_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
