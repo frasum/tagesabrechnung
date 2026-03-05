@@ -837,8 +837,9 @@ function BuchhaltungTab({ shifts, employees, payrollNotes, advances, periodLabel
                 const vacText = vacRanges.length > 0 ? `U: ${formatSickRanges(vacRanges).join(", ")}` : "";
                 const besonderheitenValue = [advanceText, vacText, note?.besonderheiten].filter(Boolean).join(" | ");
 
+                const nicknameAlreadyInName = emp.nickname && (emp.first_name?.includes(emp.nickname) || emp.last_name?.includes(emp.nickname));
                 const nameBase = emp.first_name || emp.last_name
-                  ? [emp.first_name, emp.nickname ? `(${emp.nickname})` : null, emp.last_name].filter(Boolean).join(" ")
+                  ? [emp.first_name, emp.nickname && !nicknameAlreadyInName ? `(${emp.nickname})` : null, emp.last_name].filter(Boolean).join(" ")
                   : emp.name;
                 const persoStr = emp.perso_nr && emp.perso_nr > 0 ? String(emp.perso_nr) : "";
                 const rowBg = isEven ? "bg-muted/30" : "";

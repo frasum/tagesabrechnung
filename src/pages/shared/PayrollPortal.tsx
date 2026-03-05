@@ -954,9 +954,12 @@ function PayrollZusammenfassungTab({ sfnMode, weeks, shifts, employees, periodLa
                   )}
                   <tr className="border-t hover:bg-muted/30">
                     <td className="p-2 font-medium">
-                      {emp.first_name || emp.last_name
-                        ? [emp.first_name, emp.nickname ? `(${emp.nickname})` : null, emp.last_name].filter(Boolean).join(" ")
-                        : emp.name}
+                      {(() => {
+                        const nicknameAlreadyInName = emp.nickname && (emp.first_name?.includes(emp.nickname) || emp.last_name?.includes(emp.nickname));
+                        return emp.first_name || emp.last_name
+                          ? [emp.first_name, emp.nickname && !nicknameAlreadyInName ? `(${emp.nickname})` : null, emp.last_name].filter(Boolean).join(" ")
+                          : emp.name;
+                      })()}
                       {emp.perso_nr && emp.perso_nr > 0 && <span className="text-xs text-muted-foreground ml-1">{emp.perso_nr}</span>}
                     </td>
                     {weeks.map(w => {
