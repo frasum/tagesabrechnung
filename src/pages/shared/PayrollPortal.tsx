@@ -982,7 +982,7 @@ function PayrollZusammenfassungTab({ weeks, shifts, employees, periodLabel, week
 
 // =================== Buchhaltung Tab ===================
 
-function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, periodLabel, isLocked, onUpsertNote, sfnMode = "simple" }: {
+function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, periodLabel, isLocked, onUpsertNote, sfnMode = "simple", holidayRates }: {
   shifts: Shift[];
   employees: any[];
   payrollNotes: PayrollNote[];
@@ -991,6 +991,7 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
   isLocked: boolean;
   onUpsertNote: (p: { employee_id: string; field: string; value: any }) => void;
   sfnMode?: SfnMode;
+  holidayRates?: Map<string, number>;
 }) {
   const additive = sfnMode === "extended";
   const isExtended = sfnMode === "extended";
@@ -1017,13 +1018,13 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
   return (
     <div className="space-y-3">
       <div className="flex justify-end gap-1">
-        <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungPdf(periodLabel, employees, shifts, payrollNotes); toast.success("PDF erstellt"); }}>
+        <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungPdf(periodLabel, employees, shifts, payrollNotes, sfnMode, holidayRates); toast.success("PDF erstellt"); }}>
           <FileDown className="mr-1 h-4 w-4" /> PDF
         </Button>
-        <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungExcel(periodLabel, employees, shifts, payrollNotes, sfnMode); toast.success("Excel erstellt"); }}>
+        <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungExcel(periodLabel, employees, shifts, payrollNotes, sfnMode, holidayRates); toast.success("Excel erstellt"); }}>
           <FileSpreadsheet className="mr-1 h-4 w-4" /> Excel
         </Button>
-        <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungCsv(periodLabel, employees, shifts, payrollNotes, sfnMode); toast.success("CSV erstellt"); }}>
+        <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungCsv(periodLabel, employees, shifts, payrollNotes, sfnMode, holidayRates); toast.success("CSV erstellt"); }}>
           <FileDown className="mr-1 h-4 w-4" /> CSV
         </Button>
       </div>
