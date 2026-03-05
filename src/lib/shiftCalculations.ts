@@ -84,12 +84,23 @@ export function formatHours(hours: number): string {
  * Effective evening/night hours excluding Sunday/holiday overlap.
  * When a shift falls on a Sunday or holiday, its evening (20-24) and night (24-x) hours
  * are NOT counted separately because the higher So/Fei surcharge already applies.
+ *
+ * In additive mode (§3b extended), night surcharges STACK with So/Fei surcharges,
+ * so we return the full values regardless.
  */
-export function effectiveEveningHours(shift: { evening_hours: number; sunday_holiday_hours: number }): number {
+export function effectiveEveningHours(
+  shift: { evening_hours: number; sunday_holiday_hours: number },
+  additive = false
+): number {
+  if (additive) return Number(shift.evening_hours);
   return Number(shift.sunday_holiday_hours) > 0 ? 0 : Number(shift.evening_hours);
 }
 
-export function effectiveNightHours(shift: { night_hours: number; sunday_holiday_hours: number }): number {
+export function effectiveNightHours(
+  shift: { night_hours: number; sunday_holiday_hours: number },
+  additive = false
+): number {
+  if (additive) return Number(shift.night_hours);
   return Number(shift.sunday_holiday_hours) > 0 ? 0 : Number(shift.night_hours);
 }
 

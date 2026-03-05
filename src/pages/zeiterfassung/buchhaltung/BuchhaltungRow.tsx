@@ -5,6 +5,7 @@ import { formatHours, getSickDateRanges, getVacationDateRanges, formatSickRanges
 import { displayNum } from "./utils";
 import type { EmployeeTotals, PayrollNote, Shift, AdvanceEntry } from "./types";
 import type { RestaurantEmployee } from "@/hooks/useRestaurantEmployees";
+import type { SfnMode } from "@/hooks/useSfnMode";
 import { format, parseISO } from "date-fns";
 
 interface BuchhaltungRowProps {
@@ -15,11 +16,13 @@ interface BuchhaltungRowProps {
   advances: AdvanceEntry[];
   isEven: boolean;
   isLocked?: boolean;
+  sfnMode?: SfnMode;
   onUpsertNote: (params: { employee_id: string; field: string; value: any }) => void;
 }
 
-export default function BuchhaltungRow({ emp, totals, note, shifts, advances, isEven, isLocked, onUpsertNote }: BuchhaltungRowProps) {
+export default function BuchhaltungRow({ emp, totals, note, shifts, advances, isEven, isLocked, sfnMode = "simple", onUpsertNote }: BuchhaltungRowProps) {
   const rowBg = isEven ? "bg-muted/30" : "";
+  const isExtended = sfnMode === "extended";
 
   const advanceSum = advances.reduce((s, a) => s + a.amount, 0);
   const advanceText = advances
@@ -49,7 +52,14 @@ export default function BuchhaltungRow({ emp, totals, note, shifts, advances, is
       <td className="text-center px-1 py-1.5 tabular-nums">{displayNum(totals.schichten)}</td>
       <td className="text-center px-1 py-1.5 tabular-nums">{displayNum(totals.evening, formatHours)}</td>
       <td className="text-center px-1 py-1.5 tabular-nums">{displayNum(totals.night, formatHours)}</td>
-      <td className="text-center px-1 py-1.5 tabular-nums">{displayNum(totals.soFeiStunden, formatHours)}</td>
+      {isExtended ? (
+        <>
+          <td className="text-center px-1 py-1.5 tabular-nums">{displayNum(totals.sonntagStunden, formatHours)}</td>
+          <td className="text-center px-1 py-1.5 tabular-nums">{displayNum(totals.feiertagStunden, formatHours)}</td>
+        </>
+      ) : (
+        <td className="text-center px-1 py-1.5 tabular-nums">{displayNum(totals.soFeiStunden, formatHours)}</td>
+      )}
       <td className="text-center px-1 py-1.5 tabular-nums text-green-600 font-medium border-l border-border/40">
         {totals.urlaubTage > 0 ? totals.urlaubTage.toFixed(2).replace('.', ',') : "–"}
       </td>

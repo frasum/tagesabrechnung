@@ -1,9 +1,11 @@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-type SfnColumn = "soFei" | "evening" | "night";
+type SfnColumn = "soFei" | "sonntag" | "feiertag" | "evening" | "night";
 
 const TOOLTIP_TEXT: Record<SfnColumn, string> = {
   soFei: "50 % Sonn- und Feiertagszuschlag",
+  sonntag: "50 % Sonntagszuschlag",
+  feiertag: "125 % / 150 % Feiertagszuschlag (§3b EStG)",
   evening: "25 % Nachtzuschlag",
   night: "40 % Nachtzuschlag",
 };

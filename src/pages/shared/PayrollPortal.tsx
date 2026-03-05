@@ -960,10 +960,11 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
   }, [advances]);
 
   const grandTotals = useMemo(() => {
-    const t = { gesamt: 0, schichten: 0, soFeiStunden: 0, evening: 0, night: 0, urlaubTage: 0, krankTage: 0 };
+    const t = { gesamt: 0, schichten: 0, soFeiStunden: 0, sonntagStunden: 0, feiertagStunden: 0, evening: 0, night: 0, urlaubTage: 0, krankTage: 0 };
     employees.forEach(emp => {
       const row = getEmployeeTotals(emp.id, shifts, emp.department);
       t.gesamt += row.gesamt; t.schichten += row.schichten; t.soFeiStunden += row.soFeiStunden;
+      t.sonntagStunden += row.sonntagStunden; t.feiertagStunden += row.feiertagStunden;
       t.evening += row.evening; t.night += row.night; t.urlaubTage += row.urlaubTage; t.krankTage += row.krankTage;
     });
     return t;
