@@ -23,6 +23,7 @@ const metricToggles = [
   { key: 'show_waiters', label: 'Mitarbeiter-Details' },
   { key: 'show_kitchen', label: 'Küche-Details' },
   { key: 'show_pdf_export_notification', label: 'PDF-Export Benachrichtigung' },
+  { key: 'show_notes', label: 'Notizen' },
 ] as const;
 
 type MetricKey = typeof metricToggles[number]['key'];
@@ -41,6 +42,7 @@ function TelegramSettingsContent() {
     show_waiters: true,
     show_kitchen: true,
     show_pdf_export_notification: true,
+    show_notes: true,
   });
   const [testDate, setTestDate] = useState(() => format(subDays(new Date(), 1), 'yyyy-MM-dd'));
 
@@ -56,6 +58,7 @@ function TelegramSettingsContent() {
          show_waiters: settings.show_waiters,
          show_kitchen: settings.show_kitchen,
          show_pdf_export_notification: settings.show_pdf_export_notification,
+         show_notes: settings.show_notes,
        });
     }
   }, [settings]);

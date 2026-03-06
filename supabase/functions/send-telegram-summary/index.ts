@@ -21,6 +21,7 @@ interface TelegramSettings {
   show_created_by: boolean;
   show_waiters: boolean;
   show_kitchen: boolean;
+  show_notes: boolean;
 }
 
 interface DayCashDetails {
@@ -41,7 +42,7 @@ interface DayCashDetails {
 async function loadSettings(supabase: any): Promise<TelegramSettings> {
   const { data } = await supabase
     .from("telegram_settings")
-    .select("excluded_restaurants, show_pos_total, show_guest_count, show_cash_balance, show_cash_details, show_created_by, show_waiters, show_kitchen")
+    .select("excluded_restaurants, show_pos_total, show_guest_count, show_cash_balance, show_cash_details, show_created_by, show_waiters, show_kitchen, show_notes")
     .limit(1)
     .maybeSingle();
 
@@ -60,6 +61,7 @@ async function loadSettings(supabase: any): Promise<TelegramSettings> {
     show_created_by: data?.show_created_by ?? true,
     show_waiters: data?.show_waiters ?? true,
     show_kitchen: data?.show_kitchen ?? true,
+    show_notes: data?.show_notes ?? true,
   };
 }
 
@@ -204,6 +206,13 @@ Deno.serve(async (req) => {
       }
 
       lines.push("");
+    }
+
+    if (settings.show_notes && session.notes && session.notes.trim()) {
+      lines.push(`  📝 Notizen: ${session.notes.trim()}`);
+    }
+
+    lines.push("");
     }
 
     const message = lines.join("\n");
