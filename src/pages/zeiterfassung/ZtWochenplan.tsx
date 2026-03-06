@@ -646,14 +646,10 @@ export default function ZtWochenplan() {
                         className={`text-center p-1.5 font-semibold min-w-[120px] border-b border-border text-xs ${dayIdx > 0 ? "day-separator" : ""} ${holidayDays.has(dateStr) ? "sunday-col" : ""} ${!activeDates.has(dateStr) ? "inactive-day" : ""}`}
                       >
                         {holidayName ? (
-                          <HoverCard openDelay={200}>
-                            <HoverCardTrigger asChild>
-                              <span className="text-destructive font-bold cursor-help">{format(day, "EE", { locale: de })} {format(day, "dd.MM")}</span>
-                            </HoverCardTrigger>
-                            <HoverCardContent side="bottom" className="w-auto min-w-[120px] p-3 text-xs">
-                              <p>{holidayName}</p>
-                            </HoverCardContent>
-                          </HoverCard>
+                          <div className="flex flex-col items-center gap-0.5">
+                            <span className="text-destructive font-bold">{format(day, "EE", { locale: de })} {format(day, "dd.MM")}</span>
+                            <span className="text-[10px] text-destructive/80 font-medium leading-tight">{holidayName}</span>
+                          </div>
                         ) : (
                           <span className={`${!activeDates.has(dateStr) ? "text-muted-foreground" : ""}`}>{format(day, "EE", { locale: de })} {format(day, "dd.MM")}</span>
                         )}
