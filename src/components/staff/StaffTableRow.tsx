@@ -1,4 +1,4 @@
-import { Pencil, Trash2, AlertTriangle, Trophy, Smartphone, Shield, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { Trash2, AlertTriangle, Trophy, Smartphone, Shield, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -48,7 +48,13 @@ export function StaffTableRow({ staff, onEdit, onDelete, rankingData }: StaffTab
           </div>
           <div className="flex flex-col">
             <div className="flex items-center gap-1.5">
-              <span className="font-semibold">{staff.name}</span>
+              <button
+                type="button"
+                onClick={() => onEdit(staff)}
+                className="font-semibold hover:text-primary hover:underline underline-offset-2 transition-colors text-left"
+              >
+                {staff.name}
+              </button>
               {!staff.is_active && (
                 <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Inaktiv</Badge>
               )}
@@ -124,9 +130,6 @@ export function StaffTableRow({ staff, onEdit, onDelete, rankingData }: StaffTab
       {/* Aktionen */}
       <TableCell className="text-right">
         <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10 hover:text-primary" onClick={() => onEdit(staff)}>
-            <Pencil className="w-4 h-4" />
-          </Button>
           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/70 hover:text-destructive hover:bg-destructive/10" onClick={() => onDelete(staff)}>
             <Trash2 className="w-4 h-4" />
           </Button>
