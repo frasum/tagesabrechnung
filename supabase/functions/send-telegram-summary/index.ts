@@ -205,14 +205,11 @@ Deno.serve(async (req) => {
         }
       }
 
+      if (settings.show_notes && session.notes && session.notes.trim()) {
+        lines.push(`  📝 Notizen: ${session.notes.trim()}`);
+      }
+
       lines.push("");
-    }
-
-    if (settings.show_notes && session.notes && session.notes.trim()) {
-      lines.push(`  📝 Notizen: ${session.notes.trim()}`);
-    }
-
-    lines.push("");
     }
 
     const message = lines.join("\n");
