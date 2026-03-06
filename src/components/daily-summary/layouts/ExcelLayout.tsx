@@ -310,7 +310,7 @@ export function ExcelLayout({
           {/* Notes */}
           <div className="border rounded-lg overflow-hidden">
             <div className="bg-muted/50 px-3 py-2 border-b">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nachricht AN CHEFIN   </span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nachricht / BESONDERHEITEN / Probleme       </span>
             </div>
             <div className="p-3">
               <Textarea
