@@ -427,6 +427,7 @@ export default function ZtProvision() {
               onBlur={handleCommissionPctBlur}
               suffix="%"
             />
+          </div>
         </div>
         <div className="flex items-center gap-2 self-end pb-0.5">
           <Switch
