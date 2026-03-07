@@ -122,9 +122,7 @@ export function RestaurantComparison({ restaurants }: RestaurantComparisonProps)
       { label: 'Küchen Trinkgeld', valA: sa.totalKitchenTip, valB: sb.totalKitchenTip },
       { label: 'Service Trinkgeld', valA: sa.totalWaiterTip, valB: sb.totalWaiterTip },
       { label: 'Lieferumsatz', valA: sa.totalDelivery, valB: sb.totalDelivery },
-      { label: 'Ausgaben', valA: sa.totalExpenses, valB: sb.totalExpenses, invert: true },
       { label: 'Ø Trinkgeld / Tag', valA: (sa.totalKitchenTip + sa.totalWaiterTip) / dA, valB: (sb.totalKitchenTip + sb.totalWaiterTip) / dB },
-      { label: 'Ø Ausgaben / Tag', valA: sa.totalExpenses / dA, valB: sb.totalExpenses / dB, invert: true },
     ];
   }, [a, b]);
 
