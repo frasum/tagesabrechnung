@@ -511,6 +511,8 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
             onUpsertNote={(p) => upsertNote.mutate(p)}
             sfnMode={sfnMode}
             holidayRates={holidayRates}
+            showCommission={showCommission}
+            commissionMap={showCommission ? commissionMap : undefined}
           />
         </TabsContent>
       </Tabs>
