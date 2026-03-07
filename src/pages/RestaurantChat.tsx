@@ -12,15 +12,15 @@ import ReactMarkdown from 'react-markdown';
 type Msg = { role: 'user' | 'assistant'; content: string };
 
 const SUGGESTIONS = [
-  'Wie viel Umsatz hatten wir diese Woche?',
-  'Wer hat gestern gearbeitet?',
-  'Was waren die Ausgaben im letzten Monat?',
-  'Vergleiche die Restaurants der letzten 2 Wochen',
-  'Wie viele Gäste hatten wir letzte Woche?',
+  'Wie läuft es gerade? Gibt es Auffälligkeiten?',
+  'Vergleiche Spicery und YUM diesen Monat',
   'Wie hoch war der Kreditkartenanteil am Umsatz letzte Woche?',
+  'Wer hat den höchsten Umsatz pro Stunde diesen Monat?',
+  'Wie viel Umsatz hatten wir diese Woche?',
   'Wer hat diesen Monat das meiste Trinkgeld bekommen?',
-  'Wie viele Stunden hat die Küche letzte Woche gearbeitet?',
+  'Wie viele Gäste hatten wir letzte Woche?',
   'Wie verhält sich der Umsatz zu den Schichtstunden pro Kellner?',
+  'Vergleiche den Umsatz der letzten 3 Monate pro Restaurant',
 ];
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/restaurant-chat`;
