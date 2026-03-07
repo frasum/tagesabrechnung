@@ -11,12 +11,12 @@ import { useSfnMode } from "@/hooks/useSfnMode";
 import { Switch } from "@/components/ui/switch";
 
 const allTabs = [
-  { label: "Wochenplan", path: "", permPath: "zeiterfassung" },
-  { label: "Zusammenfassung", path: "zusammenfassung", permPath: "zeiterfassung/zusammenfassung" },
-  { label: "Buchhaltung", path: "buchhaltung", permPath: "zeiterfassung/buchhaltung" },
-  { label: "Perioden", path: "perioden", permPath: "zeiterfassung/perioden" },
-  { label: "Brutto/Netto", path: "brutto-netto", permPath: "zeiterfassung/brutto-netto" },
-  { label: "Provision", path: "provision", permPath: "zeiterfassung/provision" },
+  { label: "Wochenplan", path: "", permPath: "zeiterfassung", adminOnly: false },
+  { label: "Zusammenfassung", path: "zusammenfassung", permPath: "zeiterfassung/zusammenfassung", adminOnly: false },
+  { label: "Buchhaltung", path: "buchhaltung", permPath: "zeiterfassung/buchhaltung", adminOnly: false },
+  { label: "Perioden", path: "perioden", permPath: "zeiterfassung/perioden", adminOnly: false },
+  { label: "Brutto/Netto", path: "brutto-netto", permPath: "zeiterfassung/brutto-netto", adminOnly: false },
+  { label: "Provision", path: "provision", permPath: "zeiterfassung/provision", adminOnly: true },
 ];
 
 export default function ZtLayout() {
@@ -40,11 +40,12 @@ export default function ZtLayout() {
   const alwaysVisiblePaths = ["zeiterfassung/zusammenfassung"];
 
   const tabs = useMemo(() => {
-    if (isAdmin) return allTabs;
+    let filtered = allTabs.filter(t => !t.adminOnly || isAdmin);
+    if (isAdmin) return filtered;
     if (isManager && hasCustomPermissions) {
-      return allTabs.filter(t => alwaysVisiblePaths.includes(t.permPath) || managerPaths.includes(t.permPath));
+      return filtered.filter(t => alwaysVisiblePaths.includes(t.permPath) || managerPaths.includes(t.permPath));
     }
-    return allTabs; // manager without custom perms sees all
+    return filtered;
   }, [isAdmin, isManager, hasCustomPermissions, managerPaths]);
 
   const isActive = (path: string) => {
