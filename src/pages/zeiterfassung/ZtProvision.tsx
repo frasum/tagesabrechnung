@@ -399,10 +399,10 @@ export default function ZtProvision() {
           const h = ztHoursByStaffDate.get(`${sid}:${date}`);
           if (h != null) { ztTotal += h; hasZt = true; }
         }
-        return { date, staffCount: d.staffSet.size, staffNames: Array.from(d.nameSet).sort(), hours: hasZt ? ztTotal : d.waiterHours, revenue: d.revenue };
+        return { date, staffCount: d.staffSet.size, staffNames: Array.from(d.nameSet).sort(), hours: hasZt ? ztTotal : d.waiterHours, revenue: d.revenue, allDeptHours: allDeptHoursByDate.get(date) ?? 0 };
       })
       .sort((a, b) => a.date.localeCompare(b.date));
-  }, [filteredWaiterData, isGlByName, ztHoursByStaffDate, staffNameToId]);
+  }, [filteredWaiterData, isGlByName, ztHoursByStaffDate, staffNameToId, allDeptHoursByDate]);
 
   // Commission calculation — day-by-day evaluation
   const result = useMemo(() => {
