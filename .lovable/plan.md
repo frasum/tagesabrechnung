@@ -1,24 +1,30 @@
 
 
-## Tooltips für erweiterten SFN-Modus anpassen
+## Analyse
 
-Aktuell zeigen die Tooltips nur den Zuschlagsprozentsatz. Im erweiterten (§3b) Modus sollen sie zusätzlich erklären, dass die Zuschläge additiv berechnet werden.
+Das Problem hat zwei moegliche Ursachen:
 
-### Änderung in `src/components/zeiterfassung/SfnTooltipHeader.tsx`
+1. **Daten-Filterung ist korrekt** – die Netzwerkanfragen zeigen, dass bei Einzelauswahl eines Restaurants korrekt nach `restaurant_id` gefiltert wird. Moeglicherweise arbeiten die Kuechenmitarbeiter an beiden Standorten und tauchen daher in beiden auf.
 
-- Neues optionales Prop `sfnMode?: SfnMode` hinzufügen
-- Zwei Tooltip-Text-Sets: eins für "simple", eins für "extended"
-- Im Extended-Modus erklären die Tooltips die additive Logik:
+2. **Fehlende visuelle Unterscheidung** – Wenn ein einzelnes Restaurant gewaehlt wird, wird `restaurantNames` als `undefined` uebergeben, daher zeigt die Tabelle keine Restaurant-Zuordnung an. Der Nutzer kann nicht erkennen, zu welchem Restaurant die Eintraege gehoeren.
 
-| Spalte | Simple | Extended |
-|--------|--------|----------|
-| 20–24 | 25 % Nachtzuschlag | 25 % Nachtzuschlag (20:00–00:00) — additiv zu So/Fei-Zuschlägen |
-| 24–x | 40 % Nachtzuschlag | 40 % Nachtzuschlag (00:00–04:00) — additiv zu So/Fei-Zuschlägen |
-| So/Fei | 50 % Sonn- und Feiertagszuschlag | *(nicht im Extended-Modus)* |
-| So | *(nicht im Simple-Modus)* | 50 % Sonntagszuschlag (§3b EStG) |
-| Fei | *(nicht im Simple-Modus)* | 125 % Feiertag / 150 % besondere Feiertage (1. Mai, 25./26.12.) |
+## Loesung
 
-### Aufrufer anpassen
+**`restaurantNames` immer uebergeben** – nicht nur im "Alle"-Modus. Damit wird in den Tabellen von `KitchenTipChart` und `WaiterTipChart` stets die Restaurant-Gruppierung angezeigt, auch bei Einzelauswahl. So sieht der Nutzer sofort, ob die Daten tatsaechlich nur zum gewaehlten Restaurant gehoeren.
 
-`BuchhaltungTableHead.tsx`, `ZtWochenplan.tsx`, `ZtZusammenfassung.tsx` — das `sfnMode`-Prop an `SfnTooltipHeader` durchreichen, wo es bereits verfügbar ist.
+### Aenderung in `src/pages/Statistics.tsx`
+
+Zeile 675-676 aendern:
+
+```tsx
+// Vorher:
+<WaiterTipChart data={waiterTipStats} restaurantNames={isMultiMode ? restaurantNameMap : undefined} />
+<KitchenTipChart data={kitchenTipStats} restaurantNames={isMultiMode ? restaurantNameMap : undefined} />
+
+// Nachher:
+<WaiterTipChart data={waiterTipStats} restaurantNames={restaurantNameMap} />
+<KitchenTipChart data={kitchenTipStats} restaurantNames={restaurantNameMap} />
+```
+
+Damit werden die Eintraege immer nach Restaurant gruppiert mit Ueberschrift angezeigt – egal ob "Alle" oder ein einzelnes Restaurant gewaehlt ist. Bei Einzelauswahl erscheint dann nur eine Gruppe (das gewaehlte Restaurant), was dem Nutzer bestaetigt, dass die Filterung korrekt greift.
 
