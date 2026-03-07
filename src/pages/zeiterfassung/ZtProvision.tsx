@@ -1,8 +1,10 @@
 import { useMemo, useCallback, useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useZt } from "@/contexts/ZtContext";
 import { useRestaurant } from "@/hooks/useRestaurant";
+const { restaurantSlug: _unusedSlug, ..._ } = {} as any; // will use below
 import { CurrencyInput } from "@/components/shared/CurrencyInput";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
