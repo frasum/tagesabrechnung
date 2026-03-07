@@ -39,6 +39,8 @@ import { WaiterTipChart } from '@/components/statistics/WaiterTipChart';
 import { KitchenTipChart } from '@/components/statistics/KitchenTipChart';
 import { PeriodComparison } from '@/components/statistics/PeriodComparison';
 import { RestaurantComparison } from '@/components/statistics/RestaurantComparison';
+import { RestaurantCompareCards } from '@/components/statistics/RestaurantCompareCards';
+import { RestaurantOverlayChart } from '@/components/statistics/RestaurantOverlayChart';
 import { DateRangePicker } from '@/components/statistics/DateRangePicker';
 import { MonthlyTipBreakdown } from '@/components/statistics/MonthlyTipBreakdown';
 import { useLabels } from '@/hooks/useLabels';
@@ -355,12 +357,26 @@ export default function Statistics() {
               <PeriodComparison data={comparisonData} />
             )}
 
-            {/* Restaurant Comparison Card (compare mode) */}
+            {/* Restaurant Compare Dashboard (compare mode) */}
             {statsMode === 'compare' && dataA && dataB && restA && restB && (
-              <RestaurantComparison restaurants={[
-                { name: restA.name, summary: dataA.summary },
-                { name: restB.name, summary: dataB.summary },
-              ]} />
+              <>
+                <RestaurantCompareCards
+                  nameA={restA.name}
+                  nameB={restB.name}
+                  summaryA={dataA.summary}
+                  summaryB={dataB.summary}
+                />
+                <RestaurantOverlayChart
+                  nameA={restA.name}
+                  nameB={restB.name}
+                  dailyStatsA={dataA.dailyStats}
+                  dailyStatsB={dataB.dailyStats}
+                />
+                <RestaurantComparison restaurants={[
+                  { name: restA.name, summary: dataA.summary },
+                  { name: restB.name, summary: dataB.summary },
+                ]} />
+              </>
             )}
 
             {/* Revenue Trend Chart */}
