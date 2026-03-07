@@ -67,6 +67,10 @@ export default function ZtProvision() {
     setMinRevenue(val);
   }, []);
 
+  const handleCommissionPctChange = useCallback((val: number) => {
+    setCommissionPct(val);
+  }, []);
+
   const handleMinRevenueBlur = useCallback(async () => {
     const { data: existing } = await supabase
       .from("settings")
@@ -82,6 +86,22 @@ export default function ZtProvision() {
     }
     queryClient.invalidateQueries({ queryKey: ["settings", "commission_min_revenue", restaurantId] });
   }, [minRevenue, restaurantId, queryClient]);
+
+  const handleCommissionPctBlur = useCallback(async () => {
+    const { data: existing } = await supabase
+      .from("settings")
+      .select("id")
+      .eq("key", "commission_pct")
+      .eq("restaurant_id", restaurantId)
+      .maybeSingle();
+
+    if (existing) {
+      await supabase.from("settings").update({ value: { pct: commissionPct } }).eq("id", existing.id);
+    } else {
+      await supabase.from("settings").insert({ key: "commission_pct", value: { pct: commissionPct }, restaurant_id: restaurantId });
+    }
+    queryClient.invalidateQueries({ queryKey: ["settings", "commission_pct", restaurantId] });
+  }, [commissionPct, restaurantId, queryClient]);
 
   // Fetch waiter shifts for the selected period date range
   const { data: waiterData, isLoading } = useQuery({
