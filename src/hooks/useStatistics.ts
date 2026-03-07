@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { getAllTeamMembers, countPoolShares } from '@/lib/waiterTeamUtils';
 import { startOfMonth, endOfMonth, subMonths, format, startOfWeek, endOfWeek, subWeeks } from 'date-fns';
 
 export interface DailyStats {
@@ -231,15 +232,20 @@ export function useStatistics(timeRange: TimeRange = 'month', customRange?: Cust
         });
         
         // Distribute equally among all waiters in this session (counting team members)
-        let totalShares = 0;
-        sessionShifts.forEach((shift: any) => {
-          const additionalCount = (shift.additional_waiters?.length || 0);
-          totalShares += 1 + additionalCount;
-        });
+        let totalShares = countPoolShares(sessionShifts.map((shift: any) => ({
+          waiter_name: shift.waiter_name,
+          second_waiter_name: shift.second_waiter_name,
+          additional_waiters: shift.additional_waiters || [],
+          participates_in_pool: shift.participates_in_pool ?? true,
+        })));
         const sharePerWaiter = totalShares > 0 ? sessionPool / totalShares : 0;
         
         sessionShifts.forEach((shift: any) => {
-          const allMembers = [shift.waiter_name, ...(shift.additional_waiters || [])];
+          const allMembers = getAllTeamMembers({
+            waiter_name: shift.waiter_name,
+            second_waiter_name: shift.second_waiter_name,
+            additional_waiters: shift.additional_waiters || [],
+          });
           allMembers.forEach((name: string) => {
             const key = name.toLowerCase().trim();
             if (!waiterTipMap[key]) {
