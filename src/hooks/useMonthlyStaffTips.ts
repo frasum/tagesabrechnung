@@ -136,12 +136,13 @@ async function fetchMonthlyStaffTips(monthsBack: number = 12, restaurantIds?: st
         return sum + ((s.cash_handed_in || 0) - expected - (s.kitchen_tip || 0));
       }, 0);
       
-      // Count waiter shares (team shifts use additional_waiters, only if participates_in_pool)
-      const waiterShareCount = shiftsInSession.reduce((count, s) => {
-        if (!s.participates_in_pool) return count;
-        const additionalCount = ((s as any).additional_waiters?.length || 0);
-        return count + 1 + additionalCount;
-      }, 0);
+      // Count waiter shares (team shifts include second + additional waiters, only if participates_in_pool)
+      const waiterShareCount = countPoolShares(shiftsInSession.map(s => ({
+        waiter_name: s.waiter_name,
+        second_waiter_name: (s as any).second_waiter_name,
+        additional_waiters: (s as any).additional_waiters || [],
+        participates_in_pool: s.participates_in_pool,
+      })));
       
       if (waiterShareCount > 0) {
         const tipPerWaiter = sessionPool / waiterShareCount;
@@ -159,9 +160,13 @@ async function fetchMonthlyStaffTips(monthsBack: number = 12, restaurantIds?: st
           waiterTipsMap[wKey].tip += tipPerWaiter;
           waiterTipsMap[wKey].hours += waiterHours;
           
-          // Additional waiters (no hours tracked for them, but merge into same entry via staff_id)
-          const additionalWaiters: string[] = (ws as any).additional_waiters || [];
-          for (const name of additionalWaiters) {
+          // Second + additional waiters (no hours tracked for them, but merge into same entry via staff_id)
+          const extraMembers = getAllTeamMembers({
+            waiter_name: ws.waiter_name,
+            second_waiter_name: (ws as any).second_waiter_name,
+            additional_waiters: (ws as any).additional_waiters || [],
+          }).slice(1); // skip primary, already handled above
+          for (const name of extraMembers) {
             const normalizedName = name.toLowerCase().trim();
             const aKey = nameToStaffId[normalizedName] || normalizedName;
             if (!waiterTipsMap[aKey]) {

@@ -245,11 +245,12 @@ export default function DailySummary() {
     sum + ((w.cash_handed_in || 0) - calculateExpected(w) - (w.kitchen_tip || 0)), 0);
   
   // Count shares correctly: team shifts count as 2, non-participating shifts don't count
-  const waiterShareCount = waiterShifts.reduce((count, w) => {
-    if (!w.participates_in_pool) return count;
-    const additionalCount = ((w as any).additional_waiters?.length || 0);
-    return count + 1 + additionalCount;
-  }, 0);
+  const waiterShareCount = countPoolShares(waiterShifts.map(w => ({
+    waiter_name: w.waiter_name,
+    second_waiter_name: w.second_waiter_name,
+    additional_waiters: (w as any).additional_waiters || [],
+    participates_in_pool: w.participates_in_pool,
+  })));
   const tipPerWaiter = waiterShareCount > 0 ? waiterTipPool / waiterShareCount : 0;
   
   // Keep totalWaiterTip for backward compatibility in calculations
@@ -987,8 +988,12 @@ export default function DailySummary() {
           {waiterShifts.flatMap((shift) => {
             const submittedAt = formatSubmittedAt((shift as any).submitted_at);
             const hasData = (shift.pos_sales || 0) > 0 || (shift.cash_handed_in || 0) > 0;
-            const additionalWaiters: string[] = (shift as any).additional_waiters || [];
-            const teamSize = 1 + additionalWaiters.length;
+            const allMembers = getAllTeamMembers({
+              waiter_name: shift.waiter_name,
+              second_waiter_name: shift.second_waiter_name,
+              additional_waiters: (shift as any).additional_waiters || [],
+            });
+            const teamSize = allMembers.length;
             const posSales = (shift.pos_sales || 0) / teamSize;
             const poolShare = shift.participates_in_pool ? tipPerWaiter : 0;
             const tipPct = posSales > 0 && shift.participates_in_pool
@@ -1027,7 +1032,6 @@ export default function DailySummary() {
               </div>
             );
 
-            const allMembers = [shift.waiter_name, ...additionalWaiters];
             return allMembers.map((name, idx) => renderRow(name, `${shift.id}-${idx}`));
           })}
         </div>
