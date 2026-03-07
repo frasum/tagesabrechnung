@@ -1,20 +1,24 @@
 
 
-# Zweit-Kellner in der Provisionsberechnung berücksichtigen
+## Tooltips für erweiterten SFN-Modus anpassen
 
-## Problem
-"Andi + Tu" ist als eine Schicht erfasst, wobei Tu als `second_waiter_name` oder in `additional_waiters` gespeichert ist. Die aktuelle Provisionsberechnung zählt nur den Hauptkellner (`waiter_name`) — Tu wird nicht als eigenständiger Service-MA gezählt. Daher zeigt der 26.02. nur 3 statt 4 Service-MA.
+Aktuell zeigen die Tooltips nur den Zuschlagsprozentsatz. Im erweiterten (§3b) Modus sollen sie zusätzlich erklären, dass die Zuschläge additiv berechnet werden.
 
-## Lösung
-Die Query um `second_waiter_name` und `additional_waiters` erweitern. Beim Zählen der Service-MA pro Tag werden Zweit-/Zusatzkellner als separate Personen mitgezählt.
+### Änderung in `src/components/zeiterfassung/SfnTooltipHeader.tsx`
 
-### Auswirkungen auf die Berechnung
-- **Service-MA pro Tag**: Zweit-/Zusatzkellner werden als eigene MA gezählt → `staffDays` steigt → Ø Umsatz/Tag/MA sinkt
-- **Stundenverteilung**: Die `hours_worked` der Schicht gehören zum Hauptkellner. Zweit-Kellner haben in der aktuellen Datenstruktur keine separaten Stunden, daher werden sie beim Stunden-Count nicht mitgezählt (nur beim MA-Count pro Tag)
+- Neues optionales Prop `sfnMode?: SfnMode` hinzufügen
+- Zwei Tooltip-Text-Sets: eins für "simple", eins für "extended"
+- Im Extended-Modus erklären die Tooltips die additive Logik:
 
-### Technische Änderungen (nur `ZtProvision.tsx`)
-1. Query erweitern: `second_waiter_name` und `additional_waiters` mit laden
-2. `sessionCount` / `staffDays` Berechnung: auch `second_waiter_name` und jeden Eintrag aus `additional_waiters` als eigenen MA pro Tag zählen (sofern nicht GL)
-3. `dailyBreakdown`: gleiches Prinzip — staffCount inkl. Zweit-/Zusatzkellner
-4. Aggregation (`aggregated`): Zweit-/Zusatzkellner erscheinen nicht als eigene Zeile in der Haupttabelle (haben keine separaten Stunden/Umsatz), aber werden im Ø-Umsatz-Nenner berücksichtigt
+| Spalte | Simple | Extended |
+|--------|--------|----------|
+| 20–24 | 25 % Nachtzuschlag | 25 % Nachtzuschlag (20:00–00:00) — additiv zu So/Fei-Zuschlägen |
+| 24–x | 40 % Nachtzuschlag | 40 % Nachtzuschlag (00:00–04:00) — additiv zu So/Fei-Zuschlägen |
+| So/Fei | 50 % Sonn- und Feiertagszuschlag | *(nicht im Extended-Modus)* |
+| So | *(nicht im Simple-Modus)* | 50 % Sonntagszuschlag (§3b EStG) |
+| Fei | *(nicht im Simple-Modus)* | 125 % Feiertag / 150 % besondere Feiertage (1. Mai, 25./26.12.) |
+
+### Aufrufer anpassen
+
+`BuchhaltungTableHead.tsx`, `ZtWochenplan.tsx`, `ZtZusammenfassung.tsx` — das `sfnMode`-Prop an `SfnTooltipHeader` durchreichen, wo es bereits verfügbar ist.
 
