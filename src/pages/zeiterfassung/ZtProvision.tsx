@@ -31,8 +31,9 @@ type DayBreakdown = {
 
 export default function ZtProvision() {
   const { selectedPeriodId, periods } = useZt();
-  const { restaurantId } = useRestaurant();
+  const { restaurantId, restaurantSlug } = useRestaurant();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const selectedPeriod = periods?.find(p => p.id === selectedPeriodId);
 
@@ -476,7 +477,12 @@ export default function ZtProvision() {
                           </Tooltip>
                         </TooltipProvider>
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">{fmt(day.hours)}</TableCell>
+                      <TableCell
+                        className="text-right tabular-nums cursor-pointer hover:text-primary hover:underline underline-offset-4 transition-colors"
+                        onClick={() => navigate(`/${restaurantSlug}/zeiterfassung?date=${day.date}`)}
+                      >
+                        {fmt(day.hours)}
+                      </TableCell>
                       <TableCell className="text-right tabular-nums">{fmt(day.revenue)}</TableCell>
                       <TableCell className={`text-right tabular-nums ${belowThreshold ? "text-destructive" : ""}`}>
                         {fmt(avgPerStaff)}
