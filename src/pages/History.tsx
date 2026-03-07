@@ -222,16 +222,16 @@ export default function History() {
 
               <>
               <div className="overflow-x-auto">
-                  <Table>
+                  <Table className="table-fixed w-full">
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Datum</TableHead>
-                        <TableHead className="text-right">POS Total</TableHead>
-                        <TableHead className="text-right">Kreditkarten (%)</TableHead>
-                        <TableHead className="text-right">Take Away (%)</TableHead>
-                        <TableHead className="text-right">Gäste / Ø Verzehr</TableHead>
-                        <TableHead className="text-right">Tages-Bargeld</TableHead>
-                        <TableHead></TableHead>
+                        <TableHead className="w-[180px]">Datum</TableHead>
+                        <TableHead className="w-[130px] text-right">POS Total</TableHead>
+                        <TableHead className="w-[150px] text-right">Kreditkarten (%)</TableHead>
+                        <TableHead className="w-[150px] text-right">Take Away (%)</TableHead>
+                        <TableHead className="w-[130px] text-right">Gäste / Ø Verzehr</TableHead>
+                        <TableHead className="w-[120px] text-right">Tages-Bargeld</TableHead>
+                        <TableHead className="w-[50px]"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
