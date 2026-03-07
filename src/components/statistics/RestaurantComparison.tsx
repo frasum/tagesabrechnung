@@ -1,6 +1,6 @@
-import { ArrowRight, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
+import { useMemo } from 'react';
+import { TrendingUp, TrendingDown, Minus, Calendar } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import type { StatsSummary } from '@/hooks/useStatistics';
 
 interface RestaurantComparisonProps {
@@ -16,25 +16,28 @@ const formatPercent = (val: number) => {
   return `${sign}${val.toFixed(1)}%`;
 };
 
-interface MetricRowProps {
+interface MetricDef {
   label: string;
-  values: number[];
-  names: string[];
+  valA: number;
+  valB: number;
   invert?: boolean;
 }
 
-function MetricRow({ label, values, names, invert = false }: MetricRowProps) {
-  const [a, b] = values;
-  const max = Math.max(...values.map(Math.abs));
-  const diff = b !== 0 ? ((a - b) / Math.abs(b)) * 100 : 0;
-  // For inverted metrics (expenses), lower is better
-  const effectiveDiff = invert ? -diff : diff;
+function MetricCard({ label, valA, valB, nameA, nameB, invert }: MetricDef & { nameA: string; nameB: string }) {
+  const max = Math.max(Math.abs(valA), Math.abs(valB));
+  const propA = max > 0 ? (Math.abs(valA) / max) * 100 : 0;
+  const propB = max > 0 ? (Math.abs(valB) / max) * 100 : 0;
+  const rawDiff = valB !== 0 ? ((valA - valB) / Math.abs(valB)) * 100 : 0;
+  const effectiveDiff = invert ? -rawDiff : rawDiff;
+  const leadA = Math.abs(valA) > Math.abs(valB);
+  const leadB = Math.abs(valB) > Math.abs(valA);
 
   return (
-    <div className="py-4 border-b last:border-b-0 space-y-2">
+    <div className="rounded-lg border border-border/60 bg-card p-4 space-y-3">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <span className="font-medium text-sm">{label}</span>
-        <div className="flex items-center gap-1.5 text-xs">
+        <span className="text-sm font-medium text-foreground">{label}</span>
+        <div className="flex items-center gap-1">
           {effectiveDiff > 0 ? (
             <TrendingUp className="w-3.5 h-3.5 text-success" />
           ) : effectiveDiff < 0 ? (
@@ -42,27 +45,47 @@ function MetricRow({ label, values, names, invert = false }: MetricRowProps) {
           ) : (
             <Minus className="w-3.5 h-3.5 text-muted-foreground" />
           )}
-          <span className={`tabular-nums font-medium ${effectiveDiff > 0 ? 'text-success' : effectiveDiff < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
-            {formatPercent(diff)}
-          </span>
+          <Badge
+            variant="outline"
+            className={`text-[10px] px-1.5 py-0 font-semibold ${
+              effectiveDiff > 0
+                ? 'border-success/30 text-success bg-success/10'
+                : effectiveDiff < 0
+                  ? 'border-destructive/30 text-destructive bg-destructive/10'
+                  : 'text-muted-foreground'
+            }`}
+          >
+            {formatPercent(rawDiff)}
+          </Badge>
         </div>
       </div>
-      <div className="space-y-1.5">
-        {values.map((v, i) => {
-          const proportion = max > 0 ? (Math.abs(v) / max) * 100 : 0;
-          const isLeading = Math.abs(v) === max && max > 0;
-          return (
-            <div key={i} className="flex items-center gap-3">
-              <span className="text-xs text-muted-foreground w-20 shrink-0 truncate">{names[i]}</span>
-              <div className="flex-1">
-                <Progress value={proportion} className="h-2" />
-              </div>
-              <span className={`text-sm tabular-nums w-24 text-right shrink-0 ${isLeading ? 'font-bold text-foreground' : 'text-muted-foreground'}`}>
-                {formatCurrency(v)}
-              </span>
-            </div>
-          );
-        })}
+
+      {/* Restaurant A */}
+      <div className={`flex items-center gap-2 rounded-md px-2 py-1.5 ${leadA ? 'bg-[hsl(var(--chart-1)/0.08)]' : ''}`}>
+        <span className="text-xs text-muted-foreground w-16 shrink-0 truncate">{nameA}</span>
+        <div className="flex-1 h-2.5 rounded-full bg-muted/50 overflow-hidden">
+          <div
+            className="h-full rounded-full bg-[hsl(var(--chart-1))] transition-all duration-500"
+            style={{ width: `${propA}%` }}
+          />
+        </div>
+        <span className={`text-xs tabular-nums w-[5.5rem] text-right shrink-0 ${leadA ? 'font-bold text-foreground' : 'text-muted-foreground'}`}>
+          {formatCurrency(valA)}
+        </span>
+      </div>
+
+      {/* Restaurant B */}
+      <div className={`flex items-center gap-2 rounded-md px-2 py-1.5 ${leadB ? 'bg-[hsl(var(--chart-2)/0.08)]' : ''}`}>
+        <span className="text-xs text-muted-foreground w-16 shrink-0 truncate">{nameB}</span>
+        <div className="flex-1 h-2.5 rounded-full bg-muted/50 overflow-hidden">
+          <div
+            className="h-full rounded-full bg-[hsl(var(--chart-2))] transition-all duration-500"
+            style={{ width: `${propB}%` }}
+          />
+        </div>
+        <span className={`text-xs tabular-nums w-[5.5rem] text-right shrink-0 ${leadB ? 'font-bold text-foreground' : 'text-muted-foreground'}`}>
+          {formatCurrency(valB)}
+        </span>
       </div>
     </div>
   );
@@ -71,73 +94,48 @@ function MetricRow({ label, values, names, invert = false }: MetricRowProps) {
 export function RestaurantComparison({ restaurants }: RestaurantComparisonProps) {
   if (restaurants.length < 2) return null;
 
-  const names = restaurants.map(r => r.name);
-  const metrics: { label: string; key: keyof StatsSummary; invert?: boolean }[] = [
-    { label: 'Gesamtumsatz', key: 'totalRevenue' },
-    { label: 'Ø Tagesumsatz', key: 'avgDailyRevenue' },
-    { label: 'Küchen Trinkgeld', key: 'totalKitchenTip' },
-    { label: 'Service Trinkgeld', key: 'totalWaiterTip' },
-    { label: 'Lieferumsatz', key: 'totalDelivery' },
-    { label: 'Ausgaben', key: 'totalExpenses', invert: true },
-  ];
+  const [a, b] = restaurants;
+  const nameA = a.name;
+  const nameB = b.name;
 
-  // Derived metrics
-  const avgTipPerDayA = restaurants[0].summary.daysWithData > 0
-    ? (restaurants[0].summary.totalKitchenTip + restaurants[0].summary.totalWaiterTip) / restaurants[0].summary.daysWithData
-    : 0;
-  const avgTipPerDayB = restaurants[1].summary.daysWithData > 0
-    ? (restaurants[1].summary.totalKitchenTip + restaurants[1].summary.totalWaiterTip) / restaurants[1].summary.daysWithData
-    : 0;
-  const avgExpPerDayA = restaurants[0].summary.daysWithData > 0
-    ? restaurants[0].summary.totalExpenses / restaurants[0].summary.daysWithData
-    : 0;
-  const avgExpPerDayB = restaurants[1].summary.daysWithData > 0
-    ? restaurants[1].summary.totalExpenses / restaurants[1].summary.daysWithData
-    : 0;
+  const metrics = useMemo<MetricDef[]>(() => {
+    const sa = a.summary;
+    const sb = b.summary;
+    const dA = sa.daysWithData || 1;
+    const dB = sb.daysWithData || 1;
+    return [
+      { label: 'Gesamtumsatz', valA: sa.totalRevenue, valB: sb.totalRevenue },
+      { label: 'Ø Tagesumsatz', valA: sa.avgDailyRevenue, valB: sb.avgDailyRevenue },
+      { label: 'Küchen Trinkgeld', valA: sa.totalKitchenTip, valB: sb.totalKitchenTip },
+      { label: 'Service Trinkgeld', valA: sa.totalWaiterTip, valB: sb.totalWaiterTip },
+      { label: 'Lieferumsatz', valA: sa.totalDelivery, valB: sb.totalDelivery },
+      { label: 'Ausgaben', valA: sa.totalExpenses, valB: sb.totalExpenses, invert: true },
+      { label: 'Ø Trinkgeld / Tag', valA: (sa.totalKitchenTip + sa.totalWaiterTip) / dA, valB: (sb.totalKitchenTip + sb.totalWaiterTip) / dB },
+      { label: 'Ø Ausgaben / Tag', valA: sa.totalExpenses / dA, valB: sb.totalExpenses / dB, invert: true },
+    ];
+  }, [a, b]);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <ArrowRight className="w-5 h-5" />
-          Restaurant-Vergleich
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {metrics.map(m => (
-          <MetricRow
-            key={m.key}
-            label={m.label}
-            values={restaurants.map(r => r.summary[m.key] as number)}
-            names={names}
-            invert={m.invert}
-          />
+    <div className="space-y-4">
+      <div className="grid sm:grid-cols-2 gap-3">
+        {metrics.map((m) => (
+          <MetricCard key={m.label} {...m} nameA={nameA} nameB={nameB} />
         ))}
 
-        {/* Derived metrics */}
-        <MetricRow
-          label="Ø Trinkgeld / Tag"
-          values={[avgTipPerDayA, avgTipPerDayB]}
-          names={names}
-        />
-        <MetricRow
-          label="Ø Ausgaben / Tag"
-          values={[avgExpPerDayA, avgExpPerDayB]}
-          names={names}
-          invert
-        />
-
-        {/* Days */}
-        <div className="mt-4 pt-4 border-t flex items-center justify-between">
-          {restaurants.map(r => (
-            <div key={r.name} className="text-center">
-              <span className="text-xs text-muted-foreground block">{r.name}</span>
-              <span className="text-lg font-bold tabular-nums">{r.summary.daysWithData}</span>
-              <span className="text-xs text-muted-foreground block">Tage</span>
+        {/* Days card */}
+        <div className="rounded-lg border border-border/60 bg-card p-4 flex items-center justify-around sm:col-span-2">
+          {restaurants.map((r) => (
+            <div key={r.name} className="text-center space-y-1">
+              <span className="text-xs text-muted-foreground">{r.name}</span>
+              <div className="flex items-center justify-center gap-1.5">
+                <Calendar className="w-4 h-4 text-muted-foreground" />
+                <span className="text-xl font-bold tabular-nums text-foreground">{r.summary.daysWithData}</span>
+              </div>
+              <span className="text-[10px] text-muted-foreground">Tage mit Daten</span>
             </div>
           ))}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
