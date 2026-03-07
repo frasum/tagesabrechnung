@@ -514,15 +514,24 @@ export default function ZtProvision() {
             Tagesdetails ({dailyBreakdown.length} Tage)
           </CollapsibleTrigger>
           <CollapsibleContent className="pt-3">
-            <Table>
+            <Table className="table-fixed w-full">
+              <colgroup>
+                <col className="w-[18%]" />
+                <col className="w-[14%]" />
+                <col className="w-[14%]" />
+                <col className="w-[14%]" />
+                <col className="w-[14%]" />
+                <col className="w-[14%]" />
+                <col className="w-[12%]" />
+              </colgroup>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Datum</TableHead>
-                  <TableHead className="text-right">Anzahl der Servicekräfte</TableHead>
-                  <TableHead className="text-right">Service Gesamt Stunden</TableHead>
-                  <TableHead className="text-right">Tagesumsatz</TableHead>
-                  <TableHead className="text-right">Ø pro Servicekraft</TableHead>
-                   <TableHead className="text-right">
+                  <TableHead className="py-4">Datum</TableHead>
+                  <TableHead className="text-right py-4">Anzahl der Servicekräfte</TableHead>
+                  <TableHead className="text-right py-4">Service Gesamt Stunden</TableHead>
+                  <TableHead className="text-right py-4">Tagesumsatz</TableHead>
+                  <TableHead className="text-right py-4">Ø pro Servicekraft</TableHead>
+                   <TableHead className="text-right py-4">
                      <TooltipProvider>
                        <Tooltip>
                          <TooltipTrigger asChild>
@@ -532,7 +541,7 @@ export default function ZtProvision() {
                        </Tooltip>
                      </TooltipProvider>
                    </TableHead>
-                  <TableHead className="text-right">Provision</TableHead>
+                  <TableHead className="text-right py-4">Provision</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
