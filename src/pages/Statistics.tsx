@@ -483,7 +483,14 @@ export default function Statistics() {
                   <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
                     <TrendingUp className="w-5 h-5 text-primary" />
                   </div>
-                  Umsatzentwicklung
+                  <div>
+                    Umsatzentwicklung
+                    {data?.dateRange && (
+                      <p className="text-sm font-normal text-muted-foreground mt-0.5">
+                        {format(data.dateRange.start, 'dd. MMMM yyyy', { locale: de })} – {format(data.dateRange.end, 'dd. MMMM yyyy', { locale: de })}
+                      </p>
+                    )}
+                  </div>
                 </CardTitle>
               </CardHeader>
               <CardContent>
