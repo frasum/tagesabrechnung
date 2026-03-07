@@ -179,6 +179,27 @@ export function KitchenTipChart({ data, restaurantNames }: KitchenTipChartProps)
                   </div>
                 ))}
               </div>
+            ) : restaurantNames ? (
+              <div className="space-y-4">
+                {(() => {
+                  const groups: Record<string, KitchenTipStats[]> = {};
+                  for (const entry of data) {
+                    const key = entry.restaurantId || '_unknown';
+                    if (!groups[key]) groups[key] = [];
+                    groups[key].push(entry);
+                  }
+                  return Object.entries(groups)
+                    .sort(([, a], [, b]) => b.reduce((s, i) => s + i.totalTip, 0) - a.reduce((s, i) => s + i.totalTip, 0))
+                    .map(([id, items]) => (
+                      <div key={id}>
+                        <h4 className="text-sm font-semibold text-muted-foreground mb-2 px-2">{restaurantNames[id] || id}</h4>
+                        <div className="rounded-lg border overflow-hidden">
+                          {renderTable(items.sort((a, b) => b.totalTip - a.totalTip))}
+                        </div>
+                      </div>
+                    ));
+                })()}
+              </div>
             ) : (
               <div className="rounded-lg border overflow-hidden">
                 {renderTable(data)}
