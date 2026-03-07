@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { User, PenLine } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { CurrencyInput } from '@/components/shared/CurrencyInput';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import type { LabelKey } from '@/hooks/useLabels';
 
 interface WaiterShiftData {
