@@ -388,16 +388,26 @@ Deno.serve(async (req) => {
     }
 
     // Build zt_shifts hours per month|restaurant per staff for commission distribution
-    // Map service staff to restaurants
+    // Map ALL staff to restaurants
     const staffToRestaurants: Record<string, string[]> = {};
     (staffRestaurantsRes.data || []).forEach((sr: any) => {
       if (!staffToRestaurants[sr.staff_id]) staffToRestaurants[sr.staff_id] = [];
-      staffToRestaurants[sr.staff_id].push(sr.restaurant_id);
+      if (!staffToRestaurants[sr.staff_id].includes(sr.restaurant_id)) {
+        staffToRestaurants[sr.staff_id].push(sr.restaurant_id);
+      }
     });
 
-    // Aggregate zt hours by month|restaurant|staffName
+    // Map staff to departments per restaurant
+    const staffDeptByRest: Record<string, string> = {}; // staffId:restaurantId → department
+    (staffRestaurantsRes.data || []).forEach((sr: any) => {
+      staffDeptByRest[`${sr.staff_id}:${sr.restaurant_id}`] = sr.zt_department || "?";
+    });
+
+    // Aggregate zt hours by month|restaurant|staffName (for commission: only Service)
     const ztHoursMonthRest: Record<string, Record<string, number>> = {};
+    const serviceStaffIdSet = new Set(serviceStaffIds);
     ztShifts.forEach((z: any) => {
+      if (!serviceStaffIdSet.has(z.employee_id)) return;
       const month = z.shift_date.slice(0, 7);
       const rids = staffToRestaurants[z.employee_id] || [];
       const staffName = staffById[z.employee_id]?.name || "?";
@@ -418,6 +428,39 @@ Deno.serve(async (req) => {
       comm.pool = dayData.pool;
       comm.staffHours = ztHoursMonthRest[mrKey] || {};
     }
+
+    // ==========================================
+    // COMPREHENSIVE WORKFORCE DATA (per month per restaurant per employee)
+    // ==========================================
+    type WorkforceEntry = { total: number; evening: number; night: number; nightDeep: number; sundayHoliday: number; absences: Record<string, number>; dept: string };
+    const workforceAgg: Record<string, Record<string, WorkforceEntry>> = {}; // month|restaurant → staffName → data
+
+    ztShifts.forEach((z: any) => {
+      const month = z.shift_date.slice(0, 7);
+      const rids = staffToRestaurants[z.employee_id] || [];
+      const staffName = staffById[z.employee_id]?.name || "?";
+
+      for (const rid of rids) {
+        const restaurant = restaurantMap[rid] || "?";
+        const mrKey = `${month}|${restaurant}`;
+        if (!workforceAgg[mrKey]) workforceAgg[mrKey] = {};
+        if (!workforceAgg[mrKey][staffName]) {
+          const dept = staffDeptByRest[`${z.employee_id}:${rid}`] || z.department || "?";
+          workforceAgg[mrKey][staffName] = { total: 0, evening: 0, night: 0, nightDeep: 0, sundayHoliday: 0, absences: {}, dept };
+        }
+        const entry = workforceAgg[mrKey][staffName];
+
+        if (z.absence_type) {
+          entry.absences[z.absence_type] = (entry.absences[z.absence_type] || 0) + 1;
+        } else {
+          entry.total += Number(z.total_hours) || 0;
+          entry.evening += Number(z.evening_hours) || 0;
+          entry.night += Number(z.night_hours) || 0;
+          entry.nightDeep += Number(z.night_deep_hours) || 0;
+          entry.sundayHoliday += Number(z.sunday_holiday_hours) || 0;
+        }
+      }
+    });
 
     // Build context string
     const contextParts: string[] = [];
@@ -496,6 +539,24 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Workforce hours & absences sections
+    contextParts.push("\n=== MONATLICHE ARBEITSZEITEN PRO MITARBEITER (voraggregiert, aus Zeiterfassung) ===");
+    contextParts.push("Monat | Restaurant | Mitarbeiter | Abteilung | Gesamt-Std | Abend-Std | Nacht-Std | Tiefnacht-Std | So/Feiert-Std | Fehlzeiten");
+    const wfKeys = Object.keys(workforceAgg).sort();
+    for (const key of wfKeys) {
+      const [month, restaurant] = key.split("|");
+      const staff = workforceAgg[key];
+      const sorted = Object.entries(staff).sort((a, b) => b[1].total - a[1].total);
+      for (const [name, d] of sorted) {
+        const absStr = Object.entries(d.absences).length > 0
+          ? Object.entries(d.absences).map(([type, count]) => `${type}:${count}`).join(", ")
+          : "-";
+        contextParts.push(
+          `${month} | ${restaurant} | ${name} | ${d.dept} | ${d.total.toFixed(1)}h | ${d.evening.toFixed(1)}h | ${d.night.toFixed(1)}h | ${d.nightDeep.toFixed(1)}h | ${d.sundayHoliday.toFixed(1)}h | ${absStr}`
+        );
+      }
+    }
+
     // Build session info map with date + restaurant
     const sessionInfoMap: Record<string, { date: string; restaurant: string }> = {};
     sessions.forEach((s: any) => {
@@ -551,11 +612,11 @@ Deno.serve(async (req) => {
       );
     });
 
-    contextParts.push("\n=== MITARBEITER ===");
-    contextParts.push("Name | Rolle | Aktiv | Pool");
+    contextParts.push("\n=== MITARBEITER (Stammdaten) ===");
+    contextParts.push("Name | Rolle | Aktiv | Pool | Minijob | Eintrittsdatum | Austrittsdatum | Urlaub-Vertrag | Urlaub-Vorjahr | Urlaub-Aktuell | Urlaub-Genommen | Krankheitstage");
     allStaff.forEach((s: any) => {
       contextParts.push(
-        `${s.name} | ${s.role} | ${s.is_active ? "ja" : "nein"} | ${s.participates_in_pool ? "ja" : "nein"}`
+        `${s.name} | ${s.role} | ${s.is_active ? "ja" : "nein"} | ${s.participates_in_pool ? "ja" : "nein"} | ${s.is_minijob ? "ja" : "nein"} | ${s.employment_start || "-"} | ${s.employment_end || "-"} | ${s.vacation_days_contractual ?? "-"} | ${s.vacation_days_previous ?? "-"} | ${s.vacation_days_current ?? "-"} | ${s.vacation_days_taken ?? "-"} | ${s.sick_days_total ?? "-"}`
       );
     });
 
@@ -569,6 +630,8 @@ ${dataContext}
 Wichtige Regeln:
 - Die MONATLICHE ZUSAMMENFASSUNG, das KELLNER-TRINKGELD RANKING und die KÜCHEN-STUNDEN enthalten voraggregierte, korrekte Summen. Verwende IMMER diese Summen wenn nach Monats-Totalen, Rankings oder Stunden-Summen gefragt wird, anstatt selbst aus den Rohdaten zu rechnen.
 - Die MONATLICHE PROVISIONSBERECHNUNG enthält voraggregierte Provisionsdaten. Verwende diese für alle Provisionsfragen. Provisionen basieren auf einem Schwellenwert-System: nur Tage, an denen der Durchschnittsumsatz pro Service-Mitarbeiter den Schwellenwert erreicht, tragen zum Provisions-Pool bei. Der Pool wird proportional zu den Arbeitsstunden (aus der Zeiterfassung) verteilt. Die PROVISIONS-VERTEILUNG zeigt die Aufteilung pro Mitarbeiter.
+- Die MONATLICHEN ARBEITSZEITEN enthalten die vollständigen Zeiterfassungsdaten pro Mitarbeiter: Gesamtstunden, Abendstunden (20-24 Uhr, 25% SFN-Zuschlag), Nachtstunden (0-4/24-0 Uhr, 25% Zuschlag), Tiefnachtstunden (0-4 Uhr, 40% Zuschlag), Sonn-/Feiertagsstunden. Fehlzeiten werden nach Typ (Urlaub, Krank, Frei, etc.) als Anzahl Tage angegeben.
+- Die MITARBEITER-Stammdaten enthalten Informationen zu Rolle, Beschäftigungsart (Minijob), Eintritts-/Austrittsdatum, sowie den Urlaubsanspruch und die genommenen Urlaubs-/Krankheitstage.
 - Formatiere Geldbeträge immer als Euro (z.B. 1.234,56 €)
 - Nutze Markdown-Tabellen wenn es sinnvoll ist
 - Antworte präzise und basierend auf den Daten
