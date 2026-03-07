@@ -282,13 +282,14 @@ export default function ZtProvision() {
       dateStaffMap.get(date)!.add(key);
       // Count second_waiter_name
       if (ws.second_waiter_name && !isGlByName(ws.second_waiter_name)) {
-        dateStaffMap.get(date)!.add(`second:${ws.second_waiter_name}`);
+        const sid = staffNameToId.get(ws.second_waiter_name.toLowerCase());
+        dateStaffMap.get(date)!.add(sid || `secondary:${ws.second_waiter_name}`);
       }
-      // Count additional_waiters
       if (ws.additional_waiters?.length) {
         for (const aw of ws.additional_waiters) {
           if (aw && !isGlByName(aw)) {
-            dateStaffMap.get(date)!.add(`add:${aw}`);
+            const sid = staffNameToId.get(aw.toLowerCase());
+            dateStaffMap.get(date)!.add(sid || `secondary:${aw}`);
           }
         }
       }
@@ -296,7 +297,7 @@ export default function ZtProvision() {
     let total = 0;
     for (const staff of dateStaffMap.values()) total += staff.size;
     return { sessionCount: dateStaffMap.size, staffDays: total };
-  }, [filteredWaiterData, isGlByName]);
+  }, [filteredWaiterData, isGlByName, staffNameToId]);
 
   // Daily breakdown (using filtered data), prefer zt_shifts hours per staff/day
   const dailyBreakdown = useMemo<DayBreakdown[]>(() => {
@@ -317,23 +318,23 @@ export default function ZtProvision() {
       day.waiterHours += Number(ws.hours_worked) || 0;
       day.revenue += Number(ws.pos_sales) || 0;
       if (ws.second_waiter_name && !isGlByName(ws.second_waiter_name)) {
-        const sKey = `second:${ws.second_waiter_name}`;
+        const sid = staffNameToId.get(ws.second_waiter_name.toLowerCase());
+        const sKey = sid || `secondary:${ws.second_waiter_name}`;
         if (!day.staffSet.has(sKey)) {
           day.staffSet.add(sKey);
           day.nameSet.add(ws.second_waiter_name);
         }
-        const sid = staffNameToId.get(ws.second_waiter_name.toLowerCase());
         if (sid) day.staffIdsOnDate.add(sid);
       }
       if (ws.additional_waiters?.length) {
         for (const aw of ws.additional_waiters) {
           if (aw && !isGlByName(aw)) {
-            const aKey = `add:${aw}`;
+            const awSid = staffNameToId.get(aw.toLowerCase());
+            const aKey = awSid || `secondary:${aw}`;
             if (!day.staffSet.has(aKey)) {
               day.staffSet.add(aKey);
               day.nameSet.add(aw);
             }
-            const awSid = staffNameToId.get(aw.toLowerCase());
             if (awSid) day.staffIdsOnDate.add(awSid);
           }
         }
