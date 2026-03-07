@@ -1,24 +1,30 @@
 
 
-## Tooltips für erweiterten SFN-Modus anpassen
+## Analyse: Fehlende YUM-Daten im Vergleich-Tab
 
-Aktuell zeigen die Tooltips nur den Zuschlagsprozentsatz. Im erweiterten (§3b) Modus sollen sie zusätzlich erklären, dass die Zuschläge additiv berechnet werden.
+### Problem gefunden
 
-### Änderung in `src/components/zeiterfassung/SfnTooltipHeader.tsx`
+Die Datenbank enthält alle Daten korrekt. Das Problem liegt an der **Berechnung**, nicht an fehlenden Daten:
 
-- Neues optionales Prop `sfnMode?: SfnMode` hinzufügen
-- Zwei Tooltip-Text-Sets: eins für "simple", eins für "extended"
-- Im Extended-Modus erklären die Tooltips die additive Logik:
+1. **Leere Session am 07.03.**: YUM hat eine Session am 07.03. mit `pos_total = 0` und ohne Kellner-Schichten. Diese leere Session wird trotzdem als "Tag mit Daten" gezählt, was den **Ø Tagesumsatz** nach unten verzerrt (÷7 statt ÷6).
 
-| Spalte | Simple | Extended |
-|--------|--------|----------|
-| 20–24 | 25 % Nachtzuschlag | 25 % Nachtzuschlag (20:00–00:00) — additiv zu So/Fei-Zuschlägen |
-| 24–x | 40 % Nachtzuschlag | 40 % Nachtzuschlag (00:00–04:00) — additiv zu So/Fei-Zuschlägen |
-| So/Fei | 50 % Sonn- und Feiertagszuschlag | *(nicht im Extended-Modus)* |
-| So | *(nicht im Simple-Modus)* | 50 % Sonntagszuschlag (§3b EStG) |
-| Fei | *(nicht im Simple-Modus)* | 125 % Feiertag / 150 % besondere Feiertage (1. Mai, 25./26.12.) |
+2. **`totalRevenue` basiert auf `pos_sales` aus Kellner-Schichten**, nicht auf `pos_total` (Vectron-Kasse). Für YUM ergibt das 25.565 € statt 29.282 € (Vectron). Die Differenz (~3.716 €) sind Lieferumsätze und Takeaway, die separat unter "Lieferumsatz" gezählt werden. Das ist korrekt so, aber kann verwirrend wirken.
 
-### Aufrufer anpassen
+### Lösung
 
-`BuchhaltungTableHead.tsx`, `ZtWochenplan.tsx`, `ZtZusammenfassung.tsx` — das `sfnMode`-Prop an `SfnTooltipHeader` durchreichen, wo es bereits verfügbar ist.
+**`useStatistics.ts`**: Sessions ohne Kellner-Schichten aus der `dailyStats`-Berechnung und `daysWithData`-Zählung ausschließen.
+
+```text
+Vorher:  dailyStats = sessions.map(...)  → alle Sessions, auch leere
+Nachher: dailyStats = sessions.map(...).filter(d => hat mindestens 1 Schicht)
+```
+
+Konkret:
+- Nach der `dailyStats`-Berechnung (Zeile 150-192): leere Tage herausfiltern, bei denen `kellnerUmsatz === 0` UND keine Schichten existieren
+- `summary.daysWithData` und `summary.avgDailyRevenue` basieren dann nur auf Tage mit tatsächlichen Daten
+- Gleiche Logik in `useStatisticsComparison.ts` (Zeile 29-90): `daysWithData` nur Sessions zählen, die mindestens eine Schicht haben
+
+### Betroffene Dateien
+- `src/hooks/useStatistics.ts` — `dailyStats` filtern
+- `src/hooks/useStatisticsComparison.ts` — `daysWithData` Berechnung anpassen
 
