@@ -66,8 +66,27 @@ Deno.serve(async (req) => {
     since30.setDate(since30.getDate() - 30);
     const since30Str = since30.toISOString().split("T")[0];
 
-    // Load ALL sessions + staff + restaurants + settings + staff_restaurants in parallel
-    const [sessionsRes, staffRes, restaurantsRes, settingsRes, staffRestaurantsRes] = await Promise.all([
+    // Weather code to label mapping
+    const weatherCodeLabel = (code: number): string => {
+      if (code === 0) return "Sonnig";
+      if (code <= 3) return "Bewölkt";
+      if (code <= 48) return "Nebel";
+      if (code <= 57) return "Nieselregen";
+      if (code <= 65) return "Regen";
+      if (code <= 67) return "Gefrierender Regen";
+      if (code <= 77) return "Schnee";
+      if (code <= 82) return "Regenschauer";
+      if (code <= 86) return "Schneeschauer";
+      if (code <= 99) return "Gewitter";
+      return "?";
+    };
+
+    // Load ALL sessions + staff + restaurants + settings + staff_restaurants + weather in parallel
+    const weatherPromise = fetch(
+      "https://api.open-meteo.com/v1/forecast?latitude=48.14&longitude=11.58&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weathercode&timezone=Europe/Berlin&past_days=90&forecast_days=3"
+    ).then(r => r.json()).catch(() => null);
+
+    const [sessionsRes, staffRes, restaurantsRes, settingsRes, staffRestaurantsRes, weatherData] = await Promise.all([
       supabase
         .from("sessions")
         .select("id, session_date, restaurant_id, pos_total, terminal_1_total, terminal_2_total, ordersmart_revenue, wolt_revenue, guest_count, vouchers_sold, vouchers_redeemed, finedine_vouchers, einladung, sonstige_einnahme, notes, created_by_name")
@@ -91,6 +110,7 @@ Deno.serve(async (req) => {
         .from("staff_restaurants")
         .select("staff_id, restaurant_id, zt_department")
         .in("restaurant_id", restaurant_ids),
+      weatherPromise,
     ]);
 
     const sessions = sessionsRes.data || [];
