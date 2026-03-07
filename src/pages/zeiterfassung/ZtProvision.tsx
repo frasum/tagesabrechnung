@@ -518,7 +518,7 @@ export default function ZtProvision() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Datum</TableHead>
-                  <TableHead className="text-right">Service-MA</TableHead>
+                  <TableHead className="text-right">Anzahl der Servicekräfte</TableHead>
                   <TableHead className="text-right">Stunden (h)</TableHead>
                   <TableHead className="text-right">Umsatz (€)</TableHead>
                   <TableHead className="text-right">Ø / MA (€)</TableHead>
