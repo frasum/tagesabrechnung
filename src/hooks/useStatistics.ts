@@ -33,6 +33,7 @@ export interface WaiterTipStats {
   totalTip: number;
   shiftsCount: number;
   avgTipPerShift: number;
+  restaurantId?: string;
 }
 
 export interface KitchenTipStats {
@@ -40,6 +41,7 @@ export interface KitchenTipStats {
   totalHours: number;
   totalTip: number;
   avgTipPerHour: number;
+  restaurantId?: string;
 }
 
 export type TimeRange = 'week' | 'month' | '3months' | 'custom';
@@ -84,7 +86,7 @@ export function useStatistics(timeRange: TimeRange = 'month', customRange?: Cust
       // Fetch sessions in the date range
       let sessionsQuery = supabase
         .from('sessions')
-        .select('id, session_date, pos_total, terminal_1_total, terminal_2_total, ordersmart_revenue, wolt_revenue, takeaway_total, vouchers_redeemed, finedine_vouchers, vouchers_sold, einladung, vorschuss, sonstige_einnahme, card_total_gl')
+        .select('id, session_date, restaurant_id, pos_total, terminal_1_total, terminal_2_total, ordersmart_revenue, wolt_revenue, takeaway_total, vouchers_redeemed, finedine_vouchers, vouchers_sold, einladung, vorschuss, sonstige_einnahme, card_total_gl')
         .gte('session_date', format(startDate, 'yyyy-MM-dd'))
         .lte('session_date', format(endDate, 'yyyy-MM-dd'))
         .order('session_date', { ascending: true });
@@ -217,7 +219,8 @@ export function useStatistics(timeRange: TimeRange = 'month', customRange?: Cust
 
       // Calculate waiter tip stats per person using pool system
       // For each session, calculate the pool and distribute equally
-      const waiterTipMap: Record<string, { totalPoolShare: number; shiftsCount: number; displayName: string }> = {};
+      const isMultiRestaurant = effectiveIds.length > 1;
+      const waiterTipMap: Record<string, { totalPoolShare: number; shiftsCount: number; displayName: string; restaurantId?: string }> = {};
       
       (sessions || []).forEach(session => {
         const sessionShifts = shiftsBySession[session.id] || [];
@@ -247,12 +250,13 @@ export function useStatistics(timeRange: TimeRange = 'month', customRange?: Cust
             additional_waiters: shift.additional_waiters || [],
           });
           allMembers.forEach((name: string) => {
-            const key = name.toLowerCase().trim();
-            if (!waiterTipMap[key]) {
-              waiterTipMap[key] = { totalPoolShare: 0, shiftsCount: 0, displayName: canonicalNames[key] || name };
+            const normalizedName = name.toLowerCase().trim();
+            const mapKey = isMultiRestaurant ? `${session.restaurant_id}_${normalizedName}` : normalizedName;
+            if (!waiterTipMap[mapKey]) {
+              waiterTipMap[mapKey] = { totalPoolShare: 0, shiftsCount: 0, displayName: canonicalNames[normalizedName] || name, restaurantId: isMultiRestaurant ? session.restaurant_id : undefined };
             }
-            waiterTipMap[key].totalPoolShare += sharePerWaiter;
-            waiterTipMap[key].shiftsCount += 1;
+            waiterTipMap[mapKey].totalPoolShare += sharePerWaiter;
+            waiterTipMap[mapKey].shiftsCount += 1;
           });
         });
       });
@@ -263,12 +267,13 @@ export function useStatistics(timeRange: TimeRange = 'month', customRange?: Cust
           totalTip: data.totalPoolShare,
           shiftsCount: data.shiftsCount,
           avgTipPerShift: data.shiftsCount > 0 ? data.totalPoolShare / data.shiftsCount : 0,
+          restaurantId: data.restaurantId,
         }))
         .sort((a, b) => b.totalTip - a.totalTip);
 
       // Calculate kitchen tip stats per person
       // For each session, calculate proportional tip based on hours worked
-      const kitchenTipMap: Record<string, { totalTip: number; totalHours: number; displayName: string }> = {};
+      const kitchenTipMap: Record<string, { totalTip: number; totalHours: number; displayName: string; restaurantId?: string }> = {};
       
       (sessions || []).forEach(session => {
         const sessionWaiterShifts = shiftsBySession[session.id] || [];
@@ -284,15 +289,16 @@ export function useStatistics(timeRange: TimeRange = 'month', customRange?: Cust
         
         if (totalHours > 0 && kitchenTipPool > 0) {
           sessionKitchenShifts.forEach((shift: any) => {
-            const key = shift.staff_name.toLowerCase().trim();
+            const normalizedName = shift.staff_name.toLowerCase().trim();
+            const mapKey = isMultiRestaurant ? `${session.restaurant_id}_${normalizedName}` : normalizedName;
             const hours = shift.hours_worked || 0;
             const personalTip = (hours / totalHours) * kitchenTipPool;
             
-            if (!kitchenTipMap[key]) {
-              kitchenTipMap[key] = { totalTip: 0, totalHours: 0, displayName: canonicalNames[key] || shift.staff_name };
+            if (!kitchenTipMap[mapKey]) {
+              kitchenTipMap[mapKey] = { totalTip: 0, totalHours: 0, displayName: canonicalNames[normalizedName] || shift.staff_name, restaurantId: isMultiRestaurant ? session.restaurant_id : undefined };
             }
-            kitchenTipMap[key].totalTip += personalTip;
-            kitchenTipMap[key].totalHours += hours;
+            kitchenTipMap[mapKey].totalTip += personalTip;
+            kitchenTipMap[mapKey].totalHours += hours;
           });
         }
       });
@@ -303,6 +309,7 @@ export function useStatistics(timeRange: TimeRange = 'month', customRange?: Cust
           totalTip: data.totalTip,
           totalHours: data.totalHours,
           avgTipPerHour: data.totalHours > 0 ? data.totalTip / data.totalHours : 0,
+          restaurantId: data.restaurantId,
         }))
         .sort((a, b) => b.totalTip - a.totalTip);
 
