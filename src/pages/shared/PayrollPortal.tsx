@@ -1025,6 +1025,13 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
     return t;
   }, [employees, shifts, additive]);
 
+  const totalCommission = useMemo(() => {
+    if (!commissionMap) return 0;
+    let sum = 0;
+    employees.forEach(emp => { sum += commissionMap.get(emp.id) ?? 0; });
+    return sum;
+  }, [employees, commissionMap]);
+
   let zebraIdx = 0;
   let lastDept: string | null = null;
 
@@ -1033,13 +1040,13 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
       <div className="flex items-center justify-between">
         <Badge variant="outline" className="text-xs">Modus: {sfnMode === "extended" ? "§3b EStG (erweitert)" : "Einfach"}</Badge>
         <div className="flex gap-1">
-          <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungPdf(periodLabel, employees, shifts, payrollNotes, sfnMode, holidayRates); toast.success("PDF erstellt"); }}>
+          <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungPdf(periodLabel, employees, shifts, payrollNotes, sfnMode, holidayRates, showCommission ? commissionMap : undefined); toast.success("PDF erstellt"); }}>
             <FileDown className="mr-1 h-4 w-4" /> PDF
           </Button>
-          <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungExcel(periodLabel, employees, shifts, payrollNotes, sfnMode, holidayRates); toast.success("Excel erstellt"); }}>
+          <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungExcel(periodLabel, employees, shifts, payrollNotes, sfnMode, holidayRates, showCommission ? commissionMap : undefined); toast.success("Excel erstellt"); }}>
             <FileSpreadsheet className="mr-1 h-4 w-4" /> Excel
           </Button>
-          <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungCsv(periodLabel, employees, shifts, payrollNotes, sfnMode, holidayRates); toast.success("CSV erstellt"); }}>
+          <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungCsv(periodLabel, employees, shifts, payrollNotes, sfnMode, holidayRates, showCommission ? commissionMap : undefined); toast.success("CSV erstellt"); }}>
             <FileDown className="mr-1 h-4 w-4" /> CSV
           </Button>
         </div>
@@ -1048,7 +1055,7 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm table-fixed">
-            <BuchhaltungTableHead sfnMode={sfnMode} />
+            <BuchhaltungTableHead sfnMode={sfnMode} showCommission={showCommission} />
             <tbody>
               {employees.map(emp => {
                 const showDeptHeader = emp.department !== lastDept;
@@ -1063,7 +1070,7 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
 
                 return (
                   <React.Fragment key={`${emp.id}-${emp.department}`}>
-                    {showDeptHeader && <BuchhaltungDeptHeader department={emp.department} sfnMode={sfnMode} />}
+                    {showDeptHeader && <BuchhaltungDeptHeader department={emp.department} sfnMode={sfnMode} showCommission={showCommission} />}
                     <BuchhaltungRow
                       emp={emp}
                       totals={totals}
@@ -1073,13 +1080,15 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
                       isEven={isEven}
                       isLocked={isLocked}
                       sfnMode={sfnMode}
+                      showCommission={showCommission}
+                      commission={commissionMap?.get(emp.id) ?? 0}
                       onUpsertNote={onUpsertNote}
                     />
                   </React.Fragment>
                 );
               })}
             </tbody>
-            {employees.length > 0 && <BuchhaltungFooter grandTotals={grandTotals} sfnMode={sfnMode} />}
+            {employees.length > 0 && <BuchhaltungFooter grandTotals={grandTotals} sfnMode={sfnMode} showCommission={showCommission} totalCommission={totalCommission} />}
           </table>
         </div>
       </Card>
