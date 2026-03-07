@@ -1,4 +1,5 @@
 import { useMemo, useCallback, useEffect, useState } from "react";
+import { useSelectedDate } from "@/contexts/DateContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,6 +37,7 @@ export default function ZtProvision() {
   const { restaurantId, restaurantSlug } = useRestaurant();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { setSelectedDate } = useSelectedDate();
   const { user } = useAuth();
   const isAdmin = hasPermission(user?.permissionLevel || 'staff', 'admin');
 
@@ -429,7 +431,7 @@ export default function ZtProvision() {
       {/* Summary cards */}
       {selectedPeriod && (
         <p className="text-sm text-muted-foreground">
-          Zeitraum: {new Date(selectedPeriod.start_date).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })} – {new Date(selectedPeriod.end_date).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" })} · ohne GL-Mitarbeiter
+          Zeitraum: {new Date(selectedPeriod.start_date).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })} – {new Date(selectedPeriod.end_date).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" })} · ohne reine GL-Mitarbeiter
         </p>
       )}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -499,7 +501,15 @@ export default function ZtProvision() {
                       >
                         {fmt(day.hours)}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">{fmt(day.revenue)}</TableCell>
+                      <TableCell
+                        className="text-right tabular-nums cursor-pointer hover:text-primary hover:underline underline-offset-4 transition-colors"
+                        onClick={() => {
+                          setSelectedDate(new Date(day.date + "T00:00:00"));
+                          navigate(`/${restaurantSlug}`);
+                        }}
+                      >
+                        {fmt(day.revenue)}
+                      </TableCell>
                       <TableCell className={`text-right tabular-nums font-medium ${belowThreshold ? "text-destructive" : "text-green-600 dark:text-green-400"}`}>
                         {fmt(avgPerStaff)}
                       </TableCell>
