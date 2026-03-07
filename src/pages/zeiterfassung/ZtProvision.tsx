@@ -205,7 +205,7 @@ export default function ZtProvision() {
     return Array.from(map.values()).map(e => ({ ...e, commission: 0 }));
   }, [filteredWaiterData]);
 
-  // Count unique sessions (days) and staffDays (using filtered data)
+  // Count unique sessions (days) and staffDays (using filtered data), including secondary waiters
   const { sessionCount, staffDays } = useMemo(() => {
     if (!filteredWaiterData.length) return { sessionCount: 0, staffDays: 0 };
     const dateStaffMap = new Map<string, Set<string>>();
@@ -216,13 +216,25 @@ export default function ZtProvision() {
       const key = ws.staff_id || ws.waiter_name;
       if (!dateStaffMap.has(date)) dateStaffMap.set(date, new Set());
       dateStaffMap.get(date)!.add(key);
+      // Count second_waiter_name
+      if (ws.second_waiter_name && !isGlByName(ws.second_waiter_name)) {
+        dateStaffMap.get(date)!.add(`second:${ws.second_waiter_name}`);
+      }
+      // Count additional_waiters
+      if (ws.additional_waiters?.length) {
+        for (const aw of ws.additional_waiters) {
+          if (aw && !isGlByName(aw)) {
+            dateStaffMap.get(date)!.add(`add:${aw}`);
+          }
+        }
+      }
     }
     let total = 0;
     for (const staff of dateStaffMap.values()) total += staff.size;
     return { sessionCount: dateStaffMap.size, staffDays: total };
-  }, [filteredWaiterData]);
+  }, [filteredWaiterData, isGlByName]);
 
-  // Daily breakdown (using filtered data)
+  // Daily breakdown (using filtered data), including secondary waiters in staff count
   const dailyBreakdown = useMemo<DayBreakdown[]>(() => {
     if (!filteredWaiterData.length) return [];
     const dayMap = new Map<string, { staffSet: Set<string>; hours: number; revenue: number }>();
@@ -236,11 +248,23 @@ export default function ZtProvision() {
       day.staffSet.add(key);
       day.hours += Number(ws.hours_worked) || 0;
       day.revenue += Number(ws.pos_sales) || 0;
+      // Count second_waiter_name
+      if (ws.second_waiter_name && !isGlByName(ws.second_waiter_name)) {
+        day.staffSet.add(`second:${ws.second_waiter_name}`);
+      }
+      // Count additional_waiters
+      if (ws.additional_waiters?.length) {
+        for (const aw of ws.additional_waiters) {
+          if (aw && !isGlByName(aw)) {
+            day.staffSet.add(`add:${aw}`);
+          }
+        }
+      }
     }
     return Array.from(dayMap.entries())
       .map(([date, d]) => ({ date, staffCount: d.staffSet.size, hours: d.hours, revenue: d.revenue }))
       .sort((a, b) => a.date.localeCompare(b.date));
-  }, [filteredWaiterData]);
+  }, [filteredWaiterData, isGlByName]);
 
   // Commission calculation
   const result = useMemo(() => {
