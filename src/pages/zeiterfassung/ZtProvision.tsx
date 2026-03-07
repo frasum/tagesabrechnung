@@ -32,6 +32,7 @@ type DayBreakdown = {
   staffNames: string[];
   hours: number;
   revenue: number;
+  allDeptHours: number;
 };
 
 export default function ZtProvision() {
@@ -170,6 +171,44 @@ export default function ZtProvision() {
     },
     enabled: !!selectedPeriod && !!restaurantId,
   });
+
+  // Fetch ALL zt_shifts (all departments) for hourly revenue calc
+  const { data: allDeptShiftsData } = useQuery({
+    queryKey: ["provision-all-dept-shifts", selectedPeriodId, restaurantId],
+    queryFn: async () => {
+      if (!selectedPeriod) return [];
+      // Get all staff for this restaurant
+      const { data: allStaff, error: srErr } = await supabase
+        .from("staff_restaurants")
+        .select("staff_id")
+        .eq("restaurant_id", restaurantId)
+        .not("zt_department", "is", null);
+      if (srErr) throw srErr;
+      const staffIds = allStaff?.map(s => s.staff_id) ?? [];
+      if (!staffIds.length) return [];
+
+      const { data, error } = await supabase
+        .from("zt_shifts")
+        .select("shift_date, total_hours")
+        .in("employee_id", staffIds)
+        .gte("shift_date", selectedPeriod.start_date)
+        .lte("shift_date", selectedPeriod.end_date);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedPeriod && !!restaurantId,
+  });
+
+  // Build allDeptHours by date
+  const allDeptHoursByDate = useMemo(() => {
+    const map = new Map<string, number>();
+    if (!allDeptShiftsData?.length) return map;
+    for (const s of allDeptShiftsData) {
+      const h = Number(s.total_hours) || 0;
+      map.set(s.shift_date, (map.get(s.shift_date) ?? 0) + h);
+    }
+    return map;
+  }, [allDeptShiftsData]);
 
   // Fetch staff roles to exclude GL
   const { data: staffRoles } = useQuery({
@@ -360,10 +399,10 @@ export default function ZtProvision() {
           const h = ztHoursByStaffDate.get(`${sid}:${date}`);
           if (h != null) { ztTotal += h; hasZt = true; }
         }
-        return { date, staffCount: d.staffSet.size, staffNames: Array.from(d.nameSet).sort(), hours: hasZt ? ztTotal : d.waiterHours, revenue: d.revenue };
+        return { date, staffCount: d.staffSet.size, staffNames: Array.from(d.nameSet).sort(), hours: hasZt ? ztTotal : d.waiterHours, revenue: d.revenue, allDeptHours: allDeptHoursByDate.get(date) ?? 0 };
       })
       .sort((a, b) => a.date.localeCompare(b.date));
-  }, [filteredWaiterData, isGlByName, ztHoursByStaffDate, staffNameToId]);
+  }, [filteredWaiterData, isGlByName, ztHoursByStaffDate, staffNameToId, allDeptHoursByDate]);
 
   // Commission calculation — day-by-day evaluation
   const result = useMemo(() => {
@@ -483,12 +522,14 @@ export default function ZtProvision() {
                   <TableHead className="text-right">Stunden (h)</TableHead>
                   <TableHead className="text-right">Umsatz (€)</TableHead>
                   <TableHead className="text-right">Ø / MA (€)</TableHead>
+                  <TableHead className="text-right">Ø €/h</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {dailyBreakdown.map((day) => {
                   const avgPerStaff = day.staffCount > 0 ? day.revenue / day.staffCount : 0;
                   const belowThreshold = avgPerStaff < minRevenue;
+                  const hourlyRevenue = day.allDeptHours > 0 ? day.revenue / day.allDeptHours : 0;
                   return (
                     <TableRow key={day.date}>
                       <TableCell className="font-medium">{fmtDate(day.date)}</TableCell>
@@ -526,6 +567,9 @@ export default function ZtProvision() {
                       <TableCell className={`text-right tabular-nums font-medium ${belowThreshold ? "text-destructive" : "text-green-600 dark:text-green-400"}`}>
                         {fmt(avgPerStaff)}
                       </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {day.allDeptHours > 0 ? fmt(hourlyRevenue) : "–"}
+                      </TableCell>
                     </TableRow>
                   );
                 })}
@@ -544,6 +588,13 @@ export default function ZtProvision() {
                   </TableCell>
                   <TableCell className="text-right tabular-nums font-semibold">
                     {fmt(result.avgRevenue)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums font-semibold">
+                    {(() => {
+                      const totalRev = dailyBreakdown.reduce((s, d) => s + d.revenue, 0);
+                      const totalAllH = dailyBreakdown.reduce((s, d) => s + d.allDeptHours, 0);
+                      return totalAllH > 0 ? fmt(totalRev / totalAllH) : "–";
+                    })()}
                   </TableCell>
                 </TableRow>
               </TableFooter>
