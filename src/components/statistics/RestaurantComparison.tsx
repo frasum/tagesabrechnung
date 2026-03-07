@@ -126,13 +126,24 @@ export function RestaurantComparison({ restaurants }: RestaurantComparisonProps)
     ];
   }, [a, b]);
 
-  if (!a || !b) return null;
-
   const totalSummary = useMemo(() => {
     if (!a || !b) return null;
     const sa = a.summary;
     const sb = b.summary;
     return {
+      totalRevenue: sa.totalRevenue + sb.totalRevenue,
+      avgDailyRevenue: sa.avgDailyRevenue + sb.avgDailyRevenue,
+      totalKitchenTip: sa.totalKitchenTip + sb.totalKitchenTip,
+      totalWaiterTip: sa.totalWaiterTip + sb.totalWaiterTip,
+      totalDelivery: sa.totalDelivery + sb.totalDelivery,
+      totalExpenses: sa.totalExpenses + sb.totalExpenses,
+      daysWithData: Math.max(sa.daysWithData, sb.daysWithData),
+    };
+  }, [a, b]);
+
+  if (!a || !b) return null;
+
+  return (
       totalRevenue: sa.totalRevenue + sb.totalRevenue,
       avgDailyRevenue: sa.avgDailyRevenue + sb.avgDailyRevenue,
       totalKitchenTip: sa.totalKitchenTip + sb.totalKitchenTip,
