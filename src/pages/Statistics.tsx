@@ -502,7 +502,7 @@ export default function Statistics() {
                           <stop offset="5%" stopColor="hsl(var(--chart-1))" stopOpacity={0.3}/>
                           <stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity={0}/>
                         </linearGradient>
-                        <linearGradient id="colorBargeld" x1="0" y1="0" x2="0" y2="1">
+                        <linearGradient id="colorKreditkarten" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.3}/>
                           <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0}/>
                         </linearGradient>
@@ -534,10 +534,10 @@ export default function Statistics() {
                       />
                       <Area 
                         type="monotone" 
-                        dataKey="bargeld" 
-                        name="BARGELD"
+                        dataKey="kreditkarten" 
+                        name="Kreditkarten"
                         stroke="hsl(var(--chart-2))" 
-                        fill="url(#colorBargeld)"
+                        fill="url(#colorKreditkarten)"
                         strokeWidth={2}
                       />
                       <Area 

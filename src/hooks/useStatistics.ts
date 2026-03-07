@@ -9,7 +9,7 @@ export interface DailyStats {
   kitchenTip: number;
   waiterTip: number;
   deliveryRevenue: number;
-  bargeld: number;
+  kreditkarten: number;
   expenses: number;
 }
 
@@ -167,20 +167,11 @@ export function useStatistics(timeRange: TimeRange = 'month', customRange?: Cust
           (session.wolt_revenue || 0) +
           (session.takeaway_total || 0);
 
-        // BARGELD calculation - uses pos_total (Vectron total) as base
-        const bargeld = (session.pos_total || 0) +
-          (session.vouchers_sold || 0) +
-          (session.sonstige_einnahme || 0) -
-          (session.terminal_1_total || 0) -
-          (session.terminal_2_total || 0) -
-          (session.ordersmart_revenue || 0) -
-          (session.wolt_revenue || 0) -
-          (session.vouchers_redeemed || 0) -
-          (session.finedine_vouchers || 0) -
-          (session.einladung || 0) -
-          totalOpenInvoices -
-          (session.vorschuss || 0) -
-          totalExpenses;
+        // Kreditkarten = alle unbaren Zahlungen (Terminals + Wolt + OrderSmart)
+        const kreditkarten = (session.terminal_1_total || 0) +
+          (session.terminal_2_total || 0) +
+          (session.ordersmart_revenue || 0) +
+          (session.wolt_revenue || 0);
 
         return {
           date: session.session_date,
@@ -188,7 +179,7 @@ export function useStatistics(timeRange: TimeRange = 'month', customRange?: Cust
           kitchenTip,
           waiterTip,
           deliveryRevenue,
-          bargeld,
+          kreditkarten,
           expenses: totalExpenses,
         };
       });
