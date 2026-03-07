@@ -1,24 +1,25 @@
 
 
-## Tooltips für erweiterten SFN-Modus anpassen
+# Ø Stundenumsatz in Tagesdetails — alle Abteilungen
 
-Aktuell zeigen die Tooltips nur den Zuschlagsprozentsatz. Im erweiterten (§3b) Modus sollen sie zusätzlich erklären, dass die Zuschläge additiv berechnet werden.
+## Ziel
+Neue Spalte "Ø €/h" in der Tagesdetails-Tabelle, die den **Stundenumsatz** pro Tag zeigt: `Tagesumsatz ÷ Gesamtstunden aller Mitarbeiter (Service + Küche + GL)`.
 
-### Änderung in `src/components/zeiterfassung/SfnTooltipHeader.tsx`
+## Änderungen
 
-- Neues optionales Prop `sfnMode?: SfnMode` hinzufügen
-- Zwei Tooltip-Text-Sets: eins für "simple", eins für "extended"
-- Im Extended-Modus erklären die Tooltips die additive Logik:
+### `src/pages/zeiterfassung/ZtProvision.tsx`
 
-| Spalte | Simple | Extended |
-|--------|--------|----------|
-| 20–24 | 25 % Nachtzuschlag | 25 % Nachtzuschlag (20:00–00:00) — additiv zu So/Fei-Zuschlägen |
-| 24–x | 40 % Nachtzuschlag | 40 % Nachtzuschlag (00:00–04:00) — additiv zu So/Fei-Zuschlägen |
-| So/Fei | 50 % Sonn- und Feiertagszuschlag | *(nicht im Extended-Modus)* |
-| So | *(nicht im Simple-Modus)* | 50 % Sonntagszuschlag (§3b EStG) |
-| Fei | *(nicht im Simple-Modus)* | 125 % Feiertag / 150 % besondere Feiertage (1. Mai, 25./26.12.) |
+1. **Neuer Query**: Alle `zt_shifts` für den Periodenzeitraum laden (ohne Department-Filter), gruppiert nach `shift_date` → `Map<date, totalAllHours>`
 
-### Aufrufer anpassen
+2. **DayBreakdown-Typ erweitern**: Neues Feld `allHours: number` (Stunden aller Abteilungen)
 
-`BuchhaltungTableHead.tsx`, `ZtWochenplan.tsx`, `ZtZusammenfassung.tsx` — das `sfnMode`-Prop an `SfnTooltipHeader` durchreichen, wo es bereits verfügbar ist.
+3. **dailyBreakdown-Memo**: Für jeden Tag die Gesamtstunden aus dem neuen Query einsetzen
+
+4. **Tabelle**: Neue Spalte "Ø €/h" nach "Ø / MA (€)" — zeigt `revenue / allHours`
+
+5. **Footer**: Durchschnitt oder Gesamt-Ø anzeigen
+
+### Kein DB-Änderungsbedarf
+
+Die Daten kommen aus der bestehenden `zt_shifts`-Tabelle, nur ohne Department-Filter.
 
