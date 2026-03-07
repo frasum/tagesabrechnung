@@ -117,12 +117,14 @@ export function exportBuchhaltungCsv(
   shifts: Shift[],
   payrollNotes: PayrollNote[],
   sfnMode: SfnMode = "simple",
-  holidayRates?: Map<string, number>
+  holidayRates?: Map<string, number>,
+  commissionMap?: Map<string, number>
 ) {
   const additive = sfnMode === "extended";
   const sorted = sortEmployees(employees);
+  const hasCommission = !!commissionMap;
   const sfnHeaders = additive ? ["20-24", "24-x", "So", "Fei 125%", "Fei 150%"] : ["20-24", "24-x", "So/Fei"];
-  const headers = ["Mitarbeiter", "Abteilung", "Gesamt Std.", "Schichten", ...sfnHeaders, "Urlaub", "Krank", "Vorschuss", "Besonderheiten"];
+  const headers = ["Mitarbeiter", "Abteilung", "Gesamt Std.", "Schichten", ...sfnHeaders, "Urlaub", "Krank", ...(hasCommission ? ["Provision"] : []), "Vorschuss", "Besonderheiten"];
   const rows: (string | number)[][] = [];
 
   for (const emp of sorted) {
@@ -147,7 +149,8 @@ export function exportBuchhaltungCsv(
       ? [t.evening, t.night, t.sonntagStunden, t.feiertag125, t.feiertag150]
       : [t.evening, t.night, t.soFeiStunden];
 
-    rows.push([empDisplayName(emp), emp.department, t.gesamt, t.schichten, ...sfnCells, t.urlaubTage, t.krankTage, note?.vorschuss || 0, besText]);
+    const commission = commissionMap?.get(emp.id) ?? 0;
+    rows.push([empDisplayName(emp), emp.department, t.gesamt, t.schichten, ...sfnCells, t.urlaubTage, t.krankTage, ...(hasCommission ? [commission] : []), note?.vorschuss || 0, besText]);
   }
 
   downloadCsv(`Buchhaltung_${periodLabel.replace(/\s+/g, "_")}.csv`, headers, rows);

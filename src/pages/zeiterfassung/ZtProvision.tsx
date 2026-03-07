@@ -8,6 +8,8 @@ import { useRestaurant } from "@/hooks/useRestaurant";
 import { useAuth } from "@/contexts/AuthContext";
 import { hasPermission } from "@/types/permissions";
 import { CurrencyInput } from "@/components/shared/CurrencyInput";
+import { Switch } from "@/components/ui/switch";
+import { useCommissionAddToGross } from "@/hooks/useSettings";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -40,6 +42,7 @@ export default function ZtProvision() {
   const { setSelectedDate } = useSelectedDate();
   const { user } = useAuth();
   const isAdmin = hasPermission(user?.permissionLevel || 'staff', 'admin');
+  const { commissionAddToGross, updateCommissionAddToGross } = useCommissionAddToGross(restaurantId);
 
   const selectedPeriod = periods?.find(p => p.id === selectedPeriodId);
 
@@ -424,7 +427,13 @@ export default function ZtProvision() {
               onBlur={handleCommissionPctBlur}
               suffix="%"
             />
-          </div>
+        </div>
+        <div className="flex items-center gap-2 self-end pb-0.5">
+          <Switch
+            checked={commissionAddToGross}
+            onCheckedChange={(checked) => updateCommissionAddToGross({ enabled: checked, restaurantId })}
+          />
+          <label className="text-sm font-medium text-foreground">Provision zum Brutto addieren</label>
         </div>
       </div>
 
