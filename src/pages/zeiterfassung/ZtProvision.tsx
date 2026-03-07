@@ -244,13 +244,29 @@ export default function ZtProvision() {
           waiterHours: Number(ws.hours_worked) || 0,
         });
       }
+      // Add secondary waiters as separate entries (0 revenue, hours from zt_shifts)
+      const secondaryNames: string[] = [];
+      if (ws.second_waiter_name && !isGlByName(ws.second_waiter_name)) {
+        secondaryNames.push(ws.second_waiter_name);
+      }
+      if (ws.additional_waiters?.length) {
+        for (const aw of ws.additional_waiters) {
+          if (aw && !isGlByName(aw)) secondaryNames.push(aw);
+        }
+      }
+      for (const name of secondaryNames) {
+        const sid = staffNameToId.get(name.toLowerCase()) ?? null;
+        const sKey = sid || `secondary:${name}`;
+        if (!map.has(sKey)) {
+          map.set(sKey, { staffId: sid, name, revenue: 0, waiterHours: 0 });
+        }
+      }
     }
     return Array.from(map.values()).map(e => {
-      // Prefer zt_shifts hours if available for this staff member
       const ztHours = e.staffId ? ztHoursByStaff.get(e.staffId) : undefined;
       return { ...e, hours: ztHours ?? e.waiterHours, commission: 0 };
     });
-  }, [filteredWaiterData, ztHoursByStaff]);
+  }, [filteredWaiterData, ztHoursByStaff, isGlByName, staffNameToId]);
 
   // Count unique sessions (days) and staffDays (using filtered data), including secondary waiters
   const { sessionCount, staffDays } = useMemo(() => {
