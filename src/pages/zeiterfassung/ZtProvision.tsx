@@ -206,33 +206,51 @@ export default function ZtProvision() {
     return id ? glStaffIds.has(id) : false;
   }, [staffNameToId, glStaffIds]);
 
+  // Build zt_shifts lookup: staffId → total hours, and staffId+date → hours
+  const { ztHoursByStaff, ztHoursByStaffDate } = useMemo(() => {
+    const byStaff = new Map<string, number>();
+    const byStaffDate = new Map<string, number>();
+    if (!ztShiftsData?.length) return { ztHoursByStaff: byStaff, ztHoursByStaffDate: byStaffDate };
+    for (const s of ztShiftsData) {
+      const h = Number(s.total_hours) || 0;
+      byStaff.set(s.employee_id, (byStaff.get(s.employee_id) ?? 0) + h);
+      const key = `${s.employee_id}:${s.shift_date}`;
+      byStaffDate.set(key, (byStaffDate.get(key) ?? 0) + h);
+    }
+    return { ztHoursByStaff: byStaff, ztHoursByStaffDate: byStaffDate };
+  }, [ztShiftsData]);
+
   // Filter out GL staff from waiter data
   const filteredWaiterData = useMemo(() => {
     if (!waiterData?.length) return [];
     return waiterData.filter(ws => !ws.staff_id || !glStaffIds.has(ws.staff_id));
   }, [waiterData, glStaffIds]);
 
-  // Aggregate by staff (using filtered data)
+  // Aggregate by staff (using filtered data), prefer zt_shifts hours
   const aggregated = useMemo<WaiterAggregate[]>(() => {
     if (!filteredWaiterData.length) return [];
-    const map = new Map<string, { staffId: string | null; name: string; revenue: number; hours: number }>();
+    const map = new Map<string, { staffId: string | null; name: string; revenue: number; waiterHours: number }>();
     for (const ws of filteredWaiterData) {
       const key = ws.staff_id || ws.waiter_name;
       const existing = map.get(key);
       if (existing) {
         existing.revenue += Number(ws.pos_sales) || 0;
-        existing.hours += Number(ws.hours_worked) || 0;
+        existing.waiterHours += Number(ws.hours_worked) || 0;
       } else {
         map.set(key, {
           staffId: ws.staff_id,
           name: ws.waiter_name,
           revenue: Number(ws.pos_sales) || 0,
-          hours: Number(ws.hours_worked) || 0,
+          waiterHours: Number(ws.hours_worked) || 0,
         });
       }
     }
-    return Array.from(map.values()).map(e => ({ ...e, commission: 0 }));
-  }, [filteredWaiterData]);
+    return Array.from(map.values()).map(e => {
+      // Prefer zt_shifts hours if available for this staff member
+      const ztHours = e.staffId ? ztHoursByStaff.get(e.staffId) : undefined;
+      return { ...e, hours: ztHours ?? e.waiterHours, commission: 0 };
+    });
+  }, [filteredWaiterData, ztHoursByStaff]);
 
   // Count unique sessions (days) and staffDays (using filtered data), including secondary waiters
   const { sessionCount, staffDays } = useMemo(() => {
