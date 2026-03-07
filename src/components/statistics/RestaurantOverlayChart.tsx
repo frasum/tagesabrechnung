@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp } from 'lucide-react';
 import type { DailyStats } from '@/hooks/useStatistics';
@@ -63,7 +63,17 @@ export function RestaurantOverlayChart({ nameA, nameB, dailyStatsA, dailyStatsB 
       <CardContent>
         <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={mergedData}>
+            <AreaChart data={mergedData}>
+              <defs>
+                <linearGradient id="gradA" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="hsl(var(--chart-1))" stopOpacity={0.25} />
+                  <stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="gradB" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.25} />
+                  <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0} />
+                </linearGradient>
+              </defs>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis
                 dataKey="dateFormatted"
@@ -96,27 +106,29 @@ export function RestaurantOverlayChart({ nameA, nameB, dailyStatsA, dailyStatsB 
                 }}
               />
               <Legend />
-              <Line
+              <Area
                 type="monotone"
                 dataKey="valueA"
                 name={nameA}
                 stroke="hsl(var(--chart-1))"
-                strokeWidth={2.5}
-                dot={{ r: 3, fill: 'hsl(var(--chart-1))' }}
-                activeDot={{ r: 5 }}
+                strokeWidth={3}
+                fill="url(#gradA)"
+                dot={{ r: 4, fill: 'hsl(var(--chart-1))', strokeWidth: 0 }}
+                activeDot={{ r: 6 }}
                 connectNulls
               />
-              <Line
+              <Area
                 type="monotone"
                 dataKey="valueB"
                 name={nameB}
                 stroke="hsl(var(--chart-2))"
-                strokeWidth={2.5}
-                dot={{ r: 3, fill: 'hsl(var(--chart-2))' }}
-                activeDot={{ r: 5 }}
+                strokeWidth={3}
+                fill="url(#gradB)"
+                dot={{ r: 4, fill: 'hsl(var(--chart-2))', strokeWidth: 0 }}
+                activeDot={{ r: 6 }}
                 connectNulls
               />
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         </div>
       </CardContent>
