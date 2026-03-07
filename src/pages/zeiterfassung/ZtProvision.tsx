@@ -522,7 +522,16 @@ export default function ZtProvision() {
                   <TableHead className="text-right">Stunden (h)</TableHead>
                   <TableHead className="text-right">Umsatz (€)</TableHead>
                   <TableHead className="text-right">Ø / MA (€)</TableHead>
-                  <TableHead className="text-right">Ø €/h Service/Küche & GL</TableHead>
+                   <TableHead className="text-right">
+                     <TooltipProvider>
+                       <Tooltip>
+                         <TooltipTrigger asChild>
+                           <span className="cursor-help underline decoration-dotted underline-offset-4">Ø €/h (alle)</span>
+                         </TooltipTrigger>
+                         <TooltipContent side="top">Umsatz pro Stunde · inkl. Service, Küche & GL</TooltipContent>
+                       </Tooltip>
+                     </TooltipProvider>
+                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -567,9 +576,9 @@ export default function ZtProvision() {
                       <TableCell className={`text-right tabular-nums font-medium ${belowThreshold ? "text-destructive" : "text-green-600 dark:text-green-400"}`}>
                         {fmt(avgPerStaff)}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {day.allDeptHours > 0 ? fmt(hourlyRevenue) : "–"}
-                      </TableCell>
+                       <TableCell className="text-right tabular-nums">
+                         {day.allDeptHours > 0 ? `${fmt(hourlyRevenue)} €` : "–"}
+                       </TableCell>
                     </TableRow>
                   );
                 })}
@@ -589,13 +598,13 @@ export default function ZtProvision() {
                   <TableCell className="text-right tabular-nums font-semibold">
                     {fmt(result.avgRevenue)}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums font-semibold">
-                    {(() => {
-                      const totalRev = dailyBreakdown.reduce((s, d) => s + d.revenue, 0);
-                      const totalAllH = dailyBreakdown.reduce((s, d) => s + d.allDeptHours, 0);
-                      return totalAllH > 0 ? fmt(totalRev / totalAllH) : "–";
-                    })()}
-                  </TableCell>
+                   <TableCell className="text-right tabular-nums font-semibold">
+                     {(() => {
+                       const totalRev = dailyBreakdown.reduce((s, d) => s + d.revenue, 0);
+                       const totalAllH = dailyBreakdown.reduce((s, d) => s + d.allDeptHours, 0);
+                       return totalAllH > 0 ? `${fmt(totalRev / totalAllH)} €` : "–";
+                     })()}
+                   </TableCell>
                 </TableRow>
               </TableFooter>
             </Table>
