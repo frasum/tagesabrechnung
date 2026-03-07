@@ -376,6 +376,71 @@ export default function Statistics() {
                   { name: restA.name, summary: dataA.summary },
                   { name: restB.name, summary: dataB.summary },
                 ]} />
+
+                {/* Side-by-side tip charts per restaurant */}
+                <div className="grid lg:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+                          <Users className="w-5 h-5 text-primary" />
+                        </div>
+                        Trinkgeld – {restA.name}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-[280px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={dataA.dailyStats.map(d => ({
+                            dateFormatted: format(new Date(d.date), 'dd.MM', { locale: de }),
+                            date: d.date,
+                            'Küchen TG': d.kitchenTip,
+                            'Service TG': d.waiterTip,
+                          }))}>
+                            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                            <XAxis dataKey="dateFormatted" className="text-xs fill-muted-foreground" tick={{ fontSize: 11 }} />
+                            <YAxis className="text-xs fill-muted-foreground" tick={{ fontSize: 11 }} tickFormatter={formatShortCurrency} />
+                            <Tooltip content={<CustomTooltip />} />
+                            <Legend />
+                            <Bar dataKey="Küchen TG" stackId="tips" fill="hsl(var(--chart-3))" radius={[0, 0, 0, 0]} />
+                            <Bar dataKey="Service TG" stackId="tips" fill="hsl(var(--chart-4))" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+                          <Users className="w-5 h-5 text-primary" />
+                        </div>
+                        Trinkgeld – {restB.name}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-[280px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={dataB.dailyStats.map(d => ({
+                            dateFormatted: format(new Date(d.date), 'dd.MM', { locale: de }),
+                            date: d.date,
+                            'Küchen TG': d.kitchenTip,
+                            'Service TG': d.waiterTip,
+                          }))}>
+                            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                            <XAxis dataKey="dateFormatted" className="text-xs fill-muted-foreground" tick={{ fontSize: 11 }} />
+                            <YAxis className="text-xs fill-muted-foreground" tick={{ fontSize: 11 }} tickFormatter={formatShortCurrency} />
+                            <Tooltip content={<CustomTooltip />} />
+                            <Legend />
+                            <Bar dataKey="Küchen TG" stackId="tips" fill="hsl(var(--chart-3))" radius={[0, 0, 0, 0]} />
+                            <Bar dataKey="Service TG" stackId="tips" fill="hsl(var(--chart-4))" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               </>
             )}
 
