@@ -1,24 +1,24 @@
 
 
-## Tooltips für erweiterten SFN-Modus anpassen
+## Problem
 
-Aktuell zeigen die Tooltips nur den Zuschlagsprozentsatz. Im erweiterten (§3b) Modus sollen sie zusätzlich erklären, dass die Zuschläge additiv berechnet werden.
+Die Statistik-Seite nutzt `restaurantId` aus dem URL-/Navigationskontext als Fallback (Zeile 124: `selectedRestaurantId || restaurantId`). Wenn im Statistik-Tab z.B. "YUM" gewählt wird, aber in der Navigation "Spicery" aktiv ist, kann es zu Konflikten kommen.
 
-### Änderung in `src/components/zeiterfassung/SfnTooltipHeader.tsx`
+## Lösung
 
-- Neues optionales Prop `sfnMode?: SfnMode` hinzufügen
-- Zwei Tooltip-Text-Sets: eins für "simple", eins für "extended"
-- Im Extended-Modus erklären die Tooltips die additive Logik:
+Den Fallback auf `restaurantId` aus der Navigation entfernen. Stattdessen soll der `statsMode` beim Laden der Seite auf das erste verfügbare Restaurant oder `'all'` initialisiert werden – unabhängig davon, welches Restaurant in der Navigation gewählt ist.
 
-| Spalte | Simple | Extended |
-|--------|--------|----------|
-| 20–24 | 25 % Nachtzuschlag | 25 % Nachtzuschlag (20:00–00:00) — additiv zu So/Fei-Zuschlägen |
-| 24–x | 40 % Nachtzuschlag | 40 % Nachtzuschlag (00:00–04:00) — additiv zu So/Fei-Zuschlägen |
-| So/Fei | 50 % Sonn- und Feiertagszuschlag | *(nicht im Extended-Modus)* |
-| So | *(nicht im Simple-Modus)* | 50 % Sonntagszuschlag (§3b EStG) |
-| Fei | *(nicht im Simple-Modus)* | 125 % Feiertag / 150 % besondere Feiertage (1. Mai, 25./26.12.) |
+### Änderungen in `src/pages/Statistics.tsx`
 
-### Aufrufer anpassen
+1. **Fallback entfernen** – Zeile 124 und 129: `restaurantId` nicht mehr als Fallback verwenden:
+   ```tsx
+   // Vorher:
+   isMultiMode ? undefined : (selectedRestaurantId || restaurantId)
+   // Nachher:
+   isMultiMode ? undefined : selectedRestaurantId
+   ```
 
-`BuchhaltungTableHead.tsx`, `ZtWochenplan.tsx`, `ZtZusammenfassung.tsx` — das `sfnMode`-Prop an `SfnTooltipHeader` durchreichen, wo es bereits verfügbar ist.
+2. **Default-Initialisierung anpassen** – `statsMode` startet bereits mit `'all'` (Zeile 97), was korrekt ist. Die Tabs (Zeile 224) setzen den Modus direkt auf die Restaurant-ID. Damit ist die Statistik-Auswahl vollständig unabhängig von der Navigation.
+
+3. **Labels-Hook** – Zeile 141 (`useLabels(restaurantId)`) ebenfalls auf `selectedRestaurantId` umstellen, damit Labels zum gewählten Statistik-Restaurant passen.
 
