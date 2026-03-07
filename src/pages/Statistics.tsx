@@ -121,12 +121,12 @@ export default function Statistics() {
 
   const { data, isLoading: statsLoading } = useStatistics(
     timeRange, customRange,
-    isMultiMode ? undefined : (selectedRestaurantId || restaurantId),
+    isMultiMode ? undefined : selectedRestaurantId,
     multiReady ? allRestaurantIds : undefined
   );
   const { data: comparisonData, isLoading: comparisonLoading } = useStatisticsComparison(
     timeRange, customRange,
-    isMultiMode ? undefined : (selectedRestaurantId || restaurantId),
+    isMultiMode ? undefined : selectedRestaurantId,
     multiReady ? allRestaurantIds : undefined
   );
 
@@ -138,7 +138,7 @@ export default function Statistics() {
 
   const isLoading = statsLoading || (isMultiMode && allRestaurantIds.length === 0);
 
-  const { getLabel } = useLabels(restaurantId);
+  const { getLabel } = useLabels(selectedRestaurantId ?? null);
 
   const handleTimeRangeChange = (value: string) => {
     const newRange = value as TimeRange;
