@@ -24,6 +24,7 @@ export default function ZtProvision() {
   const selectedPeriod = periods?.find(p => p.id === selectedPeriodId);
 
   const [minRevenue, setMinRevenue] = useState(1200);
+  const [commissionPct, setCommissionPct] = useState(5);
 
   // Load saved threshold from settings
   const { data: savedThreshold } = useQuery({
@@ -40,12 +41,34 @@ export default function ZtProvision() {
     enabled: !!restaurantId,
   });
 
+  const { data: savedPct } = useQuery({
+    queryKey: ["settings", "commission_pct", restaurantId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("settings")
+        .select("value")
+        .eq("key", "commission_pct")
+        .eq("restaurant_id", restaurantId)
+        .maybeSingle();
+      return (data?.value as any)?.pct ?? 5;
+    },
+    enabled: !!restaurantId,
+  });
+
   useEffect(() => {
     if (savedThreshold != null) setMinRevenue(savedThreshold);
   }, [savedThreshold]);
 
+  useEffect(() => {
+    if (savedPct != null) setCommissionPct(savedPct);
+  }, [savedPct]);
+
   const handleMinRevenueChange = useCallback((val: number) => {
     setMinRevenue(val);
+  }, []);
+
+  const handleCommissionPctChange = useCallback((val: number) => {
+    setCommissionPct(val);
   }, []);
 
   const handleMinRevenueBlur = useCallback(async () => {
@@ -63,6 +86,22 @@ export default function ZtProvision() {
     }
     queryClient.invalidateQueries({ queryKey: ["settings", "commission_min_revenue", restaurantId] });
   }, [minRevenue, restaurantId, queryClient]);
+
+  const handleCommissionPctBlur = useCallback(async () => {
+    const { data: existing } = await supabase
+      .from("settings")
+      .select("id")
+      .eq("key", "commission_pct")
+      .eq("restaurant_id", restaurantId)
+      .maybeSingle();
+
+    if (existing) {
+      await supabase.from("settings").update({ value: { pct: commissionPct } }).eq("id", existing.id);
+    } else {
+      await supabase.from("settings").insert({ key: "commission_pct", value: { pct: commissionPct }, restaurant_id: restaurantId });
+    }
+    queryClient.invalidateQueries({ queryKey: ["settings", "commission_pct", restaurantId] });
+  }, [commissionPct, restaurantId, queryClient]);
 
   // Fetch waiter shifts for the selected period date range
   const { data: waiterData, isLoading } = useQuery({
@@ -131,7 +170,7 @@ export default function ZtProvision() {
     let pool = 0;
     if (thresholdMet) {
       const excess = totalRevenue - (minRevenue * staffDays);
-      pool = Math.max(0, excess * 0.05);
+      pool = Math.max(0, excess * (commissionPct / 100));
     }
 
     const hourlyRate = totalHours > 0 ? pool / totalHours : 0;
@@ -143,7 +182,7 @@ export default function ZtProvision() {
     const totalCommission = withCommission.reduce((s, w) => s + w.commission, 0);
 
     return { staffCount, totalRevenue, totalHours, avgRevenue, thresholdMet, pool, withCommission, totalCommission, sessionCount, staffDays };
-  }, [aggregated, minRevenue, sessionCount, staffDays]);
+  }, [aggregated, minRevenue, commissionPct, sessionCount, staffDays]);
 
   const fmt = (n: number) => n.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -152,12 +191,23 @@ export default function ZtProvision() {
       {/* Threshold input */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
         <div className="space-y-1">
-          <label className="text-sm font-medium text-foreground">Mindest-Durchschnittsumsatz / Tag / MA</label>
+          <label className="text-sm font-medium text-foreground">Mindest-Ø-Umsatz / Tag / MA</label>
           <div className="w-48">
             <CurrencyInput
               value={minRevenue}
               onChange={handleMinRevenueChange}
               onBlur={handleMinRevenueBlur}
+            />
+          </div>
+        </div>
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-foreground">Provisionssatz</label>
+          <div className="w-32">
+            <CurrencyInput
+              value={commissionPct}
+              onChange={handleCommissionPctChange}
+              onBlur={handleCommissionPctBlur}
+              suffix="%"
             />
           </div>
         </div>
