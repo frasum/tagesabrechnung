@@ -281,22 +281,23 @@ export default function ZtProvision() {
     return { sessionCount: dateStaffMap.size, staffDays: total };
   }, [filteredWaiterData, isGlByName]);
 
-  // Daily breakdown (using filtered data), including secondary waiters in staff count
+  // Daily breakdown (using filtered data), prefer zt_shifts hours per staff/day
   const dailyBreakdown = useMemo<DayBreakdown[]>(() => {
     if (!filteredWaiterData.length) return [];
-    const dayMap = new Map<string, { staffSet: Set<string>; nameSet: Set<string>; hours: number; revenue: number }>();
+    const dayMap = new Map<string, { staffSet: Set<string>; nameSet: Set<string>; waiterHours: number; revenue: number; staffIdsOnDate: Set<string> }>();
     for (const ws of filteredWaiterData) {
       const session = ws.sessions as any;
       const date = session?.session_date;
       if (!date) continue;
       const key = ws.staff_id || ws.waiter_name;
-      if (!dayMap.has(date)) dayMap.set(date, { staffSet: new Set(), nameSet: new Set(), hours: 0, revenue: 0 });
+      if (!dayMap.has(date)) dayMap.set(date, { staffSet: new Set(), nameSet: new Set(), waiterHours: 0, revenue: 0, staffIdsOnDate: new Set() });
       const day = dayMap.get(date)!;
       if (!day.staffSet.has(key)) {
         day.staffSet.add(key);
         day.nameSet.add(ws.waiter_name);
+        if (ws.staff_id) day.staffIdsOnDate.add(ws.staff_id);
       }
-      day.hours += Number(ws.hours_worked) || 0;
+      day.waiterHours += Number(ws.hours_worked) || 0;
       day.revenue += Number(ws.pos_sales) || 0;
       if (ws.second_waiter_name && !isGlByName(ws.second_waiter_name)) {
         const sKey = `second:${ws.second_waiter_name}`;
@@ -318,9 +319,18 @@ export default function ZtProvision() {
       }
     }
     return Array.from(dayMap.entries())
-      .map(([date, d]) => ({ date, staffCount: d.staffSet.size, staffNames: Array.from(d.nameSet).sort(), hours: d.hours, revenue: d.revenue }))
+      .map(([date, d]) => {
+        // Sum zt_shifts hours for all staff on this date, fall back to waiter hours
+        let ztTotal = 0;
+        let hasZt = false;
+        for (const sid of d.staffIdsOnDate) {
+          const h = ztHoursByStaffDate.get(`${sid}:${date}`);
+          if (h != null) { ztTotal += h; hasZt = true; }
+        }
+        return { date, staffCount: d.staffSet.size, staffNames: Array.from(d.nameSet).sort(), hours: hasZt ? ztTotal : d.waiterHours, revenue: d.revenue };
+      })
       .sort((a, b) => a.date.localeCompare(b.date));
-  }, [filteredWaiterData, isGlByName]);
+  }, [filteredWaiterData, isGlByName, ztHoursByStaffDate]);
 
   // Commission calculation
   const result = useMemo(() => {
