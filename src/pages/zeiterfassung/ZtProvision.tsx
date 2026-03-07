@@ -120,7 +120,7 @@ export default function ZtProvision() {
       if (!selectedPeriod) return [];
       const { data, error } = await supabase
         .from("waiter_shifts")
-        .select("staff_id, waiter_name, pos_sales, hours_worked, sessions!inner(session_date, restaurant_id)")
+        .select("staff_id, waiter_name, second_waiter_name, additional_waiters, pos_sales, hours_worked, sessions!inner(session_date, restaurant_id)")
         .eq("sessions.restaurant_id", restaurantId)
         .gte("sessions.session_date", selectedPeriod.start_date)
         .lte("sessions.session_date", selectedPeriod.end_date);
