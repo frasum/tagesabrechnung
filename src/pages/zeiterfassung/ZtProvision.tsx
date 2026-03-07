@@ -451,6 +451,9 @@ export default function ZtProvision() {
         <div className="rounded-lg border border-border bg-card p-4">
           <p className="text-xs text-muted-foreground">Σ Provisionen</p>
           <p className="text-lg font-semibold tabular-nums">{fmt(result.totalCommission)} €</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {fmt(result.totalHours > 0 ? result.totalCommission / result.totalHours : 0)} € / Stunde
+          </p>
         </div>
       </div>
 
