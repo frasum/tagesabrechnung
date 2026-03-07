@@ -532,6 +532,7 @@ export default function ZtProvision() {
                        </Tooltip>
                      </TooltipProvider>
                    </TableHead>
+                  <TableHead className="text-right">Prov. (€)</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -539,6 +540,7 @@ export default function ZtProvision() {
                   const avgPerStaff = day.staffCount > 0 ? day.revenue / day.staffCount : 0;
                   const belowThreshold = avgPerStaff < minRevenue;
                   const hourlyRevenue = day.allDeptHours > 0 ? day.revenue / day.allDeptHours : 0;
+                  const dayCommission = avgPerStaff >= minRevenue ? Math.max(0, (day.revenue - minRevenue * day.staffCount) * (commissionPct / 100)) : 0;
                   return (
                     <TableRow key={day.date}>
                       <TableCell className="font-medium">{fmtDate(day.date)}</TableCell>
@@ -579,6 +581,9 @@ export default function ZtProvision() {
                        <TableCell className="text-right tabular-nums">
                          {day.allDeptHours > 0 ? `${fmt(hourlyRevenue)} €` : "–"}
                        </TableCell>
+                      <TableCell className={`text-right tabular-nums font-medium ${dayCommission > 0 ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}`}>
+                        {fmt(dayCommission)}
+                      </TableCell>
                     </TableRow>
                   );
                 })}
@@ -605,6 +610,9 @@ export default function ZtProvision() {
                        return totalAllH > 0 ? `${fmt(totalRev / totalAllH)} €` : "–";
                      })()}
                    </TableCell>
+                  <TableCell className="text-right tabular-nums font-semibold text-green-600 dark:text-green-400">
+                    {fmt(result.pool)}
+                  </TableCell>
                 </TableRow>
               </TableFooter>
             </Table>
