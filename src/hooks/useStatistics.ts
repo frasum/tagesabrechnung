@@ -146,8 +146,10 @@ export function useStatistics(timeRange: TimeRange = 'month', customRange?: Cust
         return acc;
       }, {} as Record<string, any[]>);
 
-      // Calculate daily stats
-      const dailyStats: DailyStats[] = (sessions || []).map(session => {
+      // Calculate daily stats — exclude sessions without any waiter shifts
+      const dailyStats: DailyStats[] = (sessions || [])
+        .filter(session => (shiftsBySession[session.id] || []).length > 0)
+        .map(session => {
         const sessionShifts = shiftsBySession[session.id] || [];
         const sessionExpenses = expensesBySession[session.id] || [];
 

@@ -62,13 +62,16 @@ async function fetchPeriodStats(startDate: Date, endDate: Date, restaurantId?: s
     shiftsBySession[shift.session_id].push(shift);
   });
 
+  // Filter to only sessions that have waiter shifts
+  const activeSessions = (sessions || []).filter(s => (shiftsBySession[s.id] || []).length > 0);
+
   // Calculate totals
   const totalRevenue = waiterShifts.reduce((sum, w) => sum + (w.pos_sales || 0), 0);
   const totalKitchenTip = waiterShifts.reduce((sum, w) => sum + (w.kitchen_tip || 0), 0);
   
   // Calculate waiter tip using pool system
   let totalWaiterTip = 0;
-  (sessions || []).forEach(session => {
+  activeSessions.forEach(session => {
     const sessionShifts = shiftsBySession[session.id] || [];
     if (sessionShifts.length === 0) return;
     
@@ -81,11 +84,11 @@ async function fetchPeriodStats(startDate: Date, endDate: Date, restaurantId?: s
     totalWaiterTip += sessionPool;
   });
 
-  const totalDelivery = (sessions || []).reduce((sum, s) => 
+  const totalDelivery = activeSessions.reduce((sum, s) => 
     sum + (s.ordersmart_revenue || 0) + (s.wolt_revenue || 0) + (s.takeaway_total || 0), 0);
   
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-  const daysWithData = sessions?.length || 0;
+  const daysWithData = activeSessions.length;
 
   return {
     totalRevenue,
