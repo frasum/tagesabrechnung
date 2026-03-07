@@ -1,23 +1,24 @@
 
 
-## Verstaendnis
+## Tooltips für erweiterten SFN-Modus anpassen
 
-Du moechtest, dass die Statistiken standardmaessig die Umsaetze **beider** Restaurants (Spicery + YUM) kombiniert anzeigen, nicht nur das aktuell gewaehlte Restaurant.
+Aktuell zeigen die Tooltips nur den Zuschlagsprozentsatz. Im erweiterten (§3b) Modus sollen sie zusätzlich erklären, dass die Zuschläge additiv berechnet werden.
 
-## Loesung
+### Änderung in `src/components/zeiterfassung/SfnTooltipHeader.tsx`
 
-Den Standard-Modus der Statistikseite von `'current'` (nur aktuelles Restaurant) auf `'all'` (alle Restaurants kombiniert) aendern.
+- Neues optionales Prop `sfnMode?: SfnMode` hinzufügen
+- Zwei Tooltip-Text-Sets: eins für "simple", eins für "extended"
+- Im Extended-Modus erklären die Tooltips die additive Logik:
 
-**Datei: `src/pages/Statistics.tsx`**
+| Spalte | Simple | Extended |
+|--------|--------|----------|
+| 20–24 | 25 % Nachtzuschlag | 25 % Nachtzuschlag (20:00–00:00) — additiv zu So/Fei-Zuschlägen |
+| 24–x | 40 % Nachtzuschlag | 40 % Nachtzuschlag (00:00–04:00) — additiv zu So/Fei-Zuschlägen |
+| So/Fei | 50 % Sonn- und Feiertagszuschlag | *(nicht im Extended-Modus)* |
+| So | *(nicht im Simple-Modus)* | 50 % Sonntagszuschlag (§3b EStG) |
+| Fei | *(nicht im Simple-Modus)* | 125 % Feiertag / 150 % besondere Feiertage (1. Mai, 25./26.12.) |
 
-Zeile 97 aendern:
-```tsx
-// Vorher:
-const [statsMode, setStatsMode] = useState<StatsMode>('current');
+### Aufrufer anpassen
 
-// Nachher:
-const [statsMode, setStatsMode] = useState<StatsMode>('all');
-```
-
-Damit werden beim Oeffnen der Statistik-Seite automatisch die Daten beider Restaurants kombiniert angezeigt. Der "Alle"-Tab ist vorausgewaehlt. Der Nutzer kann weiterhin auf einzelne Restaurant-Tabs wechseln, um nur deren Daten zu sehen.
+`BuchhaltungTableHead.tsx`, `ZtWochenplan.tsx`, `ZtZusammenfassung.tsx` — das `sfnMode`-Prop an `SfnTooltipHeader` durchreichen, wo es bereits verfügbar ist.
 

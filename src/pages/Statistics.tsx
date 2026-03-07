@@ -94,7 +94,7 @@ type StatsMode = string; // restaurant id | 'all' | 'compare'
 export default function Statistics() {
   const [timeRange, setTimeRange] = useState<TimeRange>('month');
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
-  const [statsMode, setStatsMode] = useState<StatsMode>('current'); // 'current' = use context restaurant
+  const [statsMode, setStatsMode] = useState<StatsMode>('all'); // 'all' = combined restaurants by default
   
   const customRange = timeRange === 'custom' && customDateRange?.from && customDateRange?.to
     ? { from: customDateRange.from, to: customDateRange.to }
