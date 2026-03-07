@@ -175,12 +175,12 @@ export default function ZtProvision() {
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="rounded-lg border border-border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Ø Umsatz / Tag</p>
+          <p className="text-xs text-muted-foreground">Ø Umsatz / Tag / MA</p>
           <p className="text-lg font-semibold tabular-nums">{fmt(result.avgRevenue)} €</p>
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Abrechnungstage</p>
-          <p className="text-lg font-semibold tabular-nums">{result.sessionCount}</p>
+          <p className="text-xs text-muted-foreground">Staff-Tage</p>
+          <p className="text-lg font-semibold tabular-nums">{result.staffDays}</p>
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
           <p className="text-xs text-muted-foreground">Provisions-Topf</p>
