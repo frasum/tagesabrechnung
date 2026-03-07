@@ -1,24 +1,38 @@
 
 
-## Tooltips für erweiterten SFN-Modus anpassen
+# Umsatz-Klick zur Tagesabrechnung + Tooltip-Prüfung
 
-Aktuell zeigen die Tooltips nur den Zuschlagsprozentsatz. Im erweiterten (§3b) Modus sollen sie zusätzlich erklären, dass die Zuschläge additiv berechnet werden.
+## Aktuelle Situation
 
-### Änderung in `src/components/zeiterfassung/SfnTooltipHeader.tsx`
+- In der Tagesdetails-Tabelle ist die **Stunden**-Spalte bereits klickbar (navigiert zu Zeiterfassung mit `?date=`)
+- Die **Umsatz**-Spalte (Zeile 502) ist **nicht klickbar** — soll aber zur Kellner-Abrechnung des jeweiligen Tages navigieren
+- Die Tooltips bei Service-MA (Zeilen 481-494) zeigen `day.staffNames` an — diese werden aus `nameSet` befüllt, das sekundäre und zusätzliche Kellner korrekt enthält. Nach der GL_ROLES-Änderung sollte Lam dort jetzt auch erscheinen.
 
-- Neues optionales Prop `sfnMode?: SfnMode` hinzufügen
-- Zwei Tooltip-Text-Sets: eins für "simple", eins für "extended"
-- Im Extended-Modus erklären die Tooltips die additive Logik:
+## Änderungen
 
-| Spalte | Simple | Extended |
-|--------|--------|----------|
-| 20–24 | 25 % Nachtzuschlag | 25 % Nachtzuschlag (20:00–00:00) — additiv zu So/Fei-Zuschlägen |
-| 24–x | 40 % Nachtzuschlag | 40 % Nachtzuschlag (00:00–04:00) — additiv zu So/Fei-Zuschlägen |
-| So/Fei | 50 % Sonn- und Feiertagszuschlag | *(nicht im Extended-Modus)* |
-| So | *(nicht im Simple-Modus)* | 50 % Sonntagszuschlag (§3b EStG) |
-| Fei | *(nicht im Simple-Modus)* | 125 % Feiertag / 150 % besondere Feiertage (1. Mai, 25./26.12.) |
+### 1. Umsatz-Zelle klickbar machen (ZtProvision.tsx, Zeile 502)
 
-### Aufrufer anpassen
+Die Umsatz-Zelle bekommt denselben Klick-Stil wie die Stunden-Zelle, navigiert aber zur Kellner-Abrechnung (`/${restaurantSlug}`) und setzt das Datum über `useSelectedDate`:
 
-`BuchhaltungTableHead.tsx`, `ZtWochenplan.tsx`, `ZtZusammenfassung.tsx` — das `sfnMode`-Prop an `SfnTooltipHeader` durchreichen, wo es bereits verfügbar ist.
+```tsx
+// Import useSelectedDate hinzufügen
+const { setSelectedDate } = useSelectedDate();
+
+// Umsatz-Zelle klickbar machen:
+<TableCell
+  className="text-right tabular-nums cursor-pointer hover:text-primary hover:underline underline-offset-4 transition-colors"
+  onClick={() => {
+    setSelectedDate(new Date(day.date + "T00:00:00"));
+    navigate(`/${restaurantSlug}`);
+  }}
+>
+  {fmt(day.revenue)}
+</TableCell>
+```
+
+### 2. Tooltip-Text aktualisieren
+
+Die Subtitle-Zeile in Zeile 432 erwähnt noch "ohne GL-Mitarbeiter". Da `waiter_gl` jetzt einbezogen wird, sollte der Text angepasst werden zu "ohne reine GL-Mitarbeiter" oder ganz entfernt werden.
+
+**Dateien:** `src/pages/zeiterfassung/ZtProvision.tsx` — eine Datei, drei kleine Änderungen.
 
