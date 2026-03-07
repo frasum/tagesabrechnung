@@ -394,6 +394,11 @@ export default function ZtProvision() {
   const fmt = (n: number) => n.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const fmtDate = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" });
 
+  // Route protection: admin only
+  if (!isAdmin) {
+    return <Navigate to={`/${restaurantSlug}/zeiterfassung`} replace />;
+  }
+
   return (
     <div className="space-y-6">
       {/* Threshold input */}
