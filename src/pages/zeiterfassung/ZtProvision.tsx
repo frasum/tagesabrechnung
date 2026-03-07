@@ -522,7 +522,7 @@ export default function ZtProvision() {
                   <TableHead className="text-right">Stunden (h)</TableHead>
                   <TableHead className="text-right">Umsatz (€)</TableHead>
                   <TableHead className="text-right">Ø / MA (€)</TableHead>
-                  <TableHead className="text-right">Ø €/h</TableHead>
+                  <TableHead className="text-right">Ø €/h Service/Küche & GL</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
