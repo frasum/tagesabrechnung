@@ -165,6 +165,61 @@ export function useOrdersmartInTakeaway(restaurantId: string | null) {
   };
 }
 
+export function useCommissionAddToGross(restaurantId: string | null) {
+  const queryClient = useQueryClient();
+
+  const { data: commissionAddToGross, isLoading } = useQuery({
+    queryKey: ['settings', 'commission_add_to_gross', restaurantId],
+    queryFn: async () => {
+      if (!restaurantId) return false;
+      const { data, error } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'commission_add_to_gross')
+        .eq('restaurant_id', restaurantId)
+        .maybeSingle();
+      if (error) throw error;
+      const value = data?.value as unknown as { enabled: boolean } | undefined;
+      return value?.enabled ?? false;
+    },
+    enabled: !!restaurantId,
+  });
+
+  const { mutate: updateCommissionAddToGross, isPending: isUpdating } = useMutation({
+    mutationFn: async ({ enabled, restaurantId: restId }: { enabled: boolean; restaurantId: string }) => {
+      const { data: existing } = await supabase
+        .from('settings')
+        .select('id')
+        .eq('key', 'commission_add_to_gross')
+        .eq('restaurant_id', restId)
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await supabase
+          .from('settings')
+          .update({ value: { enabled } })
+          .eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('settings')
+          .insert({ key: 'commission_add_to_gross', value: { enabled }, restaurant_id: restId });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['settings', 'commission_add_to_gross', restaurantId] });
+    },
+  });
+
+  return {
+    commissionAddToGross: commissionAddToGross ?? false,
+    isLoading,
+    updateCommissionAddToGross,
+    isUpdating,
+  };
+}
+
 export function useInitialCashDeficit(restaurantId: string | null) {
   const queryClient = useQueryClient();
 
