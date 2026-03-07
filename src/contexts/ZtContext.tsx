@@ -87,35 +87,42 @@ export function ZtProvider({ children }: { children: React.ReactNode }) {
     setSelectedWeekId("");
   }, [restaurantId]);
 
-  // Auto-select period AND week together once both datasets are available
+  // Handle ?date= search param navigation (e.g. from Provision page)
   useEffect(() => {
-    if (!periods?.length || !allWeeks?.length || selectedPeriodId) return;
-
-    // Check for ?date= search param (e.g. from Provision page link)
     const targetDate = searchParams.get("date");
-    const refDate = targetDate || format(new Date(), "yyyy-MM-dd");
+    if (!targetDate || !periods?.length || !allWeeks?.length) return;
 
-    // Find period containing the target date
-    const currentPeriod = periods.find(p => p.start_date <= refDate && p.end_date >= refDate);
+    const currentPeriod = periods.find(p => p.start_date <= targetDate && p.end_date >= targetDate);
     const periodId = currentPeriod?.id ?? periods[0].id;
-
-    // Find week containing the target date within that period
     const periodWeeks = allWeeks.filter(w => w.period_id === periodId);
-    const currentWeek = periodWeeks.find(w => w.start_date <= refDate && w.end_date >= refDate);
+    const currentWeek = periodWeeks.find(w => w.start_date <= targetDate && w.end_date >= targetDate);
     const weekId = currentWeek?.id ?? periodWeeks[0]?.id ?? "";
 
     setSelectedPeriodId(periodId);
     setSelectedWeekId(weekId);
 
-    // Clear the search param so it doesn't interfere with subsequent navigation
-    if (targetDate) {
-      setSearchParams((prev) => {
-        const next = new URLSearchParams(prev);
-        next.delete("date");
-        return next;
-      }, { replace: true });
-    }
-  }, [periods, allWeeks, selectedPeriodId, searchParams, setSearchParams]);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("date");
+      return next;
+    }, { replace: true });
+  }, [searchParams, periods, allWeeks, setSearchParams]);
+
+  // Auto-select period AND week together once both datasets are available
+  useEffect(() => {
+    if (!periods?.length || !allWeeks?.length || selectedPeriodId) return;
+    const today = format(new Date(), "yyyy-MM-dd");
+
+    const currentPeriod = periods.find(p => p.start_date <= today && p.end_date >= today);
+    const periodId = currentPeriod?.id ?? periods[0].id;
+
+    const periodWeeks = allWeeks.filter(w => w.period_id === periodId);
+    const currentWeek = periodWeeks.find(w => w.start_date <= today && w.end_date >= today);
+    const weekId = currentWeek?.id ?? periodWeeks[0]?.id ?? "";
+
+    setSelectedPeriodId(periodId);
+    setSelectedWeekId(weekId);
+  }, [periods, allWeeks, selectedPeriodId]);
 
   // Reset week when period changes manually (but not on initial auto-select)
   const handleSetPeriodId = (id: string) => {
