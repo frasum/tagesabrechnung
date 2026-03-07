@@ -1,24 +1,26 @@
 
 
-## Tooltips für erweiterten SFN-Modus anpassen
+# Lam (waiter_gl) in Provision einbeziehen bei Service-Schichten
 
-Aktuell zeigen die Tooltips nur den Zuschlagsprozentsatz. Im erweiterten (§3b) Modus sollen sie zusätzlich erklären, dass die Zuschläge additiv berechnet werden.
+## Problem
 
-### Änderung in `src/components/zeiterfassung/SfnTooltipHeader.tsx`
+`GL_ROLES` auf Zeile 16 enthält `"waiter_gl"`. Dadurch wird Lam **pauschal** aus der gesamten Provisionsberechnung ausgeschlossen — auch an Tagen, an denen er als Kellner in `waiter_shifts` eingetragen ist.
 
-- Neues optionales Prop `sfnMode?: SfnMode` hinzufügen
-- Zwei Tooltip-Text-Sets: eins für "simple", eins für "extended"
-- Im Extended-Modus erklären die Tooltips die additive Logik:
+## Analyse
 
-| Spalte | Simple | Extended |
-|--------|--------|----------|
-| 20–24 | 25 % Nachtzuschlag | 25 % Nachtzuschlag (20:00–00:00) — additiv zu So/Fei-Zuschlägen |
-| 24–x | 40 % Nachtzuschlag | 40 % Nachtzuschlag (00:00–04:00) — additiv zu So/Fei-Zuschlägen |
-| So/Fei | 50 % Sonn- und Feiertagszuschlag | *(nicht im Extended-Modus)* |
-| So | *(nicht im Simple-Modus)* | 50 % Sonntagszuschlag (§3b EStG) |
-| Fei | *(nicht im Simple-Modus)* | 125 % Feiertag / 150 % besondere Feiertage (1. Mai, 25./26.12.) |
+Die Logik ist bereits korrekt aufgebaut: Lam taucht in `waiter_shifts` nur auf, wenn er tatsächlich Service-Schichten hat. Die `zt_shifts`-Abfrage filtert ebenfalls auf `department = "Service"`. Das heißt: Wenn `waiter_gl` nicht mehr pauschal ausgeschlossen wird, wird Lam automatisch nur an den Tagen berücksichtigt, an denen er tatsächlich Service arbeitet.
 
-### Aufrufer anpassen
+## Lösung
 
-`BuchhaltungTableHead.tsx`, `ZtWochenplan.tsx`, `ZtZusammenfassung.tsx` — das `sfnMode`-Prop an `SfnTooltipHeader` durchreichen, wo es bereits verfügbar ist.
+**Eine Zeile ändern** in `src/pages/zeiterfassung/ZtProvision.tsx`, Zeile 16:
+
+```typescript
+// Vorher:
+const GL_ROLES = new Set(["gl", "waiter_gl", "kitchen_gl", "all"]);
+
+// Nachher:
+const GL_ROLES = new Set(["gl", "kitchen_gl"]);
+```
+
+`waiter_gl` und `all` werden entfernt, da beide Rollen Service-Anteil haben. An Tagen, an denen Lam als GL (ohne `waiter_shifts`-Eintrag) arbeitet, taucht er gar nicht in den Daten auf und wird somit automatisch nicht berücksichtigt.
 
