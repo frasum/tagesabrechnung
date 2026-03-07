@@ -229,8 +229,8 @@ export default function ZtProvision() {
           <p className="text-lg font-semibold tabular-nums">{fmt(result.avgRevenue)} €</p>
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Abrechnungstage</p>
-          <p className="text-lg font-semibold tabular-nums">{result.sessionCount}</p>
+          <p className="text-xs text-muted-foreground">Σ Stunden</p>
+          <p className="text-lg font-semibold tabular-nums">{fmt(result.totalHours)} h</p>
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
           <p className="text-xs text-muted-foreground">Provisions-Topf</p>
@@ -241,6 +241,12 @@ export default function ZtProvision() {
           <p className="text-lg font-semibold tabular-nums">{fmt(result.totalCommission)} €</p>
         </div>
       </div>
+
+      {result.withCommission.length > 0 && (
+        <p className="text-xs text-muted-foreground">
+          Verteilung des Provisions-Topfs nach geleisteten Stunden · {result.sessionCount} Abrechnungstage
+        </p>
+      )}
 
       {/* Table */}
       {isLoading ? (
