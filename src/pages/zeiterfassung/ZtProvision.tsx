@@ -37,11 +37,7 @@ export default function ZtProvision() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { user } = useAuth();
-
-  // Route protection: admin only
-  if (!hasPermission(user?.permissionLevel || 'staff', 'admin')) {
-    return <Navigate to={`/${restaurantSlug}/zeiterfassung`} replace />;
-  }
+  const isAdmin = hasPermission(user?.permissionLevel || 'staff', 'admin');
 
   const selectedPeriod = periods?.find(p => p.id === selectedPeriodId);
 
