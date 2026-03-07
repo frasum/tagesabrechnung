@@ -103,15 +103,21 @@ export default function ZtProvision() {
     return Array.from(map.values()).map(e => ({ ...e, commission: 0 }));
   }, [waiterData]);
 
-  // Count unique sessions (days) for the threshold calculation
-  const sessionCount = useMemo(() => {
-    if (!waiterData?.length) return 0;
-    const dates = new Set<string>();
+  // Count unique sessions (days) and staffDays (sum of distinct staff per day)
+  const { sessionCount, staffDays } = useMemo(() => {
+    if (!waiterData?.length) return { sessionCount: 0, staffDays: 0 };
+    const dateStaffMap = new Map<string, Set<string>>();
     for (const ws of waiterData) {
       const session = ws.sessions as any;
-      if (session?.session_date) dates.add(session.session_date);
+      const date = session?.session_date;
+      if (!date) continue;
+      const key = ws.staff_id || ws.waiter_name;
+      if (!dateStaffMap.has(date)) dateStaffMap.set(date, new Set());
+      dateStaffMap.get(date)!.add(key);
     }
-    return dates.size;
+    let total = 0;
+    for (const staff of dateStaffMap.values()) total += staff.size;
+    return { sessionCount: dateStaffMap.size, staffDays: total };
   }, [waiterData]);
 
   // Commission calculation
