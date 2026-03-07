@@ -17,11 +17,12 @@ import {
 } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { ChevronDown } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { WaiterTipStats } from '@/hooks/useStatistics';
 
 interface WaiterTipChartProps {
   data: WaiterTipStats[];
+  restaurantNames?: Record<string, string>;
 }
 
 const formatCurrency = (value: number) => {
@@ -54,8 +55,23 @@ const CustomTooltip = ({ active, payload }: any) => {
   return null;
 };
 
-export function WaiterTipChart({ data }: WaiterTipChartProps) {
+export function WaiterTipChart({ data, restaurantNames }: WaiterTipChartProps) {
   const [isOpen, setIsOpen] = useState(false);
+
+  const hasGroups = useMemo(() => data.some(d => d.restaurantId), [data]);
+  const grouped = useMemo(() => {
+    if (!hasGroups || !restaurantNames) return null;
+    const groups: Record<string, WaiterTipStats[]> = {};
+    for (const entry of data) {
+      const key = entry.restaurantId || '_';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(entry);
+    }
+    // Sort groups by total tip descending
+    return Object.entries(groups)
+      .map(([id, items]) => ({ id, name: restaurantNames[id] || id, items: items.sort((a, b) => b.totalTip - a.totalTip) }))
+      .sort((a, b) => b.items.reduce((s, i) => s + i.totalTip, 0) - a.items.reduce((s, i) => s + i.totalTip, 0));
+  }, [data, hasGroups, restaurantNames]);
   
   if (data.length === 0) {
     return (
@@ -76,6 +92,35 @@ export function WaiterTipChart({ data }: WaiterTipChartProps) {
   }
 
   const chartData = data.slice(0, 10); // Show top 10
+
+  const renderTable = (items: WaiterTipStats[], startIndex = 0) => (
+    <table className="w-full text-sm">
+      <thead className="bg-muted">
+        <tr>
+          <th className="text-left p-2 font-medium">#</th>
+          <th className="text-left p-2 font-medium">Name</th>
+          <th className="text-right p-2 font-medium">Schichten</th>
+          <th className="text-right p-2 font-medium">Pool-Anteil</th>
+          <th className="text-right p-2 font-medium">Ø/Schicht</th>
+        </tr>
+      </thead>
+      <tbody>
+        {items.map((waiter, index) => (
+          <tr key={`${waiter.restaurantId}_${waiter.name}`} className="border-t">
+            <td className="p-2 text-muted-foreground">{startIndex + index + 1}</td>
+            <td className="p-2 font-medium">{waiter.name}</td>
+            <td className="p-2 text-right tabular-nums">{waiter.shiftsCount}</td>
+            <td className={`p-2 text-right tabular-nums font-medium ${waiter.totalTip >= 0 ? 'text-success' : 'text-destructive'}`}>
+              {formatCurrency(waiter.totalTip)}
+            </td>
+            <td className={`p-2 text-right tabular-nums ${waiter.avgTipPerShift >= 0 ? '' : 'text-destructive'}`}>
+              {formatCurrency(waiter.avgTipPerShift)}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
 
   return (
     <Card>
@@ -127,34 +172,22 @@ export function WaiterTipChart({ data }: WaiterTipChartProps) {
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="pt-4">
-            <div className="rounded-lg border overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-muted">
-                  <tr>
-                    <th className="text-left p-2 font-medium">#</th>
-                    <th className="text-left p-2 font-medium">Name</th>
-                    <th className="text-right p-2 font-medium">Schichten</th>
-                    <th className="text-right p-2 font-medium">Pool-Anteil</th>
-                    <th className="text-right p-2 font-medium">Ø/Schicht</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.map((waiter, index) => (
-                    <tr key={waiter.name} className="border-t">
-                      <td className="p-2 text-muted-foreground">{index + 1}</td>
-                      <td className="p-2 font-medium">{waiter.name}</td>
-                      <td className="p-2 text-right tabular-nums">{waiter.shiftsCount}</td>
-                      <td className={`p-2 text-right tabular-nums font-medium ${waiter.totalTip >= 0 ? 'text-success' : 'text-destructive'}`}>
-                        {formatCurrency(waiter.totalTip)}
-                      </td>
-                      <td className={`p-2 text-right tabular-nums ${waiter.avgTipPerShift >= 0 ? '' : 'text-destructive'}`}>
-                        {formatCurrency(waiter.avgTipPerShift)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            {grouped ? (
+              <div className="space-y-4">
+                {grouped.map((group) => (
+                  <div key={group.id}>
+                    <h4 className="text-sm font-semibold text-muted-foreground mb-2 px-2">{group.name}</h4>
+                    <div className="rounded-lg border overflow-hidden">
+                      {renderTable(group.items)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-lg border overflow-hidden">
+                {renderTable(data)}
+              </div>
+            )}
           </CollapsibleContent>
         </Collapsible>
       </CardContent>

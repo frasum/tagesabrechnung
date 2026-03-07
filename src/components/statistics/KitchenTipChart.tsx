@@ -16,11 +16,12 @@ import {
 } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { ChevronDown } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { KitchenTipStats } from '@/hooks/useStatistics';
 
 interface KitchenTipChartProps {
   data: KitchenTipStats[];
+  restaurantNames?: Record<string, string>;
 }
 
 const formatCurrency = (value: number) => {
@@ -28,7 +29,7 @@ const formatCurrency = (value: number) => {
 };
 
 const formatHours = (hours: number) => {
-  return `${hours.toFixed(1)} Std`;
+  return `${hours.toFixed(1)} Std.`;
 };
 
 const CustomTooltip = ({ active, payload }: any) => {
@@ -47,7 +48,7 @@ const CustomTooltip = ({ active, payload }: any) => {
             <span className="font-medium tabular-nums">{formatHours(data.totalHours)}</span>
           </div>
           <div className="flex justify-between gap-4">
-            <span className="text-muted-foreground">€/Stunde:</span>
+            <span className="text-muted-foreground">TG/Std.:</span>
             <span className="font-medium tabular-nums">{formatCurrency(data.avgTipPerHour)}</span>
           </div>
         </div>
@@ -57,8 +58,22 @@ const CustomTooltip = ({ active, payload }: any) => {
   return null;
 };
 
-export function KitchenTipChart({ data }: KitchenTipChartProps) {
+export function KitchenTipChart({ data, restaurantNames }: KitchenTipChartProps) {
   const [isOpen, setIsOpen] = useState(false);
+
+  const hasGroups = useMemo(() => data.some(d => d.restaurantId), [data]);
+  const grouped = useMemo(() => {
+    if (!hasGroups || !restaurantNames) return null;
+    const groups: Record<string, KitchenTipStats[]> = {};
+    for (const entry of data) {
+      const key = entry.restaurantId || '_';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(entry);
+    }
+    return Object.entries(groups)
+      .map(([id, items]) => ({ id, name: restaurantNames[id] || id, items: items.sort((a, b) => b.totalTip - a.totalTip) }))
+      .sort((a, b) => b.items.reduce((s, i) => s + i.totalTip, 0) - a.items.reduce((s, i) => s + i.totalTip, 0));
+  }, [data, hasGroups, restaurantNames]);
   
   if (data.length === 0) {
     return (
@@ -79,6 +94,35 @@ export function KitchenTipChart({ data }: KitchenTipChartProps) {
   }
 
   const chartData = data.slice(0, 10); // Show top 10
+
+  const renderTable = (items: KitchenTipStats[]) => (
+    <table className="w-full text-sm">
+      <thead className="bg-muted">
+        <tr>
+          <th className="text-left p-2 font-medium">#</th>
+          <th className="text-left p-2 font-medium">Name</th>
+          <th className="text-right p-2 font-medium">Stunden</th>
+          <th className="text-right p-2 font-medium">Trinkgeld</th>
+          <th className="text-right p-2 font-medium">TG/Std.</th>
+        </tr>
+      </thead>
+      <tbody>
+        {items.map((staff, index) => (
+          <tr key={`${staff.restaurantId}_${staff.name}`} className="border-t">
+            <td className="p-2 text-muted-foreground">{index + 1}</td>
+            <td className="p-2 font-medium">{staff.name}</td>
+            <td className="p-2 text-right tabular-nums">{formatHours(staff.totalHours)}</td>
+            <td className="p-2 text-right tabular-nums font-medium text-success">
+              {formatCurrency(staff.totalTip)}
+            </td>
+            <td className="p-2 text-right tabular-nums">
+              {formatCurrency(staff.avgTipPerHour)}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
 
   return (
     <Card>
@@ -124,34 +168,22 @@ export function KitchenTipChart({ data }: KitchenTipChartProps) {
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="pt-4">
-            <div className="rounded-lg border overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-muted">
-                  <tr>
-                    <th className="text-left p-2 font-medium">#</th>
-                    <th className="text-left p-2 font-medium">Name</th>
-                    <th className="text-right p-2 font-medium">Stunden</th>
-                    <th className="text-right p-2 font-medium">Gesamt TG</th>
-                    <th className="text-right p-2 font-medium">€/Stunde</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.map((staff, index) => (
-                    <tr key={staff.name} className="border-t">
-                      <td className="p-2 text-muted-foreground">{index + 1}</td>
-                      <td className="p-2 font-medium">{staff.name}</td>
-                      <td className="p-2 text-right tabular-nums">{formatHours(staff.totalHours)}</td>
-                      <td className="p-2 text-right tabular-nums font-medium text-success">
-                        {formatCurrency(staff.totalTip)}
-                      </td>
-                      <td className="p-2 text-right tabular-nums">
-                        {formatCurrency(staff.avgTipPerHour)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            {grouped ? (
+              <div className="space-y-4">
+                {grouped.map((group) => (
+                  <div key={group.id}>
+                    <h4 className="text-sm font-semibold text-muted-foreground mb-2 px-2">{group.name}</h4>
+                    <div className="rounded-lg border overflow-hidden">
+                      {renderTable(group.items)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-lg border overflow-hidden">
+                {renderTable(data)}
+              </div>
+            )}
           </CollapsibleContent>
         </Collapsible>
       </CardContent>

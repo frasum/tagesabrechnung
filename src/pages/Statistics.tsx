@@ -100,6 +100,11 @@ export default function Statistics() {
   const { restaurantId, restaurantName } = useRestaurant();
   const { data: allRestaurants } = useRestaurants();
   const allRestaurantIds = useMemo(() => allRestaurants?.map(r => r.id) ?? [], [allRestaurants]);
+  const restaurantNameMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    allRestaurants?.forEach(r => { map[r.id] = r.name; });
+    return map;
+  }, [allRestaurants]);
 
   // Resolve the effective single restaurant ID
   const selectedRestaurantId = statsMode === 'current' 
@@ -640,8 +645,8 @@ export default function Statistics() {
 
             {/* Staff Tip Charts */}
             <div className="grid lg:grid-cols-2 gap-6">
-              <WaiterTipChart data={waiterTipStats} />
-              <KitchenTipChart data={kitchenTipStats} />
+              <WaiterTipChart data={waiterTipStats} restaurantNames={isMultiMode ? restaurantNameMap : undefined} />
+              <KitchenTipChart data={kitchenTipStats} restaurantNames={isMultiMode ? restaurantNameMap : undefined} />
             </div>
 
             {/* Monthly Tip Breakdown */}
