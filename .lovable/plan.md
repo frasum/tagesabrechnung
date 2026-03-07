@@ -1,24 +1,47 @@
 
 
-## Tooltips für erweiterten SFN-Modus anpassen
+## Plan: Umfassender Restaurant-Vergleich (Yum vs. Spice Tree)
 
-Aktuell zeigen die Tooltips nur den Zuschlagsprozentsatz. Im erweiterten (§3b) Modus sollen sie zusätzlich erklären, dass die Zuschläge additiv berechnet werden.
+Der bestehende "Vergleich"-Tab zeigt aktuell nur eine einfache Kennzahlen-Tabelle. Dieser wird zu einem vollwertigen Vergleichs-Dashboard ausgebaut.
 
-### Änderung in `src/components/zeiterfassung/SfnTooltipHeader.tsx`
+### 1. Dashboard-Karten (oben)
+Vier StatCards im Compare-Modus ersetzen die normalen Summary-Karten. Jede Karte zeigt **beide Restaurant-Werte** und die **Differenz**:
+- Gesamtumsatz (Yum vs. Spice Tree, %-Differenz)
+- Ø Tagesumsatz
+- Gesamt Trinkgeld
+- Lieferumsatz
 
-- Neues optionales Prop `sfnMode?: SfnMode` hinzufügen
-- Zwei Tooltip-Text-Sets: eins für "simple", eins für "extended"
-- Im Extended-Modus erklären die Tooltips die additive Logik:
+**Umsetzung:** In `Statistics.tsx` im Block `statsMode === 'compare'` eigene Karten rendern, die `dataA.summary` und `dataB.summary` nebeneinander zeigen.
 
-| Spalte | Simple | Extended |
-|--------|--------|----------|
-| 20–24 | 25 % Nachtzuschlag | 25 % Nachtzuschlag (20:00–00:00) — additiv zu So/Fei-Zuschlägen |
-| 24–x | 40 % Nachtzuschlag | 40 % Nachtzuschlag (00:00–04:00) — additiv zu So/Fei-Zuschlägen |
-| So/Fei | 50 % Sonn- und Feiertagszuschlag | *(nicht im Extended-Modus)* |
-| So | *(nicht im Simple-Modus)* | 50 % Sonntagszuschlag (§3b EStG) |
-| Fei | *(nicht im Simple-Modus)* | 125 % Feiertag / 150 % besondere Feiertage (1. Mai, 25./26.12.) |
+### 2. Erweiterte Vergleichstabelle
+Die bestehende `RestaurantComparison`-Komponente wird erweitert:
+- **Fortschrittsbalken** pro Zeile: proportionale farbige Balken zeigen visuell, welches Restaurant führt
+- **Differenz-Spalte**: absolute und prozentuale Differenz mit Trend-Icons (wie in `PeriodComparison`)
+- **Zusätzliche Kennzahlen**: Ø Trinkgeld pro Tag, Ø Ausgaben pro Tag
 
-### Aufrufer anpassen
+### 3. Overlay-Chart (Umsatzentwicklung)
+Ein neues `RestaurantOverlayChart`-Komponente zeigt beide Restaurants als **Linien im selben Chart**:
+- X-Achse: Datum
+- Linie 1 (chart-1 Farbe): Yum Tagesumsatz
+- Linie 2 (chart-2 Farbe): Spice Tree Tagesumsatz
+- Gemeinsame Tooltip mit beiden Werten
 
-`BuchhaltungTableHead.tsx`, `ZtWochenplan.tsx`, `ZtZusammenfassung.tsx` — das `sfnMode`-Prop an `SfnTooltipHeader` durchreichen, wo es bereits verfügbar ist.
+**Datenquelle:** `dataA.dailyStats` und `dataB.dailyStats` werden per Datum gemerged.
+
+### 4. Nebeneinander-Charts (Trinkgeld)
+Zwei Charts im `grid lg:grid-cols-2` Layout:
+- Links: Yum Trinkgeld-Verteilung (Küche + Service gestapelt)
+- Rechts: Spice Tree Trinkgeld-Verteilung
+
+### Dateien
+
+| Datei | Änderung |
+|---|---|
+| `src/components/statistics/RestaurantComparison.tsx` | Erweitern: Fortschrittsbalken, Differenz-Spalte, neue Kennzahlen |
+| `src/components/statistics/RestaurantOverlayChart.tsx` | **Neu**: Overlay-LineChart beider Restaurants |
+| `src/components/statistics/RestaurantCompareCards.tsx` | **Neu**: Vier Dashboard-Karten mit Vergleichswerten |
+| `src/pages/Statistics.tsx` | Compare-Modus: neue Komponenten einbinden, Nebeneinander-Trinkgeld-Charts, `dailyStats` an Overlay-Chart übergeben |
+
+### Datenfluss
+Die bestehenden `dataA` und `dataB` Hooks (Zeilen 126-127) liefern bereits alle benötigten Daten pro Restaurant. Keine DB-Änderungen nötig.
 
