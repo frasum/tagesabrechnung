@@ -221,7 +221,9 @@ export default function History() {
                 </p> :
 
               <>
-              <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+              <div className="relative">
+                <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-thin" id="history-scroll">
+                <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-card to-transparent sm:hidden z-10" />
                   <Table className="table-fixed min-w-[870px] w-full">
                     <TableHeader>
                       <TableRow>
