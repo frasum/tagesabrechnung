@@ -1,24 +1,28 @@
 
 
-## Tooltips für erweiterten SFN-Modus anpassen
+# Nur Service-Stunden für die Provision berücksichtigen
 
-Aktuell zeigen die Tooltips nur den Zuschlagsprozentsatz. Im erweiterten (§3b) Modus sollen sie zusätzlich erklären, dass die Zuschläge additiv berechnet werden.
+## Problem
 
-### Änderung in `src/components/zeiterfassung/SfnTooltipHeader.tsx`
+Die aktuelle Query holt `zt_shifts` gefiltert nach Mitarbeitern, die in `staff_restaurants` der Abteilung "Service" zugeordnet sind. Aber ein Mitarbeiter kann **beiden** Abteilungen zugewiesen sein (Service + Küche) und hat dann `zt_shifts`-Einträge mit `department = 'Service'` **und** `department = 'Küche'`. Aktuell werden alle Stunden summiert — auch die Küchenstunden.
 
-- Neues optionales Prop `sfnMode?: SfnMode` hinzufügen
-- Zwei Tooltip-Text-Sets: eins für "simple", eins für "extended"
-- Im Extended-Modus erklären die Tooltips die additive Logik:
+## Lösung
 
-| Spalte | Simple | Extended |
-|--------|--------|----------|
-| 20–24 | 25 % Nachtzuschlag | 25 % Nachtzuschlag (20:00–00:00) — additiv zu So/Fei-Zuschlägen |
-| 24–x | 40 % Nachtzuschlag | 40 % Nachtzuschlag (00:00–04:00) — additiv zu So/Fei-Zuschlägen |
-| So/Fei | 50 % Sonn- und Feiertagszuschlag | *(nicht im Extended-Modus)* |
-| So | *(nicht im Simple-Modus)* | 50 % Sonntagszuschlag (§3b EStG) |
-| Fei | *(nicht im Simple-Modus)* | 125 % Feiertag / 150 % besondere Feiertage (1. Mai, 25./26.12.) |
+In der `zt_shifts`-Query einen zusätzlichen Filter auf `department = 'Service'` setzen. Die `zt_shifts`-Tabelle hat bereits eine `department`-Spalte, die genau diesen Zweck erfüllt.
 
-### Aufrufer anpassen
+## Änderung in `ZtProvision.tsx`
 
-`BuchhaltungTableHead.tsx`, `ZtWochenplan.tsx`, `ZtZusammenfassung.tsx` — das `sfnMode`-Prop an `SfnTooltipHeader` durchreichen, wo es bereits verfügbar ist.
+**Eine Zeile hinzufügen** in der bestehenden zt_shifts-Query (ca. Zeile 150–155):
+
+```typescript
+const { data, error } = await supabase
+  .from("zt_shifts")
+  .select("employee_id, shift_date, total_hours")
+  .in("employee_id", staffIds)
+  .eq("department", "Service")  // ← NEU
+  .gte("shift_date", selectedPeriod.start_date)
+  .lte("shift_date", selectedPeriod.end_date);
+```
+
+Damit werden nur Schichten mit `department = 'Service'` in die Stundenberechnung einbezogen. Küchenstunden desselben Mitarbeiters werden ignoriert.
 
