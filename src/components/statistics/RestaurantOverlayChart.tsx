@@ -23,14 +23,13 @@ const formatShortCurrency = (value: number) => {
 
 export function RestaurantOverlayChart({ nameA, nameB, dailyStatsA, dailyStatsB }: RestaurantOverlayChartProps) {
   const mergedData = useMemo(() => {
-    const map = new Map<string, { date: string; dateFormatted: string; valueA: number; valueB: number }>();
+    const map = new Map<string, { date: string; dateFormatted: string; valueA?: number; valueB?: number }>();
 
     for (const d of dailyStatsA) {
       map.set(d.date, {
         date: d.date,
         dateFormatted: format(new Date(d.date), 'dd.MM', { locale: de }),
         valueA: d.kellnerUmsatz,
-        valueB: 0,
       });
     }
     for (const d of dailyStatsB) {
@@ -41,7 +40,6 @@ export function RestaurantOverlayChart({ nameA, nameB, dailyStatsA, dailyStatsB 
         map.set(d.date, {
           date: d.date,
           dateFormatted: format(new Date(d.date), 'dd.MM', { locale: de }),
-          valueA: 0,
           valueB: d.kellnerUmsatz,
         });
       }
@@ -103,18 +101,20 @@ export function RestaurantOverlayChart({ nameA, nameB, dailyStatsA, dailyStatsB 
                 dataKey="valueA"
                 name={nameA}
                 stroke="hsl(var(--chart-1))"
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 4 }}
+                strokeWidth={2.5}
+                dot={{ r: 3, fill: 'hsl(var(--chart-1))' }}
+                activeDot={{ r: 5 }}
+                connectNulls
               />
               <Line
                 type="monotone"
                 dataKey="valueB"
                 name={nameB}
                 stroke="hsl(var(--chart-2))"
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 4 }}
+                strokeWidth={2.5}
+                dot={{ r: 3, fill: 'hsl(var(--chart-2))' }}
+                activeDot={{ r: 5 }}
+                connectNulls
               />
             </LineChart>
           </ResponsiveContainer>
