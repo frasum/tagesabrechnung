@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
         .limit(5000),
       supabase
         .from("staff")
-        .select("id, name, nickname, role, is_active, participates_in_pool")
+        .select("id, name, nickname, role, is_active, participates_in_pool, perso_nr, is_minijob, employment_start, employment_end, vacation_days_contractual, vacation_days_previous, vacation_days_current, vacation_days_taken, sick_days_total")
         .limit(5000),
       supabase
         .from("restaurants")
@@ -94,8 +94,7 @@ Deno.serve(async (req) => {
       supabase
         .from("staff_restaurants")
         .select("staff_id, restaurant_id, zt_department")
-        .in("restaurant_id", restaurant_ids)
-        .eq("zt_department", "Service"),
+        .in("restaurant_id", restaurant_ids),
     ]);
 
     const sessions = sessionsRes.data || [];
@@ -124,16 +123,20 @@ Deno.serve(async (req) => {
       ]);
     }
 
-    // Load zt_shifts for Service department (90 days)
-    const serviceStaffIds = (staffRestaurantsRes.data || []).map((sr: any) => sr.staff_id);
+    // Load ALL zt_shifts (90 days) for comprehensive workforce data
+    const allStaffIds = (staffRes.data || []).map((s: any) => s.id);
     let ztShifts: any[] = [];
-    if (serviceStaffIds.length > 0) {
+    if (allStaffIds.length > 0) {
       ztShifts = await batchIn(supabase, "zt_shifts",
-        "employee_id, shift_date, total_hours",
-        "employee_id", serviceStaffIds);
-      // Filter to 90 days and Service department
+        "employee_id, shift_date, total_hours, evening_hours, night_hours, night_deep_hours, sunday_holiday_hours, is_holiday, department, absence_type",
+        "employee_id", allStaffIds);
       ztShifts = ztShifts.filter((z: any) => z.shift_date >= since90Str);
     }
+
+    // Separate service staff IDs for commission calculation
+    const serviceStaffIds = (staffRestaurantsRes.data || [])
+      .filter((sr: any) => sr.zt_department === "Service")
+      .map((sr: any) => sr.staff_id);
 
     // Build restaurant name map
     const restaurantMap: Record<string, string> = {};
