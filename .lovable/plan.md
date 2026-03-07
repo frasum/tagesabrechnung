@@ -1,24 +1,69 @@
 
 
-## Tooltips für erweiterten SFN-Modus anpassen
+# KI-Chat: Erweiterte Analysen und proaktive Anomalie-Erkennung
 
-Aktuell zeigen die Tooltips nur den Zuschlagsprozentsatz. Im erweiterten (§3b) Modus sollen sie zusätzlich erklären, dass die Zuschläge additiv berechnet werden.
+## Neue Fähigkeiten
 
-### Änderung in `src/components/zeiterfassung/SfnTooltipHeader.tsx`
+### 1. Zahlungsarten – Bar vs. Karte
+**Bereits verfügbare Daten**: Sessions haben `pos_total`, `terminal_1_total`, `terminal_2_total`. Waiter-Shifts haben `card_total`, `cash_handed_in`.
+**Umsetzung**: Neuer aggregierter Kontext-Abschnitt `ZAHLUNGSARTEN PRO MONAT` mit:
+- Monat | Restaurant | Gesamt-Umsatz | Kreditkarten | Bar-Anteil | Karten-Anteil-%
 
-- Neues optionales Prop `sfnMode?: SfnMode` hinzufügen
-- Zwei Tooltip-Text-Sets: eins für "simple", eins für "extended"
-- Im Extended-Modus erklären die Tooltips die additive Logik:
+Die Kreditkarten-Summe ist bereits in `monthlyAgg.kreditkarten` vorhanden. Bar = `pos_total - kreditkarten`. Prozentanteile werden berechnet.
 
-| Spalte | Simple | Extended |
-|--------|--------|----------|
-| 20–24 | 25 % Nachtzuschlag | 25 % Nachtzuschlag (20:00–00:00) — additiv zu So/Fei-Zuschlägen |
-| 24–x | 40 % Nachtzuschlag | 40 % Nachtzuschlag (00:00–04:00) — additiv zu So/Fei-Zuschlägen |
-| So/Fei | 50 % Sonn- und Feiertagszuschlag | *(nicht im Extended-Modus)* |
-| So | *(nicht im Simple-Modus)* | 50 % Sonntagszuschlag (§3b EStG) |
-| Fei | *(nicht im Simple-Modus)* | 125 % Feiertag / 150 % besondere Feiertage (1. Mai, 25./26.12.) |
+### 2. Mitarbeiter-Performance – Umsatz pro Kellner pro Stunde
+**Bereits verfügbare Daten**: `waiterHoursAgg` (Stunden) und Waiter-Shifts haben `pos_sales`.
+**Umsetzung**: Neuer Abschnitt `KELLNER-PERFORMANCE PRO MONAT`:
+- Monat | Restaurant | Kellner | Umsatz | Stunden | €/Stunde | Ø Umsatz/Schicht | Schichten
 
-### Aufrufer anpassen
+Erfordert zusätzliche Aggregation von `pos_sales` und Schichtanzahl pro Kellner.
 
-`BuchhaltungTableHead.tsx`, `ZtWochenplan.tsx`, `ZtZusammenfassung.tsx` — das `sfnMode`-Prop an `SfnTooltipHeader` durchreichen, wo es bereits verfügbar ist.
+### 3. Wetterkorrelation
+**Keine Wetterdaten vorhanden** — kein externer API-Zugang in der Edge Function sinnvoll (Latenz, Kosten).
+**Umsetzung**: Statt Wetter-API wird dem System-Prompt eine Anweisung gegeben, dass Wetterdaten nicht verfügbar sind und der Assistent stattdessen auf saisonale Muster, Wochentags-Vergleiche und Gästezahlen-Schwankungen hinweisen soll als Proxy-Indikatoren.
+
+### 4. Restaurant-Benchmarking (Spicery vs. YUM)
+**Bereits verfügbare Daten**: Alle monatlichen Aggregationen sind bereits nach Restaurant getrennt.
+**Umsetzung**: Neuer Abschnitt `RESTAURANT-VERGLEICH PRO MONAT`:
+- Monat | Kennzahl | Restaurant-A | Restaurant-B | Differenz | Differenz-%
+
+Vergleicht automatisch die Restaurants nebeneinander: Umsatz, Gäste, Ø Umsatz/Gast, Kreditkarten-Anteil, Küchen-TG, Ausgaben.
+
+### 5. Proaktive Anomalie-Erkennung
+**Umsetzung**: Serverseitige Berechnung von Anomalien als neuer Kontext-Abschnitt `AKTUELLE ANOMALIEN UND AUFFÄLLIGKEITEN`. Folgende Checks:
+
+1. **Wochenvergleich Umsatz**: Letzte 7 Tage vs. vorherige 7 Tage → melden wenn >15% Abweichung
+2. **Kellner-Abweichungen**: Ø Umsatz/Stunde eines Kellners vs. Team-Durchschnitt → melden wenn >30% unter Durchschnitt
+3. **Ungewöhnlich hohe Differenzen**: Kellner mit auffällig hohen negativen Differenzen (> 2× Standardabweichung)
+4. **Gästezahl-Trends**: Letzte Woche vs. Vorwoche
+5. **Fehlende Tage**: Tage ohne Abrechnung in den letzten 7 Tagen (außer Ruhetage)
+
+Format:
+```text
+=== AKTUELLE ANOMALIEN UND AUFFÄLLIGKEITEN ===
+⚠ Umsatz letzte Woche (Spicery): 12.340€ — 18% unter Vorwoche (15.050€)
+⚠ Kellner X: Ø 48€/h — 35% unter Team-Ø (74€/h) in den letzten 7 Tagen
+ℹ Gästezahl YUM: +12% gegenüber Vorwoche
+```
+
+## System-Prompt Ergänzungen
+
+Neue Regeln:
+- Zahlungsarten-Tabelle für Bar/Karte-Fragen nutzen
+- Kellner-Performance für Umsatz/Stunde-Fragen nutzen
+- Restaurant-Vergleich für Benchmarking-Fragen nutzen
+- Anomalien proaktiv erwähnen wenn relevant (z.B. bei allgemeinen "Wie läuft's?"-Fragen)
+- Bei Wetter-Fragen: Erklären, dass keine Wetterdaten verfügbar sind, aber saisonale Muster und Gästezahlen als Indikatoren anbieten
+
+## Technische Umsetzung
+
+**Eine Datei**: `supabase/functions/restaurant-chat/index.ts`
+
+Neue Berechnungsblöcke nach den bestehenden Aggregationen:
+1. Zahlungsarten-Aggregation (aus bestehender `monthlyAgg`)
+2. Kellner-Performance-Aggregation (neues `waiterPerfAgg` mit `pos_sales` + Schichtcount)
+3. Restaurant-Vergleich (Cross-Join der bestehenden Monatsdaten)
+4. Anomalie-Erkennung (letzte 7 Tage vs. vorherige 7 Tage aus Sessions + Shifts)
+
+Keine neuen DB-Queries nötig — alle benötigten Daten sind bereits geladen. Nur zusätzliche Aggregations-Logik und Kontext-Abschnitte.
 
