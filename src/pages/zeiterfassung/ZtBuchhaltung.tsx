@@ -22,6 +22,8 @@ import BuchhaltungRow from "./buchhaltung/BuchhaltungRow";
 import BuchhaltungFooter from "./buchhaltung/BuchhaltungFooter";
 import { useCumulatedZtData } from "@/hooks/useCumulatedZtData";
 import { useHolidayRates } from "@/hooks/useHolidayRates";
+import { useCommissionData } from "@/hooks/useCommissionData";
+import { useCommissionAddToGross } from "@/hooks/useSettings";
 import type { Shift, PayrollNote, AdvanceEntry } from "./buchhaltung/types";
 
 export default function ZtBuchhaltung() {
@@ -36,9 +38,17 @@ export default function ZtBuchhaltung() {
   const { data: holidayRates } = useHolidayRates();
   const { hasPermission } = useAuth();
   const showSfn = hasPermission('admin');
+  const { commissionAddToGross } = useCommissionAddToGross(restaurantId);
 
   const selectedPeriod = periods?.find(p => p.id === selectedPeriodId);
   const cumData = useCumulatedZtData(cumulated, selectedPeriod);
+
+  const { commissionMap, totalCommission } = useCommissionData(
+    restaurantId,
+    selectedPeriod?.start_date,
+    selectedPeriod?.end_date
+  );
+  const showCommission = commissionAddToGross;
 
   const employees = cumulated ? cumData.employees : restaurantEmployees;
   const weekIds = cumulated
@@ -186,10 +196,10 @@ export default function ZtBuchhaltung() {
         onCumulatedToggle={() => setCumulated(c => !c)}
         actions={
           <>
-            <Button variant="outline" size="sm" disabled={!selectedPeriodId || !employeesWithShifts.length} onClick={() => { if (!selectedPeriod) return; exportBuchhaltungPdf(selectedPeriod.label + (cumulated ? " (Kumuliert)" : ""), employeesWithShifts, shifts ?? [], payrollNotes ?? [], sfnMode, holidayRates); toast.success("PDF wurde erstellt"); }}>
+            <Button variant="outline" size="sm" disabled={!selectedPeriodId || !employeesWithShifts.length} onClick={() => { if (!selectedPeriod) return; exportBuchhaltungPdf(selectedPeriod.label + (cumulated ? " (Kumuliert)" : ""), employeesWithShifts, shifts ?? [], payrollNotes ?? [], sfnMode, holidayRates, showCommission ? commissionMap : undefined); toast.success("PDF wurde erstellt"); }}>
               <Download className="mr-1 h-4 w-4" /> PDF
             </Button>
-            <Button variant="outline" size="sm" disabled={!selectedPeriodId || !employeesWithShifts.length} onClick={() => { if (!selectedPeriod) return; exportBuchhaltungExcel(selectedPeriod.label + (cumulated ? " (Kumuliert)" : ""), employeesWithShifts, shifts ?? [], payrollNotes ?? [], sfnMode, holidayRates); toast.success("Excel wurde erstellt"); }}>
+            <Button variant="outline" size="sm" disabled={!selectedPeriodId || !employeesWithShifts.length} onClick={() => { if (!selectedPeriod) return; exportBuchhaltungExcel(selectedPeriod.label + (cumulated ? " (Kumuliert)" : ""), employeesWithShifts, shifts ?? [], payrollNotes ?? [], sfnMode, holidayRates, showCommission ? commissionMap : undefined); toast.success("Excel wurde erstellt"); }}>
               <FileSpreadsheet className="mr-1 h-4 w-4" /> Excel
             </Button>
           </>
@@ -199,7 +209,7 @@ export default function ZtBuchhaltung() {
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm table-fixed">
-            <BuchhaltungTableHead sfnMode={sfnMode} showSfn={showSfn} />
+            <BuchhaltungTableHead sfnMode={sfnMode} showSfn={showSfn} showCommission={showCommission} />
             <tbody>
               {employeesWithShifts.map((emp) => {
                 const showDeptHeader = emp.department !== lastDept;
@@ -213,7 +223,7 @@ export default function ZtBuchhaltung() {
 
                 return (
                   <React.Fragment key={`${emp.id}-${emp.department}-${selectedPeriodId}`}>
-                    {showDeptHeader && <BuchhaltungDeptHeader department={emp.department} sfnMode={sfnMode} showSfn={showSfn} />}
+                    {showDeptHeader && <BuchhaltungDeptHeader department={emp.department} sfnMode={sfnMode} showSfn={showSfn} showCommission={showCommission} />}
                     <BuchhaltungRow
                       emp={emp}
                       totals={totals}
@@ -224,13 +234,15 @@ export default function ZtBuchhaltung() {
                       isLocked={isPeriodLocked}
                       sfnMode={sfnMode}
                       showSfn={showSfn}
+                      showCommission={showCommission}
+                      commission={commissionMap.get(emp.id) ?? 0}
                       onUpsertNote={(params) => upsertNote.mutate(params)}
                     />
                   </React.Fragment>
                 );
               })}
             </tbody>
-            {employeesWithShifts.length > 0 && <BuchhaltungFooter grandTotals={grandTotals} sfnMode={sfnMode} showSfn={showSfn} />}
+            {employeesWithShifts.length > 0 && <BuchhaltungFooter grandTotals={grandTotals} sfnMode={sfnMode} showSfn={showSfn} showCommission={showCommission} totalCommission={totalCommission} />}
           </table>
         </div>
       </Card>
