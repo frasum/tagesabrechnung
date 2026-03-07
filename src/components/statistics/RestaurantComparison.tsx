@@ -24,19 +24,20 @@ interface MetricDef {
 }
 
 function MetricCard({ label, valA, valB, nameA, nameB, invert }: MetricDef & { nameA: string; nameB: string }) {
-  const max = Math.max(Math.abs(valA), Math.abs(valB));
-  const propA = max > 0 ? (Math.abs(valA) / max) * 100 : 0;
-  const propB = max > 0 ? (Math.abs(valB) / max) * 100 : 0;
+  const total = Math.abs(valA) + Math.abs(valB);
+  const ratioA = total > 0 ? (Math.abs(valA) / total) * 100 : 50;
+  const ratioB = total > 0 ? (Math.abs(valB) / total) * 100 : 50;
   const rawDiff = valB !== 0 ? ((valA - valB) / Math.abs(valB)) * 100 : 0;
   const effectiveDiff = invert ? -rawDiff : rawDiff;
   const leadA = Math.abs(valA) > Math.abs(valB);
   const leadB = Math.abs(valB) > Math.abs(valA);
+  const tie = Math.abs(valA) === Math.abs(valB);
 
   return (
-    <div className="rounded-lg border border-border/60 bg-card p-4 space-y-3">
-      {/* Header */}
+    <div className="rounded-xl border border-border/60 bg-card p-4 space-y-3">
+      {/* Header: label + diff badge */}
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-foreground">{label}</span>
+        <span className="text-sm font-semibold text-foreground">{label}</span>
         <div className="flex items-center gap-1">
           {effectiveDiff > 0 ? (
             <TrendingUp className="w-3.5 h-3.5 text-success" />
@@ -60,32 +61,45 @@ function MetricCard({ label, valA, valB, nameA, nameB, invert }: MetricDef & { n
         </div>
       </div>
 
-      {/* Restaurant A */}
-      <div className={`flex items-center gap-2 rounded-md px-2 py-1.5 ${leadA ? 'bg-[hsl(var(--chart-1)/0.08)]' : ''}`}>
-        <span className="text-xs text-muted-foreground w-16 shrink-0 truncate">{nameA}</span>
-        <div className="flex-1 h-2.5 rounded-full bg-muted/50 overflow-hidden">
-          <div
-            className="h-full rounded-full bg-[hsl(var(--chart-1))] transition-all duration-500"
-            style={{ width: `${propA}%` }}
-          />
+      {/* Values: left vs right */}
+      <div className="flex items-end justify-between gap-2">
+        <div className="text-left space-y-0.5">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-[hsl(var(--chart-1))] shrink-0" />
+            <span className="text-[11px] text-muted-foreground truncate">{nameA}</span>
+          </div>
+          <span className={`tabular-nums block ${leadA ? 'text-lg font-bold text-foreground' : 'text-sm text-muted-foreground'}`}>
+            {formatCurrency(valA)}
+          </span>
         </div>
-        <span className={`text-xs tabular-nums w-[5.5rem] text-right shrink-0 ${leadA ? 'font-bold text-foreground' : 'text-muted-foreground'}`}>
-          {formatCurrency(valA)}
-        </span>
+
+        {tie ? (
+          <span className="text-[10px] text-muted-foreground font-medium pb-1">=</span>
+        ) : (
+          <span className="text-[10px] text-muted-foreground font-medium pb-1">vs</span>
+        )}
+
+        <div className="text-right space-y-0.5">
+          <div className="flex items-center gap-1.5 justify-end">
+            <span className="text-[11px] text-muted-foreground truncate">{nameB}</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-[hsl(var(--chart-2))] shrink-0" />
+          </div>
+          <span className={`tabular-nums block ${leadB ? 'text-lg font-bold text-foreground' : 'text-sm text-muted-foreground'}`}>
+            {formatCurrency(valB)}
+          </span>
+        </div>
       </div>
 
-      {/* Restaurant B */}
-      <div className={`flex items-center gap-2 rounded-md px-2 py-1.5 ${leadB ? 'bg-[hsl(var(--chart-2)/0.08)]' : ''}`}>
-        <span className="text-xs text-muted-foreground w-16 shrink-0 truncate">{nameB}</span>
-        <div className="flex-1 h-2.5 rounded-full bg-muted/50 overflow-hidden">
-          <div
-            className="h-full rounded-full bg-[hsl(var(--chart-2))] transition-all duration-500"
-            style={{ width: `${propB}%` }}
-          />
-        </div>
-        <span className={`text-xs tabular-nums w-[5.5rem] text-right shrink-0 ${leadB ? 'font-bold text-foreground' : 'text-muted-foreground'}`}>
-          {formatCurrency(valB)}
-        </span>
+      {/* Split bar */}
+      <div className="flex h-3 rounded-full overflow-hidden bg-muted/30">
+        <div
+          className="h-full bg-[hsl(var(--chart-1))] transition-all duration-500 rounded-l-full"
+          style={{ width: `${ratioA}%` }}
+        />
+        <div
+          className="h-full bg-[hsl(var(--chart-2))] transition-all duration-500 rounded-r-full"
+          style={{ width: `${ratioB}%` }}
+        />
       </div>
     </div>
   );
@@ -125,10 +139,13 @@ export function RestaurantComparison({ restaurants }: RestaurantComparisonProps)
         ))}
 
         {/* Days card */}
-        <div className="rounded-lg border border-border/60 bg-card p-4 flex items-center justify-around sm:col-span-2">
-          {restaurants.map((r) => (
+        <div className="rounded-xl border border-border/60 bg-card p-4 flex items-center justify-around sm:col-span-2">
+          {restaurants.map((r, i) => (
             <div key={r.name} className="text-center space-y-1">
-              <span className="text-xs text-muted-foreground">{r.name}</span>
+              <div className="flex items-center justify-center gap-1.5">
+                <span className={`w-2.5 h-2.5 rounded-full ${i === 0 ? 'bg-[hsl(var(--chart-1))]' : 'bg-[hsl(var(--chart-2))]'}`} />
+                <span className="text-xs text-muted-foreground">{r.name}</span>
+              </div>
               <div className="flex items-center justify-center gap-1.5">
                 <Calendar className="w-4 h-4 text-muted-foreground" />
                 <span className="text-xl font-bold tabular-nums text-foreground">{r.summary.daysWithData}</span>
