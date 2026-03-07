@@ -522,12 +522,14 @@ export default function ZtProvision() {
                   <TableHead className="text-right">Stunden (h)</TableHead>
                   <TableHead className="text-right">Umsatz (€)</TableHead>
                   <TableHead className="text-right">Ø / MA (€)</TableHead>
+                  <TableHead className="text-right">Ø €/h</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {dailyBreakdown.map((day) => {
                   const avgPerStaff = day.staffCount > 0 ? day.revenue / day.staffCount : 0;
                   const belowThreshold = avgPerStaff < minRevenue;
+                  const hourlyRevenue = day.allDeptHours > 0 ? day.revenue / day.allDeptHours : 0;
                   return (
                     <TableRow key={day.date}>
                       <TableCell className="font-medium">{fmtDate(day.date)}</TableCell>
