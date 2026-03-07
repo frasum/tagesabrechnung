@@ -1,16 +1,24 @@
 
 
-## Problem
+## Tooltips für erweiterten SFN-Modus anpassen
 
-Die Kreditkarten-Werte (3.000–6.000 €) liegen sehr nah am Tagesumsatz (4.000–6.500 €), da der Großteil der Umsätze unbar bezahlt wird. Die orange Kreditkarten-Linie wird daher von der blauen Tagesumsatz-Fläche visuell verdeckt.
+Aktuell zeigen die Tooltips nur den Zuschlagsprozentsatz. Im erweiterten (§3b) Modus sollen sie zusätzlich erklären, dass die Zuschläge additiv berechnet werden.
 
-## Lösung
+### Änderung in `src/components/zeiterfassung/SfnTooltipHeader.tsx`
 
-Die Kreditkarten-Linie visuell hervorheben, damit sie trotz ähnlicher Werte sichtbar ist:
+- Neues optionales Prop `sfnMode?: SfnMode` hinzufügen
+- Zwei Tooltip-Text-Sets: eins für "simple", eins für "extended"
+- Im Extended-Modus erklären die Tooltips die additive Logik:
 
-### `src/pages/Statistics.tsx`
+| Spalte | Simple | Extended |
+|--------|--------|----------|
+| 20–24 | 25 % Nachtzuschlag | 25 % Nachtzuschlag (20:00–00:00) — additiv zu So/Fei-Zuschlägen |
+| 24–x | 40 % Nachtzuschlag | 40 % Nachtzuschlag (00:00–04:00) — additiv zu So/Fei-Zuschlägen |
+| So/Fei | 50 % Sonn- und Feiertagszuschlag | *(nicht im Extended-Modus)* |
+| So | *(nicht im Simple-Modus)* | 50 % Sonntagszuschlag (§3b EStG) |
+| Fei | *(nicht im Simple-Modus)* | 125 % Feiertag / 150 % besondere Feiertage (1. Mai, 25./26.12.) |
 
-1. **Kreditkarten-Area mit gestrichelter Linie darstellen** — `strokeDasharray="5 3"` hinzufügen, damit die Linie sich vom Tagesumsatz abhebt
-2. **Rendering-Reihenfolge anpassen** — Kreditkarten NACH dem Tagesumsatz rendern (ist bereits so), aber die `fillOpacity` der Kreditkarten-Fläche deutlich reduzieren (auf 0.1), damit die orange Linie klar erkennbar bleibt
-3. **Stärkere Strichbreite** für Kreditkarten (`strokeWidth={2.5}`) für bessere Sichtbarkeit
+### Aufrufer anpassen
+
+`BuchhaltungTableHead.tsx`, `ZtWochenplan.tsx`, `ZtZusammenfassung.tsx` — das `sfnMode`-Prop an `SfnTooltipHeader` durchreichen, wo es bereits verfügbar ist.
 

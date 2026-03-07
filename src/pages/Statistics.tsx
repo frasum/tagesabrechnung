@@ -538,7 +538,9 @@ export default function Statistics() {
                         name="Kreditkarten"
                         stroke="hsl(var(--chart-2))" 
                         fill="url(#colorKreditkarten)"
-                        strokeWidth={2}
+                        fillOpacity={0.1}
+                        strokeWidth={2.5}
+                        strokeDasharray="5 3"
                       />
                       <Area 
                         type="monotone" 
