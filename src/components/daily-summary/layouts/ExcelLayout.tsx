@@ -181,15 +181,18 @@ export function ExcelLayout({
                   <td className="px-3 py-1.5 font-medium text-foreground">Gästeanzahl</td>
                   <td className="px-3 py-1.5 w-36">
                     <div className="flex items-center gap-2">
-                      <Input
+                    <Input
                         type="text"
                         inputMode="numeric"
                         pattern="[0-9]*"
-                        value={guestCount > 0 ? String(guestCount) : ''}
+                        value={localGuestInput}
                         placeholder="0"
                         onChange={(e) => {
-                          const cleaned = e.target.value.replace(/\D/g, '');
-                          handleGuestCountChange(cleaned ? parseInt(cleaned, 10) : 0);
+                          setLocalGuestInput(e.target.value.replace(/\D/g, ''));
+                        }}
+                        onBlur={() => {
+                          const val = localGuestInput ? parseInt(localGuestInput, 10) : 0;
+                          handleGuestCountChange(val);
                         }}
                         className="h-7 text-sm border-primary/20 bg-primary/5 w-20 text-right"
                         disabled={locked} />
