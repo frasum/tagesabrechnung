@@ -118,6 +118,10 @@ export function ExcelLayout({
   const [pendingAverage, setPendingAverage] = useState(0);
   const [localGuestInput, setLocalGuestInput] = useState(guestCount > 0 ? String(guestCount) : '');
 
+  useEffect(() => {
+    setLocalGuestInput(guestCount > 0 ? String(guestCount) : '');
+  }, [guestCount]);
+
   const handleGuestCountChange = (newCount: number) => {
     if (newCount > 0) {
       const avg = (formData.pos_total - (formData.takeaway_total || 0)) / newCount;
