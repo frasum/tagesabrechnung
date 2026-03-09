@@ -116,6 +116,7 @@ export function ExcelLayout({
   const [showAvgWarning, setShowAvgWarning] = useState(false);
   const [pendingGuestCount, setPendingGuestCount] = useState(0);
   const [pendingAverage, setPendingAverage] = useState(0);
+  const [localGuestInput, setLocalGuestInput] = useState(guestCount > 0 ? String(guestCount) : '');
 
   const handleGuestCountChange = (newCount: number) => {
     if (newCount > 0) {
