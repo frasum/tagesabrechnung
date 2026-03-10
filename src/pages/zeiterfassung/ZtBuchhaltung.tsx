@@ -151,8 +151,8 @@ export default function ZtBuchhaltung() {
         const aIdx = DEPARTMENT_ORDER.indexOf(a.department as any);
         const bIdx = DEPARTMENT_ORDER.indexOf(b.department as any);
         if (aIdx !== bIdx) return aIdx - bIdx;
-        const nameA = (a.nickname || a.first_name || "").toLowerCase();
-        const nameB = (b.nickname || b.first_name || "").toLowerCase();
+        const nameA = (a.nickname || (a.name && a.name !== a.first_name && a.name !== a.last_name ? a.name : null) || a.first_name || "").toLowerCase();
+        const nameB = (b.nickname || (b.name && b.name !== b.first_name && b.name !== b.last_name ? b.name : null) || b.first_name || "").toLowerCase();
         return nameA.localeCompare(nameB, "de");
       })
     : [];
