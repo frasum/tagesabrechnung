@@ -37,9 +37,11 @@ export default function BuchhaltungRow({ emp, totals, note, shifts, advances, is
   const vacText = vacRanges.length > 0 ? `U: ${formatSickRanges(vacRanges).join(", ")}` : "";
   const besonderheitenValue = [advanceText, vacText, note?.besonderheiten].filter(Boolean).join(" | ");
 
-  const nicknameAlreadyInName = emp.nickname && (emp.first_name?.includes(emp.nickname) || emp.last_name?.includes(emp.nickname));
+  const effectiveNickname = emp.nickname || 
+    (emp.name && emp.name !== emp.first_name && emp.name !== emp.last_name ? emp.name : null);
+  const nicknameAlreadyInName = effectiveNickname && (emp.first_name?.includes(effectiveNickname) || emp.last_name?.includes(effectiveNickname));
   const nameBase = emp.first_name || emp.last_name
-    ? [emp.first_name, emp.nickname && !nicknameAlreadyInName ? `(${emp.nickname})` : null, emp.last_name].filter(Boolean).join(" ")
+    ? [emp.first_name, effectiveNickname && !nicknameAlreadyInName ? `(${effectiveNickname})` : null, emp.last_name].filter(Boolean).join(" ")
     : emp.name;
   const persoStr = emp.perso_nr && emp.perso_nr > 0 ? String(emp.perso_nr) : "";
 
