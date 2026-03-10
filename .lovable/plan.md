@@ -1,46 +1,24 @@
 
 
-## ElevenLabs Voice-Chat im Restaurant-Assistenten
+## Tooltips für erweiterten SFN-Modus anpassen
 
-### Was wird gebaut
-Der bestehende Text-Chat bekommt zwei Voice-Features:
-1. **Mikrofon-Button** neben dem Textfeld — Sprache wird per ElevenLabs STT in Text umgewandelt und als normale Nachricht gesendet
-2. **Lautsprecher-Button** an jeder Assistenten-Antwort — liest die Antwort per ElevenLabs TTS vor
+Aktuell zeigen die Tooltips nur den Zuschlagsprozentsatz. Im erweiterten (§3b) Modus sollen sie zusätzlich erklären, dass die Zuschläge additiv berechnet werden.
 
-### Architektur
+### Änderung in `src/components/zeiterfassung/SfnTooltipHeader.tsx`
 
-```text
-┌─ Frontend (RestaurantChat.tsx) ──────────────┐
-│                                                │
-│  🎤 Mic-Button → MediaRecorder → Audio Blob   │
-│       ↓                                        │
-│  fetch(/elevenlabs-stt)  → Transkript → sendMessage()
-│                                                │
-│  🔊 Speaker-Button auf Antwort                │
-│       ↓                                        │
-│  fetch(/elevenlabs-tts)  → Audio Blob → play() │
-└────────────────────────────────────────────────┘
-```
+- Neues optionales Prop `sfnMode?: SfnMode` hinzufügen
+- Zwei Tooltip-Text-Sets: eins für "simple", eins für "extended"
+- Im Extended-Modus erklären die Tooltips die additive Logik:
 
-### Neue Edge Functions (2)
+| Spalte | Simple | Extended |
+|--------|--------|----------|
+| 20–24 | 25 % Nachtzuschlag | 25 % Nachtzuschlag (20:00–00:00) — additiv zu So/Fei-Zuschlägen |
+| 24–x | 40 % Nachtzuschlag | 40 % Nachtzuschlag (00:00–04:00) — additiv zu So/Fei-Zuschlägen |
+| So/Fei | 50 % Sonn- und Feiertagszuschlag | *(nicht im Extended-Modus)* |
+| So | *(nicht im Simple-Modus)* | 50 % Sonntagszuschlag (§3b EStG) |
+| Fei | *(nicht im Simple-Modus)* | 125 % Feiertag / 150 % besondere Feiertage (1. Mai, 25./26.12.) |
 
-**1. `supabase/functions/elevenlabs-stt/index.ts`**
-- Empfängt FormData mit Audio-Datei
-- Leitet an `https://api.elevenlabs.io/v1/speech-to-text` mit `model_id: scribe_v2`, `language_code: deu`
-- Gibt `{ text: "..." }` zurück
+### Aufrufer anpassen
 
-**2. `supabase/functions/elevenlabs-tts/index.ts`**
-- Empfängt `{ text, voiceId }` als JSON
-- Ruft `https://api.elevenlabs.io/v1/text-to-speech/{voiceId}` auf mit `eleven_multilingual_v2`
-- Gibt rohes Audio (MP3) als Binary zurück
-
-### Frontend-Änderungen (`RestaurantChat.tsx`)
-
-- **Mikrofon-Button**: Neben dem Send-Button. Klick startet Aufnahme (MediaRecorder), erneuter Klick stoppt und sendet an STT Edge Function. Transkript wird als User-Nachricht gesendet.
-- **Speaker-Button**: Kleines Volume-Icon an jeder Assistant-Nachricht. Klick ruft TTS Edge Function und spielt Audio ab.
-- **States**: `isRecording`, `isSpeaking` (pro Nachricht-Index)
-- **Dependency**: Keine neue npm-Abhängigkeit nötig (nutzt native MediaRecorder + fetch)
-
-### config.toml
-- Beide neuen Functions mit `verify_jwt = false` eintragen
+`BuchhaltungTableHead.tsx`, `ZtWochenplan.tsx`, `ZtZusammenfassung.tsx` — das `sfnMode`-Prop an `SfnTooltipHeader` durchreichen, wo es bereits verfügbar ist.
 

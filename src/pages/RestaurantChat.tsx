@@ -2,12 +2,13 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Loader2, MessageCircle, Sparkles } from 'lucide-react';
+import { Send, Loader2, MessageCircle, Sparkles, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRestaurant, useRestaurants } from '@/hooks/useRestaurant';
+import { useRestaurants } from '@/hooks/useRestaurant';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import ReactMarkdown from 'react-markdown';
+import { useVoiceChat } from '@/hooks/useVoiceChat';
 
 type Msg = { role: 'user' | 'assistant'; content: string };
 
@@ -33,6 +34,7 @@ export default function RestaurantChat() {
   const { user } = useAuth();
   const { data: restaurants = [] } = useRestaurants();
   const { toast } = useToast();
+  const { isRecording, isTranscribing, playingIndex, startRecording, stopRecording, playTTS } = useVoiceChat();
 
   const scrollToBottom = useCallback(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -141,12 +143,22 @@ export default function RestaurantChat() {
         description: e.message || 'Verbindung fehlgeschlagen',
         variant: 'destructive',
       });
-      // Remove the user message if no assistant reply was started
       if (!assistantSoFar) {
         setMessages(prev => prev.slice(0, -1));
       }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleMicClick = async () => {
+    if (isRecording) {
+      const transcript = await stopRecording();
+      if (transcript) {
+        sendMessage(transcript);
+      }
+    } else {
+      startRecording();
     }
   };
 
@@ -210,9 +222,24 @@ export default function RestaurantChat() {
                 )}
               >
                 {msg.role === 'assistant' ? (
-                  <div className="prose prose-sm dark:prose-invert max-w-none [&_table]:text-xs [&_th]:px-2 [&_td]:px-2">
-                    <ReactMarkdown>{msg.content}</ReactMarkdown>
-                  </div>
+                  <>
+                    <div className="prose prose-sm dark:prose-invert max-w-none [&_table]:text-xs [&_th]:px-2 [&_td]:px-2">
+                      <ReactMarkdown>{msg.content}</ReactMarkdown>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-1 h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                      onClick={() => playTTS(msg.content, i)}
+                      disabled={isLoading}
+                    >
+                      {playingIndex === i ? (
+                        <><VolumeX className="w-3.5 h-3.5 mr-1" /> Stopp</>
+                      ) : (
+                        <><Volume2 className="w-3.5 h-3.5 mr-1" /> Vorlesen</>
+                      )}
+                    </Button>
+                  </>
                 ) : (
                   <p className="whitespace-pre-wrap">{msg.content}</p>
                 )}
@@ -252,11 +279,27 @@ export default function RestaurantChat() {
             <Input
               value={input}
               onChange={e => setInput(e.target.value)}
-              placeholder="Stelle eine Frage..."
-              disabled={isLoading}
+              placeholder={isTranscribing ? 'Transkribiere...' : isRecording ? 'Aufnahme läuft...' : 'Stelle eine Frage...'}
+              disabled={isLoading || isRecording || isTranscribing}
               className="flex-1"
             />
-            <Button type="submit" size="icon" disabled={isLoading || !input.trim()}>
+            <Button
+              type="button"
+              size="icon"
+              variant={isRecording ? 'destructive' : 'outline'}
+              onClick={handleMicClick}
+              disabled={isLoading || isTranscribing}
+              title={isRecording ? 'Aufnahme beenden' : 'Spracheingabe'}
+            >
+              {isTranscribing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : isRecording ? (
+                <MicOff className="w-4 h-4" />
+              ) : (
+                <Mic className="w-4 h-4" />
+              )}
+            </Button>
+            <Button type="submit" size="icon" disabled={isLoading || !input.trim() || isRecording}>
               {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             </Button>
           </form>
