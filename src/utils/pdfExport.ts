@@ -403,6 +403,88 @@ export const generateDailySummaryPDF = (data: PDFExportData): { blobUrl: string;
     y = textY + 12;
   }
 
+  // ========== Vorschuss-Quittungsseiten ==========
+  if (data.advances && data.advances.length > 0) {
+    const pageHeight = doc.internal.pageSize.getHeight();
+    data.advances.forEach((adv) => {
+      doc.addPage();
+      const qY = { current: 30 };
+
+      // Header: Restaurant + Datum
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100);
+      const qHeader = data.restaurantName
+        ? `${data.restaurantName}  ·  ${format(new Date(data.session.session_date), 'EEEE, d. MMMM yyyy', { locale: de })}`
+        : format(new Date(data.session.session_date), 'EEEE, d. MMMM yyyy', { locale: de });
+      doc.text(qHeader, pageWidth / 2, qY.current, { align: 'center' });
+      qY.current += 16;
+
+      // Titel
+      doc.setFontSize(24);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0);
+      doc.text('Vorschussquittung', pageWidth / 2, qY.current, { align: 'center' });
+      qY.current += 20;
+
+      // Trennlinie
+      doc.setDrawColor(200);
+      doc.setLineWidth(0.5);
+      doc.line(margin + 20, qY.current, pageWidth - margin - 20, qY.current);
+      qY.current += 16;
+
+      // Name
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(80);
+      doc.text('Mitarbeiter:', pageWidth / 2, qY.current, { align: 'center' });
+      qY.current += 10;
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0);
+      doc.text(adv.staff_name, pageWidth / 2, qY.current, { align: 'center' });
+      qY.current += 16;
+
+      // Betrag
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(80);
+      doc.text('Betrag:', pageWidth / 2, qY.current, { align: 'center' });
+      qY.current += 10;
+      doc.setFontSize(28);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0);
+      doc.text(formatCurrency(adv.amount), pageWidth / 2, qY.current, { align: 'center' });
+      qY.current += 20;
+
+      // Trennlinie
+      doc.setDrawColor(200);
+      doc.line(margin + 20, qY.current, pageWidth - margin - 20, qY.current);
+      qY.current += 16;
+
+      // Bestätigungstext
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(0);
+      const confirmText = 'Hiermit bestätige ich, den oben genannten Vorschuss bar erhalten zu haben.';
+      const confirmLines = doc.splitTextToSize(confirmText, pageWidth - 2 * margin - 40);
+      doc.text(confirmLines, pageWidth / 2, qY.current, { align: 'center' });
+      qY.current += confirmLines.length * 6 + 30;
+
+      // Unterschriftslinie
+      const sigLineY = Math.max(qY.current, pageHeight - 50);
+      const sigLineLeft = margin + 30;
+      const sigLineRight = pageWidth - margin - 30;
+      doc.setDrawColor(0);
+      doc.setLineWidth(0.5);
+      doc.line(sigLineLeft, sigLineY, sigLineRight, sigLineY);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100);
+      doc.text('Datum, Unterschrift', pageWidth / 2, sigLineY + 5, { align: 'center' });
+    });
+  }
+
   // ========== Footer with page numbers ==========
   const pageCount = doc.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
