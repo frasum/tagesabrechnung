@@ -242,7 +242,7 @@ export default function ZtWochenplan() {
     queryFn: async () => {
       const { data } = await supabase
         .from("zt_shifts")
-        .select("employee_id, shift_date, department, week_id, start_time, end_time, total_hours, absence_type")
+        .select("employee_id, shift_date, department, week_id, start_time, end_time, total_hours, absence_type, weeks!inner(scheduling_periods!inner(restaurants(name)))")
         .in("employee_id", employeeIds)
         .in("shift_date", dateStrings);
       return data ?? [];
