@@ -745,7 +745,10 @@ export default function ZtWochenplan() {
                                         </div>
                                       </HoverCardTrigger>
                                       <HoverCardContent side="bottom" className="w-auto min-w-[140px] p-3 text-xs">
-                                        <p>Bereits in {conflict.department || "anderem Restaurant"} eingetragen</p>
+                                        <p>Bereits in {conflict.department || "anderer Abteilung"} eingetragen</p>
+                                        {(conflict as any).weeks?.scheduling_periods?.restaurants?.name && (
+                                          <p className="text-muted-foreground mt-1">{(conflict as any).weeks.scheduling_periods.restaurants.name}</p>
+                                        )}
                                       </HoverCardContent>
                                     </HoverCard>
                                   </td>
