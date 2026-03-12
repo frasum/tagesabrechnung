@@ -335,7 +335,7 @@ export function useCreateStaff() {
       // Create the staff member
       const { data: staff, error } = await supabase
         .from('staff')
-        .insert(staffData)
+        .insert({ ...staffData, nickname: staffData.name })
         .select()
         .single();
       if (error) throw error;
