@@ -138,6 +138,7 @@ Deno.serve(async (req) => {
       if (matchedId) {
         // Update existing
         payload.name = displayName;
+        payload.nickname = displayName;
         if (persoNr) payload.perso_nr = persoNr;
         const { error } = await supabase
           .from("staff")
