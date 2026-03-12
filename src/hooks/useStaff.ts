@@ -463,6 +463,9 @@ export function useUpdateStaff() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['staff'] });
+      queryClient.invalidateQueries({ queryKey: ['restaurant-employees'] });
+      queryClient.invalidateQueries({ queryKey: ['cumulated-employees'] });
+      queryClient.invalidateQueries({ queryKey: ['all-restaurant-employees-zt'] });
       toast.success('Mitarbeiter erfolgreich aktualisiert');
     },
     onError: (error) => {
