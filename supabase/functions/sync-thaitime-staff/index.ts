@@ -154,6 +154,7 @@ Deno.serve(async (req) => {
         // Create new
         const { error } = await supabase.from("staff").insert({
           name: displayName,
+          nickname: displayName,
           perso_nr: persoNr || null,
           role: "waiter",
           ...payload,
