@@ -406,9 +406,10 @@ export function useUpdateStaff() {
       }
       
       // Update the staff member
+      const staffPayload = staffData.name ? { ...staffData, nickname: staffData.name } : staffData;
       const { data, error } = await supabase
         .from('staff')
-        .update(staffData)
+        .update(staffPayload)
         .eq('id', id)
         .select()
         .single();
