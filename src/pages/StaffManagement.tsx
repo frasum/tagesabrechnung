@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, ChefHat, UtensilsCrossed, Search, Trophy, ChevronDown, UserPlus } from 'lucide-react';
+import { Users, ChefHat, UtensilsCrossed, Search, Trophy, ChevronDown, UserPlus, Eye, EyeOff } from 'lucide-react';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,7 @@ import { TipRanking } from '@/components/waiter/TipRanking';
 import { StaffMatrixView } from '@/components/staff/StaffMatrixView';
 import { cn } from '@/lib/utils';
 
-import { useStaff, useCreateStaff, useUpdateStaff, useDeactivateStaff, hasRole, Staff, StaffInput, StaffRole } from '@/hooks/useStaff';
+import { useStaff, useCreateStaff, useUpdateStaff, useDeactivateStaff, useReactivateStaff, hasRole, Staff, StaffInput, StaffRole } from '@/hooks/useStaff';
 import { useShowTipRanking } from '@/hooks/useSettings';
 import { useWaiterRanking } from '@/hooks/useWaiterRanking';
 import { useRestaurants } from '@/hooks/useRestaurant';
@@ -30,6 +30,7 @@ const filterTabs: { value: FilterTab; label: string; icon: typeof Users }[] = [
 export default function StaffManagement() {
   const [filter, setFilter] = useState<FilterTab>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showInactive, setShowInactive] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
   const [deleteStaff, setDeleteStaff] = useState<Staff | null>(null);
@@ -44,10 +45,15 @@ export default function StaffManagement() {
   const createMutation = useCreateStaff();
   const updateMutation = useUpdateStaff();
   const deactivateMutation = useDeactivateStaff();
+  const reactivateMutation = useReactivateStaff();
   const { data: rankings = [], isLoading: rankingsLoading } = useWaiterRanking();
 
   const rankingMap = new Map(rankings.map(r => [r.name.toLowerCase(), r]));
-  const filteredStaff = allStaff
+  const activeStaff = allStaff.filter(s => s.is_active !== false);
+  const inactiveStaff = allStaff.filter(s => s.is_active === false);
+  const displayStaff = showInactive ? allStaff : activeStaff;
+  
+  const filteredStaff = displayStaff
     .filter(s => {
       const matchesRole = filter === 'all' || hasRole(s.role, filter as 'waiter' | 'kitchen');
       const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -56,9 +62,9 @@ export default function StaffManagement() {
     })
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  const waiterCount = allStaff.filter(s => hasRole(s.role, 'waiter')).length;
-  const kitchenCount = allStaff.filter(s => hasRole(s.role, 'kitchen')).length;
-  const counts: Record<FilterTab, number> = { all: allStaff.length, waiter: waiterCount, kitchen: kitchenCount };
+  const waiterCount = activeStaff.filter(s => hasRole(s.role, 'waiter')).length;
+  const kitchenCount = activeStaff.filter(s => hasRole(s.role, 'kitchen')).length;
+  const counts: Record<FilterTab, number> = { all: activeStaff.length, waiter: waiterCount, kitchen: kitchenCount };
 
   useEffect(() => {
     if (!selectedRankingRestaurantId && restaurants.length > 0) {
@@ -108,7 +114,8 @@ export default function StaffManagement() {
                 Mitarbeiterverwaltung
               </h1>
               <p className="text-muted-foreground mt-2 text-sm">
-                {allStaff.length} Mitarbeiter · {waiterCount} Service · {kitchenCount} Küche
+                {activeStaff.length} Mitarbeiter · {waiterCount} Service · {kitchenCount} Küche
+                {inactiveStaff.length > 0 && <span className="text-muted-foreground/60"> · {inactiveStaff.length} inaktiv</span>}
               </p>
             </div>
             
@@ -161,6 +168,18 @@ export default function StaffManagement() {
             })}
           </div>
 
+          {inactiveStaff.length > 0 && (
+            <Button
+              variant={showInactive ? "secondary" : "outline"}
+              size="sm"
+              className="gap-1.5 shrink-0"
+              onClick={() => setShowInactive(!showInactive)}
+            >
+              {showInactive ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+              <span className="hidden sm:inline">{showInactive ? 'Inaktive ausblenden' : 'Inaktive anzeigen'}</span>
+              <span className="sm:hidden">{inactiveStaff.length}</span>
+            </Button>
+          )}
         </div>
 
         {/* Tip Ranking Toggle */}
@@ -224,6 +243,7 @@ export default function StaffManagement() {
             restaurants={restaurants}
             onEdit={handleEdit}
             onDelete={setDeleteStaff}
+            onReactivate={(s) => reactivateMutation.mutate(s.id)}
           />
         )}
 

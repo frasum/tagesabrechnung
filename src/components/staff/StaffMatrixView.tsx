@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback } from 'react';
-import { UserMinus } from 'lucide-react';
+import { UserMinus, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -27,6 +27,7 @@ interface StaffMatrixViewProps {
   restaurants: Restaurant[];
   onEdit: (staff: Staff) => void;
   onDelete: (staff: Staff) => void;
+  onReactivate?: (staff: Staff) => void;
 }
 
 const permLabels: Record<PermissionLevel, string> = {
@@ -43,7 +44,7 @@ const categoryToDept: Record<string, string> = {
   gl: 'GL',
 };
 
-export function StaffMatrixView({ staff, restaurants, onEdit, onDelete }: StaffMatrixViewProps) {
+export function StaffMatrixView({ staff, restaurants, onEdit, onDelete, onReactivate }: StaffMatrixViewProps) {
   const queryClient = useQueryClient();
   const { data: skills = [] } = useSkills();
   const staffIds = useMemo(() => staff.map(s => s.id), [staff]);
@@ -300,22 +301,38 @@ export function StaffMatrixView({ staff, restaurants, onEdit, onDelete }: StaffM
                     </div>
                   </TableCell>
 
-                  {/* Deaktivieren */}
+                  {/* Aktionen */}
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => onDelete(s)}
-                          >
-                            <UserMinus className="w-4 h-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent><p className="text-xs">Deaktivieren</p></TooltipContent>
-                      </Tooltip>
+                      {s.is_active === false && onReactivate ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                              onClick={() => onReactivate(s)}
+                            >
+                              <UserCheck className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p className="text-xs">Reaktivieren</p></TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => onDelete(s)}
+                            >
+                              <UserMinus className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p className="text-xs">Deaktivieren</p></TooltipContent>
+                        </Tooltip>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

@@ -502,3 +502,25 @@ export function useDeactivateStaff() {
     },
   });
 }
+
+export function useReactivateStaff() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('staff')
+        .update({ is_active: true })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['staff'] });
+      toast.success('Mitarbeiter reaktiviert');
+    },
+    onError: (error) => {
+      toast.error('Fehler beim Reaktivieren des Mitarbeiters');
+      console.error('Error reactivating staff:', error);
+    },
+  });
+}
