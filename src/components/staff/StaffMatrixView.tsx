@@ -87,6 +87,7 @@ export function StaffMatrixView({ staff, restaurants, onEdit }: StaffMatrixViewP
   return (
     <Card className="overflow-hidden">
       <div className="overflow-x-auto">
+        <TooltipProvider delayDuration={300}>
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/30 hover:bg-muted/30">
