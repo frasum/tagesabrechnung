@@ -54,13 +54,13 @@ export function MonthlyGrid({ department, month, year }: MonthlyGridProps) {
 
   const filteredEmployees = useMemo(() => {
     return employees.filter(e => {
-      const dept = e.zt_department;
+      const dept = e.department;
       if (department === 'kitchen') return dept === 'Küche';
       return dept === 'Service' || dept === 'GL';
     });
   }, [employees, department]);
 
-  const staffIds = filteredEmployees.map(e => e.staff_id);
+  const staffIds = filteredEmployees.map(e => e.id);
   const { data: absences = [] } = useAbsences(staffIds, startDate, endDate);
 
   const getAbsenceForDay = (staffId: string, date: string) => {
