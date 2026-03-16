@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { MonthlyGrid } from '@/components/dienstplan/MonthlyGrid';
 import { DienstplanToolbar } from '@/components/dienstplan/DienstplanToolbar';
-import { DienstplanLegend } from '@/components/dienstplan/DienstplanLegend';
+
 
 export default function DienstplanService() {
   const now = new Date();
