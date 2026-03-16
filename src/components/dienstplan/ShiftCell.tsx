@@ -43,6 +43,7 @@ export function ShiftCell({
     const isVacation = absenceType === 'vacation';
     return (
       <td
+        onClick={onAbsence}
         className={cn(
           'text-center text-xs font-semibold p-1 min-w-[52px] cursor-pointer border border-border/50',
           isVacation ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'
