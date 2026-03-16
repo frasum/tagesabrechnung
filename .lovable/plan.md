@@ -1,34 +1,19 @@
 
+## Dienstplan – 2 Pläne pro Standort (Küche + Service/GL)
 
-## Fix: Mitarbeiter-Deduplizierung im Dienstplan-Grid
+### Status: ✅ Implementiert
 
-### Problem
-`useRestaurantEmployees` liefert pro `staff_restaurants`-Zeile einen Eintrag. Mo hat zwei Einträge (Service + GL), erscheint daher doppelt.
+### Was wurde gebaut
 
-### Lösung
-In `MonthlyGrid.tsx` die `filteredEmployees` nach `staff_id` deduplizieren. Mitarbeiter, die sowohl Service als auch GL haben, erscheinen nur einmal.
+- **Datenbank**: 4 neue Tabellen (`skills`, `employee_skills`, `shift_assignments`, `absences`) + `contracted_hours_per_month` auf `staff`
+- **7 Seed-Skills**: VS, PASS, SPÜLEN, CO (Küche), SERVICE, BAR (Service), GL
+- **Routing**: `/:restaurant/dienstplan/kueche` und `/:restaurant/dienstplan/service`
+- **Sidebar**: "Dienstplan" unter Tagesgeschäft
+- **Grid-UI**: Monatsansicht mit Skill-farbcodierten Zellen, Inline-Edit via Popover, Skill-Besetzungszeile (Küche)
+- **Hooks**: `useSkills`, `useDienstplan` für CRUD
 
-### Änderung
+### Nächste Schritte
 
-**`src/components/dienstplan/MonthlyGrid.tsx`** -- im `filteredEmployees` useMemo:
-
-Nach dem `.filter()` eine Deduplizierung per `Map` einfügen:
-
-```typescript
-const filteredEmployees = useMemo(() => {
-  const filtered = employees.filter(e => {
-    const dept = e.department;
-    if (department === 'kitchen') return dept === 'Küche';
-    return dept === 'Service' || dept === 'GL';
-  });
-  // Deduplizieren nach staff id
-  const unique = new Map<string, typeof filtered[0]>();
-  for (const emp of filtered) {
-    if (!unique.has(emp.id)) unique.set(emp.id, emp);
-  }
-  return Array.from(unique.values());
-}, [employees, department]);
-```
-
-Keine DB-Änderung nötig. Eine Zeile Code-Ergänzung.
-
+- Employee-Skills zuweisen (UI in Mitarbeiterverwaltung)
+- AbsenceDialog für mehrtägige Abwesenheiten
+- Dienstplan-Filter nach Skill
