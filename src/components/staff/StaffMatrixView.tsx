@@ -41,6 +41,19 @@ export function StaffMatrixView({ staff, restaurants, onEdit }: StaffMatrixViewP
   const toggleSkill = useToggleEmployeeSkill();
   const updateRole = useUpdateUserRole();
 
+  const deptMapByStaff = useMemo(() => {
+    const map = new Map<string, Map<string, Set<string>>>();
+    for (const s of staff) {
+      const rMap = new Map<string, Set<string>>();
+      for (const sr of s.staff_restaurants ?? []) {
+        if (!rMap.has(sr.restaurant_id)) rMap.set(sr.restaurant_id, new Set());
+        if (sr.zt_department) rMap.get(sr.restaurant_id)!.add(sr.zt_department);
+      }
+      map.set(s.id, rMap);
+    }
+    return map;
+  }, [staff]);
+
   const employeeSkillMap = useMemo(() => {
     const map = new Map<string, Set<string>>();
     for (const es of employeeSkills) {
@@ -50,38 +63,24 @@ export function StaffMatrixView({ staff, restaurants, onEdit }: StaffMatrixViewP
     return map;
   }, [employeeSkills]);
 
-  const handleRestaurantToggle = async (staffMember: Staff, restaurantId: string, isAssigned: boolean) => {
+  const handleDeptToggle = async (staffId: string, restaurantId: string, dept: string, isAssigned: boolean) => {
     try {
       if (isAssigned) {
-        await supabase
-          .from('staff_restaurants')
-          .delete()
-          .eq('staff_id', staffMember.id)
-          .eq('restaurant_id', restaurantId);
+        const staffMember = staff.find(s => s.id === staffId);
+        const sr = staffMember?.staff_restaurants?.find(
+          x => x.restaurant_id === restaurantId && x.zt_department === dept
+        );
+        if (sr) {
+          await supabase.from('staff_restaurants').delete().eq('id', sr.id);
+        }
       } else {
         await supabase
           .from('staff_restaurants')
-          .insert({ staff_id: staffMember.id, restaurant_id: restaurantId });
+          .insert({ staff_id: staffId, restaurant_id: restaurantId, zt_department: dept as 'Service' | 'Küche' | 'GL' });
       }
       queryClient.invalidateQueries({ queryKey: ['staff'] });
     } catch {
-      toast.error('Fehler bei Restaurant-Zuweisung');
-    }
-  };
-
-  const handleDeptChange = async (staffMember: Staff, restaurantId: string, dept: string | null) => {
-    try {
-      const sr = staffMember.staff_restaurants?.find(r => r.restaurant_id === restaurantId);
-      if (sr) {
-        await supabase
-          .from('staff_restaurants')
-          .update({ zt_department: dept as 'Service' | 'Küche' | 'GL' | null })
-          .eq('staff_id', staffMember.id)
-          .eq('restaurant_id', restaurantId);
-        queryClient.invalidateQueries({ queryKey: ['staff'] });
-      }
-    } catch {
-      toast.error('Fehler bei Abteilungsänderung');
+      toast.error('Fehler bei Abteilungszuweisung');
     }
   };
 
