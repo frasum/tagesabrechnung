@@ -120,6 +120,16 @@ export function ShiftEditPopover({
           </Button>
         )}
       </div>
+      {onAbsence && (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => { onClose(); onAbsence(); }}
+          className="w-full text-xs"
+        >
+          Abwesenheit eintragen
+        </Button>
+      )}
     </div>
   );
 }
