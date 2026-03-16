@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, FormEvent } from 'react';
-import { Store, Link2, Unlink, Smartphone, Loader2, Shield, ChevronDown } from 'lucide-react';
+import { Store, Link2, Unlink, Smartphone, Loader2, Shield, ChevronDown, Utensils } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
