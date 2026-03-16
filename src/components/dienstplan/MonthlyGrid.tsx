@@ -5,7 +5,7 @@ import { useRestaurant } from '@/hooks/useRestaurant';
 import { useRestaurantEmployees } from '@/hooks/useRestaurantEmployees';
 import { ShiftCell } from './ShiftCell';
 import { getPeriodRange } from '@/lib/periodUtils';
-import { SkillCoverageRow } from './SkillCoverageRow';
+
 import { AbsenceDialog } from './AbsenceDialog';
 import { Skeleton } from '@/components/ui/skeleton';
 
