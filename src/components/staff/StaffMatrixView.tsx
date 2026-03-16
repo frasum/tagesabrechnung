@@ -75,7 +75,7 @@ export function StaffMatrixView({ staff, restaurants, onEdit }: StaffMatrixViewP
       if (sr) {
         await supabase
           .from('staff_restaurants')
-          .update({ zt_department: dept })
+          .update({ zt_department: dept as 'Service' | 'Küche' | 'GL' | null })
           .eq('staff_id', staffMember.id)
           .eq('restaurant_id', restaurantId);
         queryClient.invalidateQueries({ queryKey: ['staff'] });
