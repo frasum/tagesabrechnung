@@ -237,9 +237,9 @@ export function StaffMatrixView({ staff, restaurants, onEdit }: StaffMatrixViewP
                               <TooltipTrigger asChild>
                                 <button
                                   type="button"
-                                  disabled={isDisabled && !has}
+                                  disabled={isDisabled}
                                   onClick={() => {
-                                    if (isDisabled && !has) return;
+                                    if (isDisabled) return;
                                     toggleSkill.mutate({ staffId: s.id, skillId: skill.id, hasSkill: has });
                                   }}
                                   className={cn(
@@ -258,13 +258,11 @@ export function StaffMatrixView({ staff, restaurants, onEdit }: StaffMatrixViewP
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p className="text-xs">
-                                  {isDisabled && !has
+                                  {isDisabled
                                     ? `Erst Abteilung „${requiredDept}" zuweisen`
-                                    : isDisabled && has
-                                      ? `Abteilung „${requiredDept}" fehlt – Skill entfernen?`
-                                      : has
-                                        ? `${skill.name} entfernen`
-                                        : `${skill.name} zuweisen`}
+                                    : has
+                                      ? `${skill.name} entfernen`
+                                      : `${skill.name} zuweisen`}
                                 </p>
                               </TooltipContent>
                             </Tooltip>
