@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, Plus, ChefHat, UtensilsCrossed, Search, Trophy, ChevronDown, UserPlus, Download } from 'lucide-react';
+import { Users, Plus, ChefHat, UtensilsCrossed, Search, Trophy, ChevronDown, UserPlus, Download, List, LayoutGrid } from 'lucide-react';
 import { toast } from 'sonner';
 import { getAuthHeaders } from '@/lib/authToken';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
@@ -12,6 +12,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { StaffTableRow } from '@/components/staff/StaffTableRow';
 import { StaffDialog } from '@/components/staff/StaffDialogNative';
 import { TipRanking } from '@/components/waiter/TipRanking';
+import { StaffMatrixView } from '@/components/staff/StaffMatrixView';
 import { cn } from '@/lib/utils';
 
 import { useStaff, useCreateStaff, useUpdateStaff, useDeleteStaff, hasRole, Staff, StaffInput, StaffRole } from '@/hooks/useStaff';
@@ -23,6 +24,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type FilterTab = 'all' | 'waiter' | 'kitchen';
+type ViewMode = 'list' | 'matrix';
 
 const filterTabs: { value: FilterTab; label: string; icon: typeof Users }[] = [
   { value: 'all', label: 'Alle', icon: Users },
@@ -31,6 +33,7 @@ const filterTabs: { value: FilterTab; label: string; icon: typeof Users }[] = [
 ];
 
 export default function StaffManagement() {
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [filter, setFilter] = useState<FilterTab>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -187,6 +190,34 @@ export default function StaffManagement() {
               );
             })}
           </div>
+
+          {/* View Mode Toggle */}
+          <div className="flex rounded-lg border bg-card p-1 gap-0.5">
+            <button
+              onClick={() => setViewMode('list')}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-all",
+                viewMode === 'list'
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              )}
+            >
+              <List className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Liste</span>
+            </button>
+            <button
+              onClick={() => setViewMode('matrix')}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-all",
+                viewMode === 'matrix'
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              )}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Matrix</span>
+            </button>
+          </div>
         </div>
 
         {/* Tip Ranking Toggle */}
@@ -229,8 +260,14 @@ export default function StaffManagement() {
           </Card>
         )}
 
-        {/* Staff Table */}
-        {filteredStaff.length === 0 ? (
+        {/* Staff Table / Matrix */}
+        {viewMode === 'matrix' ? (
+          <StaffMatrixView
+            staff={filteredStaff}
+            restaurants={restaurants}
+            onEdit={handleEdit}
+          />
+        ) : filteredStaff.length === 0 ? (
           <Card className="border-dashed border-2">
             <CardContent className="py-16 text-center">
               <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
