@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
+import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@/components/ui/table';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -23,6 +25,7 @@ interface StaffMatrixViewProps {
   staff: Staff[];
   restaurants: Restaurant[];
   onEdit: (staff: Staff) => void;
+  onDelete: (staff: Staff) => void;
 }
 
 const permLabels: Record<PermissionLevel, string> = {
@@ -39,7 +42,7 @@ const categoryToDept: Record<string, string> = {
   gl: 'GL',
 };
 
-export function StaffMatrixView({ staff, restaurants, onEdit }: StaffMatrixViewProps) {
+export function StaffMatrixView({ staff, restaurants, onEdit, onDelete }: StaffMatrixViewProps) {
   const queryClient = useQueryClient();
   const { data: skills = [] } = useSkills();
   const staffIds = useMemo(() => staff.map(s => s.id), [staff]);
@@ -158,6 +161,7 @@ export function StaffMatrixView({ staff, restaurants, onEdit }: StaffMatrixViewP
                   </TooltipContent>
                 </Tooltip>
               </TableHead>
+              <TableHead className="font-semibold w-[60px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -269,6 +273,20 @@ export function StaffMatrixView({ staff, restaurants, onEdit }: StaffMatrixViewP
                           );
                         })}
                       </TooltipProvider>
+                    </div>
+                  </TableCell>
+
+                  {/* Aktionen */}
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive/70 hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => onDelete(s)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>

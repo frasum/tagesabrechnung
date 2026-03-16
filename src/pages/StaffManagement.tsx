@@ -1,14 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Users, Plus, ChefHat, UtensilsCrossed, Search, Trophy, ChevronDown, UserPlus, List, LayoutGrid } from 'lucide-react';
-import { toast } from 'sonner';
+import { Users, ChefHat, UtensilsCrossed, Search, Trophy, ChevronDown, UserPlus } from 'lucide-react';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { Table, TableHeader, TableHead, TableBody, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { StaffTableRow } from '@/components/staff/StaffTableRow';
 import { StaffDialog } from '@/components/staff/StaffDialogNative';
 import { TipRanking } from '@/components/waiter/TipRanking';
 import { StaffMatrixView } from '@/components/staff/StaffMatrixView';
@@ -23,7 +20,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type FilterTab = 'all' | 'waiter' | 'kitchen';
-type ViewMode = 'list' | 'matrix';
 
 const filterTabs: { value: FilterTab; label: string; icon: typeof Users }[] = [
   { value: 'all', label: 'Alle', icon: Users },
@@ -32,7 +28,6 @@ const filterTabs: { value: FilterTab; label: string; icon: typeof Users }[] = [
 ];
 
 export default function StaffManagement() {
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [filter, setFilter] = useState<FilterTab>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -166,33 +161,6 @@ export default function StaffManagement() {
             })}
           </div>
 
-          {/* View Mode Toggle */}
-          <div className="flex rounded-lg border bg-card p-1 gap-0.5">
-            <button
-              onClick={() => setViewMode('list')}
-              className={cn(
-                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-all",
-                viewMode === 'list'
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-              )}
-            >
-              <List className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Liste</span>
-            </button>
-            <button
-              onClick={() => setViewMode('matrix')}
-              className={cn(
-                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-all",
-                viewMode === 'matrix'
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-              )}
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Matrix</span>
-            </button>
-          </div>
         </div>
 
         {/* Tip Ranking Toggle */}
@@ -235,14 +203,8 @@ export default function StaffManagement() {
           </Card>
         )}
 
-        {/* Staff Table / Matrix */}
-        {viewMode === 'matrix' ? (
-          <StaffMatrixView
-            staff={filteredStaff}
-            restaurants={restaurants}
-            onEdit={handleEdit}
-          />
-        ) : filteredStaff.length === 0 ? (
+        {/* Staff Matrix */}
+        {filteredStaff.length === 0 ? (
           <Card className="border-dashed border-2">
             <CardContent className="py-16 text-center">
               <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
@@ -257,32 +219,12 @@ export default function StaffManagement() {
             </CardContent>
           </Card>
         ) : (
-          <Card className="overflow-hidden">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/30 hover:bg-muted/30">
-                    <TableHead className="font-semibold">Name</TableHead>
-                    <TableHead className="font-semibold">Rolle</TableHead>
-                    <TableHead className="font-semibold">Restaurants</TableHead>
-                    <TableHead className="font-semibold">Berechtigung</TableHead>
-                    <TableHead className="text-right font-semibold">Aktionen</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredStaff.map(staff => (
-                    <StaffTableRow
-                      key={staff.id}
-                      staff={staff}
-                      onEdit={handleEdit}
-                      onDelete={setDeleteStaff}
-                      rankingData={rankingMap.get(staff.name.toLowerCase())}
-                    />
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </Card>
+          <StaffMatrixView
+            staff={filteredStaff}
+            restaurants={restaurants}
+            onEdit={handleEdit}
+            onDelete={setDeleteStaff}
+          />
         )}
 
         {/* Collapsible Ranking Table */}
