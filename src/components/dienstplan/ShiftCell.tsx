@@ -31,6 +31,7 @@ export function ShiftCell({
   restaurantId,
   skills,
   employeeSkillIds,
+  onAbsence,
 }: ShiftCellProps) {
   const [open, setOpen] = useState(false);
 
