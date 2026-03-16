@@ -77,9 +77,9 @@ export default function StaffManagement() {
     }
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDeactivate = () => {
     if (deleteStaff) {
-      deleteMutation.mutate(deleteStaff.id, { onSuccess: () => setDeleteStaff(null) });
+      deactivateMutation.mutate(deleteStaff.id, { onSuccess: () => setDeleteStaff(null) });
     }
   };
 
