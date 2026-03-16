@@ -1,19 +1,13 @@
 
-## Dienstplan – 2 Pläne pro Standort (Küche + Service/GL)
 
-### Status: ✅ Implementiert
+## Plan: Skill-Badges aus Dienstplan-Grid entfernen
 
-### Was wurde gebaut
+In `src/components/dienstplan/MonthlyGrid.tsx` die Skill-Badge-Anzeige neben dem Mitarbeiternamen entfernen:
 
-- **Datenbank**: 4 neue Tabellen (`skills`, `employee_skills`, `shift_assignments`, `absences`) + `contracted_hours_per_month` auf `staff`
-- **7 Seed-Skills**: VS, PASS, SPÜLEN, CO (Küche), SERVICE, BAR (Service), GL
-- **Routing**: `/:restaurant/dienstplan/kueche` und `/:restaurant/dienstplan/service`
-- **Sidebar**: "Dienstplan" unter Tagesgeschäft
-- **Grid-UI**: Monatsansicht mit Skill-farbcodierten Zellen, Inline-Edit via Popover, Skill-Besetzungszeile (Küche)
-- **Hooks**: `useSkills`, `useDienstplan` für CRUD
+1. **Imports entfernen**: `SkillBadge`, `useEmployeeSkills` Imports löschen
+2. **Hook-Aufruf entfernen**: `useEmployeeSkills()` Call entfernen
+3. **Render-Code vereinfachen**: Im `filteredEmployees.map` Block die `empSkillIds`/`empSkills` Berechnung und die `SkillBadge`-Komponenten aus der Mitarbeiter-Namensspalte entfernen
+4. **employeeSkillIds Prop**: Die `employeeSkillIds` Prop wird noch an `ShiftCell` → `ShiftEditPopover` weitergereicht (für Posten-Zuweisung). Diese muss erhalten bleiben, also den `allEmployeeSkills` Hook und die `empSkillIds` Berechnung beibehalten, nur die Badge-Anzeige entfernen.
 
-### Nächste Schritte
+Korrektur: Nur die `SkillBadge` Import und die Badge-Render-Zeilen entfernen. Die restliche Logik bleibt.
 
-- Employee-Skills zuweisen (UI in Mitarbeiterverwaltung)
-- AbsenceDialog für mehrtägige Abwesenheiten
-- Dienstplan-Filter nach Skill
