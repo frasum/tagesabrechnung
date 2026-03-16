@@ -96,12 +96,15 @@ export function MonthlyGrid({ department, month, year }: MonthlyGridProps) {
             </th>
             {dates.map(date => {
               const { day, weekday, isSunday } = formatDayHeader(date);
+              const dateMonth = parseInt(date.split('-')[1], 10);
+              const isPrevMonth = dateMonth !== month + 1;
+              const isFirstOfMonth = day === 1;
               return (
                 <th
                   key={date}
                   className={`p-1 text-center text-[10px] min-w-[52px] border border-border/50 ${
-                    isSunday ? 'bg-red-50 text-red-700' : ''
-                  }`}
+                    isSunday ? 'bg-red-50 text-red-700' : isPrevMonth ? 'bg-muted/80 text-muted-foreground' : ''
+                  } ${isFirstOfMonth ? 'border-l-2 border-l-primary' : ''}`}
                 >
                   <div>{weekday}</div>
                   <div className="font-bold">{day}</div>
