@@ -11,7 +11,7 @@ import { TipRanking } from '@/components/waiter/TipRanking';
 import { StaffMatrixView } from '@/components/staff/StaffMatrixView';
 import { cn } from '@/lib/utils';
 
-import { useStaff, useCreateStaff, useUpdateStaff, useDeleteStaff, hasRole, Staff, StaffInput, StaffRole } from '@/hooks/useStaff';
+import { useStaff, useCreateStaff, useUpdateStaff, useDeactivateStaff, hasRole, Staff, StaffInput, StaffRole } from '@/hooks/useStaff';
 import { useShowTipRanking } from '@/hooks/useSettings';
 import { useWaiterRanking } from '@/hooks/useWaiterRanking';
 import { useRestaurants } from '@/hooks/useRestaurant';
