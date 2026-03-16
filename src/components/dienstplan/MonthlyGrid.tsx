@@ -172,12 +172,13 @@ export function MonthlyGrid({ department, month, year }: MonthlyGridProps) {
               const dateMonth = parseInt(date.split('-')[1], 10);
               const isPrevMonth = dateMonth !== month + 1;
               const isFirstOfMonth = day === 1;
+              const isToday = date === todayStr;
               const dayShiftCount = shifts.filter(s => s.shift_date === date).length;
               return (
                 <th
                   key={date}
                   className={`p-1 text-center text-[10px] min-w-[52px] border border-border/50 ${
-                    isSunday ? 'bg-red-50 text-red-700' : isPrevMonth ? 'bg-muted/80 text-muted-foreground' : ''
+                    isToday ? 'bg-primary/15 text-primary font-bold border-b-2 border-b-primary' : isSunday ? 'bg-red-50 text-red-700' : isPrevMonth ? 'bg-muted/80 text-muted-foreground' : ''
                   } ${isFirstOfMonth ? 'border-l-2 border-l-primary' : ''}`}
                 >
                   <div>{weekday}</div>
