@@ -96,11 +96,27 @@ export function StaffMatrixView({ staff, restaurants, onEdit }: StaffMatrixViewP
                 <TableHead key={r.id} className="font-semibold text-center min-w-[100px]">
                   <div className="flex flex-col items-center gap-0.5">
                     <span>{r.name}</span>
-                    <span className="text-[10px] text-muted-foreground font-normal">Restaurant</span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="text-[10px] text-muted-foreground font-normal cursor-help underline decoration-dotted underline-offset-2">Abteilung</span>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="max-w-[220px]">
+                        <p className="text-xs">Bestimmt die <strong>Zeiterfassung</strong> und Buchhaltung – in welcher Abteilung werden Stunden erfasst und abgerechnet.</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
                 </TableHead>
               ))}
-              <TableHead className="font-semibold min-w-[200px]">Skills</TableHead>
+              <TableHead className="font-semibold min-w-[200px]">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="cursor-help underline decoration-dotted underline-offset-2">Skills</span>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-[220px]">
+                    <p className="text-xs">Bestimmt die <strong>Dienstplan-Positionen</strong> – welche Rollen kann der Mitarbeiter im Schichtplan übernehmen.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
