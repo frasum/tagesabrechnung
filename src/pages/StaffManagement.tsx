@@ -20,7 +20,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type FilterTab = 'all' | 'waiter' | 'kitchen';
-type ViewMode = 'list' | 'matrix';
 
 const filterTabs: { value: FilterTab; label: string; icon: typeof Users }[] = [
   { value: 'all', label: 'Alle', icon: Users },
