@@ -4,7 +4,7 @@ import { useSkills, useEmployeeSkills } from '@/hooks/useSkills';
 import { useRestaurant } from '@/hooks/useRestaurant';
 import { useRestaurantEmployees } from '@/hooks/useRestaurantEmployees';
 import { ShiftCell } from './ShiftCell';
-import { SkillBadge } from './SkillBadge';
+
 import { SkillCoverageRow } from './SkillCoverageRow';
 import { AbsenceDialog } from './AbsenceDialog';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -114,7 +114,6 @@ export function MonthlyGrid({ department, month, year }: MonthlyGridProps) {
             const empSkillIds = allEmployeeSkills
               .filter(es => es.staff_id === emp.id)
               .map(es => es.skill_id);
-            const empSkills = skills.filter(s => empSkillIds.includes(s.id));
 
             const totalHours = shifts
               .filter(s => s.staff_id === emp.id)
@@ -123,12 +122,7 @@ export function MonthlyGrid({ department, month, year }: MonthlyGridProps) {
             return (
               <tr key={emp.id} className="hover:bg-muted/30">
                 <td className="p-2 sticky left-0 bg-background z-10 border border-border/50">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="font-medium text-xs">{emp.name}</span>
-                    {empSkills.map(s => (
-                      <SkillBadge key={s.id} skill={s} size="sm" />
-                    ))}
-                  </div>
+                  <span className="font-medium text-xs">{emp.name}</span>
                 </td>
                 {dates.map(date => {
                   const shift = shifts.find(s => s.staff_id === emp.id && s.shift_date === date);
