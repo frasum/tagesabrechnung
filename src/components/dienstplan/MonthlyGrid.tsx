@@ -109,34 +109,34 @@ export function MonthlyGrid({ department, month, year }: MonthlyGridProps) {
         <tbody>
           {filteredEmployees.map(emp => {
             const empSkillIds = allEmployeeSkills
-              .filter(es => es.staff_id === emp.staff_id)
+              .filter(es => es.staff_id === emp.id)
               .map(es => es.skill_id);
             const empSkills = skills.filter(s => empSkillIds.includes(s.id));
 
             const totalHours = shifts
-              .filter(s => s.staff_id === emp.staff_id)
+              .filter(s => s.staff_id === emp.id)
               .reduce((sum, s) => sum + calcHours(s.start_time, s.end_time), 0);
 
             return (
-              <tr key={emp.staff_id} className="hover:bg-muted/30">
+              <tr key={emp.id} className="hover:bg-muted/30">
                 <td className="p-2 sticky left-0 bg-background z-10 border border-border/50">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="font-medium text-xs">{emp.staff_name}</span>
+                    <span className="font-medium text-xs">{emp.name}</span>
                     {empSkills.map(s => (
                       <SkillBadge key={s.id} skill={s} size="sm" />
                     ))}
                   </div>
                 </td>
                 {dates.map(date => {
-                  const shift = shifts.find(s => s.staff_id === emp.staff_id && s.shift_date === date);
-                  const absence = getAbsenceForDay(emp.staff_id, date);
+                  const shift = shifts.find(s => s.staff_id === emp.id && s.shift_date === date);
+                  const absence = getAbsenceForDay(emp.id, date);
 
                   return (
                     <ShiftCell
                       key={date}
                       shift={shift}
                       absenceType={absence?.absence_type}
-                      staffId={emp.staff_id}
+                      staffId={emp.id}
                       date={date}
                       department={department}
                       restaurantId={restaurantId}
