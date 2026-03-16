@@ -40,6 +40,7 @@ export const MANAGER_NAV_ITEMS = [
   { path: 'zeiterfassung/zusammenfassung', label: 'ZE – Zusammenfassung' },
   { path: 'zeiterfassung/buchhaltung', label: 'ZE – Buchhaltung' },
   { path: 'zeiterfassung/perioden', label: 'ZE – Perioden' },
+  { path: 'dienstplan', label: 'Dienstplan' },
 ];
 
 // Permission level hierarchy (higher index = more permissions)
