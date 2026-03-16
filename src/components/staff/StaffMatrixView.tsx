@@ -1,9 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { UserMinus } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@/components/ui/table';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -85,6 +86,14 @@ export function StaffMatrixView({ staff, restaurants, onEdit, onDelete }: StaffM
     return map;
   }, [deptMapByStaff]);
 
+  // State for skill removal confirmation
+  const [pendingSkillRemoval, setPendingSkillRemoval] = useState<{
+    staffId: string;
+    staffName: string;
+    skillNames: string[];
+    execute: () => Promise<void>;
+  } | null>(null);
+
   const handleDeptToggle = async (staffId: string, restaurantId: string, dept: string, isAssigned: boolean) => {
     try {
       if (isAssigned) {
@@ -101,18 +110,25 @@ export function StaffMatrixView({ staff, restaurants, onEdit, onDelete }: StaffM
           x => x.zt_department === dept && x.id !== sr?.id
         );
         if (!remainingForDept?.length) {
-          // Auto-remove skills whose category matches the removed dept
           const deptToCategory: Record<string, string> = { 'Küche': 'kitchen', 'Service': 'service', 'GL': 'gl' };
           const cat = deptToCategory[dept];
           if (cat) {
             const staffSkillIds = employeeSkillMap.get(staffId) ?? new Set();
             const skillsToRemove = skills.filter(sk => sk.category === cat && staffSkillIds.has(sk.id));
-            for (const sk of skillsToRemove) {
-              await supabase.from('employee_skills').delete().eq('staff_id', staffId).eq('skill_id', sk.id);
-            }
             if (skillsToRemove.length) {
-              queryClient.invalidateQueries({ queryKey: ['employee_skills'] });
-              toast.info(`${skillsToRemove.map(s => s.name).join(', ')} automatisch entfernt`);
+              // Show confirmation instead of auto-removing
+              setPendingSkillRemoval({
+                staffId,
+                staffName: staffMember?.name ?? '',
+                skillNames: skillsToRemove.map(s => s.name),
+                execute: async () => {
+                  for (const sk of skillsToRemove) {
+                    await supabase.from('employee_skills').delete().eq('staff_id', staffId).eq('skill_id', sk.id);
+                  }
+                  queryClient.invalidateQueries({ queryKey: ['employee_skills'] });
+                  toast.info(`${skillsToRemove.map(s => s.name).join(', ')} entfernt`);
+                },
+              });
             }
           }
         }
@@ -127,7 +143,15 @@ export function StaffMatrixView({ staff, restaurants, onEdit, onDelete }: StaffM
     }
   };
 
+  const handleConfirmSkillRemoval = async () => {
+    if (pendingSkillRemoval) {
+      await pendingSkillRemoval.execute();
+      setPendingSkillRemoval(null);
+    }
+  };
+
   return (
+    <>
     <Card className="overflow-hidden">
       <div className="overflow-x-auto">
         <TooltipProvider delayDuration={300}>
@@ -302,5 +326,24 @@ export function StaffMatrixView({ staff, restaurants, onEdit, onDelete }: StaffM
         </TooltipProvider>
       </div>
     </Card>
+
+    <AlertDialog open={!!pendingSkillRemoval} onOpenChange={() => setPendingSkillRemoval(null)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Skills ebenfalls entfernen?</AlertDialogTitle>
+          <AlertDialogDescription>
+            {pendingSkillRemoval?.staffName} hat keine Abteilungszuweisung mehr für diese Kategorie. 
+            Sollen die zugehörigen Skills ({pendingSkillRemoval?.skillNames.join(', ')}) ebenfalls entfernt werden?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Beibehalten</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirmSkillRemoval}>
+            Skills entfernen
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
