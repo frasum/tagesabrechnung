@@ -92,6 +92,27 @@ export function StaffMatrixView({ staff, restaurants, onEdit }: StaffMatrixViewP
         if (sr) {
           await supabase.from('staff_restaurants').delete().eq('id', sr.id);
         }
+
+        // Check if this was the last assignment for this dept across all restaurants
+        const remainingForDept = staffMember?.staff_restaurants?.filter(
+          x => x.zt_department === dept && x.id !== sr?.id
+        );
+        if (!remainingForDept?.length) {
+          // Auto-remove skills whose category matches the removed dept
+          const deptToCategory: Record<string, string> = { 'Küche': 'kitchen', 'Service': 'service', 'GL': 'gl' };
+          const cat = deptToCategory[dept];
+          if (cat) {
+            const staffSkillIds = employeeSkillMap.get(staffId) ?? new Set();
+            const skillsToRemove = skills.filter(sk => sk.category === cat && staffSkillIds.has(sk.id));
+            for (const sk of skillsToRemove) {
+              await supabase.from('employee_skills').delete().eq('staff_id', staffId).eq('skill_id', sk.id);
+            }
+            if (skillsToRemove.length) {
+              queryClient.invalidateQueries({ queryKey: ['employee_skills'] });
+              toast.info(`${skillsToRemove.map(s => s.name).join(', ')} automatisch entfernt`);
+            }
+          }
+        }
       } else {
         await supabase
           .from('staff_restaurants')
