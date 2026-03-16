@@ -1,43 +1,19 @@
 
+## Dienstplan – 2 Pläne pro Standort (Küche + Service/GL)
 
-## Einmalige Übernahme der Skill-Zuweisungen aus thaitime.pro
+### Status: ✅ Implementiert
 
-### Situation
-Die `sync-employees`-Schnittstelle in thaitime.pro liefert aktuell **keine Skills** mit. Sie gibt nur Stammdaten (Name, Perso-Nr, Stundenlohn etc.) zurück. Die `employee_skills`-Tabelle wird dort nicht abgefragt.
+### Was wurde gebaut
 
-### Notwendige Schritte (zwei Projekte betroffen)
+- **Datenbank**: 4 neue Tabellen (`skills`, `employee_skills`, `shift_assignments`, `absences`) + `contracted_hours_per_month` auf `staff`
+- **7 Seed-Skills**: VS, PASS, SPÜLEN, CO (Küche), SERVICE, BAR (Service), GL
+- **Routing**: `/:restaurant/dienstplan/kueche` und `/:restaurant/dienstplan/service`
+- **Sidebar**: "Dienstplan" unter Tagesgeschäft
+- **Grid-UI**: Monatsansicht mit Skill-farbcodierten Zellen, Inline-Edit via Popover, Skill-Besetzungszeile (Küche)
+- **Hooks**: `useSkills`, `useDienstplan` für CRUD
 
-**Schritt 1 — Im Projekt [thaitime.pro](/projects/5a39cb5f-34aa-4dce-bae4-b0934de226e8):**
-Die `sync-employees` Edge Function erweitern, damit sie zusätzlich zu den Mitarbeiterdaten auch deren Skill-Zuweisungen mitliefert. Das Response-Format wird um ein `skills`-Array pro Mitarbeiter ergänzt:
+### Nächste Schritte
 
-```json
-{
-  "perso_nr": 352,
-  "name": "MO",
-  "skills": ["Vorspeise", "pass", "kochen"]
-}
-```
-
-**Schritt 2 — Zurück in diesem Projekt (Tagesabrechnung):**
-Eine einmalige Sync-Funktion (Edge Function oder Button im UI) erstellen, die:
-1. Die erweiterte thaitime-API aufruft
-2. Mitarbeiter per `perso_nr` matcht
-3. Die Skill-Namen mappt (thaitime → Tagesabrechnung):
-
-```text
-thaitime          →  Tagesabrechnung
-─────────────────────────────────────
-Vorspeise         →  VS
-pass              →  PASS
-spülen            →  SPÜLEN
-kochen            →  CO
-service / Service →  SERVICE
-Bar               →  BAR
-GL                →  GL
-```
-
-4. Die gemappten Skills in die `employee_skills`-Tabelle einfügt
-
-### Empfohlenes Vorgehen
-Da ich von hier aus das thaitime.pro-Projekt nicht ändern kann, müsstest du kurz **in das thaitime.pro-Projekt wechseln** und mich dort bitten, die `sync-employees`-Funktion um Skills zu erweitern. Danach können wir hier den Import durchführen.
-
+- Employee-Skills zuweisen (UI in Mitarbeiterverwaltung)
+- AbsenceDialog für mehrtägige Abwesenheiten
+- Dienstplan-Filter nach Skill

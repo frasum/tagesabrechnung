@@ -6,6 +6,21 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-staff-id, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Mapping from thaitime skill names → local skill names
+const SKILL_NAME_MAP: Record<string, string> = {
+  "vorspeise": "VS",
+  "pass": "PASS",
+  "spülen": "SPÜLEN",
+  "kochen": "CO",
+  "service": "SERVICE",
+  "service 1": "SERVICE",
+  "service 2": "SERVICE",
+  "service 3": "SERVICE",
+  "service 4": "SERVICE",
+  "bar": "BAR",
+  "gl": "GL",
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -88,9 +103,28 @@ Deno.serve(async (req) => {
       staffByName.set(s.name.toLowerCase(), { id: s.id, perso_nr: s.perso_nr });
     }
 
+    // Load local skills for mapping
+    const { data: localSkills } = await supabase
+      .from("skills")
+      .select("id, name");
+    const localSkillByName = new Map<string, string>();
+    for (const sk of localSkills || []) {
+      localSkillByName.set(sk.name, sk.id);
+    }
+
+    // Load existing employee_skills to avoid duplicates
+    const { data: existingEmpSkills } = await supabase
+      .from("employee_skills")
+      .select("staff_id, skill_id");
+    const existingSkillSet = new Set<string>();
+    for (const es of existingEmpSkills || []) {
+      existingSkillSet.add(`${es.staff_id}:${es.skill_id}`);
+    }
+
     let updated = 0;
     let created = 0;
     let skipped = 0;
+    let skillsImported = 0;
 
     for (const emp of employees) {
       const persoNr = emp.perso_nr;
@@ -152,24 +186,64 @@ Deno.serve(async (req) => {
         }
       } else {
         // Create new
-        const { error } = await supabase.from("staff").insert({
+        const { data: inserted, error } = await supabase.from("staff").insert({
           name: displayName,
           nickname: displayName,
           perso_nr: persoNr || null,
           role: "waiter",
           ...payload,
-        });
+        }).select("id").single();
         if (error) {
           console.error(`Failed to create ${displayName}:`, error);
           skipped++;
         } else {
           created++;
+          matchedId = inserted.id;
+        }
+      }
+
+      // Import skills if provided and staff was matched/created
+      if (matchedId && Array.isArray(emp.skills) && emp.skills.length > 0) {
+        const skillInserts: { staff_id: string; skill_id: string }[] = [];
+        const mappedSkillIds = new Set<string>();
+
+        for (const ttSkillName of emp.skills) {
+          const localName = SKILL_NAME_MAP[ttSkillName.toLowerCase()];
+          if (!localName) {
+            console.warn(`Unknown thaitime skill: ${ttSkillName}`);
+            continue;
+          }
+          const localSkillId = localSkillByName.get(localName);
+          if (!localSkillId) {
+            console.warn(`Local skill not found: ${localName}`);
+            continue;
+          }
+          // Deduplicate (e.g. Service 1-4 all map to SERVICE)
+          if (mappedSkillIds.has(localSkillId)) continue;
+          mappedSkillIds.add(localSkillId);
+
+          const key = `${matchedId}:${localSkillId}`;
+          if (!existingSkillSet.has(key)) {
+            skillInserts.push({ staff_id: matchedId, skill_id: localSkillId });
+            existingSkillSet.add(key); // prevent duplicates within batch
+          }
+        }
+
+        if (skillInserts.length > 0) {
+          const { error: skillErr } = await supabase
+            .from("employee_skills")
+            .insert(skillInserts);
+          if (skillErr) {
+            console.error(`Failed to insert skills for ${displayName}:`, skillErr);
+          } else {
+            skillsImported += skillInserts.length;
+          }
         }
       }
     }
 
     return new Response(
-      JSON.stringify({ updated, created, skipped, total: employees.length }),
+      JSON.stringify({ updated, created, skipped, skillsImported, total: employees.length }),
       {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
