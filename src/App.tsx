@@ -37,6 +37,9 @@ const ZtBuchhaltung = lazy(() => import("./pages/zeiterfassung/ZtBuchhaltung"));
 const ZtPerioden = lazy(() => import("./pages/zeiterfassung/ZtPerioden"));
 const ZtBruttoNetto = lazy(() => import("./pages/zeiterfassung/ZtBruttoNetto"));
 const ZtProvision = lazy(() => import("./pages/zeiterfassung/ZtProvision"));
+const DienstplanLayout = lazy(() => import("./pages/DienstplanLayout"));
+const DienstplanKueche = lazy(() => import("./pages/dienstplan/DienstplanKueche"));
+const DienstplanService = lazy(() => import("./pages/dienstplan/DienstplanService"));
 const RestaurantChat = lazy(() => import("./pages/RestaurantChat"));
 const SharedZtView = lazy(() => import("./pages/shared/SharedZtView"));
 const PayrollPortal = lazy(() => import("./pages/shared/PayrollPortal"));
@@ -77,6 +80,11 @@ function RestaurantRoutes() {
             <Route path="perioden" element={<ZtPerioden />} />
             <Route path="brutto-netto" element={<ZtBruttoNetto />} />
             <Route path="provision" element={<ZtProvision />} />
+          </Route>
+          <Route path="dienstplan" element={<ProtectedRoute requiredLevel="manager"><DienstplanLayout /></ProtectedRoute>}>
+            <Route index element={<DienstplanKueche />} />
+            <Route path="kueche" element={<DienstplanKueche />} />
+            <Route path="service" element={<DienstplanService />} />
           </Route>
           <Route path="chat" element={<ProtectedRoute requiredLevel="admin"><RestaurantChat /></ProtectedRoute>} />
         </Routes>

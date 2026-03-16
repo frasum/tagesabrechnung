@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      absences: {
+        Row: {
+          absence_type: string
+          created_at: string
+          end_date: string
+          id: string
+          notes: string | null
+          staff_id: string
+          start_date: string
+        }
+        Insert: {
+          absence_type: string
+          created_at?: string
+          end_date: string
+          id?: string
+          notes?: string | null
+          staff_id: string
+          start_date: string
+        }
+        Update: {
+          absence_type?: string
+          created_at?: string
+          end_date?: string
+          id?: string
+          notes?: string | null
+          staff_id?: string
+          start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "absences_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       advances: {
         Row: {
           amount: number
@@ -234,6 +272,39 @@ export type Database = {
             columns: ["restaurant_id"]
             isOneToOne: false
             referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_skills: {
+        Row: {
+          id: string
+          skill_id: string
+          staff_id: string
+        }
+        Insert: {
+          id?: string
+          skill_id: string
+          staff_id: string
+        }
+        Update: {
+          id?: string
+          skill_id?: string
+          staff_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_skills_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "skills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_skills_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
             referencedColumns: ["id"]
           },
         ]
@@ -750,8 +821,100 @@ export type Database = {
           },
         ]
       }
+      shift_assignments: {
+        Row: {
+          assigned_skill_id: string | null
+          created_at: string
+          department: string
+          end_time: string | null
+          id: string
+          notes: string | null
+          restaurant_id: string
+          shift_date: string
+          staff_id: string
+          start_time: string | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_skill_id?: string | null
+          created_at?: string
+          department: string
+          end_time?: string | null
+          id?: string
+          notes?: string | null
+          restaurant_id: string
+          shift_date: string
+          staff_id: string
+          start_time?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_skill_id?: string | null
+          created_at?: string
+          department?: string
+          end_time?: string | null
+          id?: string
+          notes?: string | null
+          restaurant_id?: string
+          shift_date?: string
+          staff_id?: string
+          start_time?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_assignments_assigned_skill_id_fkey"
+            columns: ["assigned_skill_id"]
+            isOneToOne: false
+            referencedRelation: "skills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_assignments_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_assignments_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      skills: {
+        Row: {
+          category: string
+          color: string
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          category: string
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          category?: string
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       staff: {
         Row: {
+          contracted_hours_per_month: number | null
           created_at: string
           date_of_birth: string | null
           employment_end: string | null
@@ -783,6 +946,7 @@ export type Database = {
           vacation_days_taken: number | null
         }
         Insert: {
+          contracted_hours_per_month?: number | null
           created_at?: string
           date_of_birth?: string | null
           employment_end?: string | null
@@ -814,6 +978,7 @@ export type Database = {
           vacation_days_taken?: number | null
         }
         Update: {
+          contracted_hours_per_month?: number | null
           created_at?: string
           date_of_birth?: string | null
           employment_end?: string | null

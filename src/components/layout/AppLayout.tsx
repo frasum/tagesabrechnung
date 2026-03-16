@@ -17,7 +17,8 @@ import {
   ChevronDown,
   LucideIcon,
   Send,
-  MessageCircle
+  MessageCircle,
+  CalendarDays
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -55,6 +56,7 @@ const allNavItems: NavItem[] = [
   { path: 'kitchen', label: 'Küchen Trinkgeld', icon: ChefHat, minLevel: 'manager' },
   { path: 'summary', label: 'Tagesabrechnung', icon: FileText, minLevel: 'manager' },
   { path: 'zeiterfassung', label: 'Zeiterfassung', icon: Clock, minLevel: 'manager' },
+  { path: 'dienstplan', label: 'Dienstplan', icon: CalendarDays, minLevel: 'manager' },
   { path: 'qr-poster', label: 'QR-Code', icon: QrCode, minLevel: 'manager' },
   { path: 'statistics', label: 'Statistiken', icon: BarChart3, minLevel: 'manager' },
   { path: 'history', label: 'Verlauf', icon: History, minLevel: 'manager' },
@@ -68,7 +70,7 @@ const adminNavItems: NavItem[] = [
 ];
 
 const navGroups: NavGroup[] = [
-  { label: 'Tagesgeschäft', paths: ['', 'kitchen', 'summary', 'zeiterfassung', 'qr-poster'] },
+  { label: 'Tagesgeschäft', paths: ['', 'kitchen', 'summary', 'zeiterfassung', 'dienstplan', 'qr-poster'] },
   { label: 'Auswertung', paths: ['statistics', 'history', 'cash-balance'] },
   { label: 'Verwaltung', paths: ['/staff', '/telegram', 'chat'], adminOnly: true },
 ];
