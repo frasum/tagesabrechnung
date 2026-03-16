@@ -4,6 +4,7 @@ import { useSkills, useEmployeeSkills } from '@/hooks/useSkills';
 import { useRestaurant } from '@/hooks/useRestaurant';
 import { useRestaurantEmployees } from '@/hooks/useRestaurantEmployees';
 import { ShiftCell } from './ShiftCell';
+import { getPeriodRange } from '@/lib/periodUtils';
 
 import { SkillCoverageRow } from './SkillCoverageRow';
 import { AbsenceDialog } from './AbsenceDialog';
@@ -15,11 +16,15 @@ interface MonthlyGridProps {
   year: number;
 }
 
-function getDatesInMonth(year: number, month: number): string[] {
+function getPeriodDates(month0: number, year: number): string[] {
+  const { start, end } = getPeriodRange(month0 + 1, year);
   const dates: string[] = [];
-  const d = new Date(year, month, 1);
-  while (d.getMonth() === month) {
-    dates.push(d.toISOString().split('T')[0]);
+  const d = new Date(start);
+  while (d <= end) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    dates.push(`${y}-${m}-${day}`);
     d.setDate(d.getDate() + 1);
   }
   return dates;
