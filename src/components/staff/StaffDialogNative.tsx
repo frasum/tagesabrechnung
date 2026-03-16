@@ -392,6 +392,9 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
             <Switch id="staff-pool" checked={participatesInPool} onCheckedChange={setParticipatesInPool} />
           </div>
 
+          {/* Skills Section - only for existing staff */}
+          {staff && <SkillsSection staffId={staff.id} />}
+
           {/* Payroll Data Section - collapsible */}
           <Separator />
           <Collapsible>
