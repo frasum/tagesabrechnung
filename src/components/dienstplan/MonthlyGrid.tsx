@@ -46,11 +46,16 @@ export function MonthlyGrid({ department, month, year }: MonthlyGridProps) {
   const { data: allEmployeeSkills = [] } = useEmployeeSkills();
 
   const filteredEmployees = useMemo(() => {
-    return employees.filter(e => {
+    const filtered = employees.filter(e => {
       const dept = e.department;
       if (department === 'kitchen') return dept === 'Küche';
       return dept === 'Service' || dept === 'GL';
     });
+    const unique = new Map<string, typeof filtered[0]>();
+    for (const emp of filtered) {
+      if (!unique.has(emp.id)) unique.set(emp.id, emp);
+    }
+    return Array.from(unique.values());
   }, [employees, department]);
 
   const staffIds = filteredEmployees.map(e => e.id);
