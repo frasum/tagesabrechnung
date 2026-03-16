@@ -96,6 +96,7 @@ export function ShiftCell({
             skills={skills}
             employeeSkillIds={employeeSkillIds}
             onClose={() => setOpen(false)}
+            onAbsence={onAbsence}
           />
         </PopoverContent>
       </Popover>
