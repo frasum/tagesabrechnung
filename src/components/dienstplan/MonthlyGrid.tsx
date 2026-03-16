@@ -224,6 +224,7 @@ export function MonthlyGrid({ department, month, year }: MonthlyGridProps) {
                       skills={skills}
                       employeeSkillIds={empSkillIds}
                       isFocused={isFocused}
+                      isToday={isToday}
                       onAbsence={() => setAbsenceTarget({
                         staffId: emp.id,
                         staffName: emp.name,
