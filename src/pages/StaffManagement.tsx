@@ -161,33 +161,6 @@ export default function StaffManagement() {
             })}
           </div>
 
-          {/* View Mode Toggle */}
-          <div className="flex rounded-lg border bg-card p-1 gap-0.5">
-            <button
-              onClick={() => setViewMode('list')}
-              className={cn(
-                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-all",
-                viewMode === 'list'
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-              )}
-            >
-              <List className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Liste</span>
-            </button>
-            <button
-              onClick={() => setViewMode('matrix')}
-              className={cn(
-                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-all",
-                viewMode === 'matrix'
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-              )}
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Matrix</span>
-            </button>
-          </div>
         </div>
 
         {/* Tip Ranking Toggle */}
