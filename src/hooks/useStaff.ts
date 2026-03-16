@@ -481,24 +481,24 @@ export function useUpdateStaff() {
   });
 }
 
-export function useDeleteStaff() {
+export function useDeactivateStaff() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('staff')
-        .delete()
+        .update({ is_active: false })
         .eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['staff'] });
-      toast.success('Mitarbeiter erfolgreich gelöscht');
+      toast.success('Mitarbeiter deaktiviert');
     },
     onError: (error) => {
-      toast.error('Fehler beim Löschen des Mitarbeiters');
-      console.error('Error deleting staff:', error);
+      toast.error('Fehler beim Deaktivieren des Mitarbeiters');
+      console.error('Error deactivating staff:', error);
     },
   });
 }

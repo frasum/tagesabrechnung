@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Trash2 } from 'lucide-react';
+import { UserMinus } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -276,17 +276,22 @@ export function StaffMatrixView({ staff, restaurants, onEdit, onDelete }: StaffM
                     </div>
                   </TableCell>
 
-                  {/* Aktionen */}
+                  {/* Deaktivieren */}
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive/70 hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => onDelete(s)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => onDelete(s)}
+                          >
+                            <UserMinus className="w-4 h-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p className="text-xs">Deaktivieren</p></TooltipContent>
+                      </Tooltip>
                     </div>
                   </TableCell>
                 </TableRow>

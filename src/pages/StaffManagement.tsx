@@ -11,7 +11,7 @@ import { TipRanking } from '@/components/waiter/TipRanking';
 import { StaffMatrixView } from '@/components/staff/StaffMatrixView';
 import { cn } from '@/lib/utils';
 
-import { useStaff, useCreateStaff, useUpdateStaff, useDeleteStaff, hasRole, Staff, StaffInput, StaffRole } from '@/hooks/useStaff';
+import { useStaff, useCreateStaff, useUpdateStaff, useDeactivateStaff, hasRole, Staff, StaffInput, StaffRole } from '@/hooks/useStaff';
 import { useShowTipRanking } from '@/hooks/useSettings';
 import { useWaiterRanking } from '@/hooks/useWaiterRanking';
 import { useRestaurants } from '@/hooks/useRestaurant';
@@ -43,7 +43,7 @@ export default function StaffManagement() {
   const { data: allStaff = [], isLoading } = useStaff(undefined, { includeLinkedProfiles: true });
   const createMutation = useCreateStaff();
   const updateMutation = useUpdateStaff();
-  const deleteMutation = useDeleteStaff();
+  const deactivateMutation = useDeactivateStaff();
   const { data: rankings = [], isLoading: rankingsLoading } = useWaiterRanking();
 
   const rankingMap = new Map(rankings.map(r => [r.name.toLowerCase(), r]));
@@ -77,9 +77,9 @@ export default function StaffManagement() {
     }
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDeactivate = () => {
     if (deleteStaff) {
-      deleteMutation.mutate(deleteStaff.id, { onSuccess: () => setDeleteStaff(null) });
+      deactivateMutation.mutate(deleteStaff.id, { onSuccess: () => setDeleteStaff(null) });
     }
   };
 
@@ -268,19 +268,19 @@ export default function StaffManagement() {
       <AlertDialog open={!!deleteStaff} onOpenChange={() => setDeleteStaff(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Mitarbeiter löschen?</AlertDialogTitle>
+            <AlertDialogTitle>Mitarbeiter deaktivieren?</AlertDialogTitle>
             <AlertDialogDescription>
-              Möchten Sie "{deleteStaff?.name}" wirklich löschen? 
-              Diese Aktion kann nicht rückgängig gemacht werden.
+              „{deleteStaff?.name}" wird deaktiviert und erscheint nicht mehr in der Übersicht. 
+              Alle bisherigen Daten (Schichten, Zeiterfassung etc.) bleiben erhalten.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Abbrechen</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleConfirmDelete}
+              onClick={handleConfirmDeactivate}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleteMutation.isPending ? 'Löschen...' : 'Löschen'}
+              {deactivateMutation.isPending ? 'Deaktiviere...' : 'Deaktivieren'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,28 +1,19 @@
 
+## Dienstplan – 2 Pläne pro Standort (Küche + Service/GL)
 
-## Soft-Delete statt Hard-Delete
+### Status: ✅ Implementiert
 
-Mitarbeiter werden nicht mehr gelöscht, sondern nur deaktiviert (`is_active = false`). Deaktivierte Mitarbeiter verschwinden aus der normalen Ansicht.
+### Was wurde gebaut
 
-### Änderungen
+- **Datenbank**: 4 neue Tabellen (`skills`, `employee_skills`, `shift_assignments`, `absences`) + `contracted_hours_per_month` auf `staff`
+- **7 Seed-Skills**: VS, PASS, SPÜLEN, CO (Küche), SERVICE, BAR (Service), GL
+- **Routing**: `/:restaurant/dienstplan/kueche` und `/:restaurant/dienstplan/service`
+- **Sidebar**: "Dienstplan" unter Tagesgeschäft
+- **Grid-UI**: Monatsansicht mit Skill-farbcodierten Zellen, Inline-Edit via Popover, Skill-Besetzungszeile (Küche)
+- **Hooks**: `useSkills`, `useDienstplan` für CRUD
 
-**`src/hooks/useStaff.ts`**
-- `useDeleteStaff` umbenennen zu `useDeactivateStaff` — statt `.delete()` wird `.update({ is_active: false })` ausgeführt
-- Toast-Nachricht ändern: "Mitarbeiter deaktiviert"
-- Export-Name anpassen
+### Nächste Schritte
 
-**`src/pages/StaffManagement.tsx`**
-- Import von `useDeleteStaff` → `useDeactivateStaff`
-- `deleteMutation` → `deactivateMutation`
-- Lösch-Dialog Text anpassen: "Mitarbeiter deaktivieren?" / "wird deaktiviert und erscheint nicht mehr in der Übersicht" / Button "Deaktivieren"
-- `handleConfirmDelete` → `handleConfirmDeactivate`
-
-**`src/components/staff/StaffMatrixView.tsx`**
-- `onDelete` Prop-Name beibehalten (oder `onDeactivate`), Trash2-Icon durch ein passendes Icon ersetzen (z.B. `UserMinus` oder `Ban`)
-- Tooltip ergänzen: "Deaktivieren"
-
-**`src/hooks/useStaff.ts` (Query-Filter)**
-- Die `useStaff`-Query filtert bereits inaktive Mitarbeiter je nach Kontext. Prüfen ob der Haupt-Query in StaffManagement inaktive ausschließt — falls nicht, `.eq('is_active', true)` ergänzen oder im Frontend filtern (da `allStaff` alle laden soll für die Matrix-Ansicht, sollte der Filter im Frontend bleiben wie aktuell).
-
-Keine Datenbank-Migration nötig — `is_active` existiert bereits.
-
+- Employee-Skills zuweisen (UI in Mitarbeiterverwaltung)
+- AbsenceDialog für mehrtägige Abwesenheiten
+- Dienstplan-Filter nach Skill
