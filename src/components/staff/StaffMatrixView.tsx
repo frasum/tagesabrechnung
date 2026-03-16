@@ -310,7 +310,7 @@ export function StaffMatrixView({ staff, restaurants, onEdit, onDelete, onReacti
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                              className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
                               onClick={() => onReactivate(s)}
                             >
                               <UserCheck className="w-4 h-4" />
