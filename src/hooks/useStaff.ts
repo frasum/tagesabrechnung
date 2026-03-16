@@ -38,6 +38,7 @@ export function hasRole(role: StaffRole, check: 'waiter' | 'kitchen' | 'gl'): bo
 }
 
 export interface StaffRestaurant {
+  id: string;
   restaurant_id: string;
   zt_department: string | null;
   restaurants: {
