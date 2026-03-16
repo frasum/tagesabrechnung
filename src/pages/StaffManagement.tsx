@@ -12,6 +12,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { StaffTableRow } from '@/components/staff/StaffTableRow';
 import { StaffDialog } from '@/components/staff/StaffDialogNative';
 import { TipRanking } from '@/components/waiter/TipRanking';
+import { StaffMatrixView } from '@/components/staff/StaffMatrixView';
 import { cn } from '@/lib/utils';
 
 import { useStaff, useCreateStaff, useUpdateStaff, useDeleteStaff, hasRole, Staff, StaffInput, StaffRole } from '@/hooks/useStaff';
