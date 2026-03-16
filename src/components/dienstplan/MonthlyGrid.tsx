@@ -33,14 +33,6 @@ function formatDayHeader(dateStr: string) {
   return { day, weekday, isSunday };
 }
 
-function calcHours(startTime: string | null, endTime: string | null): number {
-  if (!startTime || !endTime) return 0;
-  const [sh, sm] = startTime.split(':').map(Number);
-  const [eh, em] = endTime.split(':').map(Number);
-  let hours = eh + em / 60 - (sh + sm / 60);
-  if (hours < 0) hours += 24;
-  return hours;
-}
 
 export function MonthlyGrid({ department, month, year }: MonthlyGridProps) {
   const { restaurantId } = useRestaurant();
