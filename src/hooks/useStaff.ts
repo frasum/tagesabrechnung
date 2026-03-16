@@ -146,6 +146,7 @@ export function useStaff(role?: StaffRole, options?: { includeLinkedProfiles?: b
         .select(`
           *,
           staff_restaurants (
+            id,
             restaurant_id,
             zt_department,
             restaurants (
