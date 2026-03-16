@@ -161,6 +161,7 @@ export function StaffMatrixView({ staff, restaurants, onEdit, onDelete }: StaffM
                   </TooltipContent>
                 </Tooltip>
               </TableHead>
+              <TableHead className="font-semibold w-[60px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
