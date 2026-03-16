@@ -151,7 +151,7 @@ export function MonthlyGrid({ department, month, year }: MonthlyGridProps) {
   }
 
   return (
-    <div className="overflow-x-auto border rounded-lg min-w-0 max-w-full">
+    <div className="scrollbar-always-visible border rounded-lg min-w-0 max-w-full">
       <table
         className="text-sm w-full border-collapse"
         tabIndex={0}
