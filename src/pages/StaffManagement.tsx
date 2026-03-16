@@ -49,7 +49,11 @@ export default function StaffManagement() {
   const { data: rankings = [], isLoading: rankingsLoading } = useWaiterRanking();
 
   const rankingMap = new Map(rankings.map(r => [r.name.toLowerCase(), r]));
-  const filteredStaff = allStaff
+  const activeStaff = allStaff.filter(s => s.is_active !== false);
+  const inactiveStaff = allStaff.filter(s => s.is_active === false);
+  const displayStaff = showInactive ? allStaff : activeStaff;
+  
+  const filteredStaff = displayStaff
     .filter(s => {
       const matchesRole = filter === 'all' || hasRole(s.role, filter as 'waiter' | 'kitchen');
       const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
