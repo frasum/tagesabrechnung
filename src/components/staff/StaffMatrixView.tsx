@@ -219,6 +219,7 @@ export function StaffMatrixView({ staff, restaurants, onEdit }: StaffMatrixViewP
             })}
           </TableBody>
         </Table>
+        </TooltipProvider>
       </div>
     </Card>
   );
