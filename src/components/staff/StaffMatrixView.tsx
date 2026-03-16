@@ -301,22 +301,38 @@ export function StaffMatrixView({ staff, restaurants, onEdit, onDelete, onReacti
                     </div>
                   </TableCell>
 
-                  {/* Deaktivieren */}
+                  {/* Aktionen */}
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => onDelete(s)}
-                          >
-                            <UserMinus className="w-4 h-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent><p className="text-xs">Deaktivieren</p></TooltipContent>
-                      </Tooltip>
+                      {s.is_active === false && onReactivate ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                              onClick={() => onReactivate(s)}
+                            >
+                              <UserCheck className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p className="text-xs">Reaktivieren</p></TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => onDelete(s)}
+                            >
+                              <UserMinus className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p className="text-xs">Deaktivieren</p></TooltipContent>
+                        </Tooltip>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

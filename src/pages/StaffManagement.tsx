@@ -243,6 +243,7 @@ export default function StaffManagement() {
             restaurants={restaurants}
             onEdit={handleEdit}
             onDelete={setDeleteStaff}
+            onReactivate={(s) => reactivateMutation.mutate(s.id)}
           />
         )}
 
