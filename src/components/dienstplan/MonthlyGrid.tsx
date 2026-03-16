@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useShiftAssignments, useAbsences } from '@/hooks/useDienstplan';
 import { useSkills, useEmployeeSkills } from '@/hooks/useSkills';
 import { useRestaurant } from '@/hooks/useRestaurant';
@@ -6,6 +6,7 @@ import { useRestaurantEmployees } from '@/hooks/useRestaurantEmployees';
 import { ShiftCell } from './ShiftCell';
 import { SkillBadge } from './SkillBadge';
 import { SkillCoverageRow } from './SkillCoverageRow';
+import { AbsenceDialog } from './AbsenceDialog';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface MonthlyGridProps {
@@ -62,6 +63,8 @@ export function MonthlyGrid({ department, month, year }: MonthlyGridProps) {
 
   const staffIds = filteredEmployees.map(e => e.id);
   const { data: absences = [] } = useAbsences(staffIds, startDate, endDate);
+
+  const [absenceTarget, setAbsenceTarget] = useState<{ staffId: string; staffName: string; absence?: any } | null>(null);
 
   const getAbsenceForDay = (staffId: string, date: string) => {
     return absences.find(a =>
@@ -142,6 +145,11 @@ export function MonthlyGrid({ department, month, year }: MonthlyGridProps) {
                       restaurantId={restaurantId}
                       skills={skills}
                       employeeSkillIds={empSkillIds}
+                      onAbsence={() => setAbsenceTarget({
+                        staffId: emp.id,
+                        staffName: emp.name,
+                        absence: absence || undefined,
+                      })}
                     />
                   );
                 })}
@@ -156,6 +164,16 @@ export function MonthlyGrid({ department, month, year }: MonthlyGridProps) {
           )}
         </tbody>
       </table>
+
+      {absenceTarget && (
+        <AbsenceDialog
+          open={!!absenceTarget}
+          onOpenChange={(open) => { if (!open) setAbsenceTarget(null); }}
+          staffId={absenceTarget.staffId}
+          staffName={absenceTarget.staffName}
+          absence={absenceTarget.absence}
+        />
+      )}
     </div>
   );
 }

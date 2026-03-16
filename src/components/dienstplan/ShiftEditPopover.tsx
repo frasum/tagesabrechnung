@@ -17,6 +17,7 @@ interface ShiftEditPopoverProps {
   skills: Skill[];
   employeeSkillIds: string[];
   onClose: () => void;
+  onAbsence?: () => void;
 }
 
 export function ShiftEditPopover({
@@ -28,6 +29,7 @@ export function ShiftEditPopover({
   skills,
   employeeSkillIds,
   onClose,
+  onAbsence,
 }: ShiftEditPopoverProps) {
   const [startTime, setStartTime] = useState(shift?.start_time?.substring(0, 5) || '16:00');
   const [endTime, setEndTime] = useState(shift?.end_time?.substring(0, 5) || '23:00');
@@ -118,6 +120,16 @@ export function ShiftEditPopover({
           </Button>
         )}
       </div>
+      {onAbsence && (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => { onClose(); onAbsence(); }}
+          className="w-full text-xs"
+        >
+          Abwesenheit eintragen
+        </Button>
+      )}
     </div>
   );
 }

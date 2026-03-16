@@ -14,6 +14,7 @@ interface ShiftCellProps {
   restaurantId: string;
   skills: Skill[];
   employeeSkillIds: string[];
+  onAbsence?: () => void;
 }
 
 function formatTime(t: string | null) {
@@ -30,6 +31,7 @@ export function ShiftCell({
   restaurantId,
   skills,
   employeeSkillIds,
+  onAbsence,
 }: ShiftCellProps) {
   const [open, setOpen] = useState(false);
 
@@ -41,6 +43,7 @@ export function ShiftCell({
     const isVacation = absenceType === 'vacation';
     return (
       <td
+        onClick={onAbsence}
         className={cn(
           'text-center text-xs font-semibold p-1 min-w-[52px] cursor-pointer border border-border/50',
           isVacation ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'
@@ -93,6 +96,7 @@ export function ShiftCell({
             skills={skills}
             employeeSkillIds={employeeSkillIds}
             onClose={() => setOpen(false)}
+            onAbsence={onAbsence}
           />
         </PopoverContent>
       </Popover>
