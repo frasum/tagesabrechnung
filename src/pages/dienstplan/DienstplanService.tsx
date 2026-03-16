@@ -10,7 +10,7 @@ export default function DienstplanService() {
 
   return (
     <div className="space-y-4">
-      <DienstplanToolbar month={month} year={year} onMonthChange={(m, y) => { setMonth(m); setYear(y); }} />
+      <DienstplanToolbar month={month} year={year} department="service" onMonthChange={(m, y) => { setMonth(m); setYear(y); }} />
       <MonthlyGrid department="service" month={month} year={year} />
       <DienstplanLegend category="service" />
     </div>
