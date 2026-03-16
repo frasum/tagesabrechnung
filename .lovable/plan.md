@@ -1,20 +1,19 @@
 
+## Dienstplan – 2 Pläne pro Standort (Küche + Service/GL)
 
-## Problem
+### Status: ✅ Implementiert
 
-In der Mitarbeitertabelle werden Restaurant-Namen doppelt angezeigt, weil ein Mitarbeiter pro Restaurant mehrere Abteilungseinträge haben kann (z.B. Service + Küche bei YUM). Die Zeile `restaurantNames` in `StaffTableRow.tsx` (Zeile 36) gibt jeden `staff_restaurants`-Eintrag als separaten Badge aus — ohne Deduplizierung.
+### Was wurde gebaut
 
-## Lösung
+- **Datenbank**: 4 neue Tabellen (`skills`, `employee_skills`, `shift_assignments`, `absences`) + `contracted_hours_per_month` auf `staff`
+- **7 Seed-Skills**: VS, PASS, SPÜLEN, CO (Küche), SERVICE, BAR (Service), GL
+- **Routing**: `/:restaurant/dienstplan/kueche` und `/:restaurant/dienstplan/service`
+- **Sidebar**: "Dienstplan" unter Tagesgeschäft
+- **Grid-UI**: Monatsansicht mit Skill-farbcodierten Zellen, Inline-Edit via Popover, Skill-Besetzungszeile (Küche)
+- **Hooks**: `useSkills`, `useDienstplan` für CRUD
 
-In `StaffTableRow.tsx`, Zeile 36, die Restaurant-Namen deduplizieren:
+### Nächste Schritte
 
-```typescript
-// Vorher:
-const restaurantNames = staff.staff_restaurants?.map(sr => sr.restaurants?.name).filter(Boolean) ?? [];
-
-// Nachher:
-const restaurantNames = [...new Set(staff.staff_restaurants?.map(sr => sr.restaurants?.name).filter(Boolean) ?? [])];
-```
-
-Das ist eine einzeilige Änderung. Danach erscheint jedes Restaurant nur noch einmal als Badge.
-
+- Employee-Skills zuweisen (UI in Mitarbeiterverwaltung)
+- AbsenceDialog für mehrtägige Abwesenheiten
+- Dienstplan-Filter nach Skill

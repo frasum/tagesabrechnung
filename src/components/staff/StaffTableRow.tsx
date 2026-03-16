@@ -33,7 +33,7 @@ export function StaffTableRow({ staff, onEdit, onDelete, rankingData }: StaffTab
   const missingNameData = !staff.first_name || !staff.last_name;
   const isLinked = !!staff.linked_profile;
   const linkedEmail = staff.linked_profile?.email;
-  const restaurantNames = staff.staff_restaurants?.map(sr => sr.restaurants?.name).filter(Boolean) ?? [];
+  const restaurantNames = [...new Set(staff.staff_restaurants?.map(sr => sr.restaurants?.name).filter(Boolean) ?? [])];
   const permLevel = (staff.permission_level || 'staff') as keyof typeof permConfig;
   const perm = permConfig[permLevel];
   const PermIcon = perm.icon;
