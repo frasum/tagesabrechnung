@@ -25,6 +25,57 @@ interface StaffDialogProps {
   isLoading?: boolean;
 }
 
+function SkillsSection({ staffId }: { staffId: string }) {
+  const { data: skills = [] } = useSkills();
+  const { data: empSkills = [] } = useEmployeeSkills([staffId]);
+  const toggleSkill = useToggleEmployeeSkill();
+
+  const empSkillIds = empSkills.filter(es => es.staff_id === staffId).map(es => es.skill_id);
+
+  return (
+    <>
+      <Separator />
+      <Collapsible>
+        <CollapsibleTrigger className="flex items-center justify-between w-full py-1 group">
+          <Label className="text-base font-semibold cursor-pointer flex items-center gap-2">
+            <Utensils className="w-4 h-4 text-primary" />
+            Skills / Posten
+          </Label>
+          <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-3">
+          <div className="flex flex-wrap gap-2">
+            {skills.map(skill => {
+              const hasSkill = empSkillIds.includes(skill.id);
+              return (
+                <button
+                  key={skill.id}
+                  type="button"
+                  onClick={() => toggleSkill.mutate({ staffId, skillId: skill.id, hasSkill })}
+                  className={`
+                    inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium
+                    border-2 transition-all cursor-pointer
+                    ${hasSkill
+                      ? 'border-transparent text-white shadow-sm'
+                      : 'border-border bg-background text-muted-foreground hover:border-muted-foreground/50'
+                    }
+                  `}
+                  style={hasSkill ? { backgroundColor: skill.color } : undefined}
+                >
+                  {skill.name}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Skills bestimmen, welche Posten im Dienstplan zugewiesen werden können.
+          </p>
+        </CollapsibleContent>
+      </Collapsible>
+    </>
+  );
+}
+
 /**
  * Minimal Dialog without Radix Select/Checkbox to avoid compose-refs bug.
  */
