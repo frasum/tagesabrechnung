@@ -17,6 +17,7 @@ interface ShiftCellProps {
   employeeSkillIds: string[];
   onAbsence?: () => void;
   isFocused?: boolean;
+  isToday?: boolean;
 }
 
 export const ShiftCell = forwardRef<HTMLTableCellElement, ShiftCellProps>(({
@@ -30,6 +31,7 @@ export const ShiftCell = forwardRef<HTMLTableCellElement, ShiftCellProps>(({
   employeeSkillIds,
   onAbsence,
   isFocused,
+  isToday,
 }, ref) => {
   const [open, setOpen] = useState(false);
   const upsertShift = useUpsertShift();
@@ -42,6 +44,7 @@ export const ShiftCell = forwardRef<HTMLTableCellElement, ShiftCellProps>(({
   const availableSkills = skills.filter(s => employeeSkillIds.includes(s.id));
 
   const focusRing = isFocused ? 'ring-2 ring-primary ring-inset' : '';
+  const todayBg = isToday ? 'bg-primary/5' : '';
 
   // Absence cell
   if (absenceType && !shift) {
@@ -90,7 +93,7 @@ export const ShiftCell = forwardRef<HTMLTableCellElement, ShiftCellProps>(({
   // No skills assigned → simple toggle
   if (availableSkills.length === 0) {
     return (
-      <td ref={ref} className={cn('p-0 min-w-[52px] border border-border/50', focusRing)}>
+      <td ref={ref} className={cn('p-0 min-w-[52px] border border-border/50', todayBg, focusRing)}>
         <button
           className={cn(
             'w-full h-full min-h-[36px] text-xs flex items-center justify-center transition-colors',
@@ -114,7 +117,7 @@ export const ShiftCell = forwardRef<HTMLTableCellElement, ShiftCellProps>(({
   }
 
   return (
-    <td ref={ref} className={cn('p-0 min-w-[52px] border border-border/50', focusRing)}>
+    <td ref={ref} className={cn('p-0 min-w-[52px] border border-border/50', todayBg, focusRing)}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <button

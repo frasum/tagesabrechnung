@@ -40,6 +40,10 @@ function formatDayHeader(dateStr: string) {
 export function MonthlyGrid({ department, month, year }: MonthlyGridProps) {
   const { restaurantId } = useRestaurant();
   const dates = useMemo(() => getPeriodDates(month, year), [year, month]);
+  const todayStr = useMemo(() => {
+    const t = new Date();
+    return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+  }, []);
   const startDate = dates[0];
   const endDate = dates[dates.length - 1];
 
@@ -168,12 +172,13 @@ export function MonthlyGrid({ department, month, year }: MonthlyGridProps) {
               const dateMonth = parseInt(date.split('-')[1], 10);
               const isPrevMonth = dateMonth !== month + 1;
               const isFirstOfMonth = day === 1;
+              const isToday = date === todayStr;
               const dayShiftCount = shifts.filter(s => s.shift_date === date).length;
               return (
                 <th
                   key={date}
                   className={`p-1 text-center text-[10px] min-w-[52px] border border-border/50 ${
-                    isSunday ? 'bg-red-50 text-red-700' : isPrevMonth ? 'bg-muted/80 text-muted-foreground' : ''
+                    isToday ? 'bg-primary/15 text-primary font-bold border-b-2 border-b-primary' : isSunday ? 'bg-red-50 text-red-700' : isPrevMonth ? 'bg-muted/80 text-muted-foreground' : ''
                   } ${isFirstOfMonth ? 'border-l-2 border-l-primary' : ''}`}
                 >
                   <div>{weekday}</div>
@@ -203,7 +208,8 @@ export function MonthlyGrid({ department, month, year }: MonthlyGridProps) {
                 {dates.map((date, dateIdx) => {
                   const shift = shifts.find(s => s.staff_id === emp.id && s.shift_date === date);
                   const absence = getAbsenceForDay(emp.id, date);
-                  const isFocused = focusedCell?.[0] === empIdx && focusedCell?.[1] === dateIdx;
+                    const isFocused = focusedCell?.[0] === empIdx && focusedCell?.[1] === dateIdx;
+                    const isToday = date === todayStr;
 
                   return (
                     <ShiftCell
@@ -218,6 +224,7 @@ export function MonthlyGrid({ department, month, year }: MonthlyGridProps) {
                       skills={skills}
                       employeeSkillIds={empSkillIds}
                       isFocused={isFocused}
+                      isToday={isToday}
                       onAbsence={() => setAbsenceTarget({
                         staffId: emp.id,
                         staffName: emp.name,
