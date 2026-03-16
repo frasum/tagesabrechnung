@@ -151,6 +151,7 @@ export function StaffMatrixView({ staff, restaurants, onEdit, onDelete }: StaffM
   };
 
   return (
+    <>
     <Card className="overflow-hidden">
       <div className="overflow-x-auto">
         <TooltipProvider delayDuration={300}>
