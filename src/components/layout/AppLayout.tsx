@@ -70,7 +70,7 @@ const adminNavItems: NavItem[] = [
 ];
 
 const navGroups: NavGroup[] = [
-  { label: 'Tagesgeschäft', paths: ['', 'kitchen', 'summary', 'zeiterfassung', 'qr-poster'] },
+  { label: 'Tagesgeschäft', paths: ['', 'kitchen', 'summary', 'zeiterfassung', 'dienstplan', 'qr-poster'] },
   { label: 'Auswertung', paths: ['statistics', 'history', 'cash-balance'] },
   { label: 'Verwaltung', paths: ['/staff', '/telegram', 'chat'], adminOnly: true },
 ];
