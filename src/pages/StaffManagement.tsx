@@ -203,14 +203,8 @@ export default function StaffManagement() {
           </Card>
         )}
 
-        {/* Staff Table / Matrix */}
-        {viewMode === 'matrix' ? (
-          <StaffMatrixView
-            staff={filteredStaff}
-            restaurants={restaurants}
-            onEdit={handleEdit}
-          />
-        ) : filteredStaff.length === 0 ? (
+        {/* Staff Matrix */}
+        {filteredStaff.length === 0 ? (
           <Card className="border-dashed border-2">
             <CardContent className="py-16 text-center">
               <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
@@ -225,32 +219,12 @@ export default function StaffManagement() {
             </CardContent>
           </Card>
         ) : (
-          <Card className="overflow-hidden">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/30 hover:bg-muted/30">
-                    <TableHead className="font-semibold">Name</TableHead>
-                    <TableHead className="font-semibold">Rolle</TableHead>
-                    <TableHead className="font-semibold">Restaurants</TableHead>
-                    <TableHead className="font-semibold">Berechtigung</TableHead>
-                    <TableHead className="text-right font-semibold">Aktionen</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredStaff.map(staff => (
-                    <StaffTableRow
-                      key={staff.id}
-                      staff={staff}
-                      onEdit={handleEdit}
-                      onDelete={setDeleteStaff}
-                      rankingData={rankingMap.get(staff.name.toLowerCase())}
-                    />
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </Card>
+          <StaffMatrixView
+            staff={filteredStaff}
+            restaurants={restaurants}
+            onEdit={handleEdit}
+            onDelete={setDeleteStaff}
+          />
         )}
 
         {/* Collapsible Ranking Table */}

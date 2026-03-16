@@ -275,6 +275,20 @@ export function StaffMatrixView({ staff, restaurants, onEdit, onDelete }: StaffM
                       </TooltipProvider>
                     </div>
                   </TableCell>
+
+                  {/* Aktionen */}
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive/70 hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => onDelete(s)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
               );
             })}
