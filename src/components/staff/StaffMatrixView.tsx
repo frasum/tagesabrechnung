@@ -244,8 +244,7 @@ export function StaffMatrixView({ staff, restaurants, onEdit }: StaffMatrixViewP
                                   }}
                                   className={cn(
                                     'inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold transition-all border',
-                                    isDisabled && !has && 'cursor-not-allowed opacity-20',
-                                    isDisabled && has && 'cursor-pointer ring-1 ring-destructive/50',
+                                    isDisabled && 'cursor-not-allowed opacity-20',
                                     !isDisabled && has
                                       ? 'text-white border-transparent cursor-pointer'
                                       : !isDisabled && !has
