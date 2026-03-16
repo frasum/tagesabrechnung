@@ -114,7 +114,8 @@ export default function StaffManagement() {
                 Mitarbeiterverwaltung
               </h1>
               <p className="text-muted-foreground mt-2 text-sm">
-                {allStaff.length} Mitarbeiter · {waiterCount} Service · {kitchenCount} Küche
+                {activeStaff.length} Mitarbeiter · {waiterCount} Service · {kitchenCount} Küche
+                {inactiveStaff.length > 0 && <span className="text-muted-foreground/60"> · {inactiveStaff.length} inaktiv</span>}
               </p>
             </div>
             
