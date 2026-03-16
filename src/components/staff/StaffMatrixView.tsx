@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Trash2 } from 'lucide-react';
+import { UserMinus } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
