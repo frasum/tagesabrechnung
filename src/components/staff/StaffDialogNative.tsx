@@ -15,6 +15,8 @@ import { useUserRole, useUpdateUserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/contexts/AuthContext';
 import type { PermissionLevel } from '@/types/permissions';
 import { PERMISSION_LEVEL_INFO } from '@/types/permissions';
+import { useSkills, useEmployeeSkills, useToggleEmployeeSkill } from '@/hooks/useSkills';
+import { SkillBadge } from '@/components/dienstplan/SkillBadge';
 interface StaffDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
