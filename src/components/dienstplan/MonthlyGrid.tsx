@@ -115,9 +115,7 @@ export function MonthlyGrid({ department, month, year }: MonthlyGridProps) {
               .filter(es => es.staff_id === emp.id)
               .map(es => es.skill_id);
 
-            const totalHours = shifts
-              .filter(s => s.staff_id === emp.id)
-              .reduce((sum, s) => sum + calcHours(s.start_time, s.end_time), 0);
+            const shiftCount = shifts.filter(s => s.staff_id === emp.id).length;
 
             return (
               <tr key={emp.id} className="hover:bg-muted/30">
