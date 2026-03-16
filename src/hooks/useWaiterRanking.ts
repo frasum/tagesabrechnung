@@ -81,7 +81,8 @@ export function useWaiterRanking() {
       // 6. Calculate averages and trends
       const rankings: Omit<WaiterRankingItem, 'rank'>[] = [];
 
-      for (const [name, sessionData] of Object.entries(waiterData)) {
+      for (const [key, entry] of Object.entries(waiterData)) {
+        const sessionData = entry.sessions;
         // Sort by session order (most recent first)
         sessionData.sort((a, b) => a.sessionOrder - b.sessionOrder);
 
@@ -93,7 +94,6 @@ export function useWaiterRanking() {
         let trendValue = 0;
 
         if (shiftsCount >= 2) {
-          // Split into recent half and older half
           const midpoint = Math.ceil(shiftsCount / 2);
           const recentSessions = sessionData.slice(0, midpoint);
           const olderSessions = sessionData.slice(midpoint);
@@ -109,7 +109,7 @@ export function useWaiterRanking() {
         }
 
         rankings.push({
-          name,
+          name: entry.displayName,
           avgTipPercent,
           shiftsCount,
           trend,
