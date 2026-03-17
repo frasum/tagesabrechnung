@@ -1,31 +1,19 @@
 
+## Dienstplan – 2 Pläne pro Standort (Küche + Service/GL)
 
-## Plan: Filter Skills by Department in ShiftCell
+### Status: ✅ Implementiert
 
-### Problem
-Currently, `ShiftCell` shows **all** skills a staff member has, regardless of the department view. When planning the kitchen, service skills like "BAR" or "SERVICE" also appear in the popover — and vice versa.
+### Was wurde gebaut
 
-### Fix
-In `ShiftCell.tsx`, filter `availableSkills` not only by the employee's assigned skill IDs but also by the current `department`. The `skills` array already contains a `category` field (`'kitchen'`, `'service'`, `'gl'`).
+- **Datenbank**: 4 neue Tabellen (`skills`, `employee_skills`, `shift_assignments`, `absences`) + `contracted_hours_per_month` auf `staff`
+- **7 Seed-Skills**: VS, PASS, SPÜLEN, CO (Küche), SERVICE, BAR (Service), GL
+- **Routing**: `/:restaurant/dienstplan/kueche` und `/:restaurant/dienstplan/service`
+- **Sidebar**: "Dienstplan" unter Tagesgeschäft
+- **Grid-UI**: Monatsansicht mit Skill-farbcodierten Zellen, Inline-Edit via Popover, Skill-Besetzungszeile (Küche)
+- **Hooks**: `useSkills`, `useDienstplan` für CRUD
 
-### Change
+### Nächste Schritte
 
-**`src/components/dienstplan/ShiftCell.tsx`** — line 46:
-
-Replace:
-```typescript
-const availableSkills = skills.filter(s => employeeSkillIds.includes(s.id));
-```
-
-With:
-```typescript
-const availableSkills = skills.filter(s =>
-  employeeSkillIds.includes(s.id) &&
-  (department === 'kitchen'
-    ? s.category === 'kitchen'
-    : s.category === 'service' || s.category === 'gl')
-);
-```
-
-This is a single-line change. No other files need modification — `department` is already passed as a prop to `ShiftCell`.
-
+- Employee-Skills zuweisen (UI in Mitarbeiterverwaltung)
+- AbsenceDialog für mehrtägige Abwesenheiten
+- Dienstplan-Filter nach Skill

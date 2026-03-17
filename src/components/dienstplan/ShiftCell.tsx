@@ -43,7 +43,12 @@ export const ShiftCell = forwardRef<HTMLTableCellElement, ShiftCellProps>(({
     ? skills.find(s => s.id === shift.assigned_skill_id)
     : null;
 
-  const availableSkills = skills.filter(s => employeeSkillIds.includes(s.id));
+  const availableSkills = skills.filter(s =>
+    employeeSkillIds.includes(s.id) &&
+    (department === 'kitchen'
+      ? s.category === 'kitchen'
+      : s.category === 'service' || s.category === 'gl')
+  );
 
   const focusRing = isFocused ? 'ring-2 ring-primary ring-inset' : '';
   const todayBg = isToday ? 'bg-primary/5' : '';
