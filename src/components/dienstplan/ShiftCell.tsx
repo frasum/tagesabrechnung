@@ -1,11 +1,15 @@
 import { useState, forwardRef } from 'react';
+import { format, parseISO } from 'date-fns';
+import { de } from 'date-fns/locale';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useUpsertShift, useDeleteShift, type ShiftAssignment } from '@/hooks/useDienstplan';
+import { Calendar } from '@/components/ui/calendar';
+import { Button } from '@/components/ui/button';
+import { useUpsertShift, useDeleteShift, useUpsertAbsence, type ShiftAssignment } from '@/hooks/useDienstplan';
 import type { Skill } from '@/hooks/useSkills';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { X, Cake } from 'lucide-react';
+import { X, Cake, CalendarIcon } from 'lucide-react';
 
 interface ShiftCellProps {
   shift?: ShiftAssignment;
