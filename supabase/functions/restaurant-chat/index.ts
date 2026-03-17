@@ -15,6 +15,7 @@ async function batchIn<T>(
   ids: string[],
   batchSize = 500
 ): Promise<T[]> {
+  if (ids.length === 0) return [];
   const results: T[] = [];
   for (let i = 0; i < ids.length; i += batchSize) {
     const batch = ids.slice(i, i + batchSize);
@@ -60,11 +61,20 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Calculate date range for raw data (30 days)
+    // Date calculations
+    const now = new Date();
+    const berlin = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Berlin" }));
+    const fmt = (d: Date) => d.toISOString().split("T")[0];
 
-    const since30 = new Date();
-    since30.setDate(since30.getDate() - 30);
-    const since30Str = since30.toISOString().split("T")[0];
+    const since14 = new Date(berlin); since14.setDate(berlin.getDate() - 14);
+    const since14Str = fmt(since14);
+    const since7 = new Date(berlin); since7.setDate(berlin.getDate() - 7);
+    const since7Str = fmt(since7);
+    const todayStr = fmt(berlin);
+
+    const sixMonthsAgo = new Date(berlin);
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const sixMonthsAgoStr = fmt(sixMonthsAgo);
 
     // Weather code to label mapping
     const weatherCodeLabel = (code: number): string => {
@@ -81,12 +91,8 @@ Deno.serve(async (req) => {
       return "?";
     };
 
-    // Load ALL sessions + staff + restaurants + settings + staff_restaurants + weather in parallel
-    const weatherPromise = fetch(
-      "https://api.open-meteo.com/v1/forecast?latitude=48.14&longitude=11.58&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weathercode&timezone=Europe/Berlin&past_days=90&forecast_days=3"
-    ).then(r => r.json()).catch(() => null);
-
-    const [sessionsRes, staffRes, restaurantsRes, settingsRes, staffRestaurantsRes, weatherData, holidaysRes] = await Promise.all([
+    // === PHASE 1: All independent queries in parallel ===
+    const [sessionsRes, staffRes, restaurantsRes, settingsRes, staffRestaurantsRes, weatherData, holidaysRes, ztShiftsRes] = await Promise.all([
       supabase
         .from("sessions")
         .select("id, session_date, restaurant_id, pos_total, terminal_1_total, terminal_2_total, ordersmart_revenue, wolt_revenue, guest_count, vouchers_sold, vouchers_redeemed, finedine_vouchers, einladung, sonstige_einnahme, notes, created_by_name")
@@ -110,55 +116,42 @@ Deno.serve(async (req) => {
         .from("staff_restaurants")
         .select("staff_id, restaurant_id, zt_department")
         .in("restaurant_id", restaurant_ids),
-      weatherPromise,
+      // Weather: only 30 days + 1 day forecast for speed
+      fetch(
+        "https://api.open-meteo.com/v1/forecast?latitude=48.14&longitude=11.58&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weathercode&timezone=Europe/Berlin&past_days=30&forecast_days=1"
+      ).then(r => r.json()).catch(() => null),
       supabase
         .from("bavarian_holidays")
         .select("holiday_date, name, surcharge_rate, from_hour")
         .order("holiday_date"),
-    ]);
-
-    const sessions = sessionsRes.data || [];
-    const sessionIds = sessions.map((s: any) => s.id);
-
-    // Load related data using batched .in() queries
-    let waiterShifts: any[] = [];
-    let kitchenShifts: any[] = [];
-    let expenses: any[] = [];
-    let advances: any[] = [];
-
-    if (sessionIds.length > 0) {
-      [waiterShifts, kitchenShifts, expenses, advances] = await Promise.all([
-        batchIn(supabase, "waiter_shifts",
-          "session_id, waiter_name, staff_id, second_waiter_name, additional_waiters, pos_sales, kassiert_brutto, differenz, kitchen_tip, hours_worked, participates_in_pool",
-          "session_id", sessionIds),
-        batchIn(supabase, "kitchen_shifts",
-          "session_id, staff_name, hours_worked",
-          "session_id", sessionIds),
-        batchIn(supabase, "expenses",
-          "session_id, amount, description",
-          "session_id", sessionIds),
-        batchIn(supabase, "advances",
-          "session_id, amount, staff_name",
-          "session_id", sessionIds),
-      ]);
-    }
-
-    // Load zt_shifts limited to last 6 months for performance
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-    const sixMonthsAgoStr = sixMonthsAgo.toISOString().split("T")[0];
-
-    const allStaffIds = (staffRes.data || []).map((s: any) => s.id);
-    let ztShifts: any[] = [];
-    if (allStaffIds.length > 0) {
-      const { data: ztData } = await supabase
+      // zt_shifts in parallel with everything else
+      supabase
         .from("zt_shifts")
         .select("employee_id, shift_date, total_hours, evening_hours, night_hours, night_deep_hours, sunday_holiday_hours, is_holiday, department, absence_type")
         .gte("shift_date", sixMonthsAgoStr)
         .order("shift_date", { ascending: false })
-        .limit(10000);
-      ztShifts = ztData || [];
-    }
+        .limit(10000),
+    ]);
+
+    const sessions = sessionsRes.data || [];
+    const sessionIds = sessions.map((s: any) => s.id);
+    const ztShifts = ztShiftsRes.data || [];
+
+    // === PHASE 2: Session-dependent queries in parallel ===
+    const [waiterShifts, kitchenShifts, expenses, advances] = await Promise.all([
+      batchIn(supabase, "waiter_shifts",
+        "session_id, waiter_name, staff_id, second_waiter_name, additional_waiters, pos_sales, kassiert_brutto, differenz, kitchen_tip, hours_worked, participates_in_pool",
+        "session_id", sessionIds),
+      batchIn(supabase, "kitchen_shifts",
+        "session_id, staff_name, hours_worked",
+        "session_id", sessionIds),
+      batchIn(supabase, "expenses",
+        "session_id, amount, description",
+        "session_id", sessionIds),
+      batchIn(supabase, "advances",
+        "session_id, amount, staff_name",
+        "session_id", sessionIds),
+    ]);
 
     // Separate service staff IDs for commission calculation
     const serviceStaffIds = (staffRestaurantsRes.data || [])
@@ -209,9 +202,8 @@ Deno.serve(async (req) => {
       serviceStaffByRestaurant[sr.restaurant_id].add(sr.staff_id);
     });
 
-    // Build zt_shifts lookup: employee_id:date → hours
+    // Build zt_shifts lookup
     const ztHoursByStaffDate = new Map<string, number>();
-    const ztHoursByStaffMonth: Record<string, Record<string, number>> = {}; // month|restaurant → staffId → hours
     ztShifts.forEach((z: any) => {
       const key = `${z.employee_id}:${z.shift_date}`;
       ztHoursByStaffDate.set(key, (ztHoursByStaffDate.get(key) ?? 0) + (Number(z.total_hours) || 0));
@@ -286,25 +278,19 @@ Deno.serve(async (req) => {
       if (!waiterTipAgg[key]) waiterTipAgg[key] = {};
       if (!waiterHoursAgg[key]) waiterHoursAgg[key] = {};
 
-      // Session pool = sum of all differenz
       const sessionPool = shiftsInSession.reduce((sum: number, s: any) => sum + (s.differenz || 0), 0);
-
-      // Count participating waiter shares (additional_waiters count extra)
       const waiterShareCount = shiftsInSession.reduce((count: number, s: any) => {
         if (!s.participates_in_pool) return count;
-        const additionalCount = (s.additional_waiters?.length || 0);
-        return count + 1 + additionalCount;
+        return count + 1 + (s.additional_waiters?.length || 0);
       }, 0);
 
-      // Distribute pool equally among participants
       if (waiterShareCount > 0 && sessionPool !== 0) {
         const tipPerWaiter = sessionPool / waiterShareCount;
         shiftsInSession.forEach((ws: any) => {
           waiterHoursAgg[key][ws.waiter_name] = (waiterHoursAgg[key][ws.waiter_name] || 0) + (ws.hours_worked || 0);
           if (!ws.participates_in_pool) return;
           waiterTipAgg[key][ws.waiter_name] = (waiterTipAgg[key][ws.waiter_name] || 0) + tipPerWaiter;
-          const additionalWaiters: string[] = ws.additional_waiters || [];
-          for (const name of additionalWaiters) {
+          for (const name of (ws.additional_waiters || [])) {
             waiterTipAgg[key][name] = (waiterTipAgg[key][name] || 0) + tipPerWaiter;
           }
         });
@@ -326,20 +312,8 @@ Deno.serve(async (req) => {
     });
 
     // ==========================================
-    // COMMISSION CALCULATION (per month per restaurant)
+    // COMMISSION CALCULATION
     // ==========================================
-    // Group waiter shifts by month|restaurantId|date for day-by-day commission calc
-    const commissionByMonthRestaurant: Record<string, {
-      restaurantId: string;
-      minRevenue: number;
-      pct: number;
-      qualDays: number;
-      totalDays: number;
-      pool: number;
-      staffHours: Record<string, number>; // staffName → hours
-    }> = {};
-
-    // Group waiter shifts by restaurantId+date
     const shiftsByRestDate: Record<string, any[]> = {};
     waiterShifts.forEach((ws: any) => {
       const info = sessionMonthRestaurant[ws.session_id];
@@ -349,7 +323,11 @@ Deno.serve(async (req) => {
       shiftsByRestDate[key].push(ws);
     });
 
-    // Process each restaurant+date
+    const commissionByMonthRestaurant: Record<string, {
+      restaurantId: string; minRevenue: number; pct: number;
+      qualDays: number; totalDays: number; pool: number;
+      staffHours: Record<string, number>;
+    }> = {};
     const daysByMonthRest: Record<string, { dates: Set<string>; qualDays: number; pool: number }> = {};
 
     for (const [rdKey, shifts] of Object.entries(shiftsByRestDate)) {
@@ -362,42 +340,26 @@ Deno.serve(async (req) => {
       if (!daysByMonthRest[mrKey]) {
         daysByMonthRest[mrKey] = { dates: new Set(), qualDays: 0, pool: 0 };
         commissionByMonthRestaurant[mrKey] = {
-          restaurantId,
-          minRevenue: settings.minRevenue,
-          pct: settings.pct,
-          qualDays: 0,
-          totalDays: 0,
-          pool: 0,
-          staffHours: {},
+          restaurantId, minRevenue: settings.minRevenue, pct: settings.pct,
+          qualDays: 0, totalDays: 0, pool: 0, staffHours: {},
         };
       }
 
       const dayData = daysByMonthRest[mrKey];
       dayData.dates.add(date);
 
-      // Filter out GL staff, count unique service staff including secondary/additional
       const staffSet = new Set<string>();
       let dayRevenue = 0;
-
       for (const ws of shifts) {
-        // Skip GL
         if (ws.staff_id && glStaffIds.has(ws.staff_id)) continue;
-
-        const key = ws.staff_id || ws.waiter_name;
-        staffSet.add(key);
+        staffSet.add(ws.staff_id || ws.waiter_name);
         dayRevenue += Number(ws.pos_sales) || 0;
-
-        // Count secondary waiters
         if (ws.second_waiter_name && !isGlByName(ws.second_waiter_name)) {
-          const sid = staffNameToId.get(ws.second_waiter_name.toLowerCase());
-          staffSet.add(sid || `secondary:${ws.second_waiter_name}`);
+          staffSet.add(staffNameToId.get(ws.second_waiter_name.toLowerCase()) || `s:${ws.second_waiter_name}`);
         }
         if (ws.additional_waiters?.length) {
           for (const aw of ws.additional_waiters) {
-            if (aw && !isGlByName(aw)) {
-              const awSid = staffNameToId.get(aw.toLowerCase());
-              staffSet.add(awSid || `secondary:${aw}`);
-            }
+            if (aw && !isGlByName(aw)) staffSet.add(staffNameToId.get(aw.toLowerCase()) || `s:${aw}`);
           }
         }
       }
@@ -407,15 +369,13 @@ Deno.serve(async (req) => {
         const dayAvg = dayRevenue / staffCount;
         if (dayAvg >= settings.minRevenue) {
           const excess = dayRevenue - (settings.minRevenue * staffCount);
-          const dayPool = Math.max(0, excess * (settings.pct / 100));
           dayData.qualDays++;
-          dayData.pool += dayPool;
+          dayData.pool += Math.max(0, excess * (settings.pct / 100));
         }
       }
     }
 
-    // Build zt_shifts hours per month|restaurant per staff for commission distribution
-    // Map ALL staff to restaurants
+    // Staff to restaurants mapping
     const staffToRestaurants: Record<string, string[]> = {};
     (staffRestaurantsRes.data || []).forEach((sr: any) => {
       if (!staffToRestaurants[sr.staff_id]) staffToRestaurants[sr.staff_id] = [];
@@ -424,13 +384,12 @@ Deno.serve(async (req) => {
       }
     });
 
-    // Map staff to departments per restaurant
-    const staffDeptByRest: Record<string, string> = {}; // staffId:restaurantId → department
+    const staffDeptByRest: Record<string, string> = {};
     (staffRestaurantsRes.data || []).forEach((sr: any) => {
       staffDeptByRest[`${sr.staff_id}:${sr.restaurant_id}`] = sr.zt_department || "?";
     });
 
-    // Aggregate zt hours by month|restaurant|staffName (for commission: only Service)
+    // ZT hours by month|restaurant|staff for commission (Service only)
     const ztHoursMonthRest: Record<string, Record<string, number>> = {};
     const serviceStaffIdSet = new Set(serviceStaffIds);
     ztShifts.forEach((z: any) => {
@@ -446,7 +405,6 @@ Deno.serve(async (req) => {
       }
     });
 
-    // Finalize commission data
     for (const [mrKey, dayData] of Object.entries(daysByMonthRest)) {
       const comm = commissionByMonthRestaurant[mrKey];
       if (!comm) continue;
@@ -457,16 +415,15 @@ Deno.serve(async (req) => {
     }
 
     // ==========================================
-    // COMPREHENSIVE WORKFORCE DATA (per month per restaurant per employee)
+    // WORKFORCE DATA
     // ==========================================
     type WorkforceEntry = { total: number; evening: number; night: number; nightDeep: number; sundayHoliday: number; absences: Record<string, number>; dept: string };
-    const workforceAgg: Record<string, Record<string, WorkforceEntry>> = {}; // month|restaurant → staffName → data
+    const workforceAgg: Record<string, Record<string, WorkforceEntry>> = {};
 
     ztShifts.forEach((z: any) => {
       const month = z.shift_date.slice(0, 7);
       const rids = staffToRestaurants[z.employee_id] || [];
       const staffName = staffById[z.employee_id]?.name || "?";
-
       for (const rid of rids) {
         const restaurant = restaurantMap[rid] || "?";
         const mrKey = `${month}|${restaurant}`;
@@ -476,7 +433,6 @@ Deno.serve(async (req) => {
           workforceAgg[mrKey][staffName] = { total: 0, evening: 0, night: 0, nightDeep: 0, sundayHoliday: 0, absences: {}, dept };
         }
         const entry = workforceAgg[mrKey][staffName];
-
         if (z.absence_type) {
           entry.absences[z.absence_type] = (entry.absences[z.absence_type] || 0) + 1;
         } else {
@@ -489,9 +445,7 @@ Deno.serve(async (req) => {
       }
     });
 
-    // ==========================================
-    // WAITER PERFORMANCE AGGREGATION (pos_sales + shifts per waiter per month)
-    // ==========================================
+    // WAITER PERFORMANCE
     const waiterPerfAgg: Record<string, Record<string, { revenue: number; shifts: number; hours: number }>> = {};
     waiterShifts.forEach((ws: any) => {
       const info = sessionMonthRestaurant[ws.session_id];
@@ -507,48 +461,35 @@ Deno.serve(async (req) => {
     // ==========================================
     // ANOMALY DETECTION (last 7 days vs previous 7 days)
     // ==========================================
-    const today = new Date();
-    const since7 = new Date(today); since7.setDate(since7.getDate() - 7);
-    const since14 = new Date(today); since14.setDate(since14.getDate() - 14);
-    const since7Str = since7.toISOString().split("T")[0];
-    const since14Str = since14.toISOString().split("T")[0];
-    const todayStr = today.toISOString().split("T")[0];
-
     const anomalies: string[] = [];
 
-    // Per-restaurant anomaly detection
     for (const rid of restaurant_ids) {
       const rName = restaurantMap[rid] || "?";
       const last7Sessions = sessions.filter((s: any) => s.restaurant_id === rid && s.session_date >= since7Str && s.session_date <= todayStr);
       const prev7Sessions = sessions.filter((s: any) => s.restaurant_id === rid && s.session_date >= since14Str && s.session_date < since7Str);
 
-      // 1. Revenue comparison
       const last7Revenue = last7Sessions.reduce((s: number, ss: any) => s + (ss.pos_total || 0), 0);
       const prev7Revenue = prev7Sessions.reduce((s: number, ss: any) => s + (ss.pos_total || 0), 0);
       if (prev7Revenue > 0) {
         const revChange = ((last7Revenue - prev7Revenue) / prev7Revenue) * 100;
         if (Math.abs(revChange) >= 15) {
-          const dir = revChange > 0 ? "über" : "unter";
-          anomalies.push(`⚠ Umsatz letzte 7 Tage (${rName}): ${last7Revenue.toFixed(0)}€ — ${Math.abs(revChange).toFixed(0)}% ${dir} Vorwoche (${prev7Revenue.toFixed(0)}€)`);
+          anomalies.push(`⚠ Umsatz 7T (${rName}): ${last7Revenue.toFixed(0)}€ — ${Math.abs(revChange).toFixed(0)}% ${revChange > 0 ? "über" : "unter"} Vorwoche (${prev7Revenue.toFixed(0)}€)`);
         }
       }
 
-      // 2. Guest count trend
       const last7Guests = last7Sessions.reduce((s: number, ss: any) => s + (ss.guest_count || 0), 0);
       const prev7Guests = prev7Sessions.reduce((s: number, ss: any) => s + (ss.guest_count || 0), 0);
       if (prev7Guests > 0) {
         const guestChange = ((last7Guests - prev7Guests) / prev7Guests) * 100;
         if (Math.abs(guestChange) >= 10) {
-          const dir = guestChange > 0 ? "+" : "";
-          anomalies.push(`ℹ Gästezahl ${rName}: ${dir}${guestChange.toFixed(0)}% gegenüber Vorwoche (${last7Guests} vs. ${prev7Guests})`);
+          anomalies.push(`ℹ Gäste ${rName}: ${guestChange > 0 ? "+" : ""}${guestChange.toFixed(0)}% ggü. Vorwoche (${last7Guests} vs ${prev7Guests})`);
         }
       }
 
-      // 3. Missing days (last 7 days without sessions)
       const last7Dates = new Set(last7Sessions.map((s: any) => s.session_date));
       const missingDays: string[] = [];
-      for (let d = new Date(since7); d <= today; d.setDate(d.getDate() + 1)) {
-        const ds = d.toISOString().split("T")[0];
+      for (let d = new Date(since7); d <= berlin; d.setDate(d.getDate() + 1)) {
+        const ds = fmt(d);
         if (!last7Dates.has(ds) && ds <= todayStr) missingDays.push(ds);
       }
       if (missingDays.length > 0 && missingDays.length <= 3) {
@@ -556,7 +497,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 4. Waiter performance deviations (last 7 days)
+    // Waiter performance deviations
     const last7SessionIds = new Set(sessions.filter((s: any) => s.session_date >= since7Str && s.session_date <= todayStr).map((s: any) => s.id));
     const waiterPerf7: Record<string, { revenue: number; hours: number }> = {};
     waiterShifts.forEach((ws: any) => {
@@ -573,12 +514,12 @@ Deno.serve(async (req) => {
         const perHour = v.revenue / v.hours;
         const deviation = ((perHour - teamAvgPerHour) / teamAvgPerHour) * 100;
         if (deviation <= -30) {
-          anomalies.push(`⚠ Kellner ${name}: Ø ${perHour.toFixed(0)}€/h — ${Math.abs(deviation).toFixed(0)}% unter Team-Ø (${teamAvgPerHour.toFixed(0)}€/h) in den letzten 7 Tagen`);
+          anomalies.push(`⚠ ${name}: Ø ${perHour.toFixed(0)}€/h — ${Math.abs(deviation).toFixed(0)}% unter Team-Ø (${teamAvgPerHour.toFixed(0)}€/h)`);
         }
       }
     }
 
-    // 5. Unusually high negative differences (> 2× std dev)
+    // High negative differences
     const recentDiffs: { name: string; diff: number }[] = [];
     waiterShifts.forEach((ws: any) => {
       if (!last7SessionIds.has(ws.session_id)) return;
@@ -590,352 +531,285 @@ Deno.serve(async (req) => {
       if (stdDev > 0) {
         for (const d of recentDiffs) {
           if (d.diff < mean - 2 * stdDev) {
-            anomalies.push(`⚠ ${d.name}: Differenz ${d.diff.toFixed(2)}€ — ungewöhnlich niedrig (Ø ${mean.toFixed(2)}€ ± ${stdDev.toFixed(2)}€)`);
+            anomalies.push(`⚠ ${d.name}: Differenz ${d.diff.toFixed(2)}€ — ungewöhnlich (Ø ${mean.toFixed(2)}€)`);
           }
         }
       }
     }
 
-    // Build context string
-    const contextParts: string[] = [];
+    // ==========================================
+    // BUILD CONTEXT STRING (optimized for minimal tokens)
+    // ==========================================
+    const ctx: string[] = [];
 
-    contextParts.push("=== RESTAURANTS ===");
-    (restaurantsRes.data || []).forEach((r: any) => {
-      contextParts.push(`${r.name} (${r.slug})`);
-    });
+    ctx.push("=== RESTAURANTS ===");
+    (restaurantsRes.data || []).forEach((r: any) => ctx.push(`${r.name} (${r.slug})`));
 
-    // Bavarian holidays
+    // Bavarian holidays (compact)
     const holidays = holidaysRes.data || [];
     if (holidays.length > 0) {
-      contextParts.push("\n=== BAYERISCHE FEIERTAGE ===");
-      contextParts.push("Datum | Name | Zuschlagssatz | Ab Stunde");
+      ctx.push("\n=== FEIERTAGE ===");
       holidays.forEach((h: any) => {
-        contextParts.push(`${h.holiday_date} | ${h.name} | ${(h.surcharge_rate * 100).toFixed(0)}% | ${h.from_hour != null ? h.from_hour + ":00" : "ganztägig"}`);
+        ctx.push(`${h.holiday_date} ${h.name} ${(h.surcharge_rate * 100).toFixed(0)}% ${h.from_hour != null ? "ab " + h.from_hour + "h" : "ganztägig"}`);
       });
     }
 
-    // Monthly summary BEFORE raw data
-    contextParts.push("\n=== MONATLICHE ZUSAMMENFASSUNG (voraggregiert, alle verfügbaren Monate) ===");
-    contextParts.push("Monat | Restaurant | Tage | Umsatz | Kreditkarten | OrderSmart | Wolt | Gutschein-VK | Gutschein-Einl | FineDine | Einladung | SoEinnahme | Gäste | Ausgaben | Vorschüsse | Küchen-TG-Gesamt");
+    // Monthly summary
+    ctx.push("\n=== MONATSZUSAMMENFASSUNG ===");
+    ctx.push("Monat|Rest|Tage|Umsatz|Karten|OS|Wolt|GVK|GEinl|FD|Einl|SoE|Gäste|Ausg|Vorsch|KüchenTG");
     const sortedKeys = Object.keys(monthlyAgg).sort();
     for (const key of sortedKeys) {
       const [month, restaurant] = key.split("|");
       const a = monthlyAgg[key];
       const ea = monthlyExpAdv[key] || { ausgaben: 0, vorschuesse: 0 };
       const kt = kitchenTipAgg[key] || 0;
-      contextParts.push(
-        `${month} | ${restaurant} | ${a.sessions_count} | ${a.pos_total}€ | ${a.kreditkarten}€ | ${a.ordersmart}€ | ${a.wolt}€ | ${a.gutscheine_vk}€ | ${a.gutscheine_einl}€ | ${a.finedine}€ | ${a.einladung}€ | ${a.sonstige_einnahme}€ | ${a.gaeste} | ${ea.ausgaben}€ | ${ea.vorschuesse}€ | ${kt}€`
-      );
+      ctx.push(`${month}|${restaurant}|${a.sessions_count}|${a.pos_total}|${a.kreditkarten}|${a.ordersmart}|${a.wolt}|${a.gutscheine_vk}|${a.gutscheine_einl}|${a.finedine}|${a.einladung}|${a.sonstige_einnahme}|${a.gaeste}|${ea.ausgaben}|${ea.vorschuesse}|${kt}`);
     }
 
-    // Waiter tip ranking per month per restaurant
-    contextParts.push("\n=== MONATLICHES KELLNER-TRINKGELD RANKING (alle verfügbaren Monate) ===");
-    contextParts.push("Monat | Restaurant | Kellner | Trinkgeld (Pool-Anteil) | Stunden");
+    // Waiter tip ranking (compact)
+    ctx.push("\n=== KELLNER-TG RANKING ===");
+    ctx.push("Monat|Rest|Name|TG|Std");
     for (const key of sortedKeys) {
       const [month, restaurant] = key.split("|");
       const tips = waiterTipAgg[key] || {};
       const hours = waiterHoursAgg[key] || {};
       const sorted = Object.entries(tips).sort((a, b) => b[1] - a[1]);
       for (const [name, tip] of sorted) {
-        contextParts.push(`${month} | ${restaurant} | ${name} | ${tip}€ | ${hours[name] || 0}h`);
+        ctx.push(`${month}|${restaurant}|${name}|${tip.toFixed(0)}|${(hours[name] || 0).toFixed(0)}`);
       }
     }
 
-    // Kitchen hours per month per restaurant
-    contextParts.push("\n=== MONATLICHE KÜCHEN-STUNDEN (alle verfügbaren Monate) ===");
-    contextParts.push("Monat | Restaurant | Mitarbeiter | Stunden");
+    // Kitchen hours (compact)
+    ctx.push("\n=== KÜCHEN-STD ===");
     for (const key of sortedKeys) {
       const [month, restaurant] = key.split("|");
       const hours = kitchenHoursAgg[key] || {};
-      const sorted = Object.entries(hours).sort((a, b) => b[1] - a[1]);
-      for (const [name, h] of sorted) {
-        contextParts.push(`${month} | ${restaurant} | ${name} | ${h}h`);
+      for (const [name, h] of Object.entries(hours).sort((a, b) => (b[1] as number) - (a[1] as number))) {
+        ctx.push(`${month}|${restaurant}|${name}|${(h as number).toFixed(0)}h`);
       }
     }
 
-    // Commission sections
-    contextParts.push("\n=== MONATLICHE PROVISIONSBERECHNUNG (alle verfügbaren Monate) ===");
-    contextParts.push("Monat | Restaurant | Schwellenwert | Prozent | Qual. Tage | Gesamt-Tage | Pool | Ges. Stunden | €/Stunde");
+    // Commission (compact)
+    ctx.push("\n=== PROVISION ===");
+    ctx.push("Monat|Rest|Schwelle|%|QualT|GesamtT|Pool|Std|€/h");
     const commKeys = Object.keys(commissionByMonthRestaurant).sort();
     for (const key of commKeys) {
       const [month, restaurant] = key.split("|");
       const c = commissionByMonthRestaurant[key];
       const totalHours = Object.values(c.staffHours).reduce((s, h) => s + h, 0);
       const hourlyRate = totalHours > 0 ? c.pool / totalHours : 0;
-      contextParts.push(
-        `${month} | ${restaurant} | ${c.minRevenue}€ | ${c.pct}% | ${c.qualDays} | ${c.totalDays} | ${c.pool.toFixed(2)}€ | ${totalHours.toFixed(1)}h | ${hourlyRate.toFixed(2)}€`
-      );
+      ctx.push(`${month}|${restaurant}|${c.minRevenue}|${c.pct}|${c.qualDays}|${c.totalDays}|${c.pool.toFixed(0)}|${totalHours.toFixed(0)}|${hourlyRate.toFixed(2)}`);
     }
 
-    contextParts.push("\n=== PROVISIONS-VERTEILUNG PRO MITARBEITER (alle verfügbaren Monate) ===");
-    contextParts.push("Monat | Restaurant | Mitarbeiter | Stunden | Provision");
+    // Commission distribution (only top entries)
+    ctx.push("\n=== PROV-VERTEILUNG ===");
     for (const key of commKeys) {
       const [month, restaurant] = key.split("|");
       const c = commissionByMonthRestaurant[key];
       const totalHours = Object.values(c.staffHours).reduce((s, h) => s + h, 0);
       const hourlyRate = totalHours > 0 ? c.pool / totalHours : 0;
-      const sorted = Object.entries(c.staffHours).sort((a, b) => b[1] - a[1]);
-      for (const [name, hours] of sorted) {
+      for (const [name, hours] of Object.entries(c.staffHours).sort((a, b) => b[1] - a[1])) {
         const commission = hourlyRate * hours;
-        if (commission > 0) {
-          contextParts.push(`${month} | ${restaurant} | ${name} | ${hours.toFixed(1)}h | ${commission.toFixed(2)}€`);
-        }
+        if (commission > 0) ctx.push(`${month}|${restaurant}|${name}|${hours.toFixed(0)}h|${commission.toFixed(0)}€`);
       }
     }
 
-    // Workforce hours & absences sections
-    contextParts.push("\n=== MONATLICHE ARBEITSZEITEN PRO MITARBEITER (alle verfügbaren Monate, aus Zeiterfassung) ===");
-    contextParts.push("Monat | Restaurant | Mitarbeiter | Abteilung | Gesamt-Std | Abend-Std | Nacht-Std | Tiefnacht-Std | So/Feiert-Std | Fehlzeiten");
+    // Workforce (compact)
+    ctx.push("\n=== ARBEITSZEITEN ===");
+    ctx.push("Monat|Rest|Name|Abt|Ges|Abend|Nacht|TiefN|SoFei|Fehl");
     const wfKeys = Object.keys(workforceAgg).sort();
     for (const key of wfKeys) {
       const [month, restaurant] = key.split("|");
-      const staff = workforceAgg[key];
-      const sorted = Object.entries(staff).sort((a, b) => b[1].total - a[1].total);
-      for (const [name, d] of sorted) {
+      for (const [name, d] of Object.entries(workforceAgg[key]).sort((a, b) => b[1].total - a[1].total)) {
         const absStr = Object.entries(d.absences).length > 0
-          ? Object.entries(d.absences).map(([type, count]) => `${type}:${count}`).join(", ")
+          ? Object.entries(d.absences).map(([t, c]) => `${t}:${c}`).join(",")
           : "-";
-        contextParts.push(
-          `${month} | ${restaurant} | ${name} | ${d.dept} | ${d.total.toFixed(1)}h | ${d.evening.toFixed(1)}h | ${d.night.toFixed(1)}h | ${d.nightDeep.toFixed(1)}h | ${d.sundayHoliday.toFixed(1)}h | ${absStr}`
-        );
+        ctx.push(`${month}|${restaurant}|${name}|${d.dept}|${d.total.toFixed(0)}|${d.evening.toFixed(0)}|${d.night.toFixed(0)}|${d.nightDeep.toFixed(0)}|${d.sundayHoliday.toFixed(0)}|${absStr}`);
       }
     }
 
-    // Zahlungsarten pro Monat
-    contextParts.push("\n=== ZAHLUNGSARTEN PRO MONAT (Bar vs. Karte) ===");
-    contextParts.push("Monat | Restaurant | Gesamt-Umsatz | Kreditkarten | Bar | Karten-Anteil-%");
+    // Payment types (compact)
+    ctx.push("\n=== ZAHLUNGSARTEN ===");
     for (const key of sortedKeys) {
       const [month, restaurant] = key.split("|");
       const a = monthlyAgg[key];
       const bar = a.pos_total - a.kreditkarten;
-      const pct = a.pos_total > 0 ? ((a.kreditkarten / a.pos_total) * 100).toFixed(1) : "0";
-      contextParts.push(`${month} | ${restaurant} | ${a.pos_total}€ | ${a.kreditkarten}€ | ${bar.toFixed(0)}€ | ${pct}%`);
+      const pct = a.pos_total > 0 ? ((a.kreditkarten / a.pos_total) * 100).toFixed(0) : "0";
+      ctx.push(`${month}|${restaurant}|Umsatz:${a.pos_total}|Karte:${a.kreditkarten}|Bar:${bar.toFixed(0)}|${pct}%`);
     }
 
-    // Kellner-Performance pro Monat
-    contextParts.push("\n=== KELLNER-PERFORMANCE PRO MONAT (Umsatz/Stunde) ===");
-    contextParts.push("Monat | Restaurant | Kellner | Umsatz | Stunden | €/Stunde | Ø Umsatz/Schicht | Schichten");
+    // Waiter performance (compact)
+    ctx.push("\n=== KELLNER-PERF ===");
     for (const key of sortedKeys) {
       const [month, restaurant] = key.split("|");
       const perf = waiterPerfAgg[key] || {};
-      const sorted = Object.entries(perf).sort((a, b) => b[1].revenue - a[1].revenue);
-      for (const [name, p] of sorted) {
+      for (const [name, p] of Object.entries(perf).sort((a, b) => b[1].revenue - a[1].revenue)) {
         const perHour = p.hours > 0 ? (p.revenue / p.hours).toFixed(0) : "-";
-        const perShift = p.shifts > 0 ? (p.revenue / p.shifts).toFixed(0) : "-";
-        contextParts.push(`${month} | ${restaurant} | ${name} | ${p.revenue.toFixed(0)}€ | ${p.hours.toFixed(1)}h | ${perHour}€ | ${perShift}€ | ${p.shifts}`);
+        ctx.push(`${month}|${restaurant}|${name}|${p.revenue.toFixed(0)}€|${p.hours.toFixed(0)}h|${perHour}€/h|${p.shifts}S`);
       }
     }
 
-    // Restaurant-Vergleich pro Monat (only if multiple restaurants)
+    // Restaurant comparison (compact, only if multiple)
     const restaurantNames = Object.values(restaurantMap);
     if (restaurantNames.length >= 2) {
-      contextParts.push("\n=== RESTAURANT-VERGLEICH PRO MONAT ===");
-      contextParts.push("Monat | Kennzahl | " + restaurantNames.join(" | ") + " | Differenz");
+      ctx.push("\n=== REST-VERGLEICH ===");
       const months = [...new Set(sortedKeys.map(k => k.split("|")[0]))].sort();
       for (const month of months) {
         const vals: Record<string, Record<string, number>> = {};
         for (const rName of restaurantNames) {
           const k = `${month}|${rName}`;
-          const a = monthlyAgg[k] || { pos_total: 0, kreditkarten: 0, gaeste: 0, sessions_count: 0 };
+          const a = monthlyAgg[k] || { pos_total: 0, kreditkarten: 0, gaeste: 0 };
           const ea = monthlyExpAdv[k] || { ausgaben: 0 };
           const kt = kitchenTipAgg[k] || 0;
           vals[rName] = {
-            Umsatz: a.pos_total,
-            Gäste: a.gaeste,
-            "Ø Umsatz/Gast": a.gaeste > 0 ? Math.round(a.pos_total / a.gaeste) : 0,
-            "Karten-%": a.pos_total > 0 ? Math.round((a.kreditkarten / a.pos_total) * 100) : 0,
-            "Küchen-TG": kt,
-            Ausgaben: ea.ausgaben,
+            U: a.pos_total, G: a.gaeste,
+            "U/G": a.gaeste > 0 ? Math.round(a.pos_total / a.gaeste) : 0,
+            "K%": a.pos_total > 0 ? Math.round((a.kreditkarten / a.pos_total) * 100) : 0,
+            KTG: kt, Aus: ea.ausgaben,
           };
         }
-        const metrics = ["Umsatz", "Gäste", "Ø Umsatz/Gast", "Karten-%", "Küchen-TG", "Ausgaben"];
-        for (const m of metrics) {
+        for (const m of ["U", "G", "U/G", "K%", "KTG", "Aus"]) {
           const values = restaurantNames.map(r => vals[r]?.[m] || 0);
-          const diff = values.length >= 2 ? values[0] - values[1] : 0;
-          const suffix = m === "Karten-%" ? "%" : "€";
-          contextParts.push(`${month} | ${m} | ${values.map(v => `${v}${suffix}`).join(" | ")} | ${diff > 0 ? "+" : ""}${diff}${suffix}`);
+          ctx.push(`${month}|${m}|${restaurantNames.map((r, i) => `${r}:${values[i]}`).join("|")}`);
         }
       }
     }
 
-    // Weather data context
+    // Weather (compact, only last 14 days + correlation)
     if (weatherData?.daily?.time) {
       const wd = weatherData.daily;
-      contextParts.push("\n=== WETTERDATEN MÜNCHEN (letzte 90 Tage + 3 Tage Vorhersage) ===");
-      contextParts.push("Datum | Max°C | Min°C | Niederschlag-mm | Wetter");
-      for (let i = 0; i < wd.time.length; i++) {
-        contextParts.push(
-          `${wd.time[i]} | ${wd.temperature_2m_max[i]} | ${wd.temperature_2m_min[i]} | ${wd.precipitation_sum[i]} | ${weatherCodeLabel(wd.weathercode[i])}`
-        );
-      }
-
-      // Weather-revenue correlation (last 30 days)
       const weatherByDate: Record<string, { maxTemp: number; precip: number; label: string }> = {};
+      ctx.push("\n=== WETTER ===");
       for (let i = 0; i < wd.time.length; i++) {
-        weatherByDate[wd.time[i]] = {
-          maxTemp: wd.temperature_2m_max[i],
-          precip: wd.precipitation_sum[i],
-          label: weatherCodeLabel(wd.weathercode[i]),
-        };
+        weatherByDate[wd.time[i]] = { maxTemp: wd.temperature_2m_max[i], precip: wd.precipitation_sum[i], label: weatherCodeLabel(wd.weathercode[i]) };
+        ctx.push(`${wd.time[i]}|${wd.temperature_2m_max[i]}°|${wd.precipitation_sum[i]}mm|${weatherCodeLabel(wd.weathercode[i])}`);
       }
 
-      contextParts.push("\n=== WETTER-UMSATZ-KORRELATION (letzte 30 Tage) ===");
-      contextParts.push("Datum | Restaurant | Max°C | Niederschlag | Wetter | Umsatz | Gäste");
-      const recentForCorrelation = sessions.filter((s: any) => s.session_date >= since30Str);
-      recentForCorrelation.sort((a: any, b: any) => a.session_date.localeCompare(b.session_date));
-      for (const s of recentForCorrelation) {
+      // Weather-revenue correlation (last 14 days only)
+      ctx.push("\n=== WETTER-UMSATZ ===");
+      const recentForCorr = sessions.filter((s: any) => s.session_date >= since14Str);
+      recentForCorr.sort((a: any, b: any) => a.session_date.localeCompare(b.session_date));
+      for (const s of recentForCorr) {
         const w = weatherByDate[s.session_date];
         if (!w) continue;
-        contextParts.push(
-          `${s.session_date} | ${restaurantMap[s.restaurant_id] || "?"} | ${w.maxTemp}°C | ${w.precip}mm | ${w.label} | ${s.pos_total || 0}€ | ${s.guest_count || 0}`
-        );
+        ctx.push(`${s.session_date}|${restaurantMap[s.restaurant_id]}|${w.maxTemp}°|${w.precip}mm|${w.label}|${s.pos_total || 0}€|${s.guest_count || 0}G`);
       }
     }
 
-    // Anomalien
+    // Anomalies
     if (anomalies.length > 0) {
-      contextParts.push("\n=== AKTUELLE ANOMALIEN UND AUFFÄLLIGKEITEN ===");
-      anomalies.forEach(a => contextParts.push(a));
+      ctx.push("\n=== ANOMALIEN ===");
+      anomalies.forEach(a => ctx.push(a));
     }
 
-    // Detailed absence records with exact dates (for "from when to when" questions)
+    // Absence ranges (compact)
     const absenceRecords: { name: string; restaurant: string; date: string; type: string }[] = [];
     ztShifts.forEach((z: any) => {
       if (!z.absence_type) return;
       const staffName = staffById[z.employee_id]?.name || "?";
       const rids = staffToRestaurants[z.employee_id] || [];
       for (const rid of rids) {
-        absenceRecords.push({
-          name: staffName,
-          restaurant: restaurantMap[rid] || "?",
-          date: z.shift_date,
-          type: z.absence_type,
-        });
+        absenceRecords.push({ name: staffName, restaurant: restaurantMap[rid] || "?", date: z.shift_date, type: z.absence_type });
       }
     });
 
     if (absenceRecords.length > 0) {
-      // Group consecutive absences into date ranges
       absenceRecords.sort((a, b) => `${a.name}|${a.restaurant}|${a.type}|${a.date}`.localeCompare(`${b.name}|${b.restaurant}|${b.type}|${b.date}`));
-
       type AbsenceRange = { name: string; restaurant: string; type: string; from: string; to: string };
       const ranges: AbsenceRange[] = [];
       let current: AbsenceRange | null = null;
-
       for (const rec of absenceRecords) {
         if (current && current.name === rec.name && current.restaurant === rec.restaurant && current.type === rec.type) {
-          // Check if consecutive (next day)
-          const prevDate = new Date(current.to);
-          prevDate.setDate(prevDate.getDate() + 1);
-          const prevStr = prevDate.toISOString().split("T")[0];
-          if (rec.date === prevStr) {
-            current.to = rec.date;
-            continue;
-          }
+          const prevDate = new Date(current.to); prevDate.setDate(prevDate.getDate() + 1);
+          if (rec.date === fmt(prevDate)) { current.to = rec.date; continue; }
         }
         if (current) ranges.push(current);
         current = { name: rec.name, restaurant: rec.restaurant, type: rec.type, from: rec.date, to: rec.date };
       }
       if (current) ranges.push(current);
 
-      contextParts.push("\n=== FEHLZEITEN-ZEITRÄUME (exakte Datumsbereiche) ===");
-      contextParts.push("Mitarbeiter | Restaurant | Typ | Von | Bis | Tage");
+      ctx.push("\n=== FEHLZEITEN ===");
       for (const r of ranges) {
-        const fromDate = new Date(r.from);
-        const toDate = new Date(r.to);
-        const days = Math.round((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-        contextParts.push(`${r.name} | ${r.restaurant} | ${r.type} | ${r.from} | ${r.to} | ${days}`);
+        const days = Math.round((new Date(r.to).getTime() - new Date(r.from).getTime()) / 86400000) + 1;
+        ctx.push(`${r.name}|${r.restaurant}|${r.type}|${r.from}→${r.to}|${days}T`);
       }
     }
 
-    // Build session info map with date + restaurant
+    // RAW DATA: limited to last 14 days for speed
     const sessionInfoMap: Record<string, { date: string; restaurant: string }> = {};
     sessions.forEach((s: any) => {
       sessionInfoMap[s.id] = { date: s.session_date, restaurant: restaurantMap[s.restaurant_id] || "?" };
     });
 
-    // RAW DATA: limited to last 30 days for context optimization
-    const recentSessions = sessions.filter((s: any) => s.session_date >= since30Str);
+    const recentSessions = sessions.filter((s: any) => s.session_date >= since14Str);
     const recentSessionIds = new Set(recentSessions.map((s: any) => s.id));
 
-    contextParts.push("\n=== SESSIONS (letzte 30 Tage, Rohdaten) ===");
-    contextParts.push("Datum | Restaurant | Kassen-Umsatz | Kreditkarten | OrderSmart | Wolt | Gutschein-VK | Gutschein-Einl | FineDine-Gutscheine | Einladung | SoEinnahme | Gäste | Notizen");
+    ctx.push("\n=== SESSIONS (14T) ===");
     recentSessions.forEach((s: any) => {
       const cards = (s.terminal_1_total || 0) + (s.terminal_2_total || 0);
-      contextParts.push(
-        `${s.session_date} | ${restaurantMap[s.restaurant_id] || "?"} | ${s.pos_total || 0}€ | ${cards}€ | ${s.ordersmart_revenue || 0}€ | ${s.wolt_revenue || 0}€ | ${s.vouchers_sold || 0}€ | ${s.vouchers_redeemed || 0}€ | ${s.finedine_vouchers || 0}€ | ${s.einladung || 0}€ | ${s.sonstige_einnahme || 0}€ | ${s.guest_count || 0} | ${s.notes || "-"}`
-      );
+      ctx.push(`${s.session_date}|${restaurantMap[s.restaurant_id]}|U:${s.pos_total || 0}|K:${cards}|OS:${s.ordersmart_revenue || 0}|W:${s.wolt_revenue || 0}|G:${s.guest_count || 0}${s.notes ? "|N:" + s.notes : ""}`);
     });
 
-    contextParts.push("\n=== KELLNER-SCHICHTEN (letzte 30 Tage) ===");
-    contextParts.push("Session-Datum | Restaurant | Name | POS-Umsatz | Kassiert | Kellner-TG (Pool-Anteil) | Küchen-TG | Stunden");
+    ctx.push("\n=== KELLNER (14T) ===");
     waiterShifts.filter((ws: any) => recentSessionIds.has(ws.session_id)).forEach((ws: any) => {
-      const info = sessionInfoMap[ws.session_id] || { date: "?", restaurant: "?" };
-      contextParts.push(
-        `${info.date} | ${info.restaurant} | ${ws.waiter_name} | ${ws.pos_sales || 0}€ | ${ws.kassiert_brutto || 0}€ | ${ws.differenz || 0}€ | ${ws.kitchen_tip || 0}€ | ${ws.hours_worked || "-"}h`
-      );
+      const info = sessionInfoMap[ws.session_id];
+      if (!info) return;
+      ctx.push(`${info.date}|${info.restaurant}|${ws.waiter_name}|POS:${ws.pos_sales || 0}|Kass:${ws.kassiert_brutto || 0}|Diff:${ws.differenz || 0}|KTG:${ws.kitchen_tip || 0}|${ws.hours_worked || "-"}h`);
     });
 
-    contextParts.push("\n=== KÜCHEN-SCHICHTEN (letzte 30 Tage) ===");
-    contextParts.push("Session-Datum | Restaurant | Name | Stunden");
+    ctx.push("\n=== KÜCHE (14T) ===");
     kitchenShifts.filter((ks: any) => recentSessionIds.has(ks.session_id)).forEach((ks: any) => {
-      const info = sessionInfoMap[ks.session_id] || { date: "?", restaurant: "?" };
-      contextParts.push(
-        `${info.date} | ${info.restaurant} | ${ks.staff_name} | ${ks.hours_worked || 0}h`
-      );
+      const info = sessionInfoMap[ks.session_id];
+      if (!info) return;
+      ctx.push(`${info.date}|${info.restaurant}|${ks.staff_name}|${ks.hours_worked || 0}h`);
     });
 
-    contextParts.push("\n=== AUSGABEN (letzte 30 Tage) ===");
-    contextParts.push("Session-Datum | Restaurant | Betrag | Beschreibung");
+    ctx.push("\n=== AUSGABEN (14T) ===");
     expenses.filter((e: any) => recentSessionIds.has(e.session_id)).forEach((e: any) => {
-      const info = sessionInfoMap[e.session_id] || { date: "?", restaurant: "?" };
-      contextParts.push(
-        `${info.date} | ${info.restaurant} | ${e.amount}€ | ${e.description}`
-      );
+      const info = sessionInfoMap[e.session_id];
+      if (!info) return;
+      ctx.push(`${info.date}|${info.restaurant}|${e.amount}€|${e.description}`);
     });
 
-    contextParts.push("\n=== VORSCHÜSSE (letzte 30 Tage) ===");
-    contextParts.push("Session-Datum | Restaurant | Name | Betrag");
+    ctx.push("\n=== VORSCHÜSSE (14T) ===");
     advances.filter((a: any) => recentSessionIds.has(a.session_id)).forEach((a: any) => {
-      const info = sessionInfoMap[a.session_id] || { date: "?", restaurant: "?" };
-      contextParts.push(
-        `${info.date} | ${info.restaurant} | ${a.staff_name} | ${a.amount}€`
-      );
+      const info = sessionInfoMap[a.session_id];
+      if (!info) return;
+      ctx.push(`${info.date}|${info.restaurant}|${a.staff_name}|${a.amount}€`);
     });
 
-    contextParts.push("\n=== MITARBEITER (Stammdaten) ===");
-    contextParts.push("Name | Rolle | Aktiv | Pool | Minijob | Eintrittsdatum | Austrittsdatum | Urlaub-Vertrag | Urlaub-Vorjahr | Urlaub-Aktuell | Urlaub-Genommen | Krankheitstage");
+    // Staff master data (compact)
+    ctx.push("\n=== MITARBEITER ===");
     allStaff.forEach((s: any) => {
-      contextParts.push(
-        `${s.name} | ${s.role} | ${s.is_active ? "ja" : "nein"} | ${s.participates_in_pool ? "ja" : "nein"} | ${s.is_minijob ? "ja" : "nein"} | ${s.employment_start || "-"} | ${s.employment_end || "-"} | ${s.vacation_days_contractual ?? "-"} | ${s.vacation_days_previous ?? "-"} | ${s.vacation_days_current ?? "-"} | ${s.vacation_days_taken ?? "-"} | ${s.sick_days_total ?? "-"}`
-      );
+      ctx.push(`${s.name}|${s.role}|${s.is_active ? "A" : "I"}|${s.is_minijob ? "MJ" : "-"}|Ein:${s.employment_start || "-"}|Aus:${s.employment_end || "-"}|UV:${s.vacation_days_contractual ?? "-"}|UG:${s.vacation_days_taken ?? "-"}|KT:${s.sick_days_total ?? "-"}`);
     });
 
-    const dataContext = contextParts.join("\n");
+    const dataContext = ctx.join("\n");
 
     const systemPrompt = `Du bist ein hilfreicher Assistent für ein Restaurant-Kassensystem. Du antwortest auf Deutsch.
-Du hast Zugriff auf die folgenden echten Daten:
-- **Aggregierte Monatsdaten**: Der gesamte verfügbare Zeitraum (alle historischen Monate)
-- **Rohdaten**: Nur die letzten 30 Tage (Sessions, Schichten, Ausgaben, Vorschüsse)
+Datenformat: Felder sind mit | getrennt. Geldbeträge in €.
+
+Verfügbare Daten:
+- Aggregierte Monatsdaten: gesamter Zeitraum
+- Rohdaten: letzte 14 Tage
 
 ${dataContext}
 
-Wichtige Regeln:
-- Die MONATLICHE ZUSAMMENFASSUNG, das KELLNER-TRINKGELD RANKING und die KÜCHEN-STUNDEN enthalten voraggregierte, korrekte Summen über den gesamten verfügbaren Zeitraum. Verwende IMMER diese Summen wenn nach Monats-Totalen, Rankings, Stunden-Summen, Jahresvergleichen oder Langzeittrends gefragt wird, anstatt selbst aus den Rohdaten zu rechnen.
-- Die MONATLICHE PROVISIONSBERECHNUNG enthält voraggregierte Provisionsdaten über alle verfügbaren Monate. Verwende diese für alle Provisionsfragen. Provisionen basieren auf einem Schwellenwert-System: nur Tage, an denen der Durchschnittsumsatz pro Service-Mitarbeiter den Schwellenwert erreicht, tragen zum Provisions-Pool bei. Der Pool wird proportional zu den Arbeitsstunden (aus der Zeiterfassung) verteilt. Die PROVISIONS-VERTEILUNG zeigt die Aufteilung pro Mitarbeiter.
-- Die MONATLICHEN ARBEITSZEITEN enthalten die vollständigen Zeiterfassungsdaten pro Mitarbeiter über alle verfügbaren Monate: Gesamtstunden, Abendstunden (20-24 Uhr, 25% SFN-Zuschlag), Nachtstunden (0-4/24-0 Uhr, 25% Zuschlag), Tiefnachtstunden (0-4 Uhr, 40% Zuschlag), Sonn-/Feiertagsstunden. Fehlzeiten werden nach Typ (Urlaub, Krank, Frei, etc.) als Anzahl Tage angegeben.
-- Die FEHLZEITEN-ZEITRÄUME zeigen exakte Von-Bis-Datumsbereiche für jede Abwesenheit über alle verfügbaren Daten. Verwende diese Tabelle wenn nach konkreten Urlaubszeiträumen oder Abwesenheitsdaten gefragt wird.
-- Die MITARBEITER-Stammdaten enthalten Informationen zu Rolle, Beschäftigungsart (Minijob), Eintritts-/Austrittsdatum, sowie den Urlaubsanspruch und die genommenen Urlaubs-/Krankheitstage.
-- Die ZAHLUNGSARTEN zeigen den monatlichen Bar- vs. Karten-Anteil pro Restaurant. Verwende diese Tabelle für Fragen nach Zahlungsarten, Bargeld-Anteil, Kreditkarten-Quote.
-- Die KELLNER-PERFORMANCE zeigt Umsatz pro Stunde, Umsatz pro Schicht und Schichtanzahl pro Kellner pro Monat. Verwende diese für Fragen nach Mitarbeiter-Effizienz, wer am meisten Umsatz pro Stunde macht, Performance-Vergleiche zwischen Kellnern.
-- Der RESTAURANT-VERGLEICH zeigt die Restaurants nebeneinander mit Umsatz, Gästen, Ø Umsatz/Gast, Karten-Anteil, Küchen-TG und Ausgaben. Verwende diese Tabelle für direkte Benchmarking-Fragen (z.B. "Vergleiche Spicery und YUM").
-- Die ANOMALIEN UND AUFFÄLLIGKEITEN enthalten automatisch erkannte Abweichungen der letzten 7 Tage. Erwähne relevante Anomalien proaktiv bei allgemeinen Fragen wie "Wie läuft's?" oder "Gibt es etwas Auffälliges?". Warte nicht darauf dass der Nutzer explizit danach fragt.
-- Die WETTERDATEN zeigen Temperatur und Niederschlag für München (Standort beider Restaurants). Nutze die WETTER-UMSATZ-KORRELATION um Zusammenhänge zwischen Wetter und Umsatz/Gästezahlen zu analysieren. Besonders relevant für Terrassen-Tage (warm + trocken). Wenn keine Wetterdaten geladen werden konnten, weise darauf hin.
-- Bei Fragen nach Jahresvergleichen, Trends oder längeren Zeiträumen: Nutze die monatlichen Zusammenfassungen — diese enthalten alle verfügbaren historischen Monate.
-- Die Rohdaten (Sessions, Schichten, Ausgaben, Vorschüsse) sind nur für die letzten 30 Tage verfügbar. Für ältere Zeiträume nutze die monatlichen Aggregationen.
-- Alle Fragen beziehen sich ausschließlich auf dieses Restaurant-Kassensystem ("Tagesabrechnung") und die darin verfügbaren Daten. Wenn jemand eine Frage stellt, die nichts mit dem System, den Restaurants oder den Betriebsdaten zu tun hat, weise freundlich darauf hin, dass du nur Fragen zu diesem System beantworten kannst.
-- Du kennst die Funktionen des Systems: Tagesabrechnung (Kassenschluss), Kellner-Abrechnung, Küchentrinkgeld-Aufteilung, Kassenstand, Ausgaben & Vorschüsse, Mitarbeiterverwaltung, Statistiken, Zeiterfassung mit Schichtplanung und Provisionsberechnung.
-- Die BAYERISCHEN FEIERTAGE enthalten alle gespeicherten Feiertage mit Datum, Name, Zuschlagssatz und ggf. Ab-Stunde. Nutze diese Tabelle für Fragen nach kommenden Feiertagen, Feiertags-Zuschlägen oder welche Feiertage in einem bestimmten Zeitraum liegen.
+Regeln:
+- MONATSZUSAMMENFASSUNG enthält voraggregierte Summen. Nutze diese für Monats-Totale statt Rohdaten.
+- PROVISION basiert auf Schwellenwert-System: nur Tage mit Ø-Umsatz ≥ Schwelle zählen. Pool wird nach ZT-Stunden verteilt.
+- ARBEITSZEITEN: Abend=20-24h 25%, Nacht=24-4h 25%, TiefNacht=0-4h 40%.
+- FEHLZEITEN zeigen exakte Von→Bis Bereiche.
+- ZAHLUNGSARTEN für Bar/Karten-Fragen.
+- KELLNER-PERF für €/h und Effizienz-Vergleiche.
+- REST-VERGLEICH für Benchmarking. U=Umsatz, G=Gäste, U/G=Ø pro Gast, K%=Kartenanteil, KTG=KüchenTG, Aus=Ausgaben.
+- ANOMALIEN proaktiv erwähnen bei allgemeinen Fragen.
+- WETTER für Korrelationen (München). Wenn keine Daten, darauf hinweisen.
+- Rohdaten nur 14 Tage. Für ältere Zeiträume → Monatsaggregationen.
+- Nur Fragen zu diesem Kassensystem beantworten.
+- Systemfunktionen: Tagesabrechnung, Kellner-Abrechnung, KüchenTG, Kassenstand, Ausgaben, Vorschüsse, Personal, Statistiken, Zeiterfassung, Provision.
+- FEIERTAGE für Zuschläge und Terminplanung.
+- Mitarbeiter-Kürzel: A=Aktiv, I=Inaktiv, MJ=Minijob, UV=Urlaubsanspruch, UG=Genommen, KT=Krankheitstage.
 - ` + (() => {
   const now = new Date();
   const berlin = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Berlin" }));
@@ -952,13 +826,8 @@ Wichtige Regeln:
   const yesterday = new Date(berlin); yesterday.setDate(berlin.getDate() - 1);
   const wday = berlin.toLocaleDateString("de-DE", { weekday: "long", timeZone: "Europe/Berlin" });
   return `Heute ist ${fmt(berlin)} (${wday}).
-Zeitraum-Referenzen (verwende IMMER diese exakten Datumsbereiche):
-  - "diese Woche" = ${fmt(thisMonday)} bis ${fmt(thisSunday)}
-  - "letzte Woche" = ${fmt(lastMonday)} bis ${fmt(lastSunday)}
-  - "dieser Monat" = ${fmt(thisMonth1)} bis ${fmt(thisMonthEnd)}
-  - "letzter Monat" = ${fmt(lastMonth1)} bis ${fmt(lastMonthEnd)}
-  - "gestern" = ${fmt(yesterday)}
-Wochen gehen IMMER von Montag bis Sonntag. Wenn der Nutzer "letzte Woche" sagt, filtere die Daten exakt auf den oben genannten Zeitraum.`;
+Zeiträume: "diese Woche"=${fmt(thisMonday)}→${fmt(thisSunday)}, "letzte Woche"=${fmt(lastMonday)}→${fmt(lastSunday)}, "dieser Monat"=${fmt(thisMonth1)}→${fmt(thisMonthEnd)}, "letzter Monat"=${fmt(lastMonth1)}→${fmt(lastMonthEnd)}, "gestern"=${fmt(yesterday)}.
+Wochen=Mo→So. IMMER diese Datumsbereiche verwenden.`;
 })();
 
     // Call Lovable AI Gateway
