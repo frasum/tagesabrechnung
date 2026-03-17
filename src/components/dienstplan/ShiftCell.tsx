@@ -134,6 +134,41 @@ export const ShiftCell = forwardRef<HTMLTableCellElement, ShiftCellProps>(({
     );
   }
 
+  // Exactly one skill → direct toggle without popover
+  if (availableSkills.length === 1) {
+    const singleSkill = availableSkills[0];
+    return (
+      <td ref={ref} title={conflictTitle} className={cn('p-0 min-w-[52px] border border-border/50 relative', todayBg, focusRing, conflictStyle)}>
+        <button
+          className={cn(
+            'w-full h-full min-h-[36px] text-xs flex items-center justify-center transition-colors'
+          )}
+          tabIndex={-1}
+          style={shift ? { backgroundColor: singleSkill.color + '20' } : undefined}
+          onClick={() => {
+            if (shift) {
+              handleDelete();
+            } else {
+              handleSkillSelect(singleSkill.id);
+            }
+          }}
+        >
+          {shift ? (
+            <span
+              className="text-[10px] font-bold text-white px-1.5 py-0.5 rounded"
+              style={{ backgroundColor: singleSkill.color }}
+            >
+              {singleSkill.name}
+            </span>
+          ) : (
+            <span className="text-muted-foreground/40">+</span>
+          )}
+        </button>
+        {conflictRestaurant && <span className="absolute top-0 right-0.5 text-[8px] text-amber-600">⚠</span>}
+      </td>
+    );
+  }
+
   return (
     <td ref={ref} title={conflictTitle} className={cn('p-0 min-w-[52px] border border-border/50 relative', todayBg, focusRing, conflictStyle)}>
       <Popover open={open} onOpenChange={setOpen}>
