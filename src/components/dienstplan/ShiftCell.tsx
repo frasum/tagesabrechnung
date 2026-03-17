@@ -55,6 +55,7 @@ export const ShiftCell = forwardRef<HTMLTableCellElement, ShiftCellProps>(({
   const [absencePopoverOpen, setAbsencePopoverOpen] = useState(false);
   const [absenceStartDate, setAbsenceStartDate] = useState<Date | undefined>();
   const [absenceEndDate, setAbsenceEndDate] = useState<Date | undefined>();
+  const { colors: absColors } = useDienstplanColors();
   const upsertShift = useUpsertShift();
   const deleteShift = useDeleteShift();
   const upsertAbsence = useUpsertAbsence();
