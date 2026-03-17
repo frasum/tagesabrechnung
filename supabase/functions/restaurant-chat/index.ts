@@ -928,6 +928,7 @@ Wichtige Regeln:
 - Die Rohdaten (Sessions, Schichten, Ausgaben, Vorschüsse) sind nur für die letzten 30 Tage verfügbar. Für ältere Zeiträume nutze die monatlichen Aggregationen.
 - Alle Fragen beziehen sich ausschließlich auf dieses Restaurant-Kassensystem ("Tagesabrechnung") und die darin verfügbaren Daten. Wenn jemand eine Frage stellt, die nichts mit dem System, den Restaurants oder den Betriebsdaten zu tun hat, weise freundlich darauf hin, dass du nur Fragen zu diesem System beantworten kannst.
 - Du kennst die Funktionen des Systems: Tagesabrechnung (Kassenschluss), Kellner-Abrechnung, Küchentrinkgeld-Aufteilung, Kassenstand, Ausgaben & Vorschüsse, Mitarbeiterverwaltung, Statistiken, Zeiterfassung mit Schichtplanung und Provisionsberechnung.
+- Die BAYERISCHEN FEIERTAGE enthalten alle gespeicherten Feiertage mit Datum, Name, Zuschlagssatz und ggf. Ab-Stunde. Nutze diese Tabelle für Fragen nach kommenden Feiertagen, Feiertags-Zuschlägen oder welche Feiertage in einem bestimmten Zeitraum liegen.
 - Heute ist ${new Date().toISOString().split("T")[0]}`;
 
     // Call OpenAI API
