@@ -153,13 +153,17 @@ export default function KuechePlan() {
             </div>
 
             {/* Active mode indicator bar */}
-            {(activeSkillId || deleteMode) && (
+            {(activeSkillId || deleteMode || absencePaintType) && (
               <div className="flex items-center gap-2 mt-2">
                 <div
                   className="h-1 flex-1 rounded-full transition-all duration-300"
                   style={{
                     backgroundColor: deleteMode
                       ? 'hsl(var(--destructive))'
+                      : absencePaintType === 'vacation'
+                      ? '#f59e0b'
+                      : absencePaintType === 'sick'
+                      ? '#ef4444'
                       : kitchenSkills.find(s => s.id === activeSkillId)?.color,
                   }}
                 />
@@ -168,10 +172,14 @@ export default function KuechePlan() {
                   style={{
                     color: deleteMode
                       ? 'hsl(var(--destructive))'
+                      : absencePaintType === 'vacation'
+                      ? '#f59e0b'
+                      : absencePaintType === 'sick'
+                      ? '#ef4444'
                       : kitchenSkills.find(s => s.id === activeSkillId)?.color,
                   }}
                 >
-                  {deleteMode ? 'Löschmodus' : kitchenSkills.find(s => s.id === activeSkillId)?.name}
+                  {deleteMode ? 'Löschmodus' : absencePaintType === 'vacation' ? 'Urlaub' : absencePaintType === 'sick' ? 'Krank' : kitchenSkills.find(s => s.id === activeSkillId)?.name}
                 </span>
               </div>
             )}
