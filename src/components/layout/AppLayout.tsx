@@ -76,7 +76,7 @@ const navGroups: NavGroup[] = [
   { label: 'Tagesgeschäft', paths: ['', 'kitchen', 'summary', 'zeiterfassung', 'qr-poster'] },
   { label: 'Auswertung', paths: ['statistics', 'history', 'cash-balance'] },
   { label: 'Planung', paths: ['dienstplan', '/kueche-plan'] },
-  { label: 'Verwaltung', paths: ['/staff', '/telegram', 'chat'], adminOnly: true },
+  { label: 'Verwaltung', paths: ['/staff', '/telegram', '/skill-settings', 'chat'], adminOnly: true },
 ];
 
 export function AppLayout({ children }: AppLayoutProps) {

@@ -82,6 +82,14 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
         <ChefHat className={iconClasses('/kueche-plan')} />
         Küchenplan
       </Link>
+      <Link
+        to="/skill-settings"
+        onClick={onClickLink}
+        className={linkClasses('/skill-settings')}
+      >
+        <Palette className={iconClasses('/skill-settings')} />
+        Farben
+      </Link>
     </>
   );
 
