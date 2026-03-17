@@ -21,7 +21,7 @@ interface RestaurantContextValue {
   error: Error | null;
 }
 
-const RestaurantContext = createContext<RestaurantContextValue | undefined>(undefined);
+export const RestaurantContext = createContext<RestaurantContextValue | undefined>(undefined);
 
 export function RestaurantProvider({ children }: { children: ReactNode }) {
   const { restaurant: slug } = useParams<{ restaurant: string }>();
