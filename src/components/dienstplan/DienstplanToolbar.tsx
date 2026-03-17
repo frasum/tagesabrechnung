@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Copy } from 'lucide-react';
 import { getPeriodRange } from '@/lib/periodUtils';
-import { useShiftAssignments, useBatchInsertShifts } from '@/hooks/useDienstplan';
+import { useShiftAssignments, useBatchInsertShifts, useConflictingShifts } from '@/hooks/useDienstplan';
 import { useRestaurant } from '@/hooks/useRestaurant';
 import { toast } from 'sonner';
 
@@ -63,6 +63,14 @@ export function DienstplanToolbar({ month, year, department, onMonthChange }: Di
   const { data: prevWeekShifts } = useShiftAssignments(department, prevStart, prevEnd);
   const { data: thisWeekShifts } = useShiftAssignments(department, thisStart, thisEnd);
 
+  // Get unique staff IDs from previous week for conflict check
+  const prevWeekStaffIds = useMemo(() => {
+    if (!prevWeekShifts) return [];
+    return [...new Set(prevWeekShifts.map(s => s.staff_id))];
+  }, [prevWeekShifts]);
+
+  const { data: conflicts } = useConflictingShifts(restaurantId, prevWeekStaffIds, thisStart, thisEnd);
+
   const prev = () => {
     if (month === 0) onMonthChange(11, year - 1);
     else onMonthChange(month - 1, year);
@@ -83,6 +91,7 @@ export function DienstplanToolbar({ month, year, department, onMonthChange }: Di
       (thisWeekShifts || []).map(s => `${s.staff_id}_${s.shift_date}`)
     );
 
+    let skippedConflicts = 0;
     const newShifts = prevWeekShifts
       .map(s => {
         const oldDate = new Date(s.shift_date + 'T00:00:00');
@@ -92,6 +101,12 @@ export function DienstplanToolbar({ month, year, department, onMonthChange }: Di
         const key = `${s.staff_id}_${newDateStr}`;
 
         if (existingKeys.has(key)) return null;
+
+        // Skip if staff has cross-restaurant conflict
+        if (conflicts?.has(`${s.staff_id}-${newDateStr}`)) {
+          skippedConflicts++;
+          return null;
+        }
 
         return {
           staff_id: s.staff_id,
@@ -107,14 +122,21 @@ export function DienstplanToolbar({ month, year, department, onMonthChange }: Di
       .filter(Boolean) as any[];
 
     if (newShifts.length === 0) {
-      toast.info('Alle Tage der aktuellen Woche sind bereits belegt');
+      if (skippedConflicts > 0) {
+        toast.info(`${skippedConflicts} Schichten wegen Standort-Konflikten übersprungen`);
+      } else {
+        toast.info('Alle Tage der aktuellen Woche sind bereits belegt');
+      }
       return;
     }
 
     setCopying(true);
     batchInsert.mutate(newShifts, {
       onSuccess: () => {
-        toast.success(`${newShifts.length} Schichten aus Vorwoche kopiert`);
+        const msg = skippedConflicts > 0
+          ? `${newShifts.length} Schichten kopiert, ${skippedConflicts} wegen Konflikten übersprungen`
+          : `${newShifts.length} Schichten aus Vorwoche kopiert`;
+        toast.success(msg);
         setCopying(false);
       },
       onError: () => {

@@ -69,6 +69,7 @@ export function useUpsertShift() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shift_assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['conflicting_shifts'] });
     },
   });
 }
@@ -86,6 +87,7 @@ export function useDeleteShift() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shift_assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['conflicting_shifts'] });
     },
   });
 }
@@ -192,6 +194,7 @@ export function useBatchInsertShifts() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shift_assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['conflicting_shifts'] });
     },
   });
 }
