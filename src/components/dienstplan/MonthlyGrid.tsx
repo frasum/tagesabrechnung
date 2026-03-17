@@ -1,4 +1,6 @@
 import { useMemo, useState, useRef, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { useShiftAssignments, useAbsences, useConflictingShifts } from '@/hooks/useDienstplan';
 import { useSkills, useEmployeeSkills } from '@/hooks/useSkills';
 import { useRestaurant } from '@/hooks/useRestaurant';
@@ -8,6 +10,7 @@ import { getPeriodRange } from '@/lib/periodUtils';
 
 import { AbsenceDialog } from './AbsenceDialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 
 interface MonthlyGridProps {
   department: 'kitchen' | 'service';
@@ -85,6 +88,18 @@ export function MonthlyGrid({ department, month, year }: MonthlyGridProps) {
   const staffIds = filteredEmployees.map(e => e.id);
   const { data: absences = [] } = useAbsences(staffIds, startDate, endDate);
   const { data: conflictMap = new Map<string, string>() } = useConflictingShifts(restaurantId, staffIds, startDate, endDate);
+
+  const { data: holidayMap = new Map<string, string>() } = useQuery({
+    queryKey: ['bavarian-holidays-dienstplan', startDate, endDate],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('bavarian_holidays')
+        .select('holiday_date, name')
+        .gte('holiday_date', startDate)
+        .lte('holiday_date', endDate);
+      return new Map(data?.map(h => [h.holiday_date, h.name]) ?? []);
+    },
+  });
 
   const [absenceTarget, setAbsenceTarget] = useState<{ staffId: string; staffName: string; absence?: any } | null>(null);
 
@@ -173,6 +188,7 @@ export function MonthlyGrid({ department, month, year }: MonthlyGridProps) {
   }
 
   return (
+    <TooltipProvider delayDuration={200}>
     <div className="scrollbar-always-visible border rounded-lg min-w-0 max-w-full">
       <table
         className="text-sm w-full border-collapse"
@@ -192,18 +208,37 @@ export function MonthlyGrid({ department, month, year }: MonthlyGridProps) {
               const isFirstOfMonth = day === 1;
               const isToday = date === todayStr;
               const dayShiftCount = shifts.filter(s => s.shift_date === date).length;
-              return (
-                <th
-                  key={date}
-                  className={`p-1 text-center text-[10px] min-w-[52px] border border-border/50 ${
-                    isToday ? 'bg-primary/15 text-primary font-bold border-b-2 border-b-primary' : isSunday ? 'bg-red-50 text-red-700' : isPrevMonth ? 'bg-muted/80 text-muted-foreground' : ''
-                  } ${isFirstOfMonth ? 'border-l-2 border-l-primary' : ''}`}
-                >
+              const holidayName = holidayMap.get(date);
+              const isHoliday = !!holidayName;
+              const tooltipLabel = holidayName || (isSunday ? 'Sonntag' : null);
+
+              const thContent = (
+                <>
                   <div>{weekday}</div>
                   <div className="font-bold">{day}</div>
                   {dayShiftCount > 0 && (
                     <div className="text-[9px] text-muted-foreground font-normal">{dayShiftCount}</div>
                   )}
+                </>
+              );
+
+              return (
+                <th
+                  key={date}
+                  className={`p-1 text-center text-[10px] min-w-[52px] border border-border/50 ${
+                    isToday ? 'bg-primary/15 text-primary font-bold border-b-2 border-b-primary' : (isSunday || isHoliday) ? 'bg-red-50 text-red-700' : isPrevMonth ? 'bg-muted/80 text-muted-foreground' : ''
+                  } ${isFirstOfMonth ? 'border-l-2 border-l-primary' : ''}`}
+                >
+                  {tooltipLabel ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="cursor-default">{thContent}</div>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="text-xs">
+                        {tooltipLabel}
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : thContent}
                 </th>
               );
             })}
@@ -277,5 +312,6 @@ export function MonthlyGrid({ department, month, year }: MonthlyGridProps) {
         />
       )}
     </div>
+    </TooltipProvider>
   );
 }
