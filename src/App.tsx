@@ -137,6 +137,7 @@ function AppContent() {
           <Route path="/staff" element={<ProtectedRoute requiredLevel="admin"><StaffManagement /></ProtectedRoute>} />
           <Route path="/permissions" element={<ProtectedRoute requiredLevel="admin"><PermissionManagement /></ProtectedRoute>} />
           <Route path="/telegram" element={<ProtectedRoute requiredLevel="admin"><TelegramSettings /></ProtectedRoute>} />
+          <Route path="/kueche-plan" element={<ProtectedRoute requiredLevel="admin"><KuechePlan /></ProtectedRoute>} />
 
           {/* Redirect root to restaurant selection */}
           <Route path="/" element={<Navigate to="/select-restaurant" replace />} />
