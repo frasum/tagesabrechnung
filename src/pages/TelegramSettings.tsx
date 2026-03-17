@@ -69,6 +69,7 @@ function TelegramSettingsContent() {
     save({
       id: settings?.id,
       excluded_restaurants: excludedRestaurants,
+      report_time: reportTime,
       ...metrics,
     });
   };
