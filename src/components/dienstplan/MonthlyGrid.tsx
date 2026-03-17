@@ -1,4 +1,6 @@
 import { useMemo, useState, useRef, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { useShiftAssignments, useAbsences, useConflictingShifts } from '@/hooks/useDienstplan';
 import { useSkills, useEmployeeSkills } from '@/hooks/useSkills';
 import { useRestaurant } from '@/hooks/useRestaurant';
@@ -8,6 +10,7 @@ import { getPeriodRange } from '@/lib/periodUtils';
 
 import { AbsenceDialog } from './AbsenceDialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 
 interface MonthlyGridProps {
   department: 'kitchen' | 'service';
