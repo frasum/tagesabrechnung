@@ -271,7 +271,7 @@ export function MonthlyGrid({ department, month, year, restaurantIdOverride, act
               .filter(es => es.staff_id === emp.id)
               .map(es => es.skill_id);
 
-            const shiftCount = shifts.filter(s => s.staff_id === emp.id).length;
+            const shiftCount = allShifts.filter(s => s.staff_id === emp.id).length;
 
             return (
               <tr key={emp.id} className="hover:bg-muted/30">
