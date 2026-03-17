@@ -44,7 +44,7 @@ function formatDayHeader(dateStr: string) {
   return { day, weekday, isSunday };
 }
 
-export function MonthlyGrid({ department, month, year, restaurantIdOverride, activeSkillId, deleteMode }: MonthlyGridProps) {
+export function MonthlyGrid({ department, month, year, restaurantIdOverride, activeSkillId, deleteMode, paintAbsenceType }: MonthlyGridProps) {
   const ctx = useContext(RestaurantContext);
   const restaurantId = restaurantIdOverride || ctx?.restaurantId || '';
   const dates = useMemo(() => getPeriodDates(month, year), [year, month]);
