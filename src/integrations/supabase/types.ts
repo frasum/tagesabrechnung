@@ -1481,7 +1481,40 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      mv_daily_summary: {
+        Row: {
+          card_total: number | null
+          created_by_name: string | null
+          einladung: number | null
+          guest_count: number | null
+          kitchen_staff_count: number | null
+          notes: string | null
+          ordersmart_revenue: number | null
+          pos_total: number | null
+          restaurant_id: string | null
+          session_date: string | null
+          sonstige_einnahme: number | null
+          takeaway_total: number | null
+          total_differenz: number | null
+          total_expenses: number | null
+          total_kitchen_hours: number | null
+          total_kitchen_tip: number | null
+          total_waiter_hours: number | null
+          total_waiter_sales: number | null
+          vouchers_sold: number | null
+          waiter_count: number | null
+          wolt_revenue: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sessions_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       check_duplicate_staff_name: {
@@ -1491,6 +1524,7 @@ export type Database = {
           exists: boolean
         }[]
       }
+      cleanup_old_records: { Args: never; Returns: undefined }
       compute_carry_over: {
         Args: { p_before_date: string; p_restaurant_id: string }
         Returns: number
