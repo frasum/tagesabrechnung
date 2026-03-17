@@ -66,6 +66,8 @@ Deno.serve(async (req) => {
     const berlin = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Berlin" }));
     const fmt = (d: Date) => d.toISOString().split("T")[0];
 
+    const since30 = new Date(berlin); since30.setDate(berlin.getDate() - 30);
+    const since30Str = fmt(since30);
     const since14 = new Date(berlin); since14.setDate(berlin.getDate() - 14);
     const since14Str = fmt(since14);
     const since7 = new Date(berlin); since7.setDate(berlin.getDate() - 7);
@@ -92,13 +94,33 @@ Deno.serve(async (req) => {
     };
 
     // === PHASE 1: All independent queries in parallel ===
-    const [sessionsRes, staffRes, restaurantsRes, settingsRes, staffRestaurantsRes, weatherData, holidaysRes, ztShiftsRes] = await Promise.all([
+    // KEY OPTIMIZATION: Use mv_daily_summary for historical aggregation,
+    // only load raw sessions for last 30 days (commission, tips, raw context)
+    const [
+      mvSummaryRes,
+      recentSessionsRes,
+      staffRes,
+      restaurantsRes,
+      settingsRes,
+      staffRestaurantsRes,
+      weatherData,
+      holidaysRes,
+      ztShiftsRes,
+    ] = await Promise.all([
+      // Materialized view: pre-aggregated daily data (ALL history, very fast)
+      supabase
+        .from("mv_daily_summary")
+        .select("*")
+        .in("restaurant_id", restaurant_ids)
+        .order("session_date", { ascending: false }),
+      // Raw sessions: only last 30 days for commission calc + raw context
       supabase
         .from("sessions")
         .select("id, session_date, restaurant_id, pos_total, terminal_1_total, terminal_2_total, ordersmart_revenue, wolt_revenue, guest_count, vouchers_sold, vouchers_redeemed, finedine_vouchers, einladung, sonstige_einnahme, notes, created_by_name")
         .in("restaurant_id", restaurant_ids)
+        .gte("session_date", since30Str)
         .order("session_date", { ascending: false })
-        .limit(10000),
+        .limit(5000),
       supabase
         .from("staff")
         .select("id, name, nickname, role, is_active, participates_in_pool, perso_nr, is_minijob, employment_start, employment_end, vacation_days_contractual, vacation_days_previous, vacation_days_current, vacation_days_taken, sick_days_total")
@@ -116,7 +138,7 @@ Deno.serve(async (req) => {
         .from("staff_restaurants")
         .select("staff_id, restaurant_id, zt_department")
         .in("restaurant_id", restaurant_ids),
-      // Weather: only 30 days + 1 day forecast for speed
+      // Weather: only 30 days + 1 day forecast
       fetch(
         "https://api.open-meteo.com/v1/forecast?latitude=48.14&longitude=11.58&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weathercode&timezone=Europe/Berlin&past_days=30&forecast_days=1"
       ).then(r => r.json()).catch(() => null),
@@ -124,7 +146,6 @@ Deno.serve(async (req) => {
         .from("bavarian_holidays")
         .select("holiday_date, name, surcharge_rate, from_hour")
         .order("holiday_date"),
-      // zt_shifts in parallel with everything else
       supabase
         .from("zt_shifts")
         .select("employee_id, shift_date, total_hours, evening_hours, night_hours, night_deep_hours, sunday_holiday_hours, is_holiday, department, absence_type")
@@ -133,24 +154,25 @@ Deno.serve(async (req) => {
         .limit(10000),
     ]);
 
-    const sessions = sessionsRes.data || [];
-    const sessionIds = sessions.map((s: any) => s.id);
+    const mvSummary = mvSummaryRes.data || [];
+    const recentSessions = recentSessionsRes.data || [];
+    const recentSessionIds = recentSessions.map((s: any) => s.id);
     const ztShifts = ztShiftsRes.data || [];
 
-    // === PHASE 2: Session-dependent queries in parallel ===
+    // === PHASE 2: Only load raw shift data for last 30 days (for tips, commission, raw context) ===
     const [waiterShifts, kitchenShifts, expenses, advances] = await Promise.all([
       batchIn(supabase, "waiter_shifts",
         "session_id, waiter_name, staff_id, second_waiter_name, additional_waiters, pos_sales, kassiert_brutto, differenz, kitchen_tip, hours_worked, participates_in_pool",
-        "session_id", sessionIds),
+        "session_id", recentSessionIds),
       batchIn(supabase, "kitchen_shifts",
         "session_id, staff_name, hours_worked",
-        "session_id", sessionIds),
+        "session_id", recentSessionIds),
       batchIn(supabase, "expenses",
         "session_id, amount, description",
-        "session_id", sessionIds),
+        "session_id", recentSessionIds),
       batchIn(supabase, "advances",
         "session_id, amount, staff_name",
-        "session_id", sessionIds),
+        "session_id", recentSessionIds),
     ]);
 
     // Separate service staff IDs for commission calculation
@@ -202,66 +224,56 @@ Deno.serve(async (req) => {
       serviceStaffByRestaurant[sr.restaurant_id].add(sr.staff_id);
     });
 
-    // Build zt_shifts lookup
-    const ztHoursByStaffDate = new Map<string, number>();
-    ztShifts.forEach((z: any) => {
-      const key = `${z.employee_id}:${z.shift_date}`;
-      ztHoursByStaffDate.set(key, (ztHoursByStaffDate.get(key) ?? 0) + (Number(z.total_hours) || 0));
-    });
-
-    // Build session → restaurant mapping
+    // Build session → restaurant mapping (recent only)
     const sessionRestaurant: Record<string, string> = {};
-    sessions.forEach((s: any) => { sessionRestaurant[s.id] = s.restaurant_id; });
+    recentSessions.forEach((s: any) => { sessionRestaurant[s.id] = s.restaurant_id; });
 
-    // Build monthly aggregation
+    // ==========================================
+    // MONTHLY SUMMARY FROM MATERIALIZED VIEW (fast path)
+    // ==========================================
     const monthlyAgg: Record<string, Record<string, number>> = {};
-    sessions.forEach((s: any) => {
-      const month = s.session_date.slice(0, 7);
-      const restaurant = restaurantMap[s.restaurant_id] || "?";
+    const monthlyExpAdv: Record<string, { ausgaben: number; vorschuesse: number }> = {};
+    const kitchenTipAgg: Record<string, number> = {};
+
+    mvSummary.forEach((row: any) => {
+      const month = row.session_date.slice(0, 7);
+      const restaurant = restaurantMap[row.restaurant_id] || "?";
       const key = `${month}|${restaurant}`;
+
       if (!monthlyAgg[key]) {
         monthlyAgg[key] = { pos_total: 0, kreditkarten: 0, ordersmart: 0, wolt: 0, gutscheine_vk: 0, gutscheine_einl: 0, finedine: 0, einladung: 0, sonstige_einnahme: 0, gaeste: 0, sessions_count: 0 };
       }
       const a = monthlyAgg[key];
-      a.pos_total += s.pos_total || 0;
-      a.kreditkarten += (s.terminal_1_total || 0) + (s.terminal_2_total || 0);
-      a.ordersmart += s.ordersmart_revenue || 0;
-      a.wolt += s.wolt_revenue || 0;
-      a.gutscheine_vk += s.vouchers_sold || 0;
-      a.gutscheine_einl += s.vouchers_redeemed || 0;
-      a.finedine += s.finedine_vouchers || 0;
-      a.einladung += s.einladung || 0;
-      a.sonstige_einnahme += s.sonstige_einnahme || 0;
-      a.gaeste += s.guest_count || 0;
+      a.pos_total += Number(row.pos_total) || 0;
+      a.kreditkarten += Number(row.card_total) || 0;
+      a.ordersmart += Number(row.ordersmart_revenue) || 0;
+      a.wolt += Number(row.wolt_revenue) || 0;
+      a.gutscheine_vk += Number(row.vouchers_sold) || 0;
+      a.gutscheine_einl += Number(row.vouchers_redeemed) || 0;
+      a.finedine += Number(row.finedine_vouchers) || 0;
+      a.einladung += Number(row.einladung) || 0;
+      a.sonstige_einnahme += Number(row.sonstige_einnahme) || 0;
+      a.gaeste += Number(row.guest_count) || 0;
       a.sessions_count += 1;
-    });
 
-    // Aggregate expenses and advances per month
-    const expBySession: Record<string, number> = {};
-    expenses.forEach((e: any) => { expBySession[e.session_id] = (expBySession[e.session_id] || 0) + (e.amount || 0); });
-    const advBySession: Record<string, number> = {};
-    advances.forEach((a: any) => { advBySession[a.session_id] = (advBySession[a.session_id] || 0) + (a.amount || 0); });
-
-    const monthlyExpAdv: Record<string, { ausgaben: number; vorschuesse: number }> = {};
-    sessions.forEach((s: any) => {
-      const month = s.session_date.slice(0, 7);
-      const restaurant = restaurantMap[s.restaurant_id] || "?";
-      const key = `${month}|${restaurant}`;
       if (!monthlyExpAdv[key]) monthlyExpAdv[key] = { ausgaben: 0, vorschuesse: 0 };
-      monthlyExpAdv[key].ausgaben += expBySession[s.id] || 0;
-      monthlyExpAdv[key].vorschuesse += advBySession[s.id] || 0;
+      monthlyExpAdv[key].ausgaben += Number(row.total_expenses) || 0;
+      monthlyExpAdv[key].vorschuesse += Number(row.total_advances) || 0;
+
+      kitchenTipAgg[key] = (kitchenTipAgg[key] || 0) + (Number(row.total_kitchen_tip) || 0);
     });
 
-    // Aggregate waiter tips per month per waiter per restaurant
+    // ==========================================
+    // WAITER TIPS & PERFORMANCE (from raw data, last 30 days)
+    // ==========================================
     const sessionMonthRestaurant: Record<string, { month: string; restaurant: string; restaurantId: string; date: string }> = {};
-    sessions.forEach((s: any) => {
+    recentSessions.forEach((s: any) => {
       sessionMonthRestaurant[s.id] = { month: s.session_date.slice(0, 7), restaurant: restaurantMap[s.restaurant_id] || "?", restaurantId: s.restaurant_id, date: s.session_date };
     });
 
     const waiterTipAgg: Record<string, Record<string, number>> = {};
     const waiterHoursAgg: Record<string, Record<string, number>> = {};
     const kitchenHoursAgg: Record<string, Record<string, number>> = {};
-    const kitchenTipAgg: Record<string, number> = {};
 
     // Group waiter shifts by session for pool calculation
     const shiftsBySession: Record<string, any[]> = {};
@@ -299,8 +311,6 @@ Deno.serve(async (req) => {
           waiterHoursAgg[key][ws.waiter_name] = (waiterHoursAgg[key][ws.waiter_name] || 0) + (ws.hours_worked || 0);
         });
       }
-
-      kitchenTipAgg[key] = (kitchenTipAgg[key] || 0) + shiftsInSession.reduce((sum: number, ws: any) => sum + (ws.kitchen_tip || 0), 0);
     }
 
     kitchenShifts.forEach((ks: any) => {
@@ -312,7 +322,7 @@ Deno.serve(async (req) => {
     });
 
     // ==========================================
-    // COMMISSION CALCULATION
+    // COMMISSION CALCULATION (from raw data, last 30 days)
     // ==========================================
     const shiftsByRestDate: Record<string, any[]> = {};
     waiterShifts.forEach((ws: any) => {
@@ -329,6 +339,20 @@ Deno.serve(async (req) => {
       staffHours: Record<string, number>;
     }> = {};
     const daysByMonthRest: Record<string, { dates: Set<string>; qualDays: number; pool: number }> = {};
+
+    // Staff to restaurants mapping
+    const staffToRestaurants: Record<string, string[]> = {};
+    (staffRestaurantsRes.data || []).forEach((sr: any) => {
+      if (!staffToRestaurants[sr.staff_id]) staffToRestaurants[sr.staff_id] = [];
+      if (!staffToRestaurants[sr.staff_id].includes(sr.restaurant_id)) {
+        staffToRestaurants[sr.staff_id].push(sr.restaurant_id);
+      }
+    });
+
+    const staffDeptByRest: Record<string, string> = {};
+    (staffRestaurantsRes.data || []).forEach((sr: any) => {
+      staffDeptByRest[`${sr.staff_id}:${sr.restaurant_id}`] = sr.zt_department || "?";
+    });
 
     for (const [rdKey, shifts] of Object.entries(shiftsByRestDate)) {
       const [restaurantId, date] = rdKey.split(":");
@@ -375,20 +399,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Staff to restaurants mapping
-    const staffToRestaurants: Record<string, string[]> = {};
-    (staffRestaurantsRes.data || []).forEach((sr: any) => {
-      if (!staffToRestaurants[sr.staff_id]) staffToRestaurants[sr.staff_id] = [];
-      if (!staffToRestaurants[sr.staff_id].includes(sr.restaurant_id)) {
-        staffToRestaurants[sr.staff_id].push(sr.restaurant_id);
-      }
-    });
-
-    const staffDeptByRest: Record<string, string> = {};
-    (staffRestaurantsRes.data || []).forEach((sr: any) => {
-      staffDeptByRest[`${sr.staff_id}:${sr.restaurant_id}`] = sr.zt_department || "?";
-    });
-
     // ZT hours by month|restaurant|staff for commission (Service only)
     const ztHoursMonthRest: Record<string, Record<string, number>> = {};
     const serviceStaffIdSet = new Set(serviceStaffIds);
@@ -415,7 +425,7 @@ Deno.serve(async (req) => {
     }
 
     // ==========================================
-    // WORKFORCE DATA
+    // WORKFORCE DATA (from zt_shifts)
     // ==========================================
     type WorkforceEntry = { total: number; evening: number; night: number; nightDeep: number; sundayHoliday: number; absences: Record<string, number>; dept: string };
     const workforceAgg: Record<string, Record<string, WorkforceEntry>> = {};
@@ -445,7 +455,7 @@ Deno.serve(async (req) => {
       }
     });
 
-    // WAITER PERFORMANCE
+    // WAITER PERFORMANCE (from raw data, last 30 days)
     const waiterPerfAgg: Record<string, Record<string, { revenue: number; shifts: number; hours: number }>> = {};
     waiterShifts.forEach((ws: any) => {
       const info = sessionMonthRestaurant[ws.session_id];
@@ -459,17 +469,17 @@ Deno.serve(async (req) => {
     });
 
     // ==========================================
-    // ANOMALY DETECTION (last 7 days vs previous 7 days)
+    // ANOMALY DETECTION (last 7 days vs previous 7 days, from materialized view)
     // ==========================================
     const anomalies: string[] = [];
 
     for (const rid of restaurant_ids) {
       const rName = restaurantMap[rid] || "?";
-      const last7Sessions = sessions.filter((s: any) => s.restaurant_id === rid && s.session_date >= since7Str && s.session_date <= todayStr);
-      const prev7Sessions = sessions.filter((s: any) => s.restaurant_id === rid && s.session_date >= since14Str && s.session_date < since7Str);
+      const last7 = mvSummary.filter((r: any) => r.restaurant_id === rid && r.session_date >= since7Str && r.session_date <= todayStr);
+      const prev7 = mvSummary.filter((r: any) => r.restaurant_id === rid && r.session_date >= since14Str && r.session_date < since7Str);
 
-      const last7Revenue = last7Sessions.reduce((s: number, ss: any) => s + (ss.pos_total || 0), 0);
-      const prev7Revenue = prev7Sessions.reduce((s: number, ss: any) => s + (ss.pos_total || 0), 0);
+      const last7Revenue = last7.reduce((s: number, r: any) => s + (Number(r.pos_total) || 0), 0);
+      const prev7Revenue = prev7.reduce((s: number, r: any) => s + (Number(r.pos_total) || 0), 0);
       if (prev7Revenue > 0) {
         const revChange = ((last7Revenue - prev7Revenue) / prev7Revenue) * 100;
         if (Math.abs(revChange) >= 15) {
@@ -477,8 +487,8 @@ Deno.serve(async (req) => {
         }
       }
 
-      const last7Guests = last7Sessions.reduce((s: number, ss: any) => s + (ss.guest_count || 0), 0);
-      const prev7Guests = prev7Sessions.reduce((s: number, ss: any) => s + (ss.guest_count || 0), 0);
+      const last7Guests = last7.reduce((s: number, r: any) => s + (Number(r.guest_count) || 0), 0);
+      const prev7Guests = prev7.reduce((s: number, r: any) => s + (Number(r.guest_count) || 0), 0);
       if (prev7Guests > 0) {
         const guestChange = ((last7Guests - prev7Guests) / prev7Guests) * 100;
         if (Math.abs(guestChange) >= 10) {
@@ -486,7 +496,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      const last7Dates = new Set(last7Sessions.map((s: any) => s.session_date));
+      const last7Dates = new Set(last7.map((r: any) => r.session_date));
       const missingDays: string[] = [];
       for (let d = new Date(since7); d <= berlin; d.setDate(d.getDate() + 1)) {
         const ds = fmt(d);
@@ -497,8 +507,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Waiter performance deviations
-    const last7SessionIds = new Set(sessions.filter((s: any) => s.session_date >= since7Str && s.session_date <= todayStr).map((s: any) => s.id));
+    // Waiter performance deviations (from raw waiter shifts, last 7 days)
+    const last7SessionIds = new Set(recentSessions.filter((s: any) => s.session_date >= since7Str && s.session_date <= todayStr).map((s: any) => s.id));
     const waiterPerf7: Record<string, { revenue: number; hours: number }> = {};
     waiterShifts.forEach((ws: any) => {
       if (!last7SessionIds.has(ws.session_id)) return;
@@ -554,7 +564,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Monthly summary
+    // Monthly summary (from materialized view)
     ctx.push("\n=== MONATSZUSAMMENFASSUNG ===");
     ctx.push("Monat|Rest|Tage|Umsatz|Karten|OS|Wolt|GVK|GEinl|FD|Einl|SoE|Gäste|Ausg|Vorsch|KüchenTG");
     const sortedKeys = Object.keys(monthlyAgg).sort();
@@ -566,10 +576,10 @@ Deno.serve(async (req) => {
       ctx.push(`${month}|${restaurant}|${a.sessions_count}|${a.pos_total}|${a.kreditkarten}|${a.ordersmart}|${a.wolt}|${a.gutscheine_vk}|${a.gutscheine_einl}|${a.finedine}|${a.einladung}|${a.sonstige_einnahme}|${a.gaeste}|${ea.ausgaben}|${ea.vorschuesse}|${kt}`);
     }
 
-    // Waiter tip ranking (compact)
-    ctx.push("\n=== KELLNER-TG RANKING ===");
+    // Waiter tip ranking (last 30 days only)
+    ctx.push("\n=== KELLNER-TG RANKING (30T) ===");
     ctx.push("Monat|Rest|Name|TG|Std");
-    for (const key of sortedKeys) {
+    for (const key of Object.keys(waiterTipAgg).sort()) {
       const [month, restaurant] = key.split("|");
       const tips = waiterTipAgg[key] || {};
       const hours = waiterHoursAgg[key] || {};
@@ -579,9 +589,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Kitchen hours (compact)
-    ctx.push("\n=== KÜCHEN-STD ===");
-    for (const key of sortedKeys) {
+    // Kitchen hours (last 30 days)
+    ctx.push("\n=== KÜCHEN-STD (30T) ===");
+    for (const key of Object.keys(kitchenHoursAgg).sort()) {
       const [month, restaurant] = key.split("|");
       const hours = kitchenHoursAgg[key] || {};
       for (const [name, h] of Object.entries(hours).sort((a, b) => (b[1] as number) - (a[1] as number))) {
@@ -589,8 +599,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Commission (compact)
-    ctx.push("\n=== PROVISION ===");
+    // Commission (last 30 days)
+    ctx.push("\n=== PROVISION (30T) ===");
     ctx.push("Monat|Rest|Schwelle|%|QualT|GesamtT|Pool|Std|€/h");
     const commKeys = Object.keys(commissionByMonthRestaurant).sort();
     for (const key of commKeys) {
@@ -601,7 +611,7 @@ Deno.serve(async (req) => {
       ctx.push(`${month}|${restaurant}|${c.minRevenue}|${c.pct}|${c.qualDays}|${c.totalDays}|${c.pool.toFixed(0)}|${totalHours.toFixed(0)}|${hourlyRate.toFixed(2)}`);
     }
 
-    // Commission distribution (only top entries)
+    // Commission distribution
     ctx.push("\n=== PROV-VERTEILUNG ===");
     for (const key of commKeys) {
       const [month, restaurant] = key.split("|");
@@ -614,7 +624,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Workforce (compact)
+    // Workforce
     ctx.push("\n=== ARBEITSZEITEN ===");
     ctx.push("Monat|Rest|Name|Abt|Ges|Abend|Nacht|TiefN|SoFei|Fehl");
     const wfKeys = Object.keys(workforceAgg).sort();
@@ -628,7 +638,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Payment types (compact)
+    // Payment types (from materialized view monthly agg)
     ctx.push("\n=== ZAHLUNGSARTEN ===");
     for (const key of sortedKeys) {
       const [month, restaurant] = key.split("|");
@@ -638,9 +648,9 @@ Deno.serve(async (req) => {
       ctx.push(`${month}|${restaurant}|Umsatz:${a.pos_total}|Karte:${a.kreditkarten}|Bar:${bar.toFixed(0)}|${pct}%`);
     }
 
-    // Waiter performance (compact)
-    ctx.push("\n=== KELLNER-PERF ===");
-    for (const key of sortedKeys) {
+    // Waiter performance (last 30 days)
+    ctx.push("\n=== KELLNER-PERF (30T) ===");
+    for (const key of Object.keys(waiterPerfAgg).sort()) {
       const [month, restaurant] = key.split("|");
       const perf = waiterPerfAgg[key] || {};
       for (const [name, p] of Object.entries(perf).sort((a, b) => b[1].revenue - a[1].revenue)) {
@@ -649,7 +659,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Restaurant comparison (compact, only if multiple)
+    // Restaurant comparison (from materialized view)
     const restaurantNames = Object.values(restaurantMap);
     if (restaurantNames.length >= 2) {
       ctx.push("\n=== REST-VERGLEICH ===");
@@ -675,7 +685,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Weather (compact, only last 14 days + correlation)
+    // Weather (compact, last 30 days + correlation)
     if (weatherData?.daily?.time) {
       const wd = weatherData.daily;
       const weatherByDate: Record<string, { maxTemp: number; precip: number; label: string }> = {};
@@ -685,14 +695,13 @@ Deno.serve(async (req) => {
         ctx.push(`${wd.time[i]}|${wd.temperature_2m_max[i]}°|${wd.precipitation_sum[i]}mm|${weatherCodeLabel(wd.weathercode[i])}`);
       }
 
-      // Weather-revenue correlation (last 14 days only)
+      // Weather-revenue correlation (last 14 days, from materialized view)
       ctx.push("\n=== WETTER-UMSATZ ===");
-      const recentForCorr = sessions.filter((s: any) => s.session_date >= since14Str);
-      recentForCorr.sort((a: any, b: any) => a.session_date.localeCompare(b.session_date));
-      for (const s of recentForCorr) {
-        const w = weatherByDate[s.session_date];
+      const recentMv = mvSummary.filter((r: any) => r.session_date >= since14Str).sort((a: any, b: any) => a.session_date.localeCompare(b.session_date));
+      for (const row of recentMv) {
+        const w = weatherByDate[row.session_date];
         if (!w) continue;
-        ctx.push(`${s.session_date}|${restaurantMap[s.restaurant_id]}|${w.maxTemp}°|${w.precip}mm|${w.label}|${s.pos_total || 0}€|${s.guest_count || 0}G`);
+        ctx.push(`${row.session_date}|${restaurantMap[row.restaurant_id]}|${w.maxTemp}°|${w.precip}mm|${w.label}|${row.pos_total || 0}€|${row.guest_count || 0}G`);
       }
     }
 
@@ -702,7 +711,7 @@ Deno.serve(async (req) => {
       anomalies.forEach(a => ctx.push(a));
     }
 
-    // Absence ranges (compact)
+    // Absence ranges (from zt_shifts)
     const absenceRecords: { name: string; restaurant: string; date: string; type: string }[] = [];
     ztShifts.forEach((z: any) => {
       if (!z.absence_type) return;
@@ -735,44 +744,44 @@ Deno.serve(async (req) => {
       }
     }
 
-    // RAW DATA: limited to last 14 days for speed
+    // RAW DATA: limited to last 14 days for detailed context
     const sessionInfoMap: Record<string, { date: string; restaurant: string }> = {};
-    sessions.forEach((s: any) => {
+    recentSessions.forEach((s: any) => {
       sessionInfoMap[s.id] = { date: s.session_date, restaurant: restaurantMap[s.restaurant_id] || "?" };
     });
 
-    const recentSessions = sessions.filter((s: any) => s.session_date >= since14Str);
-    const recentSessionIds = new Set(recentSessions.map((s: any) => s.id));
+    const last14Sessions = recentSessions.filter((s: any) => s.session_date >= since14Str);
+    const last14SessionIds = new Set(last14Sessions.map((s: any) => s.id));
 
     ctx.push("\n=== SESSIONS (14T) ===");
-    recentSessions.forEach((s: any) => {
+    last14Sessions.forEach((s: any) => {
       const cards = (s.terminal_1_total || 0) + (s.terminal_2_total || 0);
       ctx.push(`${s.session_date}|${restaurantMap[s.restaurant_id]}|U:${s.pos_total || 0}|K:${cards}|OS:${s.ordersmart_revenue || 0}|W:${s.wolt_revenue || 0}|G:${s.guest_count || 0}${s.notes ? "|N:" + s.notes : ""}`);
     });
 
     ctx.push("\n=== KELLNER (14T) ===");
-    waiterShifts.filter((ws: any) => recentSessionIds.has(ws.session_id)).forEach((ws: any) => {
+    waiterShifts.filter((ws: any) => last14SessionIds.has(ws.session_id)).forEach((ws: any) => {
       const info = sessionInfoMap[ws.session_id];
       if (!info) return;
       ctx.push(`${info.date}|${info.restaurant}|${ws.waiter_name}|POS:${ws.pos_sales || 0}|Kass:${ws.kassiert_brutto || 0}|Diff:${ws.differenz || 0}|KTG:${ws.kitchen_tip || 0}|${ws.hours_worked || "-"}h`);
     });
 
     ctx.push("\n=== KÜCHE (14T) ===");
-    kitchenShifts.filter((ks: any) => recentSessionIds.has(ks.session_id)).forEach((ks: any) => {
+    kitchenShifts.filter((ks: any) => last14SessionIds.has(ks.session_id)).forEach((ks: any) => {
       const info = sessionInfoMap[ks.session_id];
       if (!info) return;
       ctx.push(`${info.date}|${info.restaurant}|${ks.staff_name}|${ks.hours_worked || 0}h`);
     });
 
     ctx.push("\n=== AUSGABEN (14T) ===");
-    expenses.filter((e: any) => recentSessionIds.has(e.session_id)).forEach((e: any) => {
+    expenses.filter((e: any) => last14SessionIds.has(e.session_id)).forEach((e: any) => {
       const info = sessionInfoMap[e.session_id];
       if (!info) return;
       ctx.push(`${info.date}|${info.restaurant}|${e.amount}€|${e.description}`);
     });
 
     ctx.push("\n=== VORSCHÜSSE (14T) ===");
-    advances.filter((a: any) => recentSessionIds.has(a.session_id)).forEach((a: any) => {
+    advances.filter((a: any) => last14SessionIds.has(a.session_id)).forEach((a: any) => {
       const info = sessionInfoMap[a.session_id];
       if (!info) return;
       ctx.push(`${info.date}|${info.restaurant}|${a.staff_name}|${a.amount}€`);
@@ -790,7 +799,8 @@ Deno.serve(async (req) => {
 Datenformat: Felder sind mit | getrennt. Geldbeträge in €.
 
 Verfügbare Daten:
-- Aggregierte Monatsdaten: gesamter Zeitraum
+- Aggregierte Monatsdaten: gesamter Zeitraum (aus materialized view)
+- Kellner-Details (TG, Performance, Provision): letzte 30 Tage
 - Rohdaten: letzte 14 Tage
 
 ${dataContext}

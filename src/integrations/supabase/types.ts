@@ -79,6 +79,13 @@ export type Database = {
             foreignKeyName: "advances_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
+            referencedRelation: "mv_daily_summary"
+            referencedColumns: ["session_id"]
+          },
+          {
+            foreignKeyName: "advances_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
             referencedRelation: "sessions"
             referencedColumns: ["id"]
           },
@@ -336,6 +343,13 @@ export type Database = {
             foreignKeyName: "expenses_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
+            referencedRelation: "mv_daily_summary"
+            referencedColumns: ["session_id"]
+          },
+          {
+            foreignKeyName: "expenses_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
             referencedRelation: "sessions"
             referencedColumns: ["id"]
           },
@@ -373,6 +387,13 @@ export type Database = {
           staff_name?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "kitchen_shifts_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "mv_daily_summary"
+            referencedColumns: ["session_id"]
+          },
           {
             foreignKeyName: "kitchen_shifts_session_id_fkey"
             columns: ["session_id"]
@@ -1249,6 +1270,13 @@ export type Database = {
             foreignKeyName: "waiter_shifts_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
+            referencedRelation: "mv_daily_summary"
+            referencedColumns: ["session_id"]
+          },
+          {
+            foreignKeyName: "waiter_shifts_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
             referencedRelation: "sessions"
             referencedColumns: ["id"]
           },
@@ -1486,6 +1514,7 @@ export type Database = {
           card_total: number | null
           created_by_name: string | null
           einladung: number | null
+          finedine_vouchers: number | null
           guest_count: number | null
           kitchen_staff_count: number | null
           notes: string | null
@@ -1493,14 +1522,17 @@ export type Database = {
           pos_total: number | null
           restaurant_id: string | null
           session_date: string | null
+          session_id: string | null
           sonstige_einnahme: number | null
           takeaway_total: number | null
+          total_advances: number | null
           total_differenz: number | null
           total_expenses: number | null
           total_kitchen_hours: number | null
           total_kitchen_tip: number | null
           total_waiter_hours: number | null
           total_waiter_sales: number | null
+          vouchers_redeemed: number | null
           vouchers_sold: number | null
           waiter_count: number | null
           wolt_revenue: number | null
