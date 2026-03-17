@@ -66,6 +66,9 @@ export default function RestaurantChat() {
       });
     };
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120_000); // 2 min timeout
+
     try {
       const restaurantIds = restaurants.map(r => r.id);
       const resp = await fetch(CHAT_URL, {
@@ -79,6 +82,7 @@ export default function RestaurantChat() {
           restaurant_ids: restaurantIds,
           caller_staff_id: user?.staffId,
         }),
+        signal: controller.signal,
       });
 
       if (!resp.ok) {
@@ -137,16 +141,26 @@ export default function RestaurantChat() {
         }
       }
     } catch (e: any) {
-      console.error('Chat error:', e);
-      toast({
-        title: 'Chat-Fehler',
-        description: e.message || 'Verbindung fehlgeschlagen',
-        variant: 'destructive',
-      });
+      if (e.name === 'AbortError') {
+        console.error('Chat timeout after 120s');
+        toast({
+          title: 'Zeitüberschreitung',
+          description: 'Die Anfrage hat zu lange gedauert. Bitte versuche es erneut.',
+          variant: 'destructive',
+        });
+      } else {
+        console.error('Chat error:', e);
+        toast({
+          title: 'Chat-Fehler',
+          description: e.message || 'Verbindung fehlgeschlagen',
+          variant: 'destructive',
+        });
+      }
       if (!assistantSoFar) {
         setMessages(prev => prev.slice(0, -1));
       }
     } finally {
+      clearTimeout(timeoutId);
       setIsLoading(false);
     }
   };
