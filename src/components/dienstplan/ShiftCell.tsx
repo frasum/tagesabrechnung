@@ -22,6 +22,8 @@ interface ShiftCellProps {
   conflictRestaurant?: string;
   isBirthday?: boolean;
   birthdayLabel?: string;
+  paintSkillId?: string | null;
+  paintDeleteMode?: boolean;
 }
 
 export const ShiftCell = forwardRef<HTMLTableCellElement, ShiftCellProps>(({
