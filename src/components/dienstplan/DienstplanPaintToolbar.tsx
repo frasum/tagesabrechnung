@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { X, Palmtree, Thermometer } from 'lucide-react';
 import { useSkills } from '@/hooks/useSkills';
+import { useDienstplanColors } from '@/hooks/useDienstplanColors';
 
 export interface PaintModeState {
   activeSkillId: string | null;
