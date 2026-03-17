@@ -1,5 +1,6 @@
 import { useState, forwardRef } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useUpsertShift, useDeleteShift, type ShiftAssignment } from '@/hooks/useDienstplan';
 import type { Skill } from '@/hooks/useSkills';
 import { cn } from '@/lib/utils';
@@ -20,6 +21,7 @@ interface ShiftCellProps {
   isToday?: boolean;
   conflictRestaurant?: string;
   isBirthday?: boolean;
+  birthdayLabel?: string;
 }
 
 export const ShiftCell = forwardRef<HTMLTableCellElement, ShiftCellProps>(({
@@ -36,6 +38,7 @@ export const ShiftCell = forwardRef<HTMLTableCellElement, ShiftCellProps>(({
   isToday,
   conflictRestaurant,
   isBirthday,
+  birthdayLabel,
 }, ref) => {
   const [open, setOpen] = useState(false);
   const upsertShift = useUpsertShift();
@@ -72,7 +75,7 @@ export const ShiftCell = forwardRef<HTMLTableCellElement, ShiftCellProps>(({
         )}
       >
         {isVacation ? 'U' : 'K'}
-        {isBirthday && <Cake className="absolute bottom-0.5 left-0.5 w-3 h-3 text-pink-500" />}
+        {isBirthday && <Tooltip><TooltipTrigger asChild><Cake className="absolute bottom-0.5 left-0.5 w-3 h-3 text-pink-500 cursor-default" /></TooltipTrigger><TooltipContent side="top" className="text-xs">{birthdayLabel}</TooltipContent></Tooltip>}
         {conflictRestaurant && <span className="absolute top-0 right-0.5 text-[8px] text-amber-600">⚠</span>}
       </td>
     );
@@ -132,7 +135,7 @@ export const ShiftCell = forwardRef<HTMLTableCellElement, ShiftCellProps>(({
         >
           {shift ? '✓' : '+'}
         </button>
-        {isBirthday && <Cake className="absolute bottom-0.5 left-0.5 w-3 h-3 text-pink-500" />}
+        {isBirthday && <Tooltip><TooltipTrigger asChild><Cake className="absolute bottom-0.5 left-0.5 w-3 h-3 text-pink-500 cursor-default" /></TooltipTrigger><TooltipContent side="top" className="text-xs">{birthdayLabel}</TooltipContent></Tooltip>}
         {conflictRestaurant && <span className="absolute top-0 right-0.5 text-[8px] text-amber-600">⚠</span>}
       </td>
     );
@@ -168,7 +171,7 @@ export const ShiftCell = forwardRef<HTMLTableCellElement, ShiftCellProps>(({
             <span className="text-muted-foreground/40">+</span>
           )}
         </button>
-        {isBirthday && <Cake className="absolute bottom-0.5 left-0.5 w-3 h-3 text-pink-500" />}
+        {isBirthday && <Tooltip><TooltipTrigger asChild><Cake className="absolute bottom-0.5 left-0.5 w-3 h-3 text-pink-500 cursor-default" /></TooltipTrigger><TooltipContent side="top" className="text-xs">{birthdayLabel}</TooltipContent></Tooltip>}
         {conflictRestaurant && <span className="absolute top-0 right-0.5 text-[8px] text-amber-600">⚠</span>}
       </td>
     );
@@ -242,7 +245,7 @@ export const ShiftCell = forwardRef<HTMLTableCellElement, ShiftCellProps>(({
           </div>
         </PopoverContent>
       </Popover>
-      {isBirthday && <Cake className="absolute bottom-0.5 left-0.5 w-3 h-3 text-pink-500" />}
+      {isBirthday && <Tooltip><TooltipTrigger asChild><Cake className="absolute bottom-0.5 left-0.5 w-3 h-3 text-pink-500 cursor-default" /></TooltipTrigger><TooltipContent side="top" className="text-xs">{birthdayLabel}</TooltipContent></Tooltip>}
       {conflictRestaurant && <span className="absolute top-0 right-0.5 text-[8px] text-amber-600">⚠</span>}
     </td>
   );
