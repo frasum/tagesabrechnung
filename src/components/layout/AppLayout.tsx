@@ -57,6 +57,7 @@ const allNavItems: NavItem[] = [
   { path: 'summary', label: 'Tagesabrechnung', icon: FileText, minLevel: 'manager' },
   { path: 'zeiterfassung', label: 'Zeiterfassung', icon: Clock, minLevel: 'manager' },
   { path: 'dienstplan', label: 'Dienstplan', icon: CalendarDays, minLevel: 'manager' },
+  { path: '/kueche-plan', label: 'Küchenplan', icon: ChefHat, minLevel: 'admin' },
   { path: 'qr-poster', label: 'QR-Code', icon: QrCode, minLevel: 'manager' },
   { path: 'statistics', label: 'Statistiken', icon: BarChart3, minLevel: 'manager' },
   { path: 'history', label: 'Verlauf', icon: History, minLevel: 'manager' },
