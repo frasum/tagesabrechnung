@@ -4,7 +4,7 @@ import { useUpsertShift, useDeleteShift, type ShiftAssignment } from '@/hooks/us
 import type { Skill } from '@/hooks/useSkills';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { X } from 'lucide-react';
+import { X, Cake } from 'lucide-react';
 
 interface ShiftCellProps {
   shift?: ShiftAssignment;
