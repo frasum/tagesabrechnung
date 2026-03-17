@@ -1092,6 +1092,7 @@ export type Database = {
           created_at: string | null
           excluded_restaurants: string[] | null
           id: string
+          report_time: string
           show_cash_balance: boolean | null
           show_cash_details: boolean | null
           show_created_by: boolean | null
@@ -1109,6 +1110,7 @@ export type Database = {
           created_at?: string | null
           excluded_restaurants?: string[] | null
           id?: string
+          report_time?: string
           show_cash_balance?: boolean | null
           show_cash_details?: boolean | null
           show_created_by?: boolean | null
@@ -1126,6 +1128,7 @@ export type Database = {
           created_at?: string | null
           excluded_restaurants?: string[] | null
           id?: string
+          report_time?: string
           show_cash_balance?: boolean | null
           show_cash_details?: boolean | null
           show_created_by?: boolean | null
@@ -1495,6 +1498,10 @@ export type Database = {
       get_staff_permission: {
         Args: { p_staff_id: string }
         Returns: Database["public"]["Enums"]["app_permission_level"]
+      }
+      update_telegram_cron_schedule: {
+        Args: { p_time: string }
+        Returns: undefined
       }
     }
     Enums: {

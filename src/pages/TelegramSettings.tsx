@@ -44,11 +44,13 @@ function TelegramSettingsContent() {
     show_pdf_export_notification: true,
     show_notes: true,
   });
+  const [reportTime, setReportTime] = useState('06:00');
   const [testDate, setTestDate] = useState(() => format(subDays(new Date(), 1), 'yyyy-MM-dd'));
 
   useEffect(() => {
     if (settings) {
       setExcludedRestaurants(settings.excluded_restaurants || []);
+      setReportTime(settings.report_time || '06:00');
       setMetrics({
          show_pos_total: settings.show_pos_total,
          show_guest_count: settings.show_guest_count,
@@ -67,6 +69,7 @@ function TelegramSettingsContent() {
     save({
       id: settings?.id,
       excluded_restaurants: excludedRestaurants,
+      report_time: reportTime,
       ...metrics,
     });
   };
@@ -95,6 +98,27 @@ function TelegramSettingsContent() {
           Bot-Token und Chat-ID werden sicher über Umgebungsvariablen verwaltet und sind nicht über die Oberfläche einsehbar.
         </AlertDescription>
       </Alert>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Versandzeitpunkt</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-3">
+            <Label htmlFor="report-time">Uhrzeit (UTC)</Label>
+            <Input
+              id="report-time"
+              type="time"
+              value={reportTime}
+              onChange={e => setReportTime(e.target.value)}
+              className="w-32"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Aktuell: {reportTime} Uhr UTC — Der tägliche Report wird zu dieser Uhrzeit automatisch versendet.
+          </p>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

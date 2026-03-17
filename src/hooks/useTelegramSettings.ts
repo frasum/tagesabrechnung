@@ -14,6 +14,7 @@ export interface TelegramSettings {
   show_kitchen: boolean;
   show_pdf_export_notification: boolean;
   show_notes: boolean;
+  report_time: string;
 }
 
 export function useTelegramSettings() {
@@ -24,7 +25,7 @@ export function useTelegramSettings() {
     queryFn: async (): Promise<TelegramSettings | null> => {
       const { data, error } = await supabase
         .from('telegram_settings')
-        .select('id, excluded_restaurants, show_pos_total, show_guest_count, show_cash_balance, show_cash_details, show_created_by, show_waiters, show_kitchen, show_pdf_export_notification, show_notes')
+        .select('id, excluded_restaurants, show_pos_total, show_guest_count, show_cash_balance, show_cash_details, show_created_by, show_waiters, show_kitchen, show_pdf_export_notification, show_notes, report_time')
         .limit(1)
         .maybeSingle();
 
@@ -46,7 +47,13 @@ export function useTelegramSettings() {
         show_kitchen: settings.show_kitchen,
         show_pdf_export_notification: settings.show_pdf_export_notification,
         show_notes: settings.show_notes,
+        report_time: settings.report_time,
       };
+
+      // Update cron schedule if report_time changed
+      await supabase.functions.invoke('update-telegram-schedule', {
+        body: { report_time: settings.report_time },
+      });
 
       if (settings.id) {
         const { error } = await supabase
