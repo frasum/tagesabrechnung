@@ -72,7 +72,8 @@ const adminNavItems: NavItem[] = [
 const navGroups: NavGroup[] = [
   { label: 'Tagesgeschäft', paths: ['', 'kitchen', 'summary', 'zeiterfassung', 'qr-poster'] },
   { label: 'Auswertung', paths: ['statistics', 'history', 'cash-balance'] },
-  { label: 'Verwaltung', paths: ['dienstplan', '/staff', '/telegram', 'chat'], adminOnly: true },
+  { label: 'Planung', paths: ['dienstplan'] },
+  { label: 'Verwaltung', paths: ['/staff', '/telegram', 'chat'], adminOnly: true },
 ];
 
 export function AppLayout({ children }: AppLayoutProps) {
