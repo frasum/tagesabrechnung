@@ -199,6 +199,7 @@ export default function KuechePlan() {
               restaurantIdOverride={restaurant.id}
               activeSkillId={activeSkillId}
               deleteMode={deleteMode}
+              paintAbsenceType={absencePaintType}
             />
           </div>
         ))}
