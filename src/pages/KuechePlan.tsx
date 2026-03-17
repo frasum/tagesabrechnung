@@ -67,59 +67,61 @@ export default function KuechePlan() {
     <GlobalLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col gap-4">
-          <h1 className="text-2xl font-bold tracking-tight">Küchenplan</h1>
-          
-          {/* Toolbar */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <Button variant="outline" size="icon" onClick={handlePrev} className="h-8 w-8">
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <span className="text-sm font-semibold min-w-[220px] text-center">
-              {formatPeriodLabel(month, year)}
-            </span>
-            <Button variant="outline" size="icon" onClick={handleNext} className="h-8 w-8">
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-
-            <div className="h-6 w-px bg-border mx-1" />
-
-            {/* Skill paint buttons */}
-            <ToggleGroup
-              type="single"
-              value={toggleValue}
-              onValueChange={handleSkillToggle}
-              className="gap-1"
-            >
-              {kitchenSkills.map(skill => (
-                <ToggleGroupItem
-                  key={skill.id}
-                  value={skill.id}
-                  className="h-8 px-3 text-xs font-bold rounded-full border data-[state=on]:text-white transition-colors"
-                  style={{
-                    borderColor: skill.color,
-                    ...(toggleValue === skill.id
-                      ? { backgroundColor: skill.color, color: 'white' }
-                      : { color: skill.color }),
-                  }}
-                >
-                  {skill.name}
-                </ToggleGroupItem>
-              ))}
-              <ToggleGroupItem
-                value="__delete"
-                className="h-8 px-3 text-xs font-bold rounded-full border border-destructive data-[state=on]:bg-destructive data-[state=on]:text-destructive-foreground text-destructive transition-colors"
-              >
-                <X className="w-3.5 h-3.5 mr-1" />
-                Löschen
-              </ToggleGroupItem>
-            </ToggleGroup>
-
-            {(activeSkillId || deleteMode) && (
-              <span className="text-xs text-muted-foreground ml-2">
-                Klick = {deleteMode ? 'Schicht löschen' : 'Skill zuweisen / entfernen'}
+        <div className="sticky top-0 z-20 bg-background pb-3 border-b border-border/50 shadow-sm">
+          <div className="flex flex-col gap-4">
+            <h1 className="text-2xl font-bold tracking-tight">Küchenplan</h1>
+            
+            {/* Toolbar */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <Button variant="outline" size="icon" onClick={handlePrev} className="h-8 w-8">
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <span className="text-sm font-semibold min-w-[220px] text-center">
+                {formatPeriodLabel(month, year)}
               </span>
-            )}
+              <Button variant="outline" size="icon" onClick={handleNext} className="h-8 w-8">
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+
+              <div className="h-6 w-px bg-border mx-1" />
+
+              {/* Skill paint buttons */}
+              <ToggleGroup
+                type="single"
+                value={toggleValue}
+                onValueChange={handleSkillToggle}
+                className="gap-1"
+              >
+                {kitchenSkills.map(skill => (
+                  <ToggleGroupItem
+                    key={skill.id}
+                    value={skill.id}
+                    className="h-8 px-3 text-xs font-bold rounded-full border data-[state=on]:text-white transition-colors"
+                    style={{
+                      borderColor: skill.color,
+                      ...(toggleValue === skill.id
+                        ? { backgroundColor: skill.color, color: 'white' }
+                        : { color: skill.color }),
+                    }}
+                  >
+                    {skill.name}
+                  </ToggleGroupItem>
+                ))}
+                <ToggleGroupItem
+                  value="__delete"
+                  className="h-8 px-3 text-xs font-bold rounded-full border border-destructive data-[state=on]:bg-destructive data-[state=on]:text-destructive-foreground text-destructive transition-colors"
+                >
+                  <X className="w-3.5 h-3.5 mr-1" />
+                  Löschen
+                </ToggleGroupItem>
+              </ToggleGroup>
+
+              {(activeSkillId || deleteMode) && (
+                <span className="text-xs text-muted-foreground ml-2">
+                  Klick = {deleteMode ? 'Schicht löschen' : 'Skill zuweisen / entfernen'}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
