@@ -71,6 +71,12 @@ export const ShiftCell = forwardRef<HTMLTableCellElement, ShiftCellProps>(({
   }
 
   const handleSkillSelect = (skillId: string | null) => {
+    // Block new assignment if already scheduled at another restaurant
+    if (!shift && conflictRestaurant) {
+      toast.error(`Bereits eingeteilt bei ${conflictRestaurant}`);
+      setOpen(false);
+      return;
+    }
     setOpen(false);
     upsertShift.mutate(
       {
