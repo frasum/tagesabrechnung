@@ -16,6 +16,9 @@ interface MonthlyGridProps {
   department: 'kitchen' | 'service';
   month: number;
   year: number;
+  restaurantIdOverride?: string;
+  activeSkillId?: string | null;
+  deleteMode?: boolean;
 }
 
 function getPeriodDates(month0: number, year: number): string[] {
