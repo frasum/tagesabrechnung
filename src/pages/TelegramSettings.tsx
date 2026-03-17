@@ -50,6 +50,7 @@ function TelegramSettingsContent() {
   useEffect(() => {
     if (settings) {
       setExcludedRestaurants(settings.excluded_restaurants || []);
+      setReportTime(settings.report_time || '06:00');
       setMetrics({
          show_pos_total: settings.show_pos_total,
          show_guest_count: settings.show_guest_count,
