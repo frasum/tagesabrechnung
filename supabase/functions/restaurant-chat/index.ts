@@ -597,6 +597,16 @@ Deno.serve(async (req) => {
       contextParts.push(`${r.name} (${r.slug})`);
     });
 
+    // Bavarian holidays
+    const holidays = holidaysRes.data || [];
+    if (holidays.length > 0) {
+      contextParts.push("\n=== BAYERISCHE FEIERTAGE ===");
+      contextParts.push("Datum | Name | Zuschlagssatz | Ab Stunde");
+      holidays.forEach((h: any) => {
+        contextParts.push(`${h.holiday_date} | ${h.name} | ${(h.surcharge_rate * 100).toFixed(0)}% | ${h.from_hour != null ? h.from_hour + ":00" : "ganztägig"}`);
+      });
+    }
+
     // Monthly summary BEFORE raw data
     contextParts.push("\n=== MONATLICHE ZUSAMMENFASSUNG (voraggregiert, alle verfügbaren Monate) ===");
     contextParts.push("Monat | Restaurant | Tage | Umsatz | Kreditkarten | OrderSmart | Wolt | Gutschein-VK | Gutschein-Einl | FineDine | Einladung | SoEinnahme | Gäste | Ausgaben | Vorschüsse | Küchen-TG-Gesamt");
