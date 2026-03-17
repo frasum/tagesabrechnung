@@ -91,6 +91,7 @@ export function DienstplanToolbar({ month, year, department, onMonthChange }: Di
       (thisWeekShifts || []).map(s => `${s.staff_id}_${s.shift_date}`)
     );
 
+    let skippedConflicts = 0;
     const newShifts = prevWeekShifts
       .map(s => {
         const oldDate = new Date(s.shift_date + 'T00:00:00');
@@ -100,6 +101,12 @@ export function DienstplanToolbar({ month, year, department, onMonthChange }: Di
         const key = `${s.staff_id}_${newDateStr}`;
 
         if (existingKeys.has(key)) return null;
+
+        // Skip if staff has cross-restaurant conflict
+        if (conflicts?.has(`${s.staff_id}-${newDateStr}`)) {
+          skippedConflicts++;
+          return null;
+        }
 
         return {
           staff_id: s.staff_id,
@@ -115,14 +122,21 @@ export function DienstplanToolbar({ month, year, department, onMonthChange }: Di
       .filter(Boolean) as any[];
 
     if (newShifts.length === 0) {
-      toast.info('Alle Tage der aktuellen Woche sind bereits belegt');
+      if (skippedConflicts > 0) {
+        toast.info(`${skippedConflicts} Schichten wegen Standort-Konflikten übersprungen`);
+      } else {
+        toast.info('Alle Tage der aktuellen Woche sind bereits belegt');
+      }
       return;
     }
 
     setCopying(true);
     batchInsert.mutate(newShifts, {
       onSuccess: () => {
-        toast.success(`${newShifts.length} Schichten aus Vorwoche kopiert`);
+        const msg = skippedConflicts > 0
+          ? `${newShifts.length} Schichten kopiert, ${skippedConflicts} wegen Konflikten übersprungen`
+          : `${newShifts.length} Schichten aus Vorwoche kopiert`;
+        toast.success(msg);
         setCopying(false);
       },
       onError: () => {

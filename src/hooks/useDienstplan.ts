@@ -193,6 +193,7 @@ export function useBatchInsertShifts() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shift_assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['conflicting_shifts'] });
     },
   });
 }
