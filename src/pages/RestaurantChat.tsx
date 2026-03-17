@@ -141,8 +141,21 @@ export default function RestaurantChat() {
         }
       }
     } catch (e: any) {
-      console.error('Chat error:', e);
-      toast({
+      if (e.name === 'AbortError') {
+        console.error('Chat timeout after 120s');
+        toast({
+          title: 'Zeitüberschreitung',
+          description: 'Die Anfrage hat zu lange gedauert. Bitte versuche es erneut.',
+          variant: 'destructive',
+        });
+      } else {
+        console.error('Chat error:', e);
+        toast({
+          title: 'Chat-Fehler',
+          description: e.message || 'Verbindung fehlgeschlagen',
+          variant: 'destructive',
+        });
+      }
         title: 'Chat-Fehler',
         description: e.message || 'Verbindung fehlgeschlagen',
         variant: 'destructive',
