@@ -143,14 +143,21 @@ Deno.serve(async (req) => {
       ]);
     }
 
-    // Load ALL zt_shifts (90 days) for comprehensive workforce data
+    // Load zt_shifts limited to last 6 months for performance
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const sixMonthsAgoStr = sixMonthsAgo.toISOString().split("T")[0];
+
     const allStaffIds = (staffRes.data || []).map((s: any) => s.id);
     let ztShifts: any[] = [];
     if (allStaffIds.length > 0) {
-      ztShifts = await batchIn(supabase, "zt_shifts",
-        "employee_id, shift_date, total_hours, evening_hours, night_hours, night_deep_hours, sunday_holiday_hours, is_holiday, department, absence_type",
-        "employee_id", allStaffIds);
-      // No date filter — load all zt_shifts for full historical aggregations
+      const { data: ztData } = await supabase
+        .from("zt_shifts")
+        .select("employee_id, shift_date, total_hours, evening_hours, night_hours, night_deep_hours, sunday_holiday_hours, is_holiday, department, absence_type")
+        .gte("shift_date", sixMonthsAgoStr)
+        .order("shift_date", { ascending: false })
+        .limit(10000);
+      ztShifts = ztData || [];
     }
 
     // Separate service staff IDs for commission calculation
