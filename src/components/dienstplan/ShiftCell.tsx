@@ -79,6 +79,7 @@ export const ShiftCell = forwardRef<HTMLTableCellElement, ShiftCellProps>(({
   // Absence cell
   if (absenceType && !shift) {
     const isVacation = absenceType === 'vacation';
+    const absBg = isVacation ? absColors.vacation : absColors.sick;
     return (
       <td
         ref={ref}
@@ -86,9 +87,9 @@ export const ShiftCell = forwardRef<HTMLTableCellElement, ShiftCellProps>(({
         title={conflictTitle}
         className={cn(
           'text-center text-xs font-semibold p-1 min-w-[52px] cursor-pointer border border-border/50 relative',
-          isVacation ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800',
           focusRing, conflictStyle
         )}
+        style={{ backgroundColor: absBg + '30', color: absBg }}
       >
         {isVacation ? 'U' : 'K'}
         {isBirthday && <Tooltip><TooltipTrigger asChild><Cake className="absolute bottom-0.5 left-0.5 w-3 h-3 text-pink-500 cursor-default" /></TooltipTrigger><TooltipContent side="top" className="text-xs">{birthdayLabel}</TooltipContent></Tooltip>}
