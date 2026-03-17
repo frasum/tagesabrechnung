@@ -1,49 +1,57 @@
 
-## Dienstplan – 2 Pläne pro Standort (Küche + Service/GL)
 
-### Status: ✅ Implementiert
+## Fehlzeiten als Paint-Modus im Küchenplan
 
-### Was wurde gebaut
+### Konzept
 
-- **Datenbank**: 4 neue Tabellen (`skills`, `employee_skills`, `shift_assignments`, `absences`) + `contracted_hours_per_month` auf `staff`
-- **7 Seed-Skills**: VS, PASS, SPÜLEN, CO (Küche), SERVICE, BAR (Service), GL
-- **Routing**: `/:restaurant/dienstplan/kueche` und `/:restaurant/dienstplan/service`
-- **Sidebar**: "Dienstplan" unter Tagesgeschäft
-- **Grid-UI**: Monatsansicht mit Skill-farbcodierten Zellen, Inline-Edit via Popover, Skill-Besetzungszeile (Küche)
-- **Hooks**: `useSkills`, `useDienstplan` für CRUD
+Urlaub und Krank werden wie die Skill-Buttons als Paint-Modi in die ToggleGroup integriert. Klickt man nach Auswahl auf eine Grid-Zelle, öffnet sich ein kleines Popover mit Von/Bis-Datumswahl (vorausgefüllt mit dem geklickten Datum). Nach "Speichern" wird die Abwesenheit über `useUpsertAbsence` geschrieben.
 
-## Küchenplan Dual-View mit Paint-Mode
+### Änderungen
 
-### Status: ✅ Implementiert
+**1. `src/pages/KuechePlan.tsx`** — Zwei neue ToggleGroupItems hinzufügen
 
-### Was wurde gebaut
+- `__vacation` (amber) und `__sick` (rot) als Werte in die bestehende ToggleGroup
+- `handleSkillToggle` erweitern: bei `__vacation`/`__sick` wird ein neuer State `absencePaintType` gesetzt (`'vacation' | 'sick' | null`), Skill/Delete deaktiviert
+- Neuer State: `absencePaintType`
+- An `MonthlyGrid` weitreichen: neue Prop `paintAbsenceType`
+- Indicator-Bar: Farbe amber für Urlaub, rot für Krank, Text "Urlaub" / "Krank"
+- Hilfetext: "Klick = Abwesenheit eintragen"
 
-- **Neue Route** `/kueche-plan` (Admin-only, globale Route ohne Restaurant-Kontext)
-- **Seite** `src/pages/KuechePlan.tsx`: Zeigt beide Restaurants (Spicery + YUM) untereinander mit je einem MonthlyGrid
-- **Paint-Mode Toolbar**: Küchen-Skills (VS, PASS, SPÜLEN, CO) als farbige ToggleGroup-Buttons + Löschen-Button
-- **MonthlyGrid erweitert**: Neue Props `restaurantIdOverride`, `activeSkillId`, `deleteMode`
-- **ShiftCell erweitert**: Paint-Mode — Klick auf leere Zelle weist aktiven Skill zu, Klick auf belegte Zelle löscht sie
-- **Navigation**: "Küchenplan" unter Planung in GlobalLayout-Sidebar
-- **Konflikterkennung**: Amber-Marker bei Doppelbelegung über Standorte hinweg
+**2. `src/components/dienstplan/MonthlyGrid.tsx`** — Neue Prop durchreichen
 
-### Nächste Schritte
+- Neue Prop `paintAbsenceType?: 'vacation' | 'sick' | null`
+- An `ShiftCell` als neue Prop `paintAbsenceType` weitergeben
 
-- Employee-Skills zuweisen (UI in Mitarbeiterverwaltung)
-- AbsenceDialog für mehrtägige Abwesenheiten
+**3. `src/components/dienstplan/ShiftCell.tsx`** — Absence-Paint-Modus
 
-## Datenbankarchitektur-Optimierung für Skalierbarkeit
+- Neue Prop `paintAbsenceType?: 'vacation' | 'sick' | null`
+- Wenn `paintAbsenceType` gesetzt: Klick auf leere Zelle öffnet ein Popover mit:
+  - Start-Datum (vorausgefüllt mit dem Zellen-Datum)
+  - End-Datum (vorausgefüllt mit dem Zellen-Datum, für einen einzelnen Tag)
+  - Speichern-Button → ruft `useUpsertAbsence` auf
+- Klick auf bestehende Absence-Zelle → öffnet gleiches Popover zum Bearbeiten (Daten vorausgefüllt)
+- Kein separater Dialog nötig, alles inline im Popover
+- Visuell: Zelle zeigt im Hover amber/rot Hintergrund je nach Typ
 
-### Status: ✅ Implementiert
+### UI im Popover (kompakt)
 
-### Was wurde gebaut
+```text
+┌─────────────────────┐
+│  🏖️ Urlaub          │
+│  Von: [15.03.26]    │
+│  Bis: [15.03.26]    │
+│  [Speichern]        │
+└─────────────────────┘
+```
 
-- **5 Indexes**: `idx_zt_shifts_week`, `idx_zt_shifts_date`, `idx_sessions_date`, `idx_kitchen_shifts_staff`, `idx_waiter_shifts_staff`
-- **Cleanup-Funktion**: `cleanup_old_records()` löscht login_confirmations (>7d) und auth_attempts (>90d)
-- **pg_cron Job**: Cleanup täglich um 3:00 Uhr
-- **Materialized View**: `mv_daily_summary` mit täglichen Zusammenfassungen (Umsatz, Gäste, Kellner, Stunden, Ausgaben)
-- **pg_cron Job**: View-Refresh täglich um 4:00 Uhr (`REFRESH MATERIALIZED VIEW CONCURRENTLY`)
-- **Sicherheit**: Öffentlicher API-Zugriff auf View gesperrt (nur service_role)
+Zwei Calendar-Popovers innerhalb des ShiftCell-Popovers (wie in AbsenceDialog).
 
-### Nächste Schritte
+### Technische Details
 
-- AI-Chat auf `mv_daily_summary` umstellen wenn Performance-Probleme bei >1.000 Sessions auftreten
+- `isPaintMode` in ShiftCell wird erweitert: `!!(paintSkillId || paintDeleteMode || paintAbsenceType)`
+- Beim Absence-Paint wird statt eines direkten Klick-Handlers ein Popover geöffnet (da Datumseingabe nötig)
+- `useUpsertAbsence` wird direkt in ShiftCell verwendet
+- Start-Datum default = Zellen-Datum, End-Datum default = Zellen-Datum (für einen Tag reicht ein Klick + Speichern)
+
+4 Dateien betroffen: KuechePlan.tsx, MonthlyGrid.tsx, ShiftCell.tsx (+ MonthlyGrid Props Interface)
+
