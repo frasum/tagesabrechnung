@@ -958,7 +958,7 @@ Wichtige Regeln:
             { role: "system", content: systemPrompt },
             ...messages,
           ],
-          stream: true,
+          stream: false,
         }),
       }
     );
@@ -984,9 +984,13 @@ Wichtige Regeln:
       );
     }
 
-    return new Response(aiResponse.body, {
-      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-    });
+    const aiData = await aiResponse.json();
+    const content = aiData?.choices?.[0]?.message?.content;
+
+    return new Response(
+      JSON.stringify({ content: typeof content === "string" ? content : "Keine Antwort erhalten." }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   } catch (e) {
     console.error("restaurant-chat error:", e);
     return new Response(

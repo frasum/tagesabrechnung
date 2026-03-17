@@ -90,6 +90,19 @@ export default function RestaurantChat() {
         throw new Error(errData.error || `Fehler ${resp.status}`);
       }
 
+      const contentType = resp.headers.get('content-type') || '';
+
+      if (contentType.includes('application/json')) {
+        const data = await resp.json().catch(() => null);
+        const content = data?.content;
+        if (content && typeof content === 'string') {
+          upsertAssistant(content);
+        } else {
+          throw new Error('Keine Antwort erhalten');
+        }
+        return;
+      }
+
       if (!resp.body) throw new Error('Kein Stream verfügbar');
 
       const reader = resp.body.getReader();
@@ -124,7 +137,6 @@ export default function RestaurantChat() {
         }
       }
 
-      // Final flush
       if (textBuffer.trim()) {
         for (let raw of textBuffer.split('\n')) {
           if (!raw) continue;
