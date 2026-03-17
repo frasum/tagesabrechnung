@@ -66,19 +66,7 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
         className={linkClasses('/permissions')}
       >
         <Shield className={iconClasses('/permissions')} />
-        Berechtigungen
-      </Link>
-      <div className="h-px bg-sidebar-border my-3" />
-      <p className="text-xs uppercase tracking-wider text-muted-foreground px-3 mb-2">
-        Planung
-      </p>
-      <Link
-        to="/kueche-plan"
-        onClick={onClickLink}
-        className={linkClasses('/kueche-plan')}
-      >
-        <ChefHat className={iconClasses('/kueche-plan')} />
-        Küchenplan
+      Berechtigungen
       </Link>
     </>
   );
