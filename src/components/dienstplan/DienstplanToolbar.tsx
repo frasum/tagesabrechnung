@@ -24,29 +24,13 @@ function formatPeriodLabel(month0: number, year: number) {
   return `${monthNames[month0]} ${year} (${fmt(start)}–${fmt(end)}${end.getFullYear()})`;
 }
 
-function getCurrentWeekDates(): { thisWeekStart: Date; prevWeekStart: Date; prevWeekEnd: Date; thisWeekEnd: Date } {
-  const today = new Date();
-  const dayOfWeek = today.getDay();
-  // Monday-based week
-  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-  const thisWeekStart = new Date(today);
-  thisWeekStart.setDate(today.getDate() + mondayOffset);
-  thisWeekStart.setHours(0, 0, 0, 0);
-
-  const thisWeekEnd = new Date(thisWeekStart);
-  thisWeekEnd.setDate(thisWeekStart.getDate() + 6);
-
-  const prevWeekStart = new Date(thisWeekStart);
-  prevWeekStart.setDate(thisWeekStart.getDate() - 7);
-
-  const prevWeekEnd = new Date(thisWeekStart);
-  prevWeekEnd.setDate(thisWeekStart.getDate() - 1);
-
-  return { thisWeekStart, thisWeekEnd, prevWeekStart, prevWeekEnd };
-}
-
 function toDateStr(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function getPrevMonth(month0: number, year: number): { month: number; year: number } {
+  if (month0 === 0) return { month: 11, year: year - 1 };
+  return { month: month0 - 1, year };
 }
 
 export function DienstplanToolbar({ month, year, department, onMonthChange }: DienstplanToolbarProps) {
@@ -54,55 +38,69 @@ export function DienstplanToolbar({ month, year, department, onMonthChange }: Di
   const [copying, setCopying] = useState(false);
   const batchInsert = useBatchInsertShifts();
 
-  const { thisWeekStart, thisWeekEnd, prevWeekStart, prevWeekEnd } = getCurrentWeekDates();
-  const prevStart = toDateStr(prevWeekStart);
-  const prevEnd = toDateStr(prevWeekEnd);
-  const thisStart = toDateStr(thisWeekStart);
-  const thisEnd = toDateStr(thisWeekEnd);
+  // Current period range (month is 0-indexed, getPeriodRange expects 1-indexed)
+  const currentPeriod = useMemo(() => getPeriodRange(month + 1, year), [month, year]);
+  const currentStart = toDateStr(currentPeriod.start);
+  const currentEnd = toDateStr(currentPeriod.end);
 
-  const { data: prevWeekShifts } = useShiftAssignments(department, prevStart, prevEnd);
-  const { data: thisWeekShifts } = useShiftAssignments(department, thisStart, thisEnd);
+  // Previous period range
+  const prev = getPrevMonth(month, year);
+  const prevPeriod = useMemo(() => getPeriodRange(prev.month + 1, prev.year), [prev.month, prev.year]);
+  const prevStart = toDateStr(prevPeriod.start);
+  const prevEnd = toDateStr(prevPeriod.end);
 
-  // Get unique staff IDs from previous week for conflict check
-  const prevWeekStaffIds = useMemo(() => {
-    if (!prevWeekShifts) return [];
-    return [...new Set(prevWeekShifts.map(s => s.staff_id))];
-  }, [prevWeekShifts]);
+  const { data: prevMonthShifts } = useShiftAssignments(department, prevStart, prevEnd);
+  const { data: currentMonthShifts } = useShiftAssignments(department, currentStart, currentEnd);
 
-  const { data: conflicts } = useConflictingShifts(restaurantId, prevWeekStaffIds, thisStart, thisEnd);
+  const prevMonthStaffIds = useMemo(() => {
+    if (!prevMonthShifts) return [];
+    return [...new Set(prevMonthShifts.map(s => s.staff_id))];
+  }, [prevMonthShifts]);
 
-  const prev = () => {
+  const { data: conflicts } = useConflictingShifts(restaurantId, prevMonthStaffIds, currentStart, currentEnd);
+
+  const handlePrev = () => {
     if (month === 0) onMonthChange(11, year - 1);
     else onMonthChange(month - 1, year);
   };
-  const next = () => {
+  const handleNext = () => {
     if (month === 11) onMonthChange(0, year + 1);
     else onMonthChange(month + 1, year);
   };
 
-  const handleCopyWeek = () => {
-    if (!prevWeekShifts || prevWeekShifts.length === 0) {
-      toast.error('Keine Schichten in der Vorwoche vorhanden');
+  const handleCopyMonth = () => {
+    if (!prevMonthShifts || prevMonthShifts.length === 0) {
+      toast.error('Keine Schichten im Vormonat vorhanden');
       return;
     }
 
-    // Calculate day offset (7 days forward)
     const existingKeys = new Set(
-      (thisWeekShifts || []).map(s => `${s.staff_id}_${s.shift_date}`)
+      (currentMonthShifts || []).map(s => `${s.staff_id}_${s.shift_date}`)
     );
 
+    const prevPeriodStartTime = prevPeriod.start.getTime();
+    const currentPeriodStartTime = currentPeriod.start.getTime();
+    const currentPeriodEndTime = currentPeriod.end.getTime();
+
     let skippedConflicts = 0;
-    const newShifts = prevWeekShifts
+    let skippedOutOfRange = 0;
+
+    const newShifts = prevMonthShifts
       .map(s => {
         const oldDate = new Date(s.shift_date + 'T00:00:00');
-        const newDate = new Date(oldDate);
-        newDate.setDate(oldDate.getDate() + 7);
+        const dayOffset = Math.round((oldDate.getTime() - prevPeriodStartTime) / (1000 * 60 * 60 * 24));
+        const newDate = new Date(currentPeriodStartTime + dayOffset * 24 * 60 * 60 * 1000);
+
+        if (newDate.getTime() > currentPeriodEndTime) {
+          skippedOutOfRange++;
+          return null;
+        }
+
         const newDateStr = toDateStr(newDate);
         const key = `${s.staff_id}_${newDateStr}`;
 
         if (existingKeys.has(key)) return null;
 
-        // Skip if staff has cross-restaurant conflict
         if (conflicts?.has(`${s.staff_id}-${newDateStr}`)) {
           skippedConflicts++;
           return null;
@@ -125,7 +123,7 @@ export function DienstplanToolbar({ month, year, department, onMonthChange }: Di
       if (skippedConflicts > 0) {
         toast.info(`${skippedConflicts} Schichten wegen Standort-Konflikten übersprungen`);
       } else {
-        toast.info('Alle Tage der aktuellen Woche sind bereits belegt');
+        toast.info('Alle Tage des aktuellen Monats sind bereits belegt');
       }
       return;
     }
@@ -133,10 +131,10 @@ export function DienstplanToolbar({ month, year, department, onMonthChange }: Di
     setCopying(true);
     batchInsert.mutate(newShifts, {
       onSuccess: () => {
-        const msg = skippedConflicts > 0
-          ? `${newShifts.length} Schichten kopiert, ${skippedConflicts} wegen Konflikten übersprungen`
-          : `${newShifts.length} Schichten aus Vorwoche kopiert`;
-        toast.success(msg);
+        const parts = [`${newShifts.length} Schichten aus Vormonat kopiert`];
+        if (skippedConflicts > 0) parts.push(`${skippedConflicts} wegen Konflikten übersprungen`);
+        if (skippedOutOfRange > 0) parts.push(`${skippedOutOfRange} außerhalb der Periode`);
+        toast.success(parts.join(', '));
         setCopying(false);
       },
       onError: () => {
@@ -148,24 +146,24 @@ export function DienstplanToolbar({ month, year, department, onMonthChange }: Di
 
   return (
     <div className="flex items-center gap-3 flex-wrap">
-      <Button variant="outline" size="icon" onClick={prev} className="h-8 w-8">
+      <Button variant="outline" size="icon" onClick={handlePrev} className="h-8 w-8">
         <ChevronLeft className="w-4 h-4" />
       </Button>
       <span className="text-sm font-semibold min-w-[220px] text-center">
         {formatPeriodLabel(month, year)}
       </span>
-      <Button variant="outline" size="icon" onClick={next} className="h-8 w-8">
+      <Button variant="outline" size="icon" onClick={handleNext} className="h-8 w-8">
         <ChevronRight className="w-4 h-4" />
       </Button>
       <Button
         variant="outline"
         size="sm"
-        onClick={handleCopyWeek}
-        disabled={copying || !prevWeekShifts || prevWeekShifts.length === 0}
+        onClick={handleCopyMonth}
+        disabled={copying || !prevMonthShifts || prevMonthShifts.length === 0}
         className="ml-auto h-8 text-xs gap-1.5"
       >
         <Copy className="w-3.5 h-3.5" />
-        Vorwoche kopieren
+        Vormonat kopieren
       </Button>
     </div>
   );
