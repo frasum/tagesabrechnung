@@ -53,16 +53,27 @@ export default function KuechePlan() {
     if (value === '__delete') {
       setDeleteMode(true);
       setActiveSkillId(null);
+      setAbsencePaintType(null);
+    } else if (value === '__vacation') {
+      setAbsencePaintType('vacation');
+      setActiveSkillId(null);
+      setDeleteMode(false);
+    } else if (value === '__sick') {
+      setAbsencePaintType('sick');
+      setActiveSkillId(null);
+      setDeleteMode(false);
     } else if (value) {
       setDeleteMode(false);
       setActiveSkillId(value);
+      setAbsencePaintType(null);
     } else {
       setDeleteMode(false);
       setActiveSkillId(null);
+      setAbsencePaintType(null);
     }
   };
 
-  const toggleValue = deleteMode ? '__delete' : (activeSkillId || '');
+  const toggleValue = deleteMode ? '__delete' : absencePaintType === 'vacation' ? '__vacation' : absencePaintType === 'sick' ? '__sick' : (activeSkillId || '');
 
   return (
     <GlobalLayout>
