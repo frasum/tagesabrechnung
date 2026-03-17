@@ -9,6 +9,7 @@ export type RestaurantEmployee = {
   last_name: string | null;
   nickname: string | null;
   department: string;
+  date_of_birth: string | null;
 };
 
 export function useRestaurantEmployees(restaurantId: string) {
@@ -17,7 +18,7 @@ export function useRestaurantEmployees(restaurantId: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("staff_restaurants")
-        .select("zt_department, staff_id, staff!inner(id, name, perso_nr, first_name, last_name, nickname, is_active)")
+        .select("zt_department, staff_id, staff!inner(id, name, perso_nr, first_name, last_name, nickname, is_active, date_of_birth)")
         .eq("restaurant_id", restaurantId)
         .not("zt_department", "is", null)
         .eq("staff.is_active", true);
@@ -31,6 +32,7 @@ export function useRestaurantEmployees(restaurantId: string) {
         last_name: row.staff.last_name,
         nickname: row.staff.nickname,
         department: row.zt_department,
+        date_of_birth: row.staff.date_of_birth,
       }));
     },
     enabled: !!restaurantId,

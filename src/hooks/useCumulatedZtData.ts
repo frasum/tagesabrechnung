@@ -100,6 +100,7 @@ export function useCumulatedZtData(
           last_name: row.staff.last_name,
           nickname: row.staff.nickname,
           department: row.zt_department,
+          date_of_birth: row.staff.date_of_birth ?? null,
         });
       }
       return result;

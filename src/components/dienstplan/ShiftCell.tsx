@@ -4,7 +4,7 @@ import { useUpsertShift, useDeleteShift, type ShiftAssignment } from '@/hooks/us
 import type { Skill } from '@/hooks/useSkills';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { X } from 'lucide-react';
+import { X, Cake } from 'lucide-react';
 
 interface ShiftCellProps {
   shift?: ShiftAssignment;
@@ -19,6 +19,7 @@ interface ShiftCellProps {
   isFocused?: boolean;
   isToday?: boolean;
   conflictRestaurant?: string;
+  isBirthday?: boolean;
 }
 
 export const ShiftCell = forwardRef<HTMLTableCellElement, ShiftCellProps>(({
@@ -34,6 +35,7 @@ export const ShiftCell = forwardRef<HTMLTableCellElement, ShiftCellProps>(({
   isFocused,
   isToday,
   conflictRestaurant,
+  isBirthday,
 }, ref) => {
   const [open, setOpen] = useState(false);
   const upsertShift = useUpsertShift();
@@ -70,6 +72,7 @@ export const ShiftCell = forwardRef<HTMLTableCellElement, ShiftCellProps>(({
         )}
       >
         {isVacation ? 'U' : 'K'}
+        {isBirthday && <Cake className="absolute bottom-0.5 left-0.5 w-3 h-3 text-pink-500" />}
         {conflictRestaurant && <span className="absolute top-0 right-0.5 text-[8px] text-amber-600">⚠</span>}
       </td>
     );
@@ -129,6 +132,7 @@ export const ShiftCell = forwardRef<HTMLTableCellElement, ShiftCellProps>(({
         >
           {shift ? '✓' : '+'}
         </button>
+        {isBirthday && <Cake className="absolute bottom-0.5 left-0.5 w-3 h-3 text-pink-500" />}
         {conflictRestaurant && <span className="absolute top-0 right-0.5 text-[8px] text-amber-600">⚠</span>}
       </td>
     );
@@ -164,6 +168,7 @@ export const ShiftCell = forwardRef<HTMLTableCellElement, ShiftCellProps>(({
             <span className="text-muted-foreground/40">+</span>
           )}
         </button>
+        {isBirthday && <Cake className="absolute bottom-0.5 left-0.5 w-3 h-3 text-pink-500" />}
         {conflictRestaurant && <span className="absolute top-0 right-0.5 text-[8px] text-amber-600">⚠</span>}
       </td>
     );
@@ -237,6 +242,7 @@ export const ShiftCell = forwardRef<HTMLTableCellElement, ShiftCellProps>(({
           </div>
         </PopoverContent>
       </Popover>
+      {isBirthday && <Cake className="absolute bottom-0.5 left-0.5 w-3 h-3 text-pink-500" />}
       {conflictRestaurant && <span className="absolute top-0 right-0.5 text-[8px] text-amber-600">⚠</span>}
     </td>
   );
