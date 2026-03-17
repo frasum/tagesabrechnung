@@ -20,6 +20,7 @@ interface ShiftCellProps {
   isToday?: boolean;
   conflictRestaurant?: string;
   isBirthday?: boolean;
+  birthdayLabel?: string;
 }
 
 export const ShiftCell = forwardRef<HTMLTableCellElement, ShiftCellProps>(({
