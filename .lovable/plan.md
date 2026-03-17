@@ -1,49 +1,67 @@
 
-## Dienstplan – 2 Pläne pro Standort (Küche + Service/GL)
 
-### Status: ✅ Implementiert
+## Skill-Farben Einstellungen
 
-### Was wurde gebaut
+### Ziel
+Eine neue Einstellungsseite unter "Verwaltung" für die individuelle Farbkonfiguration der Dienstplan-Buttons (Skills + Urlaub/Krank/Löschen).
 
-- **Datenbank**: 4 neue Tabellen (`skills`, `employee_skills`, `shift_assignments`, `absences`) + `contracted_hours_per_month` auf `staff`
-- **7 Seed-Skills**: VS, PASS, SPÜLEN, CO (Küche), SERVICE, BAR (Service), GL
-- **Routing**: `/:restaurant/dienstplan/kueche` und `/:restaurant/dienstplan/service`
-- **Sidebar**: "Dienstplan" unter Tagesgeschäft
-- **Grid-UI**: Monatsansicht mit Skill-farbcodierten Zellen, Inline-Edit via Popover, Skill-Besetzungszeile (Küche)
-- **Hooks**: `useSkills`, `useDienstplan` für CRUD
+### Änderungen
 
-## Küchenplan Dual-View mit Paint-Mode
+**1. Neue Komponente: `src/components/settings/SkillColorSettings.tsx`**
+- Zeigt alle Skills aus der `skills`-Tabelle mit ihrem aktuellen Farb-Swatch und einem Color-Picker (nativer `<input type="color">`)
+- Zusätzlich: Farbe für "Urlaub" und "Krank" (gespeichert in `settings`-Tabelle als `dienstplan_colors` Key, z.B. `{ vacation: "#f59e0b", sick: "#ef4444" }`)
+- Speichern-Button aktualisiert die `skills.color`-Spalte direkt per `supabase.from('skills').update({ color }).eq('id', skillId)`
+- Gruppiert nach Kategorie (Küche / Service / GL)
 
-### Status: ✅ Implementiert
+**2. Neuer Hook: `src/hooks/useDienstplanColors.ts`**
+- Liest/schreibt die Urlaub/Krank-Farben aus `settings`-Tabelle (Key `dienstplan_colors`, kein `restaurant_id` nötig — oder mit Restaurant-ID falls standortspezifisch gewünscht)
+- Default-Werte: `{ vacation: '#f59e0b', sick: '#ef4444' }`
 
-### Was wurde gebaut
+**3. Neue Seite: `src/pages/SkillSettings.tsx`**
+- Wrapper mit `GlobalLayout`, enthält `SkillColorSettings`
+- Titel: "Dienstplan-Farben"
 
-- **Neue Route** `/kueche-plan` (Admin-only, globale Route ohne Restaurant-Kontext)
-- **Seite** `src/pages/KuechePlan.tsx`: Zeigt beide Restaurants (Spicery + YUM) untereinander mit je einem MonthlyGrid
-- **Paint-Mode Toolbar**: Küchen-Skills (VS, PASS, SPÜLEN, CO) als farbige ToggleGroup-Buttons + Löschen-Button
-- **MonthlyGrid erweitert**: Neue Props `restaurantIdOverride`, `activeSkillId`, `deleteMode`
-- **ShiftCell erweitert**: Paint-Mode — Klick auf leere Zelle weist aktiven Skill zu, Klick auf belegte Zelle löscht sie
-- **Navigation**: "Küchenplan" unter Planung in GlobalLayout-Sidebar
-- **Konflikterkennung**: Amber-Marker bei Doppelbelegung über Standorte hinweg
+**4. `src/App.tsx`** — Neue Route
+- `/skill-settings` unter admin-geschützten globalen Routen
 
-### Nächste Schritte
+**5. `src/components/layout/AppLayout.tsx`** — Nav-Eintrag
+- Neuer Eintrag in `adminNavItems`: `{ path: '/skill-settings', label: 'Farben', icon: Palette, minLevel: 'admin' }`
+- Zur Gruppe "Verwaltung" hinzufügen
 
-- Employee-Skills zuweisen (UI in Mitarbeiterverwaltung)
-- AbsenceDialog für mehrtägige Abwesenheiten
+**6. `src/components/dienstplan/DienstplanPaintToolbar.tsx`** — Farben aus Settings verwenden
+- `useDienstplanColors()` einbinden
+- Hardcoded `#f59e0b` (Urlaub) und `#ef4444` (Krank) durch dynamische Werte ersetzen
+- Skill-Farben kommen bereits aus der DB, brauchen keine Änderung
 
-## Datenbankarchitektur-Optimierung für Skalierbarkeit
+**7. `src/components/dienstplan/ShiftCell.tsx`** — Gleiche Anpassung
+- Urlaub/Krank-Farben im Absence-Popover und Hover dynamisch machen
 
-### Status: ✅ Implementiert
+### UI-Skizze
 
-### Was wurde gebaut
+```text
+┌──────────────────────────────────────┐
+│  🎨 Dienstplan-Farben                │
+│                                      │
+│  Küche                               │
+│  ■ GRILL     [#e53e3e]  [Picker]     │
+│  ■ SUSHI     [#3182ce]  [Picker]     │
+│                                      │
+│  Service                             │
+│  ■ SERVICE   [#38a169]  [Picker]     │
+│  ■ BAR       [#d69e2e]  [Picker]     │
+│                                      │
+│  Abwesenheiten                       │
+│  ■ Urlaub    [#f59e0b]  [Picker]     │
+│  ■ Krank     [#ef4444]  [Picker]     │
+│                                      │
+│  [Speichern]                         │
+└──────────────────────────────────────┘
+```
 
-- **5 Indexes**: `idx_zt_shifts_week`, `idx_zt_shifts_date`, `idx_sessions_date`, `idx_kitchen_shifts_staff`, `idx_waiter_shifts_staff`
-- **Cleanup-Funktion**: `cleanup_old_records()` löscht login_confirmations (>7d) und auth_attempts (>90d)
-- **pg_cron Job**: Cleanup täglich um 3:00 Uhr
-- **Materialized View**: `mv_daily_summary` mit täglichen Zusammenfassungen (Umsatz, Gäste, Kellner, Stunden, Ausgaben)
-- **pg_cron Job**: View-Refresh täglich um 4:00 Uhr (`REFRESH MATERIALIZED VIEW CONCURRENTLY`)
-- **Sicherheit**: Öffentlicher API-Zugriff auf View gesperrt (nur service_role)
+### Technische Details
+- Skill-Farben: direkt in `skills`-Tabelle (existiert bereits)
+- Abwesenheits-Farben: in `settings`-Tabelle mit Key `dienstplan_colors` (kein DB-Migration nötig, `settings`-Tabelle existiert bereits)
+- Kein neues DB-Schema erforderlich
 
-### Nächste Schritte
+6 Dateien: 2 neue (Seite + Hook), 4 bestehende anpassen (App.tsx, AppLayout, PaintToolbar, ShiftCell)
 
-- AI-Chat auf `mv_daily_summary` umstellen wenn Performance-Probleme bei >1.000 Sessions auftreten
