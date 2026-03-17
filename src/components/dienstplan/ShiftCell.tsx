@@ -18,6 +18,7 @@ interface ShiftCellProps {
   onAbsence?: () => void;
   isFocused?: boolean;
   isToday?: boolean;
+  conflictRestaurant?: string;
 }
 
 export const ShiftCell = forwardRef<HTMLTableCellElement, ShiftCellProps>(({

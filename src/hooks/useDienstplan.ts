@@ -153,6 +153,32 @@ export function useDeleteAbsence() {
   });
 }
 
+export function useConflictingShifts(restaurantId: string, staffIds: string[], startDate: string, endDate: string) {
+  return useQuery({
+    queryKey: ['conflicting_shifts', restaurantId, staffIds, startDate, endDate],
+    queryFn: async () => {
+      if (staffIds.length === 0) return new Map<string, string>();
+      const { data, error } = await supabase
+        .from('shift_assignments')
+        .select('staff_id, shift_date, restaurants(name)')
+        .in('staff_id', staffIds)
+        .neq('restaurant_id', restaurantId)
+        .gte('shift_date', startDate)
+        .lte('shift_date', endDate);
+      if (error) throw error;
+      const map = new Map<string, string>();
+      for (const row of data || []) {
+        const r = row.restaurants as unknown as { name: string } | null;
+        if (r?.name) {
+          map.set(`${row.staff_id}-${row.shift_date}`, r.name);
+        }
+      }
+      return map;
+    },
+    enabled: !!restaurantId && staffIds.length > 0,
+  });
+}
+
 export function useBatchInsertShifts() {
   const queryClient = useQueryClient();
 
