@@ -6,7 +6,7 @@ import { useSkills } from '@/hooks/useSkills';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
 import { Button } from '@/components/ui/button';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Palmtree, Thermometer } from 'lucide-react';
 import { getPeriodRange } from '@/lib/periodUtils';
 
 const monthNames = [
