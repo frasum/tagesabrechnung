@@ -14,6 +14,7 @@ export interface TelegramSettings {
   show_kitchen: boolean;
   show_pdf_export_notification: boolean;
   show_notes: boolean;
+  report_time: string;
 }
 
 export function useTelegramSettings() {
