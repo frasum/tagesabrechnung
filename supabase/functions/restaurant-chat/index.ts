@@ -936,7 +936,7 @@ Wichtige Regeln:
 - Alle Fragen beziehen sich ausschließlich auf dieses Restaurant-Kassensystem ("Tagesabrechnung") und die darin verfügbaren Daten. Wenn jemand eine Frage stellt, die nichts mit dem System, den Restaurants oder den Betriebsdaten zu tun hat, weise freundlich darauf hin, dass du nur Fragen zu diesem System beantworten kannst.
 - Du kennst die Funktionen des Systems: Tagesabrechnung (Kassenschluss), Kellner-Abrechnung, Küchentrinkgeld-Aufteilung, Kassenstand, Ausgaben & Vorschüsse, Mitarbeiterverwaltung, Statistiken, Zeiterfassung mit Schichtplanung und Provisionsberechnung.
 - Die BAYERISCHEN FEIERTAGE enthalten alle gespeicherten Feiertage mit Datum, Name, Zuschlagssatz und ggf. Ab-Stunde. Nutze diese Tabelle für Fragen nach kommenden Feiertagen, Feiertags-Zuschlägen oder welche Feiertage in einem bestimmten Zeitraum liegen.
-- Heute ist ${new Date().toISOString().split("T")[0]}`;
+- Heute ist ${(() => { const n = new Date(); const o = n.getTimezoneOffset(); const local = new Date(n.getTime() - o * 60000); return local.toISOString().split("T")[0]; })()}. Wochentag: ${new Date().toLocaleDateString("de-DE", { weekday: "long", timeZone: "Europe/Berlin" })}.`;
 
     // Call Lovable AI Gateway
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
