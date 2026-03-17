@@ -312,5 +312,6 @@ export function MonthlyGrid({ department, month, year }: MonthlyGridProps) {
         />
       )}
     </div>
+    </TooltipProvider>
   );
 }
