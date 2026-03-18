@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useSkills } from '@/hooks/useSkills';
 import { useDienstplanColors } from '@/hooks/useDienstplanColors';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,6 +13,7 @@ interface SkillColorSettingsProps {
 }
 
 export function SkillColorSettings({ restaurantId }: SkillColorSettingsProps) {
+  const queryClient = useQueryClient();
   const { data: skills = [], isLoading: loadingSkills } = useSkills();
   const { colors: absenceColors, isLoading: loadingColors, saveColors, isSaving } = useDienstplanColors();
 
@@ -60,6 +62,9 @@ export function SkillColorSettings({ restaurantId }: SkillColorSettingsProps) {
 
       // Save absence colors
       await saveColors({ colors: { vacation: vacationColor, sick: sickColor }, restaurantId });
+
+      // Invalidate skills cache so other components pick up new colors
+      queryClient.invalidateQueries({ queryKey: ['skills'] });
 
       toast.success('Farben gespeichert');
     } catch {
