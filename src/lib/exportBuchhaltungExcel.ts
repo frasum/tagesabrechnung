@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx";
+import type * as XLSXType from "xlsx";
 import { DEPARTMENT_ORDER, countVacationDays, countSickDays, formatHours, getSickDateRanges, getVacationDateRanges, formatSickRanges, effectiveEveningHours, effectiveNightHours } from "./shiftCalculations";
 import type { SfnMode } from "@/hooks/useSfnMode";
 
@@ -50,7 +50,7 @@ function computeSfn(empShifts: Shift[], additive: boolean, holidayRates?: Map<st
   };
 }
 
-export function exportBuchhaltungExcel(
+export async function exportBuchhaltungExcel(
   periodLabel: string,
   employees: Employee[],
   shifts: Shift[],
@@ -59,6 +59,7 @@ export function exportBuchhaltungExcel(
   holidayRates?: Map<string, number>,
   commissionMap?: Map<string, number>
 ) {
+  const XLSX: typeof XLSXType = await import("xlsx") as any;
   const additive = sfnMode === "extended";
 
   const sorted = [...employees].sort((a, b) => {

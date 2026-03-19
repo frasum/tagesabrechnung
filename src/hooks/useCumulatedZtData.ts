@@ -31,7 +31,7 @@ export function useCumulatedZtData(
       if (!selectedPeriod) return [];
       const { data, error } = await supabase
         .from("scheduling_periods")
-        .select("*")
+        .select("id, label, start_date, end_date, status, restaurant_id")
         .eq("start_date", selectedPeriod.start_date)
         .eq("end_date", selectedPeriod.end_date);
       if (error) throw error;
@@ -49,7 +49,7 @@ export function useCumulatedZtData(
       if (!allPeriodIds.length) return [];
       const { data, error } = await supabase
         .from("weeks")
-        .select("*")
+        .select("id, period_id, week_number, start_date, end_date")
         .in("period_id", allPeriodIds)
         .order("week_number");
       if (error) throw error;
@@ -67,7 +67,7 @@ export function useCumulatedZtData(
       if (!weekIds.length) return [];
       const { data, error } = await supabase
         .from("zt_shifts")
-        .select("*")
+        .select("id, week_id, employee_id, shift_date, start_time, end_time, total_hours, evening_hours, night_hours, night_deep_hours, sunday_holiday_hours, is_holiday, absence_type, department")
         .in("week_id", weekIds);
       if (error) throw error;
       return data;
@@ -115,7 +115,7 @@ export function useCumulatedZtData(
       if (!allPeriodIds.length) return [];
       const { data, error } = await supabase
         .from("payroll_notes")
-        .select("*")
+        .select("id, employee_id, period_id, vorschuss, urlaub_tage, besonderheiten")
         .in("period_id", allPeriodIds);
       if (error) throw error;
       return data;

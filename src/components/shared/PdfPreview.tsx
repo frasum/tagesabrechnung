@@ -1,13 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import * as pdfjs from "pdfjs-dist";
-import workerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import type * as pdfjsTypes from "pdfjs-dist";
 import { Minus, Plus, Printer } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+let pdfjsLib: typeof pdfjsTypes | null = null;
+
+async function getPdfjs() {
+  if (pdfjsLib) return pdfjsLib;
+  const pdfjs = await import("pdfjs-dist");
+  const workerSrc = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
+  pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+  pdfjsLib = pdfjs;
+  return pdfjs;
+}
 
 type PdfPreviewProps = {
   blobUrl: string;
@@ -16,7 +24,7 @@ type PdfPreviewProps = {
 };
 
 export function PdfPreview({ blobUrl, className, fileName }: PdfPreviewProps) {
-  const [doc, setDoc] = useState<pdfjs.PDFDocumentProxy | null>(null);
+  const [doc, setDoc] = useState<pdfjsTypes.PDFDocumentProxy | null>(null);
   const [numPages, setNumPages] = useState(0);
   const [scale, setScale] = useState(1.1);
   const [loading, setLoading] = useState(true);
@@ -33,6 +41,7 @@ export function PdfPreview({ blobUrl, className, fileName }: PdfPreviewProps) {
 
     (async () => {
       try {
+        const pdfjs = await getPdfjs();
         const res = await fetch(blobUrl);
         const data = await res.arrayBuffer();
 
@@ -195,7 +204,7 @@ export function PdfPreview({ blobUrl, className, fileName }: PdfPreviewProps) {
 }
 
 type PdfPageProps = {
-  pdf: pdfjs.PDFDocumentProxy;
+  pdf: pdfjsTypes.PDFDocumentProxy;
   pageNumber: number;
   scale: number;
   onCanvasReady: (pageNumber: number, canvas: HTMLCanvasElement | null) => void;
