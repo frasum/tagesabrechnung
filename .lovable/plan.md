@@ -1,49 +1,45 @@
 
-## Dienstplan – 2 Pläne pro Standort (Küche + Service/GL)
 
-### Status: ✅ Implementiert
+## Code-Review: Produktionsfähigkeit
 
-### Was wurde gebaut
+Nach Prüfung aller relevanten Dateien (Paint-Modus, Farbeinstellungen, Hooks, Routing, Layouts) ist der Code **grundsätzlich produktionsfähig**. Es gibt allerdings **zwei Probleme**, die behoben werden sollten:
 
-- **Datenbank**: 4 neue Tabellen (`skills`, `employee_skills`, `shift_assignments`, `absences`) + `contracted_hours_per_month` auf `staff`
-- **7 Seed-Skills**: VS, PASS, SPÜLEN, CO (Küche), SERVICE, BAR (Service), GL
-- **Routing**: `/:restaurant/dienstplan/kueche` und `/:restaurant/dienstplan/service`
-- **Sidebar**: "Dienstplan" unter Tagesgeschäft
-- **Grid-UI**: Monatsansicht mit Skill-farbcodierten Zellen, Inline-Edit via Popover, Skill-Besetzungszeile (Küche)
-- **Hooks**: `useSkills`, `useDienstplan` für CRUD
+---
 
-## Küchenplan Dual-View mit Paint-Mode
+### Problem 1: Read/Write-Inkonsistenz bei `dienstplan_colors`
 
-### Status: ✅ Implementiert
+**`useDienstplanColors` liest OHNE `restaurant_id`-Filter**, speichert aber MIT `restaurant_id`. Das bedeutet:
+- Beim Lesen wird `limit(1).maybeSingle()` ohne Filter auf `restaurant_id` verwendet → es wird ein zufälliger Eintrag zurückgegeben, falls mehrere Restaurants existieren
+- Beim Schreiben wird korrekt nach `restaurant_id` gefiltert
 
-### Was wurde gebaut
+**Fix:** Den Read-Query ebenfalls mit `restaurant_id` filtern, oder — da die Farben global gelten sollen — beim Lesen konsistent den gleichen Restaurant-Eintrag verwenden.
 
-- **Neue Route** `/kueche-plan` (Admin-only, globale Route ohne Restaurant-Kontext)
-- **Seite** `src/pages/KuechePlan.tsx`: Zeigt beide Restaurants (Spicery + YUM) untereinander mit je einem MonthlyGrid
-- **Paint-Mode Toolbar**: Küchen-Skills (VS, PASS, SPÜLEN, CO) als farbige ToggleGroup-Buttons + Löschen-Button
-- **MonthlyGrid erweitert**: Neue Props `restaurantIdOverride`, `activeSkillId`, `deleteMode`
-- **ShiftCell erweitert**: Paint-Mode — Klick auf leere Zelle weist aktiven Skill zu, Klick auf belegte Zelle löscht sie
-- **Navigation**: "Küchenplan" unter Planung in GlobalLayout-Sidebar
-- **Konflikterkennung**: Amber-Marker bei Doppelbelegung über Standorte hinweg
+**Empfohlener Ansatz:** Da die Farben nicht restaurantspezifisch sein sollen, den Read-Query mit `.eq('key', SETTINGS_KEY).limit(1).maybeSingle()` belassen, aber das Upsert so anpassen, dass es beim Update ebenfalls nur nach `key` filtert (ohne `restaurant_id`), damit Read und Write denselben Datensatz treffen.
 
-### Nächste Schritte
+---
 
-- Employee-Skills zuweisen (UI in Mitarbeiterverwaltung)
-- AbsenceDialog für mehrtägige Abwesenheiten
+### Problem 2: `SkillSettings.tsx` — Kein Fallback wenn `restaurantId` leer ist
 
-## Datenbankarchitektur-Optimierung für Skalierbarkeit
+Die Seite zeigt **nichts an** wenn `restaurants` noch laden oder leer sind. Kein Loading-State, keine Fehlermeldung.
 
-### Status: ✅ Implementiert
+**Fix:** Loading-Spinner und Fallback-Text hinzufügen.
 
-### Was wurde gebaut
+---
 
-- **5 Indexes**: `idx_zt_shifts_week`, `idx_zt_shifts_date`, `idx_sessions_date`, `idx_kitchen_shifts_staff`, `idx_waiter_shifts_staff`
-- **Cleanup-Funktion**: `cleanup_old_records()` löscht login_confirmations (>7d) und auth_attempts (>90d)
-- **pg_cron Job**: Cleanup täglich um 3:00 Uhr
-- **Materialized View**: `mv_daily_summary` mit täglichen Zusammenfassungen (Umsatz, Gäste, Kellner, Stunden, Ausgaben)
-- **pg_cron Job**: View-Refresh täglich um 4:00 Uhr (`REFRESH MATERIALIZED VIEW CONCURRENTLY`)
-- **Sicherheit**: Öffentlicher API-Zugriff auf View gesperrt (nur service_role)
+### Kein Problem (bestätigt korrekt):
+- Paint-Toolbar, ShiftCell, MonthlyGrid: sauber integriert
+- Cache-Invalidierung nach Speichern: korrekt (`skills` + `dienstplan_colors`)
+- Routing und ProtectedRoute: korrekt konfiguriert
+- RLS-Policies: `skills` und `settings` haben offene Policies — passend für diese Admin-Funktion
+- Keine Console-Errors
 
-### Nächste Schritte
+### Änderungen
 
-- AI-Chat auf `mv_daily_summary` umstellen wenn Performance-Probleme bei >1.000 Sessions auftreten
+**1. `src/hooks/useDienstplanColors.ts`**
+- Read und Write konsistent machen: beim Upsert nur nach `key` suchen (ohne `restaurant_id`), damit der gelesene und geschriebene Datensatz identisch sind
+
+**2. `src/pages/SkillSettings.tsx`**
+- Loading-State hinzufügen während Restaurants laden
+
+2 Dateien, minimale Änderungen.
+
