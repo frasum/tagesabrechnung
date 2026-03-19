@@ -1,10 +1,10 @@
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
 import { SkillColorSettings } from '@/components/settings/SkillColorSettings';
 import { useRestaurants } from '@/hooks/useRestaurant';
-import { Palette } from 'lucide-react';
+import { Palette, Loader2 } from 'lucide-react';
 
 export default function SkillSettings() {
-  const { data: restaurants = [] } = useRestaurants();
+  const { data: restaurants = [], isLoading } = useRestaurants();
   const restaurantId = restaurants[0]?.id ?? '';
 
   return (
@@ -17,7 +17,15 @@ export default function SkillSettings() {
         <p className="text-sm text-muted-foreground">
           Hier kannst du die Farben der Skill-Buttons und Abwesenheitsmarkierungen im Dienstplan individuell festlegen.
         </p>
-        {restaurantId && <SkillColorSettings restaurantId={restaurantId} />}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : restaurantId ? (
+          <SkillColorSettings restaurantId={restaurantId} />
+        ) : (
+          <p className="text-sm text-muted-foreground">Kein Restaurant gefunden.</p>
+        )}
       </div>
     </GlobalLayout>
   );

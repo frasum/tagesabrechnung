@@ -39,7 +39,7 @@ export function useDienstplanColors() {
         .from('settings')
         .select('id')
         .eq('key', SETTINGS_KEY)
-        .eq('restaurant_id', restaurantId)
+        .limit(1)
         .maybeSingle();
 
       const jsonValue = colors as unknown as import('@/integrations/supabase/types').Json;
