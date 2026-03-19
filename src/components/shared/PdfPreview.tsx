@@ -24,7 +24,7 @@ type PdfPreviewProps = {
 };
 
 export function PdfPreview({ blobUrl, className, fileName }: PdfPreviewProps) {
-  const [doc, setDoc] = useState<pdfjs.PDFDocumentProxy | null>(null);
+  const [doc, setDoc] = useState<pdfjsTypes.PDFDocumentProxy | null>(null);
   const [numPages, setNumPages] = useState(0);
   const [scale, setScale] = useState(1.1);
   const [loading, setLoading] = useState(true);
