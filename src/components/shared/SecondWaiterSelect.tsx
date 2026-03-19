@@ -1,3 +1,4 @@
+import { forwardRef } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useActiveStaff, useActiveStaffByRestaurant } from '@/hooks/useStaff';
 import { User, Users } from 'lucide-react';
@@ -11,14 +12,14 @@ interface SecondWaiterSelectProps {
   restaurantId?: string | null;
 }
 
-export function SecondWaiterSelect({ 
+export const SecondWaiterSelect = forwardRef<HTMLDivElement, SecondWaiterSelectProps>(function SecondWaiterSelect({ 
   value, 
   onValueChange, 
   excludeWaiter = '',
   placeholder = 'Keiner',
   disabled = false,
   restaurantId,
-}: SecondWaiterSelectProps) {
+}, ref) {
   const globalQuery = useActiveStaff(restaurantId ? undefined : 'waiter');
   const restaurantQuery = useActiveStaffByRestaurant(restaurantId ?? null, 'waiter');
   const { data: staffList = [], isLoading } = restaurantId ? restaurantQuery : globalQuery;
@@ -27,29 +28,31 @@ export function SecondWaiterSelect({
   const filteredStaff = staffList.filter(staff => staff.name !== excludeWaiter);
 
   return (
-    <Select value={value} onValueChange={onValueChange} disabled={disabled || isLoading}>
-      <SelectTrigger>
-        <div className="flex items-center gap-2">
-          <Users className="w-4 h-4 text-muted-foreground" />
-          <SelectValue placeholder={isLoading ? 'Laden...' : placeholder} />
-        </div>
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="none">
+    <div ref={ref}>
+      <Select value={value} onValueChange={onValueChange} disabled={disabled || isLoading}>
+        <SelectTrigger>
           <div className="flex items-center gap-2">
-            <User className="w-4 h-4 text-muted-foreground" />
-            2 Kollegen auf einen Schlüssel
+            <Users className="w-4 h-4 text-muted-foreground" />
+            <SelectValue placeholder={isLoading ? 'Laden...' : placeholder} />
           </div>
-        </SelectItem>
-        {filteredStaff.map((staff) => (
-          <SelectItem key={staff.id} value={staff.name}>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="none">
             <div className="flex items-center gap-2">
-              <User className="w-4 h-4" />
-              {staff.name}
+              <User className="w-4 h-4 text-muted-foreground" />
+              2 Kollegen auf einen Schlüssel
             </div>
           </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+          {filteredStaff.map((staff) => (
+            <SelectItem key={staff.id} value={staff.name}>
+              <div className="flex items-center gap-2">
+                <User className="w-4 h-4" />
+                {staff.name}
+              </div>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
-}
+});

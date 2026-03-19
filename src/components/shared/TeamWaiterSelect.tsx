@@ -1,3 +1,4 @@
+import { forwardRef } from 'react';
 import { useActiveStaff, useActiveStaffByRestaurant } from '@/hooks/useStaff';
 import { User, Users, X } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,13 +12,13 @@ interface TeamWaiterSelectProps {
   restaurantId?: string | null;
 }
 
-export function TeamWaiterSelect({
+export const TeamWaiterSelect = forwardRef<HTMLDivElement, TeamWaiterSelectProps>(function TeamWaiterSelect({
   value,
   onValueChange,
   excludeWaiter = '',
   disabled = false,
   restaurantId,
-}: TeamWaiterSelectProps) {
+}, ref) {
   const globalQuery = useActiveStaff(restaurantId ? undefined : 'waiter');
   const restaurantQuery = useActiveStaffByRestaurant(restaurantId ?? null, 'waiter');
   const { data: staffList = [], isLoading } = restaurantId ? restaurantQuery : globalQuery;
@@ -38,7 +39,7 @@ export function TeamWaiterSelect({
   };
 
   return (
-    <div className="space-y-2">
+    <div ref={ref} className="space-y-2">
       {/* Selected team members */}
       {value.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
@@ -85,4 +86,4 @@ export function TeamWaiterSelect({
       )}
     </div>
   );
-}
+});
