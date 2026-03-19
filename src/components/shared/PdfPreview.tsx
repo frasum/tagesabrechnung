@@ -1,13 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import * as pdfjs from "pdfjs-dist";
-import workerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import type * as pdfjsTypes from "pdfjs-dist";
 import { Minus, Plus, Printer } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+let pdfjsLib: typeof pdfjsTypes | null = null;
+
+async function getPdfjs() {
+  if (pdfjsLib) return pdfjsLib;
+  const pdfjs = await import("pdfjs-dist");
+  const workerSrc = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
+  pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+  pdfjsLib = pdfjs;
+  return pdfjs;
+}
 
 type PdfPreviewProps = {
   blobUrl: string;
