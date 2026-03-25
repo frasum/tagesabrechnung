@@ -120,8 +120,6 @@ export function SessionLockScreen() {
           },
         }
       );
-        }
-      );
 
       if (!response.ok) {
         throw new Error('Failed to generate QR code');
