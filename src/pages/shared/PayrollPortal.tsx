@@ -486,10 +486,11 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="wochenplan">Wochenplan</TabsTrigger>
           <TabsTrigger value="zusammenfassung">Zusammenfassung</TabsTrigger>
           <TabsTrigger value="buchhaltung">Buchhaltung</TabsTrigger>
+          <TabsTrigger value="provision">Provision</TabsTrigger>
         </TabsList>
 
         <TabsContent value="wochenplan">
