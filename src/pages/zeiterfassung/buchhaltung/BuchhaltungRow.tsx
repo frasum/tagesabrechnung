@@ -1,3 +1,4 @@
+import { useRef, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
@@ -89,14 +90,37 @@ export default function BuchhaltungRow({ emp, totals, note, shifts, advances, is
         />
       </td>
       <td className="p-1">
-        <Textarea
-          className="time-input-clean text-xs min-h-[28px] h-7 resize-none"
-          defaultValue={besonderheitenValue}
-          disabled={isLocked}
-          onBlur={(e) => onUpsertNote({ employee_id: emp.id, field: "besonderheiten", value: e.target.value })}
-        />
+        {isLocked ? (
+          <div className="text-xs whitespace-pre-wrap break-words min-h-[28px] py-1 px-2">
+            {besonderheitenValue || "–"}
+          </div>
+        ) : (
+          <AutoExpandTextarea
+            defaultValue={besonderheitenValue}
+            onBlur={(e) => onUpsertNote({ employee_id: emp.id, field: "besonderheiten", value: e.target.value })}
+          />
+        )}
       </td>
     </tr>
+  );
+}
+
+function AutoExpandTextarea({ defaultValue, onBlur }: { defaultValue: string; onBlur: (e: React.FocusEvent<HTMLTextAreaElement>) => void }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const autoResize = useCallback((el: HTMLTextAreaElement) => {
+    el.style.height = "auto";
+    el.style.height = el.scrollHeight + "px";
+  }, []);
+
+  return (
+    <Textarea
+      ref={ref}
+      className="time-input-clean text-xs min-h-[28px] h-auto resize-none overflow-hidden"
+      defaultValue={defaultValue}
+      onInput={(e) => autoResize(e.currentTarget)}
+      onBlur={onBlur}
+      onFocus={(e) => autoResize(e.currentTarget)}
+    />
   );
 }
 
