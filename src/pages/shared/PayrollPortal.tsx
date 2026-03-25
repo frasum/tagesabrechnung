@@ -537,6 +537,20 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
             commissionMap={showCommission ? commissionMap : undefined}
           />
         </TabsContent>
+
+        <TabsContent value="provision">
+          <PayrollProvisionTab
+            waiterShifts={data.waiterShifts ?? []}
+            staffRoles={data.staffRoles ?? []}
+            commissionSettings={data.commissionSettings ?? {}}
+            shifts={filteredShifts}
+            employees={filteredEmployees}
+            restaurants={restaurants}
+            selectedRestaurant={effectiveRestaurant}
+            periodStartDate={period.start_date}
+            periodEndDate={period.end_date}
+          />
+        </TabsContent>
       </Tabs>
     </div>
   );
