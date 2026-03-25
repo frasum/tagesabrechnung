@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Lock, LogOut, Loader2, Smartphone, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { getAuthToken } from '@/lib/authToken';
+import { getAuthHeaders } from '@/lib/authToken';
 
 export function SessionLockScreen() {
   const { user, unlockSession, logout } = useAuth();
