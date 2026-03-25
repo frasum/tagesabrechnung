@@ -53,6 +53,24 @@ type SharedPeriod = {
   restaurant_name: string;
 };
 
+type WaiterShiftEntry = {
+  staff_id: string | null;
+  waiter_name: string;
+  second_waiter_name: string | null;
+  additional_waiters: string[];
+  pos_sales: number;
+  hours_worked: number | null;
+  session_date: string;
+  restaurant_id: string;
+};
+
+type StaffRoleEntry = {
+  id: string;
+  role: string;
+  name: string;
+  nickname: string | null;
+};
+
 type CumulatedData = {
   period: { label: string; start_date: string; end_date: string; status: string };
   weeks: any[];
@@ -65,6 +83,9 @@ type CumulatedData = {
   advances: AdvanceEntry[];
   holidays: { holiday_date: string; name: string; surcharge_rate?: number }[];
   matchingPeriods: { id: string; label: string; restaurant_name: string; restaurant_id: string }[];
+  waiterShifts?: WaiterShiftEntry[];
+  staffRoles?: StaffRoleEntry[];
+  commissionSettings?: Record<string, { minRevenue: number; pct: number }>;
 };
 
 export default function PayrollPortal() {
@@ -465,10 +486,11 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="wochenplan">Wochenplan</TabsTrigger>
           <TabsTrigger value="zusammenfassung">Zusammenfassung</TabsTrigger>
           <TabsTrigger value="buchhaltung">Buchhaltung</TabsTrigger>
+          <TabsTrigger value="provision">Provision</TabsTrigger>
         </TabsList>
 
         <TabsContent value="wochenplan">
@@ -513,6 +535,20 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
             holidayRates={holidayRates}
             showCommission={showCommission}
             commissionMap={showCommission ? commissionMap : undefined}
+          />
+        </TabsContent>
+
+        <TabsContent value="provision">
+          <PayrollProvisionTab
+            waiterShifts={data.waiterShifts ?? []}
+            staffRoles={data.staffRoles ?? []}
+            commissionSettings={data.commissionSettings ?? {}}
+            shifts={filteredShifts}
+            employees={filteredEmployees}
+            restaurants={restaurants}
+            selectedRestaurant={effectiveRestaurant}
+            periodStartDate={period.start_date}
+            periodEndDate={period.end_date}
           />
         </TabsContent>
       </Tabs>
@@ -1111,6 +1147,278 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
           </table>
         </div>
       </Card>
+    </div>
+  );
+}
+
+// =================== Provision Tab ===================
+
+const GL_ROLES = new Set(["gl", "kitchen_gl"]);
+
+function PayrollProvisionTab({ waiterShifts, staffRoles, commissionSettings, shifts, employees, restaurants, selectedRestaurant, periodStartDate, periodEndDate }: {
+  waiterShifts: WaiterShiftEntry[];
+  staffRoles: StaffRoleEntry[];
+  commissionSettings: Record<string, { minRevenue: number; pct: number }>;
+  shifts: Shift[];
+  employees: any[];
+  restaurants: { id: string; name: string }[];
+  selectedRestaurant: string;
+  periodStartDate: string;
+  periodEndDate: string;
+}) {
+  const fmt = (n: number) => n.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtDate = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" });
+
+  const effectiveSettings = useMemo(() => {
+    const entries = Object.entries(commissionSettings);
+    if (selectedRestaurant !== "all" && commissionSettings[selectedRestaurant]) {
+      return commissionSettings[selectedRestaurant];
+    }
+    if (entries.length === 0) return { minRevenue: 1200, pct: 5 };
+    return entries[0][1];
+  }, [commissionSettings, selectedRestaurant]);
+
+  const minRevenue = effectiveSettings.minRevenue;
+  const commissionPct = effectiveSettings.pct;
+
+  const glStaffIds = useMemo(() => new Set(staffRoles.filter(s => GL_ROLES.has(s.role)).map(s => s.id)), [staffRoles]);
+
+  const staffNameToId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const s of staffRoles) {
+      map.set(s.name.toLowerCase(), s.id);
+      if (s.nickname) map.set(s.nickname.toLowerCase(), s.id);
+    }
+    return map;
+  }, [staffRoles]);
+
+  const isGlByName = useCallback((name: string) => {
+    const id = staffNameToId.get(name.toLowerCase());
+    return id ? glStaffIds.has(id) : false;
+  }, [staffNameToId, glStaffIds]);
+
+  const filteredWaiterShifts = useMemo(() => {
+    let ws = waiterShifts;
+    if (selectedRestaurant !== "all") ws = ws.filter(w => w.restaurant_id === selectedRestaurant);
+    return ws.filter(w => !w.staff_id || !glStaffIds.has(w.staff_id));
+  }, [waiterShifts, selectedRestaurant, glStaffIds]);
+
+  const serviceEmployeeIds = useMemo(() => new Set(employees.filter(e => e.department === "Service").map(e => e.id)), [employees]);
+
+  const { ztHoursByStaff, ztHoursByStaffDate } = useMemo(() => {
+    const byStaff = new Map<string, number>();
+    const byStaffDate = new Map<string, number>();
+    for (const s of shifts) {
+      if (s.department !== "Service" || !serviceEmployeeIds.has(s.employee_id)) continue;
+      const h = Number(s.total_hours) || 0;
+      if (h <= 0) continue;
+      byStaff.set(s.employee_id, (byStaff.get(s.employee_id) ?? 0) + h);
+      const key = `${s.employee_id}:${s.shift_date}`;
+      byStaffDate.set(key, (byStaffDate.get(key) ?? 0) + h);
+    }
+    return { ztHoursByStaff: byStaff, ztHoursByStaffDate: byStaffDate };
+  }, [shifts, serviceEmployeeIds]);
+
+  const allDeptHoursByDate = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const s of shifts) {
+      const h = Number(s.total_hours) || 0;
+      if (h > 0) map.set(s.shift_date, (map.get(s.shift_date) ?? 0) + h);
+    }
+    return map;
+  }, [shifts]);
+
+  const dailyBreakdown = useMemo(() => {
+    const dayMap = new Map<string, { staffSet: Set<string>; nameSet: Set<string>; waiterHours: number; revenue: number; staffIdsOnDate: Set<string> }>();
+    for (const ws of filteredWaiterShifts) {
+      const date = ws.session_date;
+      if (!date) continue;
+      const key = ws.staff_id || ws.waiter_name;
+      if (!dayMap.has(date)) dayMap.set(date, { staffSet: new Set(), nameSet: new Set(), waiterHours: 0, revenue: 0, staffIdsOnDate: new Set() });
+      const day = dayMap.get(date)!;
+      if (!day.staffSet.has(key)) { day.staffSet.add(key); day.nameSet.add(ws.waiter_name); if (ws.staff_id) day.staffIdsOnDate.add(ws.staff_id); }
+      day.waiterHours += Number(ws.hours_worked) || 0;
+      day.revenue += Number(ws.pos_sales) || 0;
+      const secondaries: string[] = [];
+      if (ws.second_waiter_name && !isGlByName(ws.second_waiter_name)) secondaries.push(ws.second_waiter_name);
+      if (ws.additional_waiters?.length) for (const aw of ws.additional_waiters) if (aw && !isGlByName(aw)) secondaries.push(aw);
+      for (const name of secondaries) {
+        const sid = staffNameToId.get(name.toLowerCase());
+        const sKey = sid || `secondary:${name}`;
+        if (!day.staffSet.has(sKey)) { day.staffSet.add(sKey); day.nameSet.add(name); }
+        if (sid) day.staffIdsOnDate.add(sid);
+      }
+    }
+    return Array.from(dayMap.entries()).map(([date, d]) => {
+      let ztTotal = 0, hasZt = false;
+      for (const sid of d.staffIdsOnDate) { const h = ztHoursByStaffDate.get(`${sid}:${date}`); if (h != null) { ztTotal += h; hasZt = true; } }
+      return { date, staffCount: d.staffSet.size, staffNames: Array.from(d.nameSet).sort(), hours: hasZt ? ztTotal : d.waiterHours, revenue: d.revenue, allDeptHours: allDeptHoursByDate.get(date) ?? 0 };
+    }).sort((a, b) => a.date.localeCompare(b.date));
+  }, [filteredWaiterShifts, isGlByName, ztHoursByStaffDate, staffNameToId, allDeptHoursByDate]);
+
+  const aggregated = useMemo(() => {
+    const map = new Map<string, { staffId: string | null; name: string; revenue: number; waiterHours: number }>();
+    for (const ws of filteredWaiterShifts) {
+      const key = ws.staff_id || ws.waiter_name;
+      const existing = map.get(key);
+      if (existing) { existing.revenue += Number(ws.pos_sales) || 0; existing.waiterHours += Number(ws.hours_worked) || 0; }
+      else map.set(key, { staffId: ws.staff_id, name: ws.waiter_name, revenue: Number(ws.pos_sales) || 0, waiterHours: Number(ws.hours_worked) || 0 });
+      const secondaries: string[] = [];
+      if (ws.second_waiter_name && !isGlByName(ws.second_waiter_name)) secondaries.push(ws.second_waiter_name);
+      if (ws.additional_waiters?.length) for (const aw of ws.additional_waiters) if (aw && !isGlByName(aw)) secondaries.push(aw);
+      for (const name of secondaries) {
+        const sid = staffNameToId.get(name.toLowerCase()) ?? null;
+        const sKey = sid || `secondary:${name}`;
+        if (!map.has(sKey)) map.set(sKey, { staffId: sid, name, revenue: 0, waiterHours: 0 });
+      }
+    }
+    return Array.from(map.values()).map(e => ({ ...e, hours: (e.staffId ? ztHoursByStaff.get(e.staffId) : undefined) ?? e.waiterHours, commission: 0 }));
+  }, [filteredWaiterShifts, ztHoursByStaff, isGlByName, staffNameToId]);
+
+  const staffDays = useMemo(() => dailyBreakdown.reduce((s, d) => s + d.staffCount, 0), [dailyBreakdown]);
+
+  const result = useMemo(() => {
+    const totalRevenue = aggregated.reduce((s, w) => s + w.revenue, 0);
+    const totalHours = aggregated.reduce((s, w) => s + w.hours, 0);
+    const avgRevenue = staffDays > 0 ? totalRevenue / staffDays : 0;
+    let pool = 0, qualifyingDays = 0;
+    for (const day of dailyBreakdown) {
+      const dayAvg = day.staffCount > 0 ? day.revenue / day.staffCount : 0;
+      if (dayAvg >= minRevenue) { pool += Math.max(0, (day.revenue - minRevenue * day.staffCount) * (commissionPct / 100)); qualifyingDays++; }
+    }
+    const hourlyRate = totalHours > 0 ? pool / totalHours : 0;
+    const withCommission = aggregated.map(w => ({ ...w, commission: pool > 0 ? hourlyRate * w.hours : 0 }));
+    return { totalRevenue, totalHours, avgRevenue, pool, withCommission, totalCommission: withCommission.reduce((s, w) => s + w.commission, 0), qualifyingDays, sessionCount: dailyBreakdown.length, staffDays };
+  }, [aggregated, minRevenue, commissionPct, dailyBreakdown, staffDays]);
+
+  return (
+    <div className="space-y-6 mt-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 text-sm">
+        <div className="rounded-lg border border-border bg-card px-4 py-2">
+          <span className="text-muted-foreground">Mindest-Ø-Umsatz:</span>{" "}
+          <span className="font-semibold tabular-nums">{fmt(minRevenue)} €</span>
+        </div>
+        <div className="rounded-lg border border-border bg-card px-4 py-2">
+          <span className="text-muted-foreground">Provisionssatz:</span>{" "}
+          <span className="font-semibold tabular-nums">{commissionPct} %</span>
+        </div>
+      </div>
+
+      <p className="text-sm text-muted-foreground">
+        Zeitraum: {new Date(periodStartDate).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })} – {new Date(periodEndDate).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" })} · ohne reine GL-Mitarbeiter
+      </p>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="rounded-lg border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Ø Umsatz / Tag / MA</p>
+          <p className="text-lg font-semibold tabular-nums">{fmt(result.avgRevenue)} €</p>
+        </div>
+        <div className="rounded-lg border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Σ Stunden</p>
+          <p className="text-lg font-semibold tabular-nums">{fmt(result.totalHours)} h</p>
+        </div>
+        <div className="rounded-lg border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Provisions-Topf</p>
+          <p className="text-lg font-semibold tabular-nums">{fmt(result.pool)} €</p>
+          <p className="text-xs text-muted-foreground mt-1">{result.qualifyingDays} von {result.sessionCount} Tagen qualifiziert</p>
+        </div>
+        <div className="rounded-lg border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Σ Provisionen</p>
+          <p className="text-lg font-semibold tabular-nums">{fmt(result.totalCommission)} €</p>
+          <p className="text-xs text-muted-foreground mt-1">{fmt(result.totalHours > 0 ? result.totalCommission / result.totalHours : 0)} € / Stunde</p>
+        </div>
+      </div>
+
+      {dailyBreakdown.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="border-b">
+                <th className="text-left py-2 px-2 font-medium text-muted-foreground">Datum</th>
+                <th className="text-right py-2 px-2 font-medium text-muted-foreground">Servicekräfte</th>
+                <th className="text-right py-2 px-2 font-medium text-muted-foreground">Stunden</th>
+                <th className="text-right py-2 px-2 font-medium text-muted-foreground">Umsatz</th>
+                <th className="text-right py-2 px-2 font-medium text-muted-foreground">Ø pro MA</th>
+                <th className="text-right py-2 px-2 font-medium text-muted-foreground">Ø €/h Team</th>
+                <th className="text-right py-2 px-2 font-medium text-muted-foreground">Provision</th>
+              </tr>
+            </thead>
+            <tbody>
+              {dailyBreakdown.map(day => {
+                const avgPerStaff = day.staffCount > 0 ? day.revenue / day.staffCount : 0;
+                const belowThreshold = avgPerStaff < minRevenue;
+                const hourlyRevenue = day.allDeptHours > 0 ? day.revenue / day.allDeptHours : 0;
+                const dayCommission = avgPerStaff >= minRevenue ? Math.max(0, (day.revenue - minRevenue * day.staffCount) * (commissionPct / 100)) : 0;
+                return (
+                  <tr key={day.date} className="border-b">
+                    <td className="py-2 px-2 font-medium">{fmtDate(day.date)}</td>
+                    <td className="text-right py-2 px-2 tabular-nums">{day.staffCount}</td>
+                    <td className="text-right py-2 px-2 tabular-nums">{fmt(day.hours)}</td>
+                    <td className="text-right py-2 px-2 tabular-nums">{fmt(day.revenue)}</td>
+                    <td className={`text-right py-2 px-2 tabular-nums font-medium ${belowThreshold ? "text-destructive" : "text-green-600 dark:text-green-400"}`}>{fmt(avgPerStaff)}</td>
+                    <td className="text-right py-2 px-2 tabular-nums">{day.allDeptHours > 0 ? `${fmt(hourlyRevenue)} €` : "–"}</td>
+                    <td className={`text-right py-2 px-2 tabular-nums font-medium ${dayCommission > 0 ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}`}>{fmt(dayCommission)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2 font-semibold">
+                <td className="py-2 px-2">Gesamt</td>
+                <td className="text-right py-2 px-2 tabular-nums">{dailyBreakdown.reduce((s, d) => s + d.staffCount, 0)}</td>
+                <td className="text-right py-2 px-2 tabular-nums">{fmt(dailyBreakdown.reduce((s, d) => s + d.hours, 0))}</td>
+                <td className="text-right py-2 px-2 tabular-nums">{fmt(dailyBreakdown.reduce((s, d) => s + d.revenue, 0))}</td>
+                <td className="text-right py-2 px-2 tabular-nums">{fmt(result.avgRevenue)}</td>
+                <td className="text-right py-2 px-2 tabular-nums">
+                  {(() => { const r = dailyBreakdown.reduce((s, d) => s + d.revenue, 0); const h = dailyBreakdown.reduce((s, d) => s + d.allDeptHours, 0); return h > 0 ? `${fmt(r / h)} €` : "–"; })()}
+                </td>
+                <td className="text-right py-2 px-2 tabular-nums text-green-600 dark:text-green-400">{fmt(result.pool)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+
+      {result.withCommission.length > 0 && (
+        <p className="text-xs text-muted-foreground">Verteilung des Provisions-Topfs nach geleisteten Stunden · {result.sessionCount} Abrechnungstage</p>
+      )}
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm border-collapse">
+          <thead>
+            <tr className="border-b">
+              <th className="text-left py-2 px-2 font-medium text-muted-foreground">Name</th>
+              <th className="text-right py-2 px-2 font-medium text-muted-foreground">Umsatz (€)</th>
+              <th className="text-right py-2 px-2 font-medium text-muted-foreground">Stunden (h)</th>
+              <th className="text-right py-2 px-2 font-medium text-muted-foreground">Provision (€)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {result.withCommission.length === 0 ? (
+              <tr><td colSpan={4} className="text-center text-muted-foreground py-8">Keine Service-Schichten in dieser Periode</td></tr>
+            ) : (
+              result.withCommission.sort((a, b) => b.revenue - a.revenue).map(w => (
+                <tr key={w.staffId || w.name} className="border-b">
+                  <td className="py-2 px-2 font-medium">{w.name}</td>
+                  <td className="text-right py-2 px-2 tabular-nums">{fmt(w.revenue)}</td>
+                  <td className="text-right py-2 px-2 tabular-nums">{fmt(w.hours)}</td>
+                  <td className="text-right py-2 px-2 tabular-nums font-medium">{fmt(w.commission)}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+          {result.withCommission.length > 0 && (
+            <tfoot>
+              <tr className="border-t-2 font-semibold">
+                <td className="py-2 px-2">Gesamt</td>
+                <td className="text-right py-2 px-2 tabular-nums">{fmt(result.totalRevenue)}</td>
+                <td className="text-right py-2 px-2 tabular-nums">{fmt(result.totalHours)}</td>
+                <td className="text-right py-2 px-2 tabular-nums">{fmt(result.totalCommission)}</td>
+              </tr>
+            </tfoot>
+          )}
+        </table>
+      </div>
     </div>
   );
 }

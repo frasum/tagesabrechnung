@@ -233,8 +233,10 @@ Deno.serve(async (req) => {
 
     const weekIds = (weeks ?? []).map((w: any) => w.id);
 
-    // 3. Load shifts, employees, notes, advances, holidays in parallel
-    const [shiftsRes, employeesRes, notesRes, advancesRes, holidaysRes] = await Promise.all([
+    const restaurantIds = (matchingPeriods ?? []).map((p: any) => p.restaurant_id).filter(Boolean);
+
+    // 3. Load shifts, employees, notes, advances, holidays, waiter data, staff roles, commission settings in parallel
+    const [shiftsRes, employeesRes, notesRes, advancesRes, holidaysRes, waiterShiftsRes, staffRolesRes, commissionSettingsRes] = await Promise.all([
       weekIds.length > 0
         ? supabase.from("zt_shifts").select("*").in("week_id", weekIds)
         : { data: [], error: null },
@@ -242,7 +244,7 @@ Deno.serve(async (req) => {
         .from("staff_restaurants")
         .select("zt_department, staff_id, restaurant_id, staff!inner(id, name, perso_nr, first_name, last_name, nickname)")
         .not("zt_department", "is", null)
-        .in("restaurant_id", (matchingPeriods ?? []).map((p: any) => p.restaurant_id).filter(Boolean)),
+        .in("restaurant_id", restaurantIds),
       supabase
         .from("payroll_notes")
         .select("*")
@@ -255,6 +257,24 @@ Deno.serve(async (req) => {
       supabase
         .from("bavarian_holidays")
         .select("holiday_date, name, surcharge_rate"),
+      // Waiter shifts for commission calculation
+      supabase
+        .from("waiter_shifts")
+        .select("staff_id, waiter_name, second_waiter_name, additional_waiters, pos_sales, hours_worked, sessions!inner(session_date, restaurant_id)")
+        .in("sessions.restaurant_id", restaurantIds)
+        .gte("sessions.session_date", period_start_date)
+        .lte("sessions.session_date", period_end_date),
+      // Staff roles for GL exclusion
+      supabase
+        .from("staff")
+        .select("id, role, name, nickname")
+        .eq("is_active", true),
+      // Commission settings per restaurant
+      supabase
+        .from("settings")
+        .select("key, value, restaurant_id")
+        .in("key", ["commission_min_revenue", "commission_pct"])
+        .in("restaurant_id", restaurantIds),
     ]);
 
     // Deduplicate employees by id + department
@@ -304,6 +324,18 @@ Deno.serve(async (req) => {
       deduplicatedWeeks.push(w);
     }
 
+    // Build commission settings map per restaurant
+    const commissionSettings: Record<string, { minRevenue: number; pct: number }> = {};
+    for (const rid of restaurantIds) {
+      commissionSettings[rid] = { minRevenue: 1200, pct: 5 };
+    }
+    for (const s of (commissionSettingsRes.data as any[] ?? [])) {
+      const entry = commissionSettings[s.restaurant_id];
+      if (!entry) continue;
+      if (s.key === "commission_min_revenue") entry.minRevenue = (s.value as any)?.amount ?? 1200;
+      if (s.key === "commission_pct") entry.pct = (s.value as any)?.pct ?? 5;
+    }
+
     return new Response(JSON.stringify({
       period: {
         label: representativePeriod.label,
@@ -326,6 +358,23 @@ Deno.serve(async (req) => {
         restaurant_name: p.restaurants?.name ?? "Unbekannt",
         restaurant_id: p.restaurant_id,
       })),
+      waiterShifts: (waiterShiftsRes.data ?? []).map((ws: any) => ({
+        staff_id: ws.staff_id,
+        waiter_name: ws.waiter_name,
+        second_waiter_name: ws.second_waiter_name,
+        additional_waiters: ws.additional_waiters,
+        pos_sales: ws.pos_sales,
+        hours_worked: ws.hours_worked,
+        session_date: ws.sessions?.session_date,
+        restaurant_id: ws.sessions?.restaurant_id,
+      })),
+      staffRoles: (staffRolesRes.data ?? []).map((s: any) => ({
+        id: s.id,
+        role: s.role,
+        name: s.name,
+        nickname: s.nickname,
+      })),
+      commissionSettings,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
