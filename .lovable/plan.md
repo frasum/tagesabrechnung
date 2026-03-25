@@ -1,32 +1,32 @@
 
 
-## Peters YUM-Schichten → Spicery umordnen
+## Provisions-Tab im Lohnbüro Portal
 
-### Ausgangslage
-Peter (GL) hat **ca. 20 Schichten** im YUM für die Periode März 2026 (26.02.–25.03.2026), alle mit 17:00–01:00. In der Spicery existiert die gleiche Periode mit identischen Wochen-Nummern. Es gibt keine Konflikte (keine bestehenden Spicery-Schichten für Peter in diesem Zeitraum).
+### Analyse
 
-### Vorgehen
+Das Lohnbüro-Portal hat aktuell 3 Tabs (Wochenplan, Zusammenfassung, Buchhaltung). Die Provisionsberechnung (`ZtProvision`) benötigt `waiter_shifts`-Daten (Umsatz, Stunden pro Kellner/Tag) und Staff-Rollen (um GL auszuschließen). Diese Daten werden aktuell nicht von der Edge Function `payroll-office-data` geliefert.
 
-Da die `zt_shifts`-Tabelle einen UNIQUE-Constraint auf `employee_id, shift_date, department` hat, kann ich die `week_id` der bestehenden Schichten direkt auf die Spicery-Wochen ändern. Das ist ein reines Daten-Update — kein Code oder Schema muss geändert werden.
+### Änderungen
 
-**Wochen-Mapping (YUM → Spicery):**
+**1. `supabase/functions/payroll-office-data/index.ts`**
+- Zusätzlich `waiter_shifts` laden (mit Sessions-Join, gefiltert auf den Periodenzeitraum und die relevanten Restaurant-IDs)
+- Zusätzlich `staff` (id, role, name, nickname) laden für GL-Ausschluss und Namens-Zuordnung
+- Commission-Settings (`commission_min_revenue`, `commission_pct`) pro Restaurant laden
+- Alles im bestehenden `Promise.all`-Block hinzufügen und in der Response zurückgeben
 
-| Woche | YUM week_id | Spicery week_id |
-|-------|-------------|-----------------|
-| 1 | `1a41c986-...` | `944b58ee-...` |
-| 2 | `ffc44363-...` | `4557444e-...` |
-| 3 | `8b5c2120-...` | `73c6cced-...` |
-| 4 | `361c1f1f-...` | `8a5ca6c4-...` |
-| 5 | `bc3f93c0-...` | `d64786c0-...` |
+**2. `src/pages/shared/PayrollPortal.tsx`**
+- `CumulatedData`-Typ erweitern um `waiterShifts`, `staffRoles`, `commissionSettings`
+- Neuen `PayrollProvisionTab` als Komponente erstellen — read-only Version der Provisionslogik:
+  - GL-Ausschluss, tägliche Aufschlüsselung, Provisions-Pool-Berechnung, Verteilung nach Stunden
+  - Keine Settings-Bearbeitung (Schwellenwert/Prozentsatz nur anzeigen)
+  - Verwendet `zt_shifts` aus den bereits geladenen `shifts`-Daten (Service-Department)
+- 4. Tab "Provision" in `TabsList` hinzufügen (`grid-cols-3` → `grid-cols-4`)
+- Restaurant-Filter auf Provision-Tab anwenden (wie bei den anderen Tabs)
 
-**Aktion:** 5 UPDATE-Statements, je eines pro Woche, die Peters Schichten von der YUM-`week_id` auf die Spicery-`week_id` umsetzen. Die Schichtdaten (Zeiten, Stunden, Feiertag-Flags) bleiben unverändert.
+### Kein Eingriff nötig bei
+- Routing/Auth — das Portal ist bereits PIN-geschützt
+- RLS — die Edge Function nutzt den Service Role Key
+- Bestehende Tabs — keine Änderung
 
-```sql
--- Woche 1
-UPDATE zt_shifts SET week_id = '944b58ee-...' 
-WHERE employee_id = 'peter_id' AND week_id = '1a41c986-...';
--- ... analog für Wochen 2–5
-```
-
-Keine Code-Änderungen nötig. Reine Datenkorrektur.
+2 Dateien. Die Provisionslogik wird aus `ZtProvision.tsx` adaptiert, aber ohne Editier-Funktionen und ohne App-Kontext-Abhängigkeiten.
 
