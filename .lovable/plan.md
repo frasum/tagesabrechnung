@@ -1,12 +1,28 @@
 
 
-## Fix: Provisions-Tab im Lohnbüro nicht sichtbar
+## Besonderheiten-Spalte: Volltext sichtbar machen
 
-### Analyse
+### Problem
+Die Besonderheiten-Spalte nutzt ein `Textarea` mit fester Höhe (`h-7` = 28px). Bei langen Texten (Vorschüsse + Urlaub + manuelle Einträge) wird der Inhalt abgeschnitten.
 
-Der Code ist vollständig vorhanden — sowohl die Edge Function (`payroll-office-data`) als auch die UI (`PayrollProvisionTab` + 4. Tab) sind korrekt implementiert. Das Problem ist höchstwahrscheinlich, dass die Edge Function nach dem letzten Update **nicht neu deployed** wurde. Die alte deployed Version liefert daher `waiterShifts`, `staffRoles` und `commissionSettings` nicht in der Response zurück.
+### Vorschlag: Auto-Height mit Text-Wrapping
 
-### Lösung
+**In `BuchhaltungRow.tsx`:** Die Textarea bekommt `h-auto` statt `h-7` und `overflow-hidden` mit einer CSS-Klasse, die die Höhe automatisch an den Inhalt anpasst. Zusätzlich `whitespace-pre-wrap` für sauberen Zeilenumbruch.
 
-Die Edge Function `payroll-office-data` muss neu deployed werden. Keine Code-Änderungen nötig — nur ein Redeployment.
+Konkret:
+- `min-h-[28px] h-7 resize-none` → `min-h-[28px] h-auto resize-none`
+- Beim initialen Render und nach Blur die Textarea-Höhe per `scrollHeight` setzen (via `useEffect` oder `ref`)
+
+Alternativ (einfacher, besonders für das Lohnbüro wo es read-only ist): Im Lohnbüro die Besonderheiten als **normalen Text mit Wrapping** rendern statt als Textarea — das spart den Input-Overhead und zeigt alles direkt an.
+
+### Empfehlung
+Beides kombinieren:
+- **Lohnbüro (read-only):** Einfacher `<td>` mit Text-Wrapping, kein Input-Element
+- **Manager-Ansicht (editierbar):** Auto-expanding Textarea
+
+### Dateien
+- `src/pages/zeiterfassung/buchhaltung/BuchhaltungRow.tsx` — Auto-expanding Textarea (1 Zeile CSS + ref-basiertes Auto-Resize)
+- `src/pages/shared/PayrollPortal.tsx` — Falls die Buchhaltung dort die gleiche Row-Komponente nutzt, wird `isLocked` bereits übergeben. Wir können `isLocked` nutzen um zwischen Text-Anzeige und Textarea zu wechseln.
+
+Minimale Änderung, keine neuen Abhängigkeiten.
 
