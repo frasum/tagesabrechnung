@@ -324,6 +324,18 @@ Deno.serve(async (req) => {
       deduplicatedWeeks.push(w);
     }
 
+    // Build commission settings map per restaurant
+    const commissionSettings: Record<string, { minRevenue: number; pct: number }> = {};
+    for (const rid of restaurantIds) {
+      commissionSettings[rid] = { minRevenue: 1200, pct: 5 };
+    }
+    for (const s of (commissionSettingsRes.data as any[] ?? [])) {
+      const entry = commissionSettings[s.restaurant_id];
+      if (!entry) continue;
+      if (s.key === "commission_min_revenue") entry.minRevenue = (s.value as any)?.amount ?? 1200;
+      if (s.key === "commission_pct") entry.pct = (s.value as any)?.pct ?? 5;
+    }
+
     return new Response(JSON.stringify({
       period: {
         label: representativePeriod.label,
@@ -346,6 +358,23 @@ Deno.serve(async (req) => {
         restaurant_name: p.restaurants?.name ?? "Unbekannt",
         restaurant_id: p.restaurant_id,
       })),
+      waiterShifts: (waiterShiftsRes.data ?? []).map((ws: any) => ({
+        staff_id: ws.staff_id,
+        waiter_name: ws.waiter_name,
+        second_waiter_name: ws.second_waiter_name,
+        additional_waiters: ws.additional_waiters,
+        pos_sales: ws.pos_sales,
+        hours_worked: ws.hours_worked,
+        session_date: ws.sessions?.session_date,
+        restaurant_id: ws.sessions?.restaurant_id,
+      })),
+      staffRoles: (staffRolesRes.data ?? []).map((s: any) => ({
+        id: s.id,
+        role: s.role,
+        name: s.name,
+        nickname: s.nickname,
+      })),
+      commissionSettings,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
