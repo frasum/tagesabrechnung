@@ -156,7 +156,6 @@ export default function ZtZusammenfassung() {
       return true;
     })
   );
-  );
 
   const employeesWithShifts = filterEmployeesBySearch(employeesWithShiftsUnfiltered, searchTerm);
 
