@@ -230,7 +230,7 @@ export default function ZtBuchhaltung() {
 
                 return (
                   <React.Fragment key={`${emp.id}-${emp.department}-${selectedPeriodId}`}>
-                    {showDeptHeader && <BuchhaltungDeptHeader department={emp.department} sfnMode={sfnMode} showSfn={showSfn} showCommission={showCommission} />}
+                    {showDeptHeader && !searchTerm.trim() && <BuchhaltungDeptHeader department={emp.department} sfnMode={sfnMode} showSfn={showSfn} showCommission={showCommission} />}
                     <BuchhaltungRow
                       emp={emp}
                       totals={totals}
