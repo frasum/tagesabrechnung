@@ -204,13 +204,14 @@ export default function ZtZusammenfassung() {
     };
   })();
 
-  const getWeeklyHours = (empId: string, weekNumber: number, department?: string) => {
-    // In cumulated mode, shifts are loaded for ALL weeks across restaurants
-    // We filter by week_number via the weekNumberToIds mapping
+  const getWeeklyHours = (empId: string, weekNumber: number, department?: string, restaurantId?: string) => {
     const wIds = weekNumberToIds[weekNumber] ?? [];
-    // But in cumulated mode, multiple weeks with same week_number exist across periods
-    // The shifts are loaded with ALL week IDs, so we need to find all shifts matching any of those week IDs
-    const weekShifts = shifts?.filter((s) => s.employee_id === empId && wIds.includes(s.week_id) && (!department || s.department === department)) ?? [];
+    const weekShifts = shifts?.filter((s) => {
+      if (s.employee_id !== empId || !wIds.includes(s.week_id)) return false;
+      if (department && s.department !== department) return false;
+      if (isSearchActive && restaurantId && cumData.weekIdToRestaurantId[s.week_id] && cumData.weekIdToRestaurantId[s.week_id] !== restaurantId) return false;
+      return true;
+    }) ?? [];
     return weekShifts.reduce((sum, s) => sum + Number(s.total_hours), 0);
   };
 
