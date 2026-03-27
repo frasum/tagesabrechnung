@@ -53,6 +53,7 @@ export default function BuchhaltungRow({ emp, totals, note, shifts, advances, is
       <td className="px-2 py-1.5 font-medium whitespace-nowrap">
         {nameBase}
         {persoStr && <span className="text-xs text-muted-foreground ml-1">{persoStr}</span>}
+        <RestaurantBadge restaurantName={emp.restaurant_name} department={emp.department} show={showRestaurantBadge} />
       </td>
       <td className="text-center px-1 py-1.5 font-semibold tabular-nums bg-primary/5 border-l border-border/40">
         {formatHours(totals.gesamt)}
