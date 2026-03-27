@@ -22,6 +22,7 @@ import BuchhaltungRow from "./buchhaltung/BuchhaltungRow";
 import BuchhaltungFooter from "./buchhaltung/BuchhaltungFooter";
 import { useCumulatedZtData } from "@/hooks/useCumulatedZtData";
 import { useHolidayRates } from "@/hooks/useHolidayRates";
+import RestaurantBadge from "@/components/zeiterfassung/RestaurantBadge";
 import { useCommissionData } from "@/hooks/useCommissionData";
 import { useCommissionAddToGross } from "@/hooks/useSettings";
 import type { Shift, PayrollNote, AdvanceEntry } from "./buchhaltung/types";
@@ -43,7 +44,8 @@ export default function ZtBuchhaltung() {
   const { commissionAddToGross } = useCommissionAddToGross(restaurantId);
 
   const selectedPeriod = periods?.find(p => p.id === selectedPeriodId);
-  const cumData = useCumulatedZtData(cumulated, selectedPeriod);
+  const isSearchActive = !!searchTerm.trim();
+  const cumData = useCumulatedZtData(cumulated || isSearchActive, selectedPeriod);
 
   const { commissionMap, totalCommission } = useCommissionData(
     restaurantId,
@@ -52,8 +54,8 @@ export default function ZtBuchhaltung() {
   );
   const showCommission = commissionAddToGross;
 
-  const employees = cumulated ? cumData.employees : restaurantEmployees;
-  const weekIds = cumulated
+  const employees = (cumulated || isSearchActive) ? cumData.employees : restaurantEmployees;
+  const weekIds = (cumulated || isSearchActive)
     ? (cumData.allWeekIds ?? [])
     : (weeks?.map(w => w.id) ?? []);
 
@@ -69,10 +71,10 @@ export default function ZtBuchhaltung() {
       if (error) throw error;
       return data as Shift[];
     },
-    enabled: !cumulated && weekIds.length > 0,
+    enabled: !cumulated && !isSearchActive && weekIds.length > 0,
   });
 
-  const shifts = cumulated ? (cumData.shifts as Shift[] | undefined) : singleShifts;
+  const shifts = (cumulated || isSearchActive) ? (cumData.shifts as Shift[] | undefined) : singleShifts;
 
   const { data: singlePayrollNotes } = useQuery({
     queryKey: ["payroll-notes", selectedPeriodId],
@@ -85,10 +87,10 @@ export default function ZtBuchhaltung() {
       if (error) throw error;
       return data as PayrollNote[];
     },
-    enabled: !cumulated && !!selectedPeriodId,
+    enabled: !cumulated && !isSearchActive && !!selectedPeriodId,
   });
 
-  const payrollNotes = cumulated ? (cumData.payrollNotes as PayrollNote[] | undefined) : singlePayrollNotes;
+  const payrollNotes = (cumulated || isSearchActive) ? (cumData.payrollNotes as PayrollNote[] | undefined) : singlePayrollNotes;
 
   const { data: singleAdvances } = useQuery({
     queryKey: ["buchhaltung-advances", restaurantId, selectedPeriodId],
@@ -107,10 +109,10 @@ export default function ZtBuchhaltung() {
         date: d.sessions.session_date as string,
       })) as AdvanceEntry[];
     },
-    enabled: !cumulated && !!selectedPeriod && !!restaurantId,
+    enabled: !cumulated && !isSearchActive && !!selectedPeriod && !!restaurantId,
   });
 
-  const advances = cumulated ? (cumData.advances as AdvanceEntry[] | undefined) : singleAdvances;
+  const advances = (cumulated || isSearchActive) ? (cumData.advances as AdvanceEntry[] | undefined) : singleAdvances;
 
   const advancesByName = useMemo(() => {
     const map: Record<string, AdvanceEntry[]> = {};
@@ -243,6 +245,7 @@ export default function ZtBuchhaltung() {
                       showSfn={showSfn}
                       showCommission={showCommission}
                       commission={emp.department === "Service" ? (commissionMap.get(emp.id) ?? 0) : 0}
+                      showRestaurantBadge={isSearchActive}
                       onUpsertNote={(params) => upsertNote.mutate(params)}
                     />
                   </React.Fragment>

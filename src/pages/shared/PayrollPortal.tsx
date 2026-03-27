@@ -41,6 +41,7 @@ import BuchhaltungFooter from "@/pages/zeiterfassung/buchhaltung/BuchhaltungFoot
 import { useSfnMode, type SfnMode } from "@/hooks/useSfnMode";
 import { effectiveEveningHours, effectiveNightHours } from "@/lib/shiftCalculations";
 import EmployeeSearchFilter, { filterEmployeesBySearch } from "@/components/zeiterfassung/EmployeeSearchFilter";
+import RestaurantBadge from "@/components/zeiterfassung/RestaurantBadge";
 
 const PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID;
 const API_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -361,6 +362,13 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
     return Array.from(seen.entries()).map(([id, name]) => ({ id, name }));
   }, [matchingPeriods]);
 
+  // Map restaurant_id to restaurant_name for employees
+  const restaurantIdToName = useMemo(() => {
+    const map = new Map<string, string>();
+    matchingPeriods.forEach(p => map.set(p.restaurant_id, p.restaurant_name));
+    return map;
+  }, [matchingPeriods]);
+
   useEffect(() => {
     if (weeks?.length && !selectedWeekId) setSelectedWeekId(weeks[0].id);
   }, [weeks, selectedWeekId]);
@@ -374,9 +382,13 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
   }, [shifts, effectiveRestaurant, weekToRestaurant]);
 
   const filteredEmployees = useMemo(() => {
-    if (effectiveRestaurant === "all") return employees;
-    return employees.filter((e: any) => e.restaurant_id === effectiveRestaurant);
-  }, [employees, effectiveRestaurant]);
+    const enriched = employees.map((e: any) => ({
+      ...e,
+      restaurant_name: e.restaurant_name ?? restaurantIdToName.get(e.restaurant_id) ?? undefined,
+    }));
+    if (effectiveRestaurant === "all") return enriched;
+    return enriched.filter((e: any) => e.restaurant_id === effectiveRestaurant);
+  }, [employees, effectiveRestaurant, restaurantIdToName]);
 
   const filteredAdvances = useMemo(() => {
     if (effectiveRestaurant === "all") return advances;
@@ -514,6 +526,7 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
             pin={pin}
             weekNumberToAllIds={effectiveWeekNumberToAllIds}
             onShiftsChanged={() => queryClient.invalidateQueries({ queryKey: ["payroll-data"] })}
+            searchTerm={searchTerm}
           />
         </TabsContent>
 
@@ -603,7 +616,7 @@ function handleTimeKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
 
 // =================== Wochenplan Tab ===================
 
-function PayrollWochenplanTab({ weeks, shifts, employees, holidays, periodLabel, selectedWeekId, onSelectWeek, isLocked, pin, weekNumberToAllIds, onShiftsChanged }: {
+function PayrollWochenplanTab({ weeks, shifts, employees, holidays, periodLabel, selectedWeekId, onSelectWeek, isLocked, pin, weekNumberToAllIds, onShiftsChanged, searchTerm = "" }: {
   weeks: any[];
   shifts: Shift[];
   employees: any[];
@@ -615,6 +628,7 @@ function PayrollWochenplanTab({ weeks, shifts, employees, holidays, periodLabel,
   pin: string;
   weekNumberToAllIds: Record<number, string[]>;
   onShiftsChanged: () => void;
+  searchTerm?: string;
 }) {
   const [editingTime, setEditingTime] = useState<Record<string, string>>({});
   const [absenceDialog, setAbsenceDialog] = useState<{
@@ -776,6 +790,7 @@ function PayrollWochenplanTab({ weeks, shifts, employees, holidays, periodLabel,
                       <tr className={`border-t hover:bg-muted/30 ${isEven ? "bg-muted/20" : ""}`}>
                         <td className="p-1.5 font-medium text-xs whitespace-nowrap border-l-2" style={{ borderLeftColor: deptColor }}>
                           {emp.nickname || emp.first_name || emp.name}
+                          <RestaurantBadge restaurantName={emp.restaurant_name} department={emp.department} show={!!searchTerm} />
                         </td>
                         {weekDays.map(day => {
                           const dateStr = format(day, "yyyy-MM-dd");
@@ -1027,6 +1042,7 @@ function PayrollZusammenfassungTab({ sfnMode, weeks, shifts, employees, periodLa
                           : emp.name;
                       })()}
                       {emp.perso_nr && emp.perso_nr > 0 && <span className="text-xs text-muted-foreground ml-1">{emp.perso_nr}</span>}
+                      <RestaurantBadge restaurantName={emp.restaurant_name} department={emp.department} show={!!searchTerm.trim()} />
                     </td>
                     {weeks.map(w => {
                       const h = getWeeklyHours(emp.id, w.week_number, emp.department);
@@ -1139,6 +1155,7 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
                   <React.Fragment key={`${emp.id}-${emp.department}`}>
                     {showDeptHeader && !searchTerm.trim() && <BuchhaltungDeptHeader department={emp.department} sfnMode={sfnMode} showCommission={showCommission} />}
                     <BuchhaltungRow
+                      showRestaurantBadge={!!searchTerm.trim()}
                       emp={emp}
                       totals={totals}
                       note={note as PayrollNote | undefined}

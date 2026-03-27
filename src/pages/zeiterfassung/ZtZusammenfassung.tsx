@@ -19,6 +19,7 @@ import { useHolidayRates } from "@/hooks/useHolidayRates";
 import ShiftTimeOverride from "@/components/zeiterfassung/ShiftTimeOverride";
 import { useSfnMode } from "@/hooks/useSfnMode";
 import EmployeeSearchFilter, { filterEmployeesBySearch } from "@/components/zeiterfassung/EmployeeSearchFilter";
+import RestaurantBadge from "@/components/zeiterfassung/RestaurantBadge";
 
 type Shift = {
   id: string;
@@ -51,7 +52,8 @@ export default function ZtZusammenfassung() {
   const showSfn = hasPermission('admin');
 
   const selectedPeriod = periods?.find(p => p.id === selectedPeriodId);
-  const cumData = useCumulatedZtData(cumulated, selectedPeriod);
+  const isSearchActive = !!searchTerm.trim();
+  const cumData = useCumulatedZtData(cumulated || isSearchActive, selectedPeriod);
 
   // Load employees from ALL restaurants for ShiftTimeOverride
   const { data: allRestaurantEmployees } = useQuery({
@@ -59,7 +61,7 @@ export default function ZtZusammenfassung() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("staff_restaurants")
-        .select("zt_department, staff_id, restaurant_id, staff!inner(id, name, perso_nr, first_name, last_name, nickname)")
+        .select("zt_department, staff_id, restaurant_id, restaurants(name), staff!inner(id, name, perso_nr, first_name, last_name, nickname)")
         .in("restaurant_id", allRestaurantIds)
         .not("zt_department", "is", null);
       if (error) throw error;
@@ -71,6 +73,8 @@ export default function ZtZusammenfassung() {
         last_name: row.staff.last_name,
         nickname: row.staff.nickname,
         department: row.zt_department,
+        restaurant_name: row.restaurants?.name ?? undefined,
+        restaurant_id: row.restaurant_id,
       }));
     },
     enabled: allRestaurantIds.length > 0,
@@ -99,11 +103,11 @@ export default function ZtZusammenfassung() {
     enabled: !!selectedPeriod,
   });
 
-  const employees = cumulated ? cumData.employees : restaurantEmployees;
-  const weeks = cumulated ? cumData.weeks : contextWeeks;
+  const employees = (cumulated || isSearchActive) ? cumData.employees : restaurantEmployees;
+  const weeks = (cumulated || isSearchActive) ? cumData.weeks : contextWeeks;
 
   // Load all shifts for all weeks of the selected period
-  const weekIds = cumulated
+  const weekIds = (cumulated || isSearchActive)
     ? (cumData.allWeekIds ?? [])
     : (contextWeeks?.map(w => w.id) ?? []);
 
@@ -119,13 +123,13 @@ export default function ZtZusammenfassung() {
       if (error) throw error;
       return data as Shift[];
     },
-    enabled: !cumulated && weekIds.length > 0,
+    enabled: !cumulated && !isSearchActive && weekIds.length > 0,
   });
 
-  const shifts = cumulated ? (cumData.shifts as Shift[] | undefined) : singleShifts;
+  const shifts = (cumulated || isSearchActive) ? (cumData.shifts as Shift[] | undefined) : singleShifts;
 
   // Build a map: weekNumber -> weekIds
-  const weekNumberToIds: Record<number, string[]> = cumulated
+  const weekNumberToIds: Record<number, string[]> = (cumulated || isSearchActive)
     ? cumData.weekNumberToAllIds
     : (() => {
         const map: Record<number, string[]> = {};
@@ -280,6 +284,7 @@ export default function ZtZusammenfassung() {
                           : emp.name;
                       })()}
                       {emp.perso_nr && emp.perso_nr > 0 && <span className="text-xs text-muted-foreground ml-1">{emp.perso_nr}</span>}
+                      <RestaurantBadge restaurantName={(emp as any).restaurant_name} department={emp.department} show={isSearchActive} />
                     </td>
                     {weeks?.map((w) => {
                       const h = getWeeklyHours(emp.id, w.week_number, emp.department);

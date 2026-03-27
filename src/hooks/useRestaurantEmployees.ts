@@ -10,6 +10,8 @@ export type RestaurantEmployee = {
   nickname: string | null;
   department: string;
   date_of_birth: string | null;
+  restaurant_name?: string;
+  restaurant_id?: string;
 };
 
 export function useRestaurantEmployees(restaurantId: string) {

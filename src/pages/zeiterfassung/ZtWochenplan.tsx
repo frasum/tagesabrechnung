@@ -29,6 +29,7 @@ import { useRestaurantEmployees, type RestaurantEmployee } from "@/hooks/useRest
 import { useCumulatedZtData } from "@/hooks/useCumulatedZtData";
 import { useHolidayRates } from "@/hooks/useHolidayRates";
 import EmployeeSearchFilter, { filterEmployeesBySearch } from "@/components/zeiterfassung/EmployeeSearchFilter";
+import RestaurantBadge from "@/components/zeiterfassung/RestaurantBadge";
 
 type Shift = {
   id: string;
@@ -124,19 +125,21 @@ export default function ZtWochenplan() {
 
   const selectedPeriod = periods?.find(p => p.id === selectedPeriodId);
 
+  const isSearchActive = !!searchTerm.trim();
+
   // Cumulated data hook
   const cumData = useCumulatedZtData(
-    cumulated,
+    cumulated || isSearchActive,
     selectedPeriod ? { start_date: selectedPeriod.start_date, end_date: selectedPeriod.end_date } : undefined
   );
 
   const { data: restaurantEmployees } = useRestaurantEmployees(restaurantId);
 
   // Effective employees: cumulated or restaurant-specific
-  const employees = cumulated ? cumData.employees : restaurantEmployees;
+  const employees = (cumulated || isSearchActive) ? cumData.employees : restaurantEmployees;
 
   // Effective weeks: cumulated (deduplicated by week_number) or restaurant-specific
-  const effectiveWeeks = cumulated ? cumData.weeks : weeks;
+  const effectiveWeeks = (cumulated || isSearchActive) ? cumData.weeks : weeks;
 
   // When cumulated, map selectedWeekId to the deduplicated week
   // We need a "virtual" selectedWeekId for cumulated mode
@@ -707,6 +710,7 @@ export default function ZtWochenplan() {
                           <div className="flex items-center gap-1.5">
                             <div className={`w-0.5 h-4 rounded-full ${deptColor} opacity-60`}></div>
                             <span className="truncate">{emp.nickname || (emp.name !== emp.first_name && emp.name !== emp.last_name ? emp.name : null) || emp.first_name || emp.name}</span>
+                            <RestaurantBadge restaurantName={(emp as any).restaurant_name} department={emp.department} show={isSearchActive} />
                           </div>
                         </td>
                         {weekDays.map((day, dayIdx) => {

@@ -8,6 +8,7 @@ import type { EmployeeTotals, PayrollNote, Shift, AdvanceEntry } from "./types";
 import type { RestaurantEmployee } from "@/hooks/useRestaurantEmployees";
 import type { SfnMode } from "@/hooks/useSfnMode";
 import { format, parseISO } from "date-fns";
+import RestaurantBadge from "@/components/zeiterfassung/RestaurantBadge";
 
 interface BuchhaltungRowProps {
   emp: RestaurantEmployee;
@@ -21,10 +22,11 @@ interface BuchhaltungRowProps {
   showSfn?: boolean;
   showCommission?: boolean;
   commission?: number;
+  showRestaurantBadge?: boolean;
   onUpsertNote: (params: { employee_id: string; field: string; value: any }) => void;
 }
 
-export default function BuchhaltungRow({ emp, totals, note, shifts, advances, isEven, isLocked, sfnMode = "simple", showSfn = true, showCommission = false, commission = 0, onUpsertNote }: BuchhaltungRowProps) {
+export default function BuchhaltungRow({ emp, totals, note, shifts, advances, isEven, isLocked, sfnMode = "simple", showSfn = true, showCommission = false, commission = 0, showRestaurantBadge = false, onUpsertNote }: BuchhaltungRowProps) {
   const rowBg = isEven ? "bg-muted/30" : "";
   const isExtended = sfnMode === "extended";
 
@@ -51,6 +53,7 @@ export default function BuchhaltungRow({ emp, totals, note, shifts, advances, is
       <td className="px-2 py-1.5 font-medium whitespace-nowrap">
         {nameBase}
         {persoStr && <span className="text-xs text-muted-foreground ml-1">{persoStr}</span>}
+        <RestaurantBadge restaurantName={emp.restaurant_name} department={emp.department} show={showRestaurantBadge} />
       </td>
       <td className="text-center px-1 py-1.5 font-semibold tabular-nums bg-primary/5 border-l border-border/40">
         {formatHours(totals.gesamt)}
