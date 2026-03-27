@@ -76,22 +76,22 @@ export function useCumulatedZtData(
     enabled: enabled && weekIds.length > 0,
   });
 
-  // 4. Load all employees across all restaurants (with zt_department)
+  // 4. Load all employees across all restaurants (with zt_department + restaurant name)
   const { data: employees } = useQuery({
     queryKey: ["cumulated-employees"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("staff_restaurants")
-        .select("zt_department, staff_id, staff!inner(id, name, perso_nr, first_name, last_name, nickname)")
+        .select("zt_department, staff_id, restaurant_id, restaurants(name), staff!inner(id, name, perso_nr, first_name, last_name, nickname)")
         .not("zt_department", "is", null)
         .eq("staff.is_active", true);
       if (error) throw error;
 
-      // Deduplicate by staff.id + department
+      // Deduplicate by staff.id + department + restaurant_id
       const seen = new Set<string>();
       const result: RestaurantEmployee[] = [];
       for (const row of data as any[]) {
-        const key = `${row.staff.id}-${row.zt_department}`;
+        const key = `${row.staff.id}-${row.zt_department}-${row.restaurant_id}`;
         if (seen.has(key)) continue;
         seen.add(key);
         result.push({
@@ -103,6 +103,8 @@ export function useCumulatedZtData(
           nickname: row.staff.nickname,
           department: row.zt_department,
           date_of_birth: row.staff.date_of_birth ?? null,
+          restaurant_name: row.restaurants?.name ?? undefined,
+          restaurant_id: row.restaurant_id ?? undefined,
         });
       }
       return result;
