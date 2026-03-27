@@ -74,7 +74,7 @@ export default function ZtBuchhaltung() {
     enabled: !cumulated && !isSearchActive && weekIds.length > 0,
   });
 
-  const shifts = cumulated ? (cumData.shifts as Shift[] | undefined) : singleShifts;
+  const shifts = (cumulated || isSearchActive) ? (cumData.shifts as Shift[] | undefined) : singleShifts;
 
   const { data: singlePayrollNotes } = useQuery({
     queryKey: ["payroll-notes", selectedPeriodId],
