@@ -37,7 +37,7 @@ export default function BuchhaltungRow({ emp, totals, note, shifts, advances, is
 
   const vorschussValue = advanceSum > 0 ? advanceSum : (note?.vorschuss ?? 0);
   const vacRanges = getVacationDateRanges(shifts);
-  const vacText = vacRanges.length > 0 ? `U: ${formatSickRanges(vacRanges).join(", ")}` : "";
+  const vacText = vacRanges.length > 0 ? `U: ${formatVacationRanges(vacRanges, shifts).join(", ")}` : "";
   const autoPrefix = [advanceText, vacText].filter(Boolean).join(" | ");
 
   // Strip auto-generated prefix from stored note to avoid duplication

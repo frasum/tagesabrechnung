@@ -194,6 +194,26 @@ export function formatSickRanges(ranges: { from: string; to: string }[]): string
   });
 }
 
+/**
+ * Format vacation date ranges using actual shift count instead of calendar days.
+ */
+export function formatVacationRanges(
+  ranges: { from: string; to: string }[],
+  shifts: { absence_type?: string | null; shift_date?: string }[]
+): string[] {
+  const fmtDay = (d: Date) =>
+    `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.`;
+  return ranges.map(r => {
+    const fromDate = new Date(r.from);
+    const toDate = new Date(r.to);
+    if (r.from === r.to) return fmtDay(fromDate);
+    const actualDays = shifts.filter(
+      s => s.absence_type === 'urlaub' && s.shift_date && s.shift_date >= r.from && s.shift_date <= r.to
+    ).length;
+    return `${fmtDay(fromDate)}–${fmtDay(toDate)} (${actualDays}T)`;
+  });
+}
+
 export function getDepartmentColorClass(dept: string): string {
   switch (dept) {
     case "Küche": return "dept-kueche";
