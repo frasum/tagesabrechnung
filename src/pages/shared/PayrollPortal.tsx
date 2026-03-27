@@ -526,6 +526,7 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
             employees={filterEmployeesBySearch(employeesWithShifts, searchTerm)}
             periodLabel={period.label}
             weekNumberToAllIds={effectiveWeekNumberToAllIds}
+            searchTerm={searchTerm}
           />
         </TabsContent>
 
@@ -543,6 +544,7 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
             holidayRates={holidayRates}
             showCommission={showCommission}
             commissionMap={showCommission ? commissionMap : undefined}
+            searchTerm={searchTerm}
           />
         </TabsContent>
 
@@ -929,13 +931,14 @@ function PayrollWochenplanTab({ weeks, shifts, employees, holidays, periodLabel,
 
 // =================== Zusammenfassung Tab ===================
 
-function PayrollZusammenfassungTab({ sfnMode, weeks, shifts, employees, periodLabel, weekNumberToAllIds }: {
+function PayrollZusammenfassungTab({ sfnMode, weeks, shifts, employees, periodLabel, weekNumberToAllIds, searchTerm = "" }: {
   sfnMode: SfnMode;
   weeks: any[];
   shifts: Shift[];
   employees: any[];
   periodLabel: string;
   weekNumberToAllIds: Record<number, string[]>;
+  searchTerm?: string;
 }) {
   const additive = sfnMode === "extended";
   const isExtended = sfnMode === "extended";
@@ -1008,7 +1011,7 @@ function PayrollZusammenfassungTab({ sfnMode, weeks, shifts, employees, periodLa
 
               return (
                 <React.Fragment key={`${emp.id}-${emp.department}`}>
-                   {showDeptHeader && (
+                   {showDeptHeader && !searchTerm.trim() && (
                     <tr>
                       <td colSpan={weeks.length + (isExtended ? 9 : 8)} className={`p-2 font-bold text-xs uppercase tracking-wide ${getDepartmentBgClass(emp.department)}`}>
                         {emp.department}
@@ -1056,7 +1059,7 @@ function PayrollZusammenfassungTab({ sfnMode, weeks, shifts, employees, periodLa
 
 // =================== Buchhaltung Tab ===================
 
-function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, periodLabel, isLocked, onUpsertNote, sfnMode = "simple", holidayRates, showCommission = false, commissionMap }: {
+function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, periodLabel, isLocked, onUpsertNote, sfnMode = "simple", holidayRates, showCommission = false, commissionMap, searchTerm = "" }: {
   shifts: Shift[];
   employees: any[];
   payrollNotes: PayrollNote[];
@@ -1068,6 +1071,7 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
   holidayRates?: Map<string, number>;
   showCommission?: boolean;
   commissionMap?: Map<string, number>;
+  searchTerm?: string;
 }) {
   const additive = sfnMode === "extended";
   const isExtended = sfnMode === "extended";
@@ -1133,7 +1137,7 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
 
                 return (
                   <React.Fragment key={`${emp.id}-${emp.department}`}>
-                    {showDeptHeader && <BuchhaltungDeptHeader department={emp.department} sfnMode={sfnMode} showCommission={showCommission} />}
+                    {showDeptHeader && !searchTerm.trim() && <BuchhaltungDeptHeader department={emp.department} sfnMode={sfnMode} showCommission={showCommission} />}
                     <BuchhaltungRow
                       emp={emp}
                       totals={totals}
@@ -1151,7 +1155,7 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
                 );
               })}
             </tbody>
-            {employees.length > 0 && <BuchhaltungFooter grandTotals={grandTotals} sfnMode={sfnMode} showCommission={showCommission} totalCommission={totalCommission} />}
+            {employees.length > 0 && !searchTerm.trim() && <BuchhaltungFooter grandTotals={grandTotals} sfnMode={sfnMode} showCommission={showCommission} totalCommission={totalCommission} />}
           </table>
         </div>
       </Card>

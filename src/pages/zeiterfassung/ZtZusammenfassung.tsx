@@ -262,7 +262,7 @@ export default function ZtZusammenfassung() {
 
               return (
                 <React.Fragment key={`${emp.id}-${emp.department}`}>
-                  {showDeptHeader && (
+                  {showDeptHeader && !searchTerm.trim() && (
                     <tr>
                       <td colSpan={(weeks?.length ?? 0) + (isExtended ? (showSfn ? 9 : 5) : (showSfn ? 8 : 5))} className={`p-2 font-bold text-xs uppercase tracking-wide ${getDepartmentBgClass(emp.department)}`}>
                         {emp.department}
@@ -300,7 +300,7 @@ export default function ZtZusammenfassung() {
                     <td className="text-center p-2 text-green-600 font-medium">{totals.urlaubTage > 0 ? totals.urlaubTage.toFixed(2).replace('.', ',') : ""}</td>
                     <td className="text-center p-2 text-red-600 font-medium">{totals.krankTage > 0 ? totals.krankTage : ""}</td>
                   </tr>
-                  {showDeptSubtotal && (() => {
+                  {showDeptSubtotal && !searchTerm.trim() && (() => {
                     const dt = getDepartmentTotals(emp.department!);
                     return (
                       <tr className={`border-t-2 font-bold ${getDepartmentBgClass(emp.department)}`}>
@@ -327,7 +327,7 @@ export default function ZtZusammenfassung() {
               );
             })}
           </tbody>
-          <tfoot>
+          {!searchTerm.trim() && <tfoot>
             <tr className="border-t-2 font-bold bg-muted">
               <td className="p-2 uppercase text-xs sticky left-0 bg-muted z-10">Gesamt</td>
               {weeks?.map((w) => <td key={w.id} className="text-center p-2"></td>)}
@@ -346,7 +346,7 @@ export default function ZtZusammenfassung() {
               <td className="text-center p-2">{grandTotals.urlaubTage > 0 ? grandTotals.urlaubTage.toFixed(2).replace('.', ',') : ""}</td>
               <td className="text-center p-2">{grandTotals.krankTage > 0 ? grandTotals.krankTage : ""}</td>
             </tr>
-          </tfoot>
+          </tfoot>}
         </table>
       </div>
 
