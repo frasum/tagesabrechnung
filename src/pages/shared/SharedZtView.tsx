@@ -834,7 +834,7 @@ function BuchhaltungTab({ shifts, employees, payrollNotes, advances, periodLabel
                 const advanceText = empAdvances.map(a => `Vorschuss ${format(parseISO(a.date), "dd.MM.")}: ${a.amount.toFixed(2).replace(".", ",")} €`).join("; ");
                 const vorschussValue = advanceSum > 0 ? advanceSum : (note?.vorschuss ?? 0);
                 const vacRanges = getVacationDateRanges(empShifts);
-                const vacText = vacRanges.length > 0 ? `U: ${formatSickRanges(vacRanges).join(", ")}` : "";
+                const vacText = vacRanges.length > 0 ? `U: ${formatVacationRanges(vacRanges, empShifts).join(", ")}` : "";
                 const besonderheitenValue = [advanceText, vacText, note?.besonderheiten].filter(Boolean).join(" | ");
 
                 const nicknameAlreadyInName = emp.nickname && (emp.first_name?.includes(emp.nickname) || emp.last_name?.includes(emp.nickname));
