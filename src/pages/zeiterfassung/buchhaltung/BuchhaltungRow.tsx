@@ -24,9 +24,10 @@ interface BuchhaltungRowProps {
   commission?: number;
   showRestaurantBadge?: boolean;
   onUpsertNote: (params: { employee_id: string; field: string; value: any }) => void;
+  onEmployeeClick?: (empId: string) => void;
 }
 
-export default function BuchhaltungRow({ emp, totals, note, shifts, advances, isEven, isLocked, sfnMode = "simple", showSfn = true, showCommission = false, commission = 0, showRestaurantBadge = false, onUpsertNote }: BuchhaltungRowProps) {
+export default function BuchhaltungRow({ emp, totals, note, shifts, advances, isEven, isLocked, sfnMode = "simple", showSfn = true, showCommission = false, commission = 0, showRestaurantBadge = false, onUpsertNote, onEmployeeClick }: BuchhaltungRowProps) {
   const rowBg = isEven ? "bg-muted/30" : "";
   const isExtended = sfnMode === "extended";
 
@@ -59,7 +60,9 @@ export default function BuchhaltungRow({ emp, totals, note, shifts, advances, is
   return (
     <tr className={`border-t border-border/50 hover:bg-primary/5 transition-colors ${rowBg}`}>
       <td className="px-2 py-1.5 font-medium whitespace-nowrap">
-        {nameBase}
+        <span className={onEmployeeClick ? "cursor-pointer hover:underline" : ""} onClick={() => onEmployeeClick?.(emp.id)}>
+          {nameBase}
+        </span>
         {persoStr && <span className="text-xs text-muted-foreground ml-1">{persoStr}</span>}
         <RestaurantBadge restaurantName={emp.restaurant_name} department={emp.department} show={showRestaurantBadge} />
       </td>

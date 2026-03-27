@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Loader2, FileDown, FileSpreadsheet, AlertCircle, Lock, ArrowLeft, CalendarIcon } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -329,6 +330,7 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
   const [selectedWeekId, setSelectedWeekId] = useState<string>("");
   const [selectedRestaurant, setSelectedRestaurant] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [staffDetailEmployee, setStaffDetailEmployee] = useState<any | null>(null);
   const { sfnMode, setSfnMode } = useSfnMode();
 
   // Commission data for Buchhaltung tab
@@ -450,6 +452,29 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
     onError: () => toast.error("Fehler beim Speichern"),
   });
 
+  const updateStaff = useMutation({
+    mutationFn: async (params: { staff_id: string; updates: Record<string, any> }) => {
+      const res = await fetch(`https://${PROJECT_ID}.supabase.co/functions/v1/payroll-office-data`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: API_KEY },
+        body: JSON.stringify({ pin, action: "update_staff", ...params }),
+      });
+      if (!res.ok) throw new Error("Fehler beim Speichern");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payroll-data"] });
+      toast.success("Mitarbeiterdaten gespeichert");
+      setStaffDetailEmployee(null);
+    },
+    onError: () => toast.error("Fehler beim Speichern"),
+  });
+
+  const handleEmployeeClick = useCallback((empId: string) => {
+    // Find unique employee data (take first occurrence regardless of department)
+    const emp = employees.find(e => e.id === empId);
+    if (emp) setStaffDetailEmployee(emp);
+  }, [employees]);
+
   return (
     <div className="max-w-7xl mx-auto p-4 space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
@@ -527,6 +552,7 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
             weekNumberToAllIds={effectiveWeekNumberToAllIds}
             onShiftsChanged={() => queryClient.invalidateQueries({ queryKey: ["payroll-data"] })}
             searchTerm={searchTerm}
+            onEmployeeClick={handleEmployeeClick}
           />
         </TabsContent>
 
@@ -540,6 +566,7 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
             periodLabel={period.label}
             weekNumberToAllIds={effectiveWeekNumberToAllIds}
             searchTerm={searchTerm}
+            onEmployeeClick={handleEmployeeClick}
           />
         </TabsContent>
 
@@ -558,6 +585,7 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
             showCommission={showCommission}
             commissionMap={showCommission ? commissionMap : undefined}
             searchTerm={searchTerm}
+            onEmployeeClick={handleEmployeeClick}
           />
         </TabsContent>
 
@@ -575,6 +603,17 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
           />
         </TabsContent>
       </Tabs>
+
+      <StaffDetailDialog
+        employee={staffDetailEmployee}
+        onClose={() => setStaffDetailEmployee(null)}
+        onSave={(updates) => {
+          if (staffDetailEmployee) {
+            updateStaff.mutate({ staff_id: staffDetailEmployee.id, updates });
+          }
+        }}
+        isSaving={updateStaff.isPending}
+      />
     </div>
   );
 }
@@ -616,7 +655,7 @@ function handleTimeKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
 
 // =================== Wochenplan Tab ===================
 
-function PayrollWochenplanTab({ weeks, shifts, employees, holidays, periodLabel, selectedWeekId, onSelectWeek, isLocked, pin, weekNumberToAllIds, onShiftsChanged, searchTerm = "" }: {
+function PayrollWochenplanTab({ weeks, shifts, employees, holidays, periodLabel, selectedWeekId, onSelectWeek, isLocked, pin, weekNumberToAllIds, onShiftsChanged, searchTerm = "", onEmployeeClick }: {
   weeks: any[];
   shifts: Shift[];
   employees: any[];
@@ -629,6 +668,7 @@ function PayrollWochenplanTab({ weeks, shifts, employees, holidays, periodLabel,
   weekNumberToAllIds: Record<number, string[]>;
   onShiftsChanged: () => void;
   searchTerm?: string;
+  onEmployeeClick?: (empId: string) => void;
 }) {
   const [editingTime, setEditingTime] = useState<Record<string, string>>({});
   const [absenceDialog, setAbsenceDialog] = useState<{
@@ -789,7 +829,9 @@ function PayrollWochenplanTab({ weeks, shifts, employees, holidays, periodLabel,
                       )}
                       <tr className={`border-t hover:bg-muted/30 ${isEven ? "bg-muted/20" : ""}`}>
                         <td className="p-1.5 font-medium text-xs whitespace-nowrap border-l-2" style={{ borderLeftColor: deptColor }}>
-                          {emp.nickname || emp.first_name || emp.name}
+                          <span className="cursor-pointer hover:underline" onClick={() => onEmployeeClick?.(emp.id)}>
+                            {emp.nickname || emp.first_name || emp.name}
+                          </span>
                           <RestaurantBadge restaurantName={emp.restaurant_name} department={emp.department} show={!!searchTerm} />
                         </td>
                         {weekDays.map(day => {
@@ -946,7 +988,7 @@ function PayrollWochenplanTab({ weeks, shifts, employees, holidays, periodLabel,
 
 // =================== Zusammenfassung Tab ===================
 
-function PayrollZusammenfassungTab({ sfnMode, weeks, shifts, employees, periodLabel, weekNumberToAllIds, searchTerm = "" }: {
+function PayrollZusammenfassungTab({ sfnMode, weeks, shifts, employees, periodLabel, weekNumberToAllIds, searchTerm = "", onEmployeeClick }: {
   sfnMode: SfnMode;
   weeks: any[];
   shifts: Shift[];
@@ -954,6 +996,7 @@ function PayrollZusammenfassungTab({ sfnMode, weeks, shifts, employees, periodLa
   periodLabel: string;
   weekNumberToAllIds: Record<number, string[]>;
   searchTerm?: string;
+  onEmployeeClick?: (empId: string) => void;
 }) {
   const additive = sfnMode === "extended";
   const isExtended = sfnMode === "extended";
@@ -1035,12 +1078,14 @@ function PayrollZusammenfassungTab({ sfnMode, weeks, shifts, employees, periodLa
                   )}
                   <tr className="border-t hover:bg-muted/30">
                     <td className="p-2 font-medium">
+                      <span className="cursor-pointer hover:underline" onClick={() => onEmployeeClick?.(emp.id)}>
                       {(() => {
                         const nicknameAlreadyInName = emp.nickname && (emp.first_name?.includes(emp.nickname) || emp.last_name?.includes(emp.nickname));
                         return emp.first_name || emp.last_name
                           ? [emp.first_name, emp.nickname && !nicknameAlreadyInName ? `(${emp.nickname})` : null, emp.last_name].filter(Boolean).join(" ")
                           : emp.name;
                       })()}
+                      </span>
                       {emp.perso_nr && emp.perso_nr > 0 && <span className="text-xs text-muted-foreground ml-1">{emp.perso_nr}</span>}
                       <RestaurantBadge restaurantName={emp.restaurant_name} department={emp.department} show={!!searchTerm.trim()} />
                     </td>
@@ -1075,7 +1120,7 @@ function PayrollZusammenfassungTab({ sfnMode, weeks, shifts, employees, periodLa
 
 // =================== Buchhaltung Tab ===================
 
-function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, periodLabel, isLocked, onUpsertNote, sfnMode = "simple", holidayRates, showCommission = false, commissionMap, searchTerm = "" }: {
+function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, periodLabel, isLocked, onUpsertNote, sfnMode = "simple", holidayRates, showCommission = false, commissionMap, searchTerm = "", onEmployeeClick }: {
   shifts: Shift[];
   employees: any[];
   payrollNotes: PayrollNote[];
@@ -1088,6 +1133,7 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
   showCommission?: boolean;
   commissionMap?: Map<string, number>;
   searchTerm?: string;
+  onEmployeeClick?: (empId: string) => void;
 }) {
   const additive = sfnMode === "extended";
   const isExtended = sfnMode === "extended";
@@ -1167,6 +1213,7 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
                       showCommission={showCommission}
                       commission={emp.department === "Service" ? (commissionMap?.get(emp.id) ?? 0) : 0}
                       onUpsertNote={onUpsertNote}
+                      onEmployeeClick={onEmployeeClick}
                     />
                   </React.Fragment>
                 );
@@ -1449,5 +1496,156 @@ function PayrollProvisionTab({ waiterShifts, staffRoles, commissionSettings, shi
         </table>
       </div>
     </div>
+  );
+}
+
+// =================== Staff Detail Dialog ===================
+
+const ROLE_LABELS: Record<string, string> = {
+  waiter: "Kellner", kitchen: "Küche", both: "Beides", gl: "GL",
+  waiter_gl: "Kellner + GL", kitchen_gl: "Küche + GL", all: "Alle",
+};
+
+function StaffDetailDialog({ employee, onClose, onSave, isSaving }: {
+  employee: any | null;
+  onClose: () => void;
+  onSave: (updates: Record<string, any>) => void;
+  isSaving: boolean;
+}) {
+  const [form, setForm] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    if (employee) {
+      setForm({
+        first_name: employee.first_name ?? "",
+        last_name: employee.last_name ?? "",
+        nickname: employee.nickname ?? "",
+        date_of_birth: employee.date_of_birth ?? "",
+        nationality: employee.nationality ?? "",
+        perso_nr: employee.perso_nr ?? "",
+        personnel_group: employee.personnel_group ?? "",
+        employment_start: employee.employment_start ?? "",
+        employment_end: employee.employment_end ?? "",
+        hourly_rate: employee.hourly_rate ?? "",
+        contracted_hours_per_month: employee.contracted_hours_per_month ?? "",
+        is_minijob: employee.is_minijob ?? false,
+        is_sv_exempt: employee.is_sv_exempt ?? false,
+        tax_id: employee.tax_id ?? "",
+        tax_class: employee.tax_class ?? "",
+        social_security_nr: employee.social_security_nr ?? "",
+        health_insurance: employee.health_insurance ?? "",
+        vacation_days_contractual: employee.vacation_days_contractual ?? "",
+        vacation_days_current: employee.vacation_days_current ?? "",
+        vacation_days_previous: employee.vacation_days_previous ?? "",
+        vacation_days_taken: employee.vacation_days_taken ?? "",
+        sick_days_total: employee.sick_days_total ?? "",
+      });
+    }
+  }, [employee]);
+
+  const set = (field: string, value: any) => setForm(prev => ({ ...prev, [field]: value }));
+
+  const handleSave = () => {
+    const updates: Record<string, any> = { ...form };
+    for (const key of ["perso_nr", "hourly_rate", "contracted_hours_per_month", "vacation_days_contractual", "vacation_days_current", "vacation_days_previous", "vacation_days_taken", "sick_days_total"]) {
+      if (updates[key] === "" || updates[key] === null) updates[key] = null;
+      else updates[key] = Number(updates[key]);
+    }
+    for (const key of ["date_of_birth", "employment_start", "employment_end", "nationality", "personnel_group", "tax_id", "tax_class", "social_security_nr", "health_insurance", "nickname"]) {
+      if (updates[key] === "") updates[key] = null;
+    }
+    onSave(updates);
+  };
+
+  if (!employee) return null;
+
+  const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
+    <div className="space-y-3">
+      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide border-b pb-1">{title}</h3>
+      <div className="grid grid-cols-2 gap-3">{children}</div>
+    </div>
+  );
+
+  const Field = ({ label, field, type = "text" }: { label: string; field: string; type?: string }) => (
+    <div className="space-y-1">
+      <Label className="text-xs">{label}</Label>
+      <Input
+        type={type}
+        value={form[field] ?? ""}
+        onChange={(e) => set(field, e.target.value)}
+        className="h-8 text-sm"
+      />
+    </div>
+  );
+
+  return (
+    <Dialog open={!!employee} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {employee.first_name || employee.last_name
+              ? [employee.first_name, employee.last_name].filter(Boolean).join(" ")
+              : employee.name}
+          </DialogTitle>
+          <DialogDescription>
+            {ROLE_LABELS[employee.role] ?? employee.role}
+            {employee.department && ` · ${employee.department}`}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-5 py-2">
+          <Section title="Persönliche Daten">
+            <Field label="Vorname" field="first_name" />
+            <Field label="Nachname" field="last_name" />
+            <Field label="Spitzname" field="nickname" />
+            <Field label="Geburtsdatum" field="date_of_birth" type="date" />
+            <Field label="Nationalität" field="nationality" />
+          </Section>
+
+          <Section title="Beschäftigung">
+            <Field label="Perso-Nr" field="perso_nr" type="number" />
+            <Field label="Personalgruppe" field="personnel_group" />
+            <Field label="Eintrittsdatum" field="employment_start" type="date" />
+            <Field label="Austrittsdatum" field="employment_end" type="date" />
+          </Section>
+
+          <Section title="Vergütung">
+            <Field label="Stundenlohn (€)" field="hourly_rate" type="number" />
+            <Field label="Vertragsstunden / Monat" field="contracted_hours_per_month" type="number" />
+            <div className="flex items-center gap-3">
+              <Switch checked={form.is_minijob ?? false} onCheckedChange={(v) => set("is_minijob", v)} />
+              <Label className="text-sm">Minijob</Label>
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch checked={form.is_sv_exempt ?? false} onCheckedChange={(v) => set("is_sv_exempt", v)} />
+              <Label className="text-sm">SV-befreit</Label>
+            </div>
+          </Section>
+
+          <Section title="Steuer / Sozialversicherung">
+            <Field label="Steuer-ID" field="tax_id" />
+            <Field label="Steuerklasse" field="tax_class" />
+            <Field label="SV-Nummer" field="social_security_nr" />
+            <Field label="Krankenkasse" field="health_insurance" />
+          </Section>
+
+          <Section title="Urlaub / Krankheit">
+            <Field label="Vertragliche Urlaubstage" field="vacation_days_contractual" type="number" />
+            <Field label="Aktuell" field="vacation_days_current" type="number" />
+            <Field label="Vorjahr" field="vacation_days_previous" type="number" />
+            <Field label="Genommen" field="vacation_days_taken" type="number" />
+            <Field label="Krankheitstage gesamt" field="sick_days_total" type="number" />
+          </Section>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Abbrechen</Button>
+          <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+            Speichern
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
