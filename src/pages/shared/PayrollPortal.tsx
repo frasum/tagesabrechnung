@@ -519,7 +519,7 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
             sfnMode={sfnMode}
             weeks={weeks}
             shifts={filteredShifts}
-            employees={employeesWithShifts}
+            employees={filterEmployeesBySearch(employeesWithShifts, searchTerm)}
             periodLabel={period.label}
             weekNumberToAllIds={effectiveWeekNumberToAllIds}
           />
