@@ -43,7 +43,8 @@ export default function ZtZusammenfassung() {
   const allRestaurantIds = allRestaurants?.map(r => r.id) ?? [];
   const { selectedPeriodId, setSelectedPeriodId, periods, weeks: contextWeeks } = useZt();
   const { data: restaurantEmployees } = useRestaurantEmployees(restaurantId);
-  const [cumulated, setCumulated] = useState(false);
+  const [restaurantFilter, setRestaurantFilter] = useState<string | "all">(restaurantId);
+  const cumulated = restaurantFilter !== restaurantId;
   const [searchTerm, setSearchTerm] = useState("");
   const { hasPermission } = useAuth();
   const { data: holidayRates } = useHolidayRates();
@@ -103,7 +104,11 @@ export default function ZtZusammenfassung() {
     enabled: !!selectedPeriod,
   });
 
-  const employees = (cumulated || isSearchActive) ? cumData.employees : restaurantEmployees;
+  const allEmployees = (cumulated || isSearchActive) ? cumData.employees : restaurantEmployees;
+  const employees = allEmployees?.filter(emp => {
+    if (restaurantFilter === "all" || !cumulated) return true;
+    return (emp as any).restaurant_id === restaurantFilter;
+  });
   const weeks = (cumulated || isSearchActive) ? cumData.weeks : contextWeeks;
 
   // Load all shifts for all weeks of the selected period
@@ -226,9 +231,9 @@ export default function ZtZusammenfassung() {
         periods={periods}
         selectedPeriodId={selectedPeriodId}
         onPeriodChange={setSelectedPeriodId}
-        showCumulated={(allRestaurants?.length ?? 0) > 1}
-        cumulated={cumulated}
-        onCumulatedToggle={() => setCumulated(c => !c)}
+        restaurants={allRestaurants?.map(r => ({ id: r.id, name: r.name })) ?? []}
+        restaurantFilter={restaurantFilter}
+        onRestaurantFilterChange={setRestaurantFilter}
         actions={
           <>
             <Button variant="outline" size="sm" disabled={!employeesWithShifts.length} onClick={() => { if (selectedPeriod && weeks && shifts) { exportZusammenfassungPdf(selectedPeriod.label + (cumulated ? " (Alle Restaurants)" : ""), employeesWithShifts, weeks, shifts, cumulated ? cumData.weekNumberToAllIds : undefined, sfnMode, holidayRates); } }}>

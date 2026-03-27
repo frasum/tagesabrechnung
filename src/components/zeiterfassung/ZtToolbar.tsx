@@ -21,10 +21,10 @@ interface ZtToolbarProps {
   selectedPeriodId: string;
   onPeriodChange: (id: string) => void;
   isLocked?: boolean;
-  /** Show cumulated toggle */
-  showCumulated?: boolean;
-  cumulated?: boolean;
-  onCumulatedToggle?: () => void;
+  /** Restaurant filter buttons */
+  restaurants?: { id: string; name: string }[];
+  restaurantFilter?: string | "all";
+  onRestaurantFilterChange?: (id: string | "all") => void;
   /** Week selector */
   weeks?: Week[] | null;
   selectedWeekId?: string;
@@ -39,18 +39,20 @@ export function ZtToolbar({
   selectedPeriodId,
   onPeriodChange,
   isLocked,
-  showCumulated,
-  cumulated,
-  onCumulatedToggle,
+  restaurants,
+  restaurantFilter,
+  onRestaurantFilterChange,
   weeks,
   selectedWeekId,
   cumSelectedWeekNum,
   onWeekSelect,
   actions,
 }: ZtToolbarProps) {
+  const showRestaurantFilter = restaurants && restaurants.length > 1 && onRestaurantFilterChange;
+
   return (
     <div className="rounded-xl border border-border bg-card p-3 space-y-3 flex-shrink-0">
-      {/* Row 1: Period select + cumulated toggle + actions */}
+      {/* Row 1: Period select + restaurant filter + actions */}
       <div className="flex items-center gap-3 flex-wrap">
         <Select value={selectedPeriodId} onValueChange={onPeriodChange}>
           <SelectTrigger className="w-[180px] h-9 text-sm bg-background">
@@ -67,19 +69,34 @@ export function ZtToolbar({
           <Badge variant="secondary" className="text-xs px-2 py-0.5">Gesperrt</Badge>
         )}
 
-        {showCumulated && (
-          <button
-            onClick={onCumulatedToggle}
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all",
-              cumulated
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-            )}
-          >
-            <span className={cn("w-1.5 h-1.5 rounded-full", cumulated ? "bg-primary-foreground" : "bg-muted-foreground/50")} />
-            Alle Restaurants
-          </button>
+        {showRestaurantFilter && (
+          <div className="inline-flex rounded-lg bg-muted p-1 gap-0">
+            {restaurants.map((r) => (
+              <button
+                key={r.id}
+                onClick={() => onRestaurantFilterChange(r.id)}
+                className={cn(
+                  "relative px-3 py-1.5 text-xs font-medium rounded-md transition-all whitespace-nowrap",
+                  restaurantFilter === r.id
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {r.name}
+              </button>
+            ))}
+            <button
+              onClick={() => onRestaurantFilterChange("all")}
+              className={cn(
+                "relative px-3 py-1.5 text-xs font-medium rounded-md transition-all whitespace-nowrap",
+                restaurantFilter === "all"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Alle
+            </button>
+          </div>
         )}
 
         {actions && <div className="ml-auto flex items-center gap-1.5">{actions}</div>}
@@ -89,12 +106,13 @@ export function ZtToolbar({
       {weeks && weeks.length > 0 && (
         <div className="inline-flex rounded-lg bg-muted p-1 gap-0">
           {weeks.map((w) => {
-            const isSelected = cumulated
+            const isCumulated = restaurantFilter && restaurantFilter !== "all" ? false : restaurantFilter === "all";
+            const isSelected = isCumulated
               ? w.week_number === cumSelectedWeekNum
               : w.id === selectedWeekId;
             return (
               <button
-                key={cumulated ? `cum-${w.week_number}` : w.id}
+                key={isCumulated ? `cum-${w.week_number}` : w.id}
                 onClick={() => onWeekSelect?.(w.id, w.week_number)}
                 className={cn(
                   "relative px-3 py-1.5 text-xs font-medium rounded-md transition-all whitespace-nowrap",

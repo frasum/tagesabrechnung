@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Download, FileSpreadsheet } from "lucide-react";
-import { useRestaurant } from "@/hooks/useRestaurant";
+import { useRestaurant, useRestaurants } from "@/hooks/useRestaurant";
 import { useRestaurantEmployees } from "@/hooks/useRestaurantEmployees";
 import { useZt } from "@/contexts/ZtContext";
 import { DEPARTMENT_ORDER } from "@/lib/shiftCalculations";
@@ -33,7 +33,9 @@ export default function ZtBuchhaltung() {
   const { restaurantId } = useRestaurant();
   const { selectedPeriodId, setSelectedPeriodId, periods, weeks, isPeriodLocked } = useZt();
   const { data: restaurantEmployees } = useRestaurantEmployees(restaurantId);
-  const [cumulated, setCumulated] = useState(false);
+  const { data: allRestaurants } = useRestaurants();
+  const [restaurantFilter, setRestaurantFilter] = useState<string | "all">(restaurantId);
+  const cumulated = restaurantFilter !== restaurantId;
   const [searchTerm, setSearchTerm] = useState("");
   const outletContext = useOutletContext<{ sfnMode?: string }>();
   const sfnMode = (outletContext?.sfnMode as "simple" | "extended") ?? "simple";
@@ -54,7 +56,11 @@ export default function ZtBuchhaltung() {
   );
   const showCommission = commissionAddToGross;
 
-  const employees = (cumulated || isSearchActive) ? cumData.employees : restaurantEmployees;
+  const allEmployees = (cumulated || isSearchActive) ? cumData.employees : restaurantEmployees;
+  const employees = allEmployees?.filter(emp => {
+    if (restaurantFilter === "all" || !cumulated) return true;
+    return (emp as any).restaurant_id === restaurantFilter;
+  });
   const weekIds = (cumulated || isSearchActive)
     ? (cumData.allWeekIds ?? [])
     : (weeks?.map(w => w.id) ?? []);
@@ -199,9 +205,9 @@ export default function ZtBuchhaltung() {
         periods={periods}
         selectedPeriodId={selectedPeriodId}
         onPeriodChange={setSelectedPeriodId}
-        showCumulated
-        cumulated={cumulated}
-        onCumulatedToggle={() => setCumulated(c => !c)}
+        restaurants={allRestaurants?.map(r => ({ id: r.id, name: r.name })) ?? []}
+        restaurantFilter={restaurantFilter}
+        onRestaurantFilterChange={setRestaurantFilter}
         actions={
           <>
             <Button variant="outline" size="sm" disabled={!selectedPeriodId || !employeesWithShifts.length} onClick={() => { if (!selectedPeriod) return; exportBuchhaltungPdf(selectedPeriod.label + (cumulated ? " (Kumuliert)" : ""), employeesWithShifts, shifts ?? [], payrollNotes ?? [], sfnMode, holidayRates, showCommission ? commissionMap : undefined); toast.success("PDF wurde erstellt"); }}>

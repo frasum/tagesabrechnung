@@ -108,7 +108,8 @@ export default function ZtWochenplan() {
   const { hasPermission } = useAuth();
   const showSfn = hasPermission('admin');
 
-  const [cumulated, setCumulated] = useState(false);
+  const [restaurantFilter, setRestaurantFilter] = useState<string | "all">(restaurantId);
+  const cumulated = restaurantFilter !== restaurantId;
   const [searchTerm, setSearchTerm] = useState("");
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -136,7 +137,11 @@ export default function ZtWochenplan() {
   const { data: restaurantEmployees } = useRestaurantEmployees(restaurantId);
 
   // Effective employees: cumulated or restaurant-specific
-  const employees = (cumulated || isSearchActive) ? cumData.employees : restaurantEmployees;
+  const allEmployees = (cumulated || isSearchActive) ? cumData.employees : restaurantEmployees;
+  const employees = allEmployees?.filter(emp => {
+    if (restaurantFilter === "all" || !cumulated) return true;
+    return (emp as any).restaurant_id === restaurantFilter;
+  });
 
   // Effective weeks: cumulated (deduplicated by week_number) or restaurant-specific
   const effectiveWeeks = (cumulated || isSearchActive) ? cumData.weeks : weeks;
@@ -604,9 +609,9 @@ export default function ZtWochenplan() {
         selectedPeriodId={selectedPeriodId}
         onPeriodChange={(v) => { setSelectedPeriodId(v); setSelectedWeekId(""); setCumSelectedWeekNum(null); }}
         isLocked={isLocked}
-        showCumulated={hasMultipleRestaurants}
-        cumulated={cumulated}
-        onCumulatedToggle={() => { setCumulated(prev => !prev); setCumSelectedWeekNum(null); }}
+        restaurants={restaurants?.map(r => ({ id: r.id, name: r.name })) ?? []}
+        restaurantFilter={restaurantFilter}
+        onRestaurantFilterChange={(v) => { setRestaurantFilter(v); setCumSelectedWeekNum(null); }}
         weeks={effectiveWeeks}
         selectedWeekId={selectedWeekId}
         cumSelectedWeekNum={cumSelectedWeekNum}
