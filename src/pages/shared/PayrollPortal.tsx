@@ -390,8 +390,13 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
   const filteredShifts = useMemo(() => {
     if (effectiveRestaurant === "all") return shifts;
     const empIds = new Set(filteredEmployees.map((e: any) => e.id));
-    return shifts.filter(s => empIds.has(s.employee_id));
-  }, [shifts, effectiveRestaurant, filteredEmployees]);
+    const restaurantWeekIds = new Set(
+      Object.entries(weekToRestaurant)
+        .filter(([, rid]) => rid === effectiveRestaurant)
+        .map(([wid]) => wid)
+    );
+    return shifts.filter(s => empIds.has(s.employee_id) && restaurantWeekIds.has(s.week_id));
+  }, [shifts, effectiveRestaurant, filteredEmployees, weekToRestaurant]);
 
 
 

@@ -143,8 +143,13 @@ export default function SharedZtView() {
   const filteredShifts = useMemo(() => {
     if (!hasMultipleRestaurants || effectiveRestaurant === "all") return shifts;
     const empIds = new Set(filteredEmployees.map((e: any) => e.id));
-    return shifts.filter(s => empIds.has(s.employee_id));
-  }, [shifts, effectiveRestaurant, hasMultipleRestaurants, filteredEmployees]);
+    const restaurantWeekIds = new Set(
+      Object.entries(weekToRestaurant)
+        .filter(([, rid]) => rid === effectiveRestaurant)
+        .map(([wid]) => wid)
+    );
+    return shifts.filter(s => empIds.has(s.employee_id) && restaurantWeekIds.has(s.week_id));
+  }, [shifts, effectiveRestaurant, hasMultipleRestaurants, filteredEmployees, weekToRestaurant]);
 
   const effectiveWeekNumberToAllIds = effectiveRestaurant === "all" ? weekNumberToAllIds : undefined;
 
