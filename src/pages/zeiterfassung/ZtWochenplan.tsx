@@ -385,6 +385,9 @@ export default function ZtWochenplan() {
       queryClient.invalidateQueries({ queryKey: ["zt-shifts"] });
       queryClient.invalidateQueries({ queryKey: ["zt-shifts-period"] });
       queryClient.invalidateQueries({ queryKey: ["zt-shifts-global"] });
+      queryClient.invalidateQueries({ queryKey: ["zt-summary-shifts"] });
+      queryClient.invalidateQueries({ queryKey: ["zt-buchhaltung-shifts"] });
+      queryClient.invalidateQueries({ queryKey: ["cumulated-shifts"] });
     },
     onError: () => {
       toast.error("Fehler beim Speichern");

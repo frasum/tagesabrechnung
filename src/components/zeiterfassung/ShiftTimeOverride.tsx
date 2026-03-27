@@ -244,6 +244,8 @@ export default function ShiftTimeOverride({
       });
       queryClient.invalidateQueries({ queryKey: ["zt-summary-shifts"] });
       queryClient.invalidateQueries({ queryKey: ["zt-shifts"] });
+      queryClient.invalidateQueries({ queryKey: ["zt-buchhaltung-shifts"] });
+      queryClient.invalidateQueries({ queryKey: ["cumulated-shifts"] });
     } catch (err: any) {
       toast({ title: "Fehler beim Anpassen", description: err.message, variant: "destructive" });
     } finally {
@@ -370,6 +372,8 @@ export default function ShiftTimeOverride({
       });
       queryClient.invalidateQueries({ queryKey: ["zt-summary-shifts"] });
       queryClient.invalidateQueries({ queryKey: ["zt-shifts"] });
+      queryClient.invalidateQueries({ queryKey: ["zt-buchhaltung-shifts"] });
+      queryClient.invalidateQueries({ queryKey: ["cumulated-shifts"] });
     } catch (err: any) {
       toast({ title: "Fehler beim Erzeugen", description: err.message, variant: "destructive" });
     } finally {
@@ -498,6 +502,8 @@ export default function ShiftTimeOverride({
       });
       queryClient.invalidateQueries({ queryKey: ["zt-summary-shifts"] });
       queryClient.invalidateQueries({ queryKey: ["zt-shifts"] });
+      queryClient.invalidateQueries({ queryKey: ["zt-buchhaltung-shifts"] });
+      queryClient.invalidateQueries({ queryKey: ["cumulated-shifts"] });
     } catch (err: any) {
       toast({ title: "Fehler beim Erzeugen", description: err.message, variant: "destructive" });
     } finally {
