@@ -82,7 +82,7 @@ export function useCumulatedZtData(
     queryFn: async () => {
       const { data, error } = await supabase
         .from("staff_restaurants")
-        .select("zt_department, staff_id, restaurant_id, restaurants(name), staff!inner(id, name, perso_nr, first_name, last_name, nickname)")
+        .select("zt_department, staff_id, restaurant_id, restaurants(name), staff!inner(id, name, perso_nr, first_name, last_name, nickname, date_of_birth)")
         .not("zt_department", "is", null)
         .eq("staff.is_active", true);
       if (error) throw error;
