@@ -28,6 +28,7 @@ import { useZt } from "@/contexts/ZtContext";
 import { useRestaurantEmployees, type RestaurantEmployee } from "@/hooks/useRestaurantEmployees";
 import { useCumulatedZtData } from "@/hooks/useCumulatedZtData";
 import { useHolidayRates } from "@/hooks/useHolidayRates";
+import EmployeeSearchFilter, { filterEmployeesBySearch } from "@/components/zeiterfassung/EmployeeSearchFilter";
 
 type Shift = {
   id: string;
