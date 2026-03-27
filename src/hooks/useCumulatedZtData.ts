@@ -83,7 +83,8 @@ export function useCumulatedZtData(
       const { data, error } = await supabase
         .from("staff_restaurants")
         .select("zt_department, staff_id, staff!inner(id, name, perso_nr, first_name, last_name, nickname)")
-        .not("zt_department", "is", null);
+        .not("zt_department", "is", null)
+        .eq("staff.is_active", true);
       if (error) throw error;
 
       // Deduplicate by staff.id + department
