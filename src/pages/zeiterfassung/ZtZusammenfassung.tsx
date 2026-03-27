@@ -227,9 +227,9 @@ export default function ZtZusammenfassung() {
         periods={periods}
         selectedPeriodId={selectedPeriodId}
         onPeriodChange={setSelectedPeriodId}
-        showCumulated={(allRestaurants?.length ?? 0) > 1}
-        cumulated={cumulated}
-        onCumulatedToggle={() => setCumulated(c => !c)}
+        restaurants={allRestaurants?.map(r => ({ id: r.id, name: r.name })) ?? []}
+        restaurantFilter={restaurantFilter}
+        onRestaurantFilterChange={setRestaurantFilter}
         actions={
           <>
             <Button variant="outline" size="sm" disabled={!employeesWithShifts.length} onClick={() => { if (selectedPeriod && weeks && shifts) { exportZusammenfassungPdf(selectedPeriod.label + (cumulated ? " (Alle Restaurants)" : ""), employeesWithShifts, weeks, shifts, cumulated ? cumData.weekNumberToAllIds : undefined, sfnMode, holidayRates); } }}>

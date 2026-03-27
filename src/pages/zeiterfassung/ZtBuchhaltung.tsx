@@ -201,9 +201,9 @@ export default function ZtBuchhaltung() {
         periods={periods}
         selectedPeriodId={selectedPeriodId}
         onPeriodChange={setSelectedPeriodId}
-        showCumulated
-        cumulated={cumulated}
-        onCumulatedToggle={() => setCumulated(c => !c)}
+        restaurants={allRestaurants?.map(r => ({ id: r.id, name: r.name })) ?? []}
+        restaurantFilter={restaurantFilter}
+        onRestaurantFilterChange={setRestaurantFilter}
         actions={
           <>
             <Button variant="outline" size="sm" disabled={!selectedPeriodId || !employeesWithShifts.length} onClick={() => { if (!selectedPeriod) return; exportBuchhaltungPdf(selectedPeriod.label + (cumulated ? " (Kumuliert)" : ""), employeesWithShifts, shifts ?? [], payrollNotes ?? [], sfnMode, holidayRates, showCommission ? commissionMap : undefined); toast.success("PDF wurde erstellt"); }}>

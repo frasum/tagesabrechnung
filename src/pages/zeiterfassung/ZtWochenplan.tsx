@@ -605,9 +605,9 @@ export default function ZtWochenplan() {
         selectedPeriodId={selectedPeriodId}
         onPeriodChange={(v) => { setSelectedPeriodId(v); setSelectedWeekId(""); setCumSelectedWeekNum(null); }}
         isLocked={isLocked}
-        showCumulated={hasMultipleRestaurants}
-        cumulated={cumulated}
-        onCumulatedToggle={() => { setCumulated(prev => !prev); setCumSelectedWeekNum(null); }}
+        restaurants={restaurants?.map(r => ({ id: r.id, name: r.name })) ?? []}
+        restaurantFilter={restaurantFilter}
+        onRestaurantFilterChange={(v) => { setRestaurantFilter(v); setCumSelectedWeekNum(null); }}
         weeks={effectiveWeeks}
         selectedWeekId={selectedWeekId}
         cumSelectedWeekNum={cumSelectedWeekNum}
