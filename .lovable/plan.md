@@ -1,25 +1,17 @@
 
 
-## Fix: Jean's Schichten fehlen in der Zusammenfassung bei YUM-Filter
+## Fix: Fehlende Mitarbeiter in der Buchhaltung bei Restaurant-Filter
 
-### Ursache
-
-**Wochenplan** und **Zusammenfassung** filtern Schichten unterschiedlich:
-
-- **Wochenplan**: Lädt alle Schichten aller Wochen-IDs (beide Restaurants) und zeigt sie ohne Restaurant-Filter an → Jean's Schichten sind sichtbar
-- **Zusammenfassung**: Hat einen zusätzlichen Filter, der prüft ob die `week_id` der Schicht zum Restaurant des Mitarbeiters passt (`weekIdToRestaurantId[s.week_id] !== emp.restaurant_id`). Wenn Jean's Schichten unter Spicery's Wochen gespeichert sind (weil die Eingabe im Spicery-Kontext erfolgte), aber Jean einen staff_restaurants-Eintrag für YUM hat, werden die Schichten **ausgefiltert** → Jean erscheint nicht
+### Problem
+Identisches Problem wie in der Zusammenfassung: `ZtBuchhaltung.tsx` filtert Schichten basierend auf `weekIdToRestaurantId`, wodurch Mitarbeiter wie Jean nicht erscheinen, wenn ihre Schichten unter einem anderen Restaurant-Kontext gespeichert wurden.
 
 ### Lösung
+Den restriktiven Restaurant-Check auf Schichten an **2 Stellen** in `ZtBuchhaltung.tsx` entfernen:
 
-In `ZtZusammenfassung.tsx` den Restaurant-basierten Schicht-Filter entfernen. Die Mitarbeiterliste ist bereits nach Restaurant gefiltert — es ist unnötig, zusätzlich zu prüfen ob die Wochen-ID zum Restaurant passt.
+1. **Zeile 187** (`employeesWithShiftsUnfiltered`): Die Bedingung `cumData.weekIdToRestaurantId[s.week_id] !== (emp as any).restaurant_id` entfernen
+2. **Zeile 250** (`empShifts` im Render): Dieselbe Bedingung entfernen
 
-**3 Stellen in `ZtZusammenfassung.tsx`:**
-
-1. **`employeesWithShiftsUnfiltered`** (Zeile 173): Restaurant-Check auf Schichten entfernen
-2. **`getEmployeeTotals`** (Zeile 184): Restaurant-Check auf Schichten entfernen  
-3. **`getWeeklyHours`** (Zeile 235): Restaurant-Check auf Schichten entfernen
-
-Konkret wird jeweils die Bedingung `cumData.weekIdToRestaurantId[s.week_id] !== (emp as any).restaurant_id` entfernt. Stattdessen reicht es, dass der Mitarbeiter bereits nach Restaurant gefiltert ist.
+Die Mitarbeiterliste ist bereits nach Restaurant gefiltert — der zusätzliche Check auf die Wochen-ID ist unnötig und schließt korrekte Schichten aus.
 
 1 Datei, keine DB-Änderung.
 
