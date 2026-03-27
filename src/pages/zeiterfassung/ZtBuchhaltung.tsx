@@ -184,7 +184,7 @@ export default function ZtBuchhaltung() {
     shifts?.some((s) => {
       if (s.employee_id !== emp.id || s.department !== emp.department) return false;
       if (!(Number(s.total_hours) > 0 || s.absence_type)) return false;
-      if ((cumulated || isSearchActive) && (emp as any).restaurant_id && cumData.weekIdToRestaurantId[s.week_id] && cumData.weekIdToRestaurantId[s.week_id] !== (emp as any).restaurant_id) return false;
+      if (restaurantFilter !== "all" && (cumulated || isSearchActive) && (emp as any).restaurant_id && cumData.weekIdToRestaurantId[s.week_id] && cumData.weekIdToRestaurantId[s.week_id] !== (emp as any).restaurant_id) return false;
       return true;
     })
   );
