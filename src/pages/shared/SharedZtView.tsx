@@ -385,7 +385,19 @@ function WochenplanTab({ weeks, shifts, employees, holidays, periodLabel, select
     ? weekNumberToAllIds[selectedWeekNumber] ?? [selectedWeekId]
     : [selectedWeekId];
   const weekShifts = shifts.filter(s => allWeekIdsForSelected.includes(s.week_id));
-  const allPeriodShifts = shifts;
+
+  // Pre-scope shifts for exports: each shift only belongs to the employee's restaurant
+  const exportShifts = useMemo(() => {
+    if (!weekToRestaurant) return shifts;
+    const empRestMap = new Map<string, string>();
+    employees.forEach(emp => { if (emp.restaurant_id) empRestMap.set(`${emp.id}-${emp.department}`, emp.restaurant_id); });
+    return shifts.filter(s => {
+      const restId = weekToRestaurant[s.week_id];
+      if (!restId) return true;
+      const empRest = empRestMap.get(`${s.employee_id}-${s.department}`);
+      return !empRest || empRest === restId;
+    });
+  }, [shifts, weekToRestaurant, employees]);
 
   const upsertShift = useMutation({
     mutationFn: async (params: {
