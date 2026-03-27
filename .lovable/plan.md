@@ -1,21 +1,47 @@
 
 
-## Fix: Urlaubstage-Anzeige in Besonderheiten
+## Mitarbeiter-Datenkartei im Lohnbüro-Portal
 
-### Problem
-`formatSickRanges` zeigt Kalendertage im Datumsbereich: `U: 02.03.–25.03. (24T)`. Das sind 24 Kalendertage, aber nur 18 sind tatsächliche Urlaubstage (Wochenenden werden abgezogen). Die Urlaubsspalte zeigt korrekt 18 — der Besonderheiten-Text ist irreführend.
+### Übersicht
+Beim Klick auf einen Mitarbeiternamen im Lohnbüro-Portal öffnet sich ein Dialog mit der vollständigen Lohnabrechnungsdatenkartei. Die Daten sind dort auch bearbeitbar.
 
-### Lösung
-Für Urlaub die tatsächliche Anzahl der eingetragenen Urlaubstage im Bereich anzeigen statt Kalendertage.
+### Änderungen
 
-**`src/pages/zeiterfassung/buchhaltung/BuchhaltungRow.tsx`**
-- Statt `formatSickRanges(vacRanges)` eine eigene Formatierung verwenden, die die tatsächliche Anzahl der Urlaubs-Schichten zählt (nicht Kalendertage)
-- Oder: Einfach die Gesamtzahl aus `totals.urlaubTage` verwenden: `U: 02.03.–25.03. (18T)`
+#### 1. Edge Function erweitern (`supabase/functions/payroll-office-data/index.ts`)
 
-Konkret: Eine neue Hilfsfunktion `formatVacationRanges(ranges, shifts)` erstellen, die pro Bereich die tatsächlichen Urlaubs-Shifts zählt statt `toDate - fromDate + 1`.
+**Mehr Felder bei employees laden:**
+Die bestehende `staff`-Abfrage um alle lohnrelevanten Felder erweitern:
+- `date_of_birth`, `employment_start`, `employment_end`
+- `hourly_rate`, `contracted_hours_per_month`
+- `tax_id`, `tax_class`, `social_security_nr`
+- `health_insurance`, `nationality`, `personnel_group`
+- `is_minijob`, `is_sv_exempt`
+- `vacation_days_contractual`, `vacation_days_current`, `vacation_days_previous`, `vacation_days_taken`
+- `sick_days_total`
 
-**`src/lib/shiftCalculations.ts`**
-- Neue Funktion `formatVacationRanges` hinzufügen, die wie `formatSickRanges` arbeitet, aber die Tage aus den tatsächlichen Shifts zählt
+**Neue Action `update_staff`:**
+Ermöglicht das Bearbeiten der Stammdaten über das Portal (PIN-gesichert wie alle anderen Actions).
 
-2 Dateien, keine DB-Änderung.
+#### 2. PayrollPortal erweitern (`src/pages/shared/PayrollPortal.tsx`)
+
+**Neue Komponente `StaffDetailDialog`:**
+- Dialog öffnet sich bei Klick auf Mitarbeiternamen (in allen Tabs: Wochenplan, Zusammenfassung, Buchhaltung)
+- Zeigt alle Stammdaten in übersichtlichen Sektionen:
+  - **Persönliche Daten**: Name, Vorname, Nachname, Geburtsdatum, Nationalität
+  - **Beschäftigung**: Perso-Nr, Rolle, Eintrittsdatum, Austrittsdatum, Personalgruppe
+  - **Vergütung**: Stundenlohn, Vertragsstunden/Monat, Minijob, SV-befreit
+  - **Steuer/SV**: Steuer-ID, Steuerklasse, SV-Nummer, Krankenkasse
+  - **Urlaub/Krankheit**: Vertragliche Urlaubstage, aktuell, Vorjahr, genommen, Krankheitstage gesamt
+- Alle Felder sind editierbar (Input-Felder)
+- Speichern-Button ruft die neue `update_staff` Action auf
+
+**Klickbare Mitarbeiternamen:**
+- In allen Tabs (Wochenplan, Zusammenfassung, Buchhaltung) werden die Mitarbeiternamen klickbar gemacht (`cursor-pointer`, `hover:underline`)
+- Klick öffnet den `StaffDetailDialog`
+
+### Technische Details
+- 2 Dateien: Edge Function + PayrollPortal
+- Dialog verwendet bestehende UI-Komponenten (Dialog, Input, Label, Switch)
+- Speichern über die Edge Function (PIN-Validierung wie bei allen anderen Actions)
+- Nach dem Speichern: Query-Invalidierung für automatisches Refresh
 
