@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useRestaurants } from "@/hooks/useRestaurant";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calculator, Info, AlertTriangle, Users } from "lucide-react";
 import { SFN_RATES } from "@/lib/sfnRates";
 import type { SfnMode } from "@/hooks/useSfnMode";
+import { format } from "date-fns";
 
 interface BatchResult {
   restaurantName: string;
