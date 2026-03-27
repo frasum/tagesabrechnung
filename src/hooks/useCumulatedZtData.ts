@@ -169,12 +169,27 @@ export function useCumulatedZtData(
     return map;
   }, [weeks]);
 
+  // Build weekId -> restaurantId mapping (via period)
+  const weekIdToRestaurantId = useMemo(() => {
+    const periodToRestaurant: Record<string, string> = {};
+    matchingPeriods?.forEach(p => {
+      if (p.restaurant_id) periodToRestaurant[p.id] = p.restaurant_id;
+    });
+    const map: Record<string, string> = {};
+    weeks?.forEach(w => {
+      const rid = periodToRestaurant[w.period_id];
+      if (rid) map[w.id] = rid;
+    });
+    return map;
+  }, [weeks, matchingPeriods]);
+
   return {
     employees,
     shifts,
     weeks: deduplicatedWeeks,
     allWeekIds: weekIds,
     weekNumberToAllIds,
+    weekIdToRestaurantId,
     payrollNotes,
     advances,
     matchingPeriods,

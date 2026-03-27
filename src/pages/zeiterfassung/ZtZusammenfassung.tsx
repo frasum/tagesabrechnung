@@ -293,7 +293,7 @@ export default function ZtZusammenfassung() {
                       <RestaurantBadge restaurantName={(emp as any).restaurant_name} department={emp.department} show={isSearchActive} />
                     </td>
                     {weeks?.map((w) => {
-                      const h = getWeeklyHours(emp.id, w.week_number, emp.department);
+                      const h = getWeeklyHours(emp.id, w.week_number, emp.department, (emp as any).restaurant_id);
                       return <td key={w.id} className="text-center p-2">{h > 0 ? formatHours(h) : ""}</td>;
                     })}
                     <td className="text-center p-2 font-medium">{formatHours(totals.gesamt)}</td>
