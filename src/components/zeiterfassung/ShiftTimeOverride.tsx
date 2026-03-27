@@ -117,6 +117,7 @@ export default function ShiftTimeOverride({
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(loadHiddenIds);
   const [showHidden, setShowHidden] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const toggleHidden = useCallback((id: string) => {
