@@ -1,17 +1,24 @@
 
 
-## Fix: Fehlende Mitarbeiter in der Buchhaltung bei Restaurant-Filter
+## Echtzeit-Synchronisierung: Wochenplan → Zusammenfassung & Buchhaltung
 
 ### Problem
-Identisches Problem wie in der Zusammenfassung: `ZtBuchhaltung.tsx` filtert Schichten basierend auf `weekIdToRestaurantId`, wodurch Mitarbeiter wie Jean nicht erscheinen, wenn ihre Schichten unter einem anderen Restaurant-Kontext gespeichert wurden.
+Wenn im Wochenplan Schichten geändert werden, werden nur die Query-Keys `zt-shifts`, `zt-shifts-period` und `zt-shifts-global` invalidiert. Die Zusammenfassung (`zt-summary-shifts`) und Buchhaltung (`zt-buchhaltung-shifts`) sowie die kumulierten Daten (`cumulated-shifts`) werden **nicht** invalidiert. Beim Tab-Wechsel zeigen diese Tabs daher veraltete gecachte Daten, bis React Query sie irgendwann als "stale" markiert.
 
 ### Lösung
-Den restriktiven Restaurant-Check auf Schichten an **2 Stellen** in `ZtBuchhaltung.tsx` entfernen:
+An allen Stellen, die Schicht-Daten mutieren, auch die Query-Keys der anderen Tabs invalidieren.
 
-1. **Zeile 187** (`employeesWithShiftsUnfiltered`): Die Bedingung `cumData.weekIdToRestaurantId[s.week_id] !== (emp as any).restaurant_id` entfernen
-2. **Zeile 250** (`empShifts` im Render): Dieselbe Bedingung entfernen
+**Datei 1: `src/pages/zeiterfassung/ZtWochenplan.tsx`** (~Zeile 385)
+- Nach den bestehenden `invalidateQueries`-Aufrufen zusätzlich invalidieren:
+  - `zt-summary-shifts`
+  - `zt-buchhaltung-shifts`
+  - `cumulated-shifts`
 
-Die Mitarbeiterliste ist bereits nach Restaurant gefiltert — der zusätzliche Check auf die Wochen-ID ist unnötig und schließt korrekte Schichten aus.
+**Datei 2: `src/components/zeiterfassung/ShiftTimeOverride.tsx`** (3 Stellen: ~Zeile 245, ~370, ~499)
+- Bereits invalidiert: `zt-summary-shifts` und `zt-shifts`
+- Zusätzlich invalidieren:
+  - `zt-buchhaltung-shifts`
+  - `cumulated-shifts`
 
-1 Datei, keine DB-Änderung.
+2 Dateien, keine DB-Änderung.
 
