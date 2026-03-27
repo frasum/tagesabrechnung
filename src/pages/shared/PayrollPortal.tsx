@@ -788,6 +788,7 @@ function PayrollWochenplanTab({ weeks, shifts, employees, holidays, periodLabel,
                       <tr className={`border-t hover:bg-muted/30 ${isEven ? "bg-muted/20" : ""}`}>
                         <td className="p-1.5 font-medium text-xs whitespace-nowrap border-l-2" style={{ borderLeftColor: deptColor }}>
                           {emp.nickname || emp.first_name || emp.name}
+                          <RestaurantBadge restaurantName={emp.restaurant_name} department={emp.department} show={!!searchTerm} />
                         </td>
                         {weekDays.map(day => {
                           const dateStr = format(day, "yyyy-MM-dd");
