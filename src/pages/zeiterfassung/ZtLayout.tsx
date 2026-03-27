@@ -55,7 +55,7 @@ export default function ZtLayout() {
     return location.pathname.startsWith(`${basePath}/${path}`);
   };
 
-  const showSfnToggle = !isActive("") && !isActive("zusammenfassung") && !isActive("provision");
+  const showSfnToggle = !isActive("") && !isActive("zusammenfassung") && !isActive("provision") && !isActive("perioden");
 
   return (
     <AppLayout>
