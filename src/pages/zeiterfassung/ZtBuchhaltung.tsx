@@ -236,7 +236,7 @@ export default function ZtBuchhaltung() {
                 const note = payrollNotes?.find((n) => n.employee_id === emp.id);
 
                 return (
-                  <React.Fragment key={`${emp.id}-${emp.department}-${selectedPeriodId}`}>
+                  <React.Fragment key={`${emp.id}-${emp.department}-${(emp as any).restaurant_id ?? ''}-${selectedPeriodId}`}>
                     {showDeptHeader && !searchTerm.trim() && <BuchhaltungDeptHeader department={emp.department} sfnMode={sfnMode} showSfn={showSfn} showCommission={showCommission} />}
                     <BuchhaltungRow
                       emp={emp}

@@ -276,7 +276,7 @@ export default function ZtZusammenfassung() {
               const totals = getEmployeeTotals(emp.id, emp.department, (emp as any).restaurant_id);
 
               return (
-                <React.Fragment key={`${emp.id}-${emp.department}`}>
+                <React.Fragment key={`${emp.id}-${emp.department}-${(emp as any).restaurant_id ?? ''}`}>
                   {showDeptHeader && !searchTerm.trim() && (
                     <tr>
                       <td colSpan={(weeks?.length ?? 0) + (isExtended ? (showSfn ? 9 : 5) : (showSfn ? 8 : 5))} className={`p-2 font-bold text-xs uppercase tracking-wide ${getDepartmentBgClass(emp.department)}`}>
