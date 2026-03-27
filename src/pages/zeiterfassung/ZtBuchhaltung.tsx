@@ -57,10 +57,22 @@ export default function ZtBuchhaltung() {
   const showCommission = commissionAddToGross;
 
   const allEmployees = (cumulated || isSearchActive) ? cumData.employees : restaurantEmployees;
-  const employees = allEmployees?.filter(emp => {
-    if (restaurantFilter === "all" || !cumulated) return true;
-    return (emp as any).restaurant_id === restaurantFilter;
-  });
+  const employees = (() => {
+    let list = allEmployees?.filter(emp => {
+      if (restaurantFilter === "all" || !cumulated) return true;
+      return (emp as any).restaurant_id === restaurantFilter;
+    }) ?? [];
+    if (restaurantFilter === "all" && cumulated) {
+      const seen = new Set<string>();
+      list = list.filter(emp => {
+        const key = `${emp.id}-${emp.department}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+    return list;
+  })();
   const weekIds = (cumulated || isSearchActive)
     ? (cumData.allWeekIds ?? [])
     : (weeks?.map(w => w.id) ?? []);
