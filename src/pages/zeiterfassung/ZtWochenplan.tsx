@@ -691,7 +691,7 @@ export default function ZtWochenplan() {
                   if (showDeptHeader) empIndexInDept = 0;
                   const isEvenRow = empIndexInDept % 2 === 1;
                   empIndexInDept++;
-                  const totals = getEmployeeWeekTotals(emp.id, emp.department);
+                  const totals = getEmployeeWeekTotals(emp.id, emp.department, (emp as any).restaurant_id);
                   const deptColor = emp.department === "Küche" ? "dept-kueche" : emp.department === "GL" ? "dept-gl" : "dept-service";
 
                   return (
