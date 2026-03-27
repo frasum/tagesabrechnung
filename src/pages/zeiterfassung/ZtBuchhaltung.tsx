@@ -233,6 +233,7 @@ export default function ZtBuchhaltung() {
                   return true;
                 }) ?? [];
                 const totals = getEmployeeTotals(emp.id, empShifts, emp.department, isExtended);
+                const note = payrollNotes?.find((n) => n.employee_id === emp.id);
 
                 return (
                   <React.Fragment key={`${emp.id}-${emp.department}-${selectedPeriodId}`}>
