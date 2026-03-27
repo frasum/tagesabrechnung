@@ -111,7 +111,7 @@ export async function exportBuchhaltungExcel(
     const sickRanges = getSickDateRanges(empShifts as any);
     const sickText = sickRanges.length > 0 ? `K: ${formatSickRanges(sickRanges).join(", ")}` : "";
     const vacRanges = getVacationDateRanges(empShifts as any);
-    const vacText = vacRanges.length > 0 ? `U: ${formatSickRanges(vacRanges).join(", ")}` : "";
+    const vacText = vacRanges.length > 0 ? `U: ${formatVacationRanges(vacRanges, empShifts as any).join(", ")}` : "";
     const besText = [note?.besonderheiten, vacText, sickText].filter(Boolean).join(" | ");
 
     const nicknameAlreadyInName = emp.nickname && (emp.first_name?.includes(emp.nickname) || emp.last_name?.includes(emp.nickname));
