@@ -1,4 +1,4 @@
-import { DEPARTMENT_ORDER, countVacationDays, countSickDays, getSickDateRanges, getVacationDateRanges, formatSickRanges, effectiveEveningHours, effectiveNightHours } from "./shiftCalculations";
+import { DEPARTMENT_ORDER, countVacationDays, countSickDays, getSickDateRanges, getVacationDateRanges, formatSickRanges, formatVacationRanges, effectiveEveningHours, effectiveNightHours } from "./shiftCalculations";
 import { format, parseISO, eachDayOfInterval } from "date-fns";
 import { de } from "date-fns/locale";
 import type { SfnMode } from "@/hooks/useSfnMode";
