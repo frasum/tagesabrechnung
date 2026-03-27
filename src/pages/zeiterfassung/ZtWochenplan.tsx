@@ -677,8 +677,8 @@ export default function ZtWochenplan() {
                 </tr>
               </thead>
               <tbody>
-                {sortedEmployees.map((emp, idx) => {
-                  const prevDept = idx > 0 ? sortedEmployees[idx - 1].department : null;
+                {filterEmployeesBySearch(sortedEmployees, searchTerm).map((emp, idx, filteredArr) => {
+                  const prevDept = idx > 0 ? filteredArr[idx - 1].department : null;
                   const showDeptHeader = emp.department !== prevDept;
                   if (showDeptHeader) empIndexInDept = 0;
                   const isEvenRow = empIndexInDept % 2 === 1;
