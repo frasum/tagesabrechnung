@@ -108,6 +108,7 @@ export default function ZtWochenplan() {
   const showSfn = hasPermission('admin');
 
   const [cumulated, setCumulated] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [editingTime, setEditingTime] = useState<Record<string, string>>({});
