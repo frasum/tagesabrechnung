@@ -23,7 +23,7 @@ import { de } from "date-fns/locale";
 import {
   formatHours, DEPARTMENT_ORDER, getDepartmentBgClass, getDepartmentColorClass,
   countVacationDays, countSickDays, isSunday,
-  getSickDateRanges, getVacationDateRanges, formatSickRanges,
+  getSickDateRanges, getVacationDateRanges, formatSickRanges, formatVacationRanges,
 } from "@/lib/shiftCalculations";
 import { getEmployeeTotals } from "@/pages/zeiterfassung/buchhaltung/utils";
 import { exportWochenplanPdf } from "@/lib/exportWochenplanPdf";
