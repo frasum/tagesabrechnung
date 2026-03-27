@@ -153,7 +153,11 @@ export default function BatchPayrollCalculation({
     if (sel) return { from: sel.start_date, to: sel.end_date };
     return { from: dateFrom, to: dateTo };
   }, [selectedBatchPeriodId, periods, dateFrom, dateTo]);
-    setBatchCalculating(true);
+
+  const isExtended = sfnMode === "extended";
+
+  const handleBatchCalculate = useCallback(async () => {
+    if (!effectiveDates.from || !effectiveDates.to) return;
     setBatchResults([]);
     setBatchError(null);
     setBatchProgress({ current: 0, total: 0 });
