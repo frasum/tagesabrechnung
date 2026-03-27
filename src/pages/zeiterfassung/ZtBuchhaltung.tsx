@@ -71,7 +71,7 @@ export default function ZtBuchhaltung() {
       if (error) throw error;
       return data as Shift[];
     },
-    enabled: !cumulated && weekIds.length > 0,
+    enabled: !cumulated && !isSearchActive && weekIds.length > 0,
   });
 
   const shifts = cumulated ? (cumData.shifts as Shift[] | undefined) : singleShifts;
