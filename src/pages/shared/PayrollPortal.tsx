@@ -393,14 +393,7 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
     return shifts.filter(s => empIds.has(s.employee_id));
   }, [shifts, effectiveRestaurant, filteredEmployees]);
 
-  const filteredEmployees = useMemo(() => {
-    const enriched = employees.map((e: any) => ({
-      ...e,
-      restaurant_name: e.restaurant_name ?? restaurantIdToName.get(e.restaurant_id) ?? undefined,
-    }));
-    if (effectiveRestaurant === "all") return enriched;
-    return enriched.filter((e: any) => e.restaurant_id === effectiveRestaurant);
-  }, [employees, effectiveRestaurant, restaurantIdToName]);
+
 
   const filteredAdvances = useMemo(() => {
     if (effectiveRestaurant === "all") return advances;
