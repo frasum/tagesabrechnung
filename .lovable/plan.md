@@ -1,24 +1,31 @@
 
 
-## Echtzeit-Synchronisierung: Wochenplan → Zusammenfassung & Buchhaltung
+## Fix: Zusammenfassung zeigt falsche Summen bei Restaurant-Filter
 
 ### Problem
-Wenn im Wochenplan Schichten geändert werden, werden nur die Query-Keys `zt-shifts`, `zt-shifts-period` und `zt-shifts-global` invalidiert. Die Zusammenfassung (`zt-summary-shifts`) und Buchhaltung (`zt-buchhaltung-shifts`) sowie die kumulierten Daten (`cumulated-shifts`) werden **nicht** invalidiert. Beim Tab-Wechsel zeigen diese Tabs daher veraltete gecachte Daten, bis React Query sie irgendwann als "stale" markiert.
+Bei Auswahl eines anderen Restaurants (z.B. YUM aus der Spicery-Ansicht) zeigt die **Zusammenfassung** falsche Gesamtsummen:
+- **YUM Zusammenfassung GESAMT**: 206,90 (falsch — enthält Spicery-Daten)
+- **YUM Buchhaltung GESAMT**: 132,75 (korrekt)
+
+Die Differenz (74,15) entspricht exakt den Spicery-Daten.
+
+### Ursache
+In `ZtZusammenfassung.tsx` berechnen zwei Funktionen ihre Summen über **alle geladenen Schichten**, anstatt nur die Schichten der gefilterten Mitarbeiter zu berücksichtigen:
+
+1. **`getDepartmentTotals`** (Zeile 199): Filtert Schichten nur nach `department`, nicht nach den angezeigten Mitarbeitern → Spicery-Küchenschichten werden in die YUM-Küchensumme eingerechnet
+2. **`grandTotals`** (Zeile 214): Verwendet `shifts` komplett ungefiltert → alle Schichten beider Restaurants werden summiert
+
+Im Vergleich: Die **Buchhaltung** macht es richtig — sie iteriert über `employeesWithShifts` und ruft `getEmployeeTotals` pro Mitarbeiter auf.
 
 ### Lösung
-An allen Stellen, die Schicht-Daten mutieren, auch die Query-Keys der anderen Tabs invalidieren.
+**Datei: `src/pages/zeiterfassung/ZtZusammenfassung.tsx`**
 
-**Datei 1: `src/pages/zeiterfassung/ZtWochenplan.tsx`** (~Zeile 385)
-- Nach den bestehenden `invalidateQueries`-Aufrufen zusätzlich invalidieren:
-  - `zt-summary-shifts`
-  - `zt-buchhaltung-shifts`
-  - `cumulated-shifts`
+1. **`getDepartmentTotals`** anpassen: Nur Schichten von Mitarbeitern berücksichtigen, die auch in `employeesWithShifts` enthalten sind
+2. **`grandTotals`** anpassen: Statt alle Schichten zu summieren, nur über die gefilterten Mitarbeiter iterieren (analog zur Buchhaltung)
 
-**Datei 2: `src/components/zeiterfassung/ShiftTimeOverride.tsx`** (3 Stellen: ~Zeile 245, ~370, ~499)
-- Bereits invalidiert: `zt-summary-shifts` und `zt-shifts`
-- Zusätzlich invalidieren:
-  - `zt-buchhaltung-shifts`
-  - `cumulated-shifts`
+Konkret:
+- `getDepartmentTotals`: Schichten zusätzlich filtern auf `employee_id`s, die in den angezeigten Mitarbeitern der jeweiligen Abteilung vorkommen
+- `grandTotals`: Über `employeesWithShifts` iterieren und `getEmployeeTotals` pro Mitarbeiter aufrufen, statt blind `allShifts` zu summieren
 
-2 Dateien, keine DB-Änderung.
+1 Datei, keine DB-Änderung.
 
