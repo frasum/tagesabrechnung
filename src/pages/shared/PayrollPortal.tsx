@@ -561,6 +561,7 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
             onShiftsChanged={() => queryClient.invalidateQueries({ queryKey: ["payroll-data"] })}
             searchTerm={searchTerm}
             onEmployeeClick={handleEmployeeClick}
+            weekToRestaurant={effectiveRestaurant === "all" ? weekToRestaurant : undefined}
           />
         </TabsContent>
 
@@ -665,7 +666,7 @@ function handleTimeKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
 
 // =================== Wochenplan Tab ===================
 
-function PayrollWochenplanTab({ weeks, shifts, employees, holidays, periodLabel, selectedWeekId, onSelectWeek, isLocked, pin, weekNumberToAllIds, onShiftsChanged, searchTerm = "", onEmployeeClick }: {
+function PayrollWochenplanTab({ weeks, shifts, employees, holidays, periodLabel, selectedWeekId, onSelectWeek, isLocked, pin, weekNumberToAllIds, onShiftsChanged, searchTerm = "", onEmployeeClick, weekToRestaurant }: {
   weeks: any[];
   shifts: Shift[];
   employees: any[];
@@ -679,6 +680,7 @@ function PayrollWochenplanTab({ weeks, shifts, employees, holidays, periodLabel,
   onShiftsChanged: () => void;
   searchTerm?: string;
   onEmployeeClick?: (empId: string) => void;
+  weekToRestaurant?: Record<string, string>;
 }) {
   const [editingTime, setEditingTime] = useState<Record<string, string>>({});
   const [absenceDialog, setAbsenceDialog] = useState<{
@@ -772,6 +774,19 @@ function PayrollWochenplanTab({ weeks, shifts, employees, holidays, periodLabel,
     });
   };
 
+  // Pre-scope shifts for exports
+  const exportShifts = useMemo(() => {
+    if (!weekToRestaurant) return shifts;
+    const empRestMap = new Map<string, string>();
+    employees.forEach(emp => { if (emp.restaurant_id) empRestMap.set(`${emp.id}-${emp.department}`, emp.restaurant_id); });
+    return shifts.filter(s => {
+      const restId = weekToRestaurant[s.week_id];
+      if (!restId) return true;
+      const empRest = empRestMap.get(`${s.employee_id}-${s.department}`);
+      return !empRest || empRest === restId;
+    });
+  }, [shifts, weekToRestaurant, employees]);
+
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2 flex-wrap">
@@ -783,13 +798,13 @@ function PayrollWochenplanTab({ weeks, shifts, employees, holidays, periodLabel,
           ))}
         </div>
         <div className="ml-auto flex gap-1">
-          <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" disabled={!shifts.length} onClick={() => exportWochenplanPdf(periodLabel, employees, weeks, shifts as any, holidays)}>
+          <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" disabled={!shifts.length} onClick={() => exportWochenplanPdf(periodLabel, employees, weeks, exportShifts as any, holidays)}>
             <FileDown className="h-3.5 w-3.5" /> PDF
           </Button>
-          <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" disabled={!shifts.length} onClick={() => exportWochenplanExcel(periodLabel, employees, weeks, shifts as any, holidays)}>
+          <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" disabled={!shifts.length} onClick={() => exportWochenplanExcel(periodLabel, employees, weeks, exportShifts as any, holidays)}>
             <FileSpreadsheet className="h-3.5 w-3.5" /> Excel
           </Button>
-          <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" disabled={!shifts.length} onClick={() => { exportWochenplanCsv(periodLabel, employees, weeks, shifts as any, holidays); toast.success("CSV erstellt"); }}>
+          <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" disabled={!shifts.length} onClick={() => { exportWochenplanCsv(periodLabel, employees, weeks, exportShifts as any, holidays); toast.success("CSV erstellt"); }}>
             <FileDown className="h-3.5 w-3.5" /> CSV
           </Button>
         </div>
@@ -1045,18 +1060,31 @@ function PayrollZusammenfassungTab({ sfnMode, weeks, shifts, employees, periodLa
     };
   };
 
+  // Pre-scope shifts for exports: each shift only belongs to the employee's restaurant
+  const exportShifts = useMemo(() => {
+    if (!weekToRestaurant) return shifts;
+    const empRestMap = new Map<string, string>();
+    employees.forEach(emp => { if (emp.restaurant_id) empRestMap.set(`${emp.id}-${emp.department}`, emp.restaurant_id); });
+    return shifts.filter(s => {
+      const restId = weekToRestaurant[s.week_id];
+      if (!restId) return true;
+      const empRest = empRestMap.get(`${s.employee_id}-${s.department}`);
+      return !empRest || empRest === restId;
+    });
+  }, [shifts, weekToRestaurant, employees]);
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <Badge variant="outline" className="text-xs">{isExtended ? "§3b EStG (erweitert)" : "Einfach"}</Badge>
         <div className="flex gap-1">
-        <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => exportZusammenfassungPdf(periodLabel, employees, weeks, shifts as any, weekNumberToAllIds)}>
+        <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => exportZusammenfassungPdf(periodLabel, employees, weeks, exportShifts as any, weekNumberToAllIds)}>
           <FileDown className="mr-1 h-4 w-4" /> PDF
         </Button>
-        <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => exportZusammenfassungExcel(periodLabel, employees, weeks, shifts as any, weekNumberToAllIds)}>
+        <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => exportZusammenfassungExcel(periodLabel, employees, weeks, exportShifts as any, weekNumberToAllIds)}>
           <FileSpreadsheet className="mr-1 h-4 w-4" /> Excel
         </Button>
-        <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportZusammenfassungCsv(periodLabel, employees, weeks, shifts as any, weekNumberToAllIds); toast.success("CSV erstellt"); }}>
+        <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportZusammenfassungCsv(periodLabel, employees, weeks, exportShifts as any, weekNumberToAllIds); toast.success("CSV erstellt"); }}>
           <FileDown className="mr-1 h-4 w-4" /> CSV
         </Button>
         </div>
@@ -1196,6 +1224,19 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
     return sum;
   }, [employees, commissionMap]);
 
+  // Pre-scope shifts for exports
+  const exportShifts = useMemo(() => {
+    if (!weekToRestaurant) return shifts;
+    const empRestMap = new Map<string, string>();
+    employees.forEach(emp => { if (emp.restaurant_id) empRestMap.set(`${emp.id}-${emp.department}`, emp.restaurant_id); });
+    return shifts.filter(s => {
+      const restId = weekToRestaurant[s.week_id];
+      if (!restId) return true;
+      const empRest = empRestMap.get(`${s.employee_id}-${s.department}`);
+      return !empRest || empRest === restId;
+    });
+  }, [shifts, weekToRestaurant, employees]);
+
   let zebraIdx = 0;
   let lastDept: string | null = null;
 
@@ -1204,13 +1245,13 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
       <div className="flex items-center justify-between">
         <Badge variant="outline" className="text-xs">Modus: {sfnMode === "extended" ? "§3b EStG (erweitert)" : "Einfach"}</Badge>
         <div className="flex gap-1">
-          <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungPdf(periodLabel, employees, shifts, payrollNotes, sfnMode, holidayRates, showCommission ? commissionMap : undefined); toast.success("PDF erstellt"); }}>
+          <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungPdf(periodLabel, employees, exportShifts, payrollNotes, sfnMode, holidayRates, showCommission ? commissionMap : undefined); toast.success("PDF erstellt"); }}>
             <FileDown className="mr-1 h-4 w-4" /> PDF
           </Button>
-          <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungExcel(periodLabel, employees, shifts, payrollNotes, sfnMode, holidayRates, showCommission ? commissionMap : undefined); toast.success("Excel erstellt"); }}>
+          <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungExcel(periodLabel, employees, exportShifts, payrollNotes, sfnMode, holidayRates, showCommission ? commissionMap : undefined); toast.success("Excel erstellt"); }}>
             <FileSpreadsheet className="mr-1 h-4 w-4" /> Excel
           </Button>
-          <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungCsv(periodLabel, employees, shifts, payrollNotes, sfnMode, holidayRates, showCommission ? commissionMap : undefined); toast.success("CSV erstellt"); }}>
+          <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungCsv(periodLabel, employees, exportShifts, payrollNotes, sfnMode, holidayRates, showCommission ? commissionMap : undefined); toast.success("CSV erstellt"); }}>
             <FileDown className="mr-1 h-4 w-4" /> CSV
           </Button>
         </div>
