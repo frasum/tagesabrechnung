@@ -43,7 +43,8 @@ export default function ZtZusammenfassung() {
   const allRestaurantIds = allRestaurants?.map(r => r.id) ?? [];
   const { selectedPeriodId, setSelectedPeriodId, periods, weeks: contextWeeks } = useZt();
   const { data: restaurantEmployees } = useRestaurantEmployees(restaurantId);
-  const [cumulated, setCumulated] = useState(false);
+  const [restaurantFilter, setRestaurantFilter] = useState<string | "all">(restaurantId);
+  const cumulated = restaurantFilter !== restaurantId;
   const [searchTerm, setSearchTerm] = useState("");
   const { hasPermission } = useAuth();
   const { data: holidayRates } = useHolidayRates();
