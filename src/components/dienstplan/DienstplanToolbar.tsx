@@ -57,7 +57,7 @@ export function DienstplanToolbar({ month, year, department, onMonthChange }: Di
     return [...new Set(prevMonthShifts.map(s => s.staff_id))];
   }, [prevMonthShifts]);
 
-  const { data: conflicts } = useConflictingShifts(restaurantId, prevMonthStaffIds, currentStart, currentEnd);
+  const { data: conflicts } = useConflictingShifts(restaurantId, department, prevMonthStaffIds, currentStart, currentEnd);
 
   const handlePrev = () => {
     if (month === 0) onMonthChange(11, year - 1);
