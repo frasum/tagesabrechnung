@@ -1238,7 +1238,7 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
                       emp={emp}
                       totals={totals}
                       note={note as PayrollNote | undefined}
-                      shifts={empShifts}
+                      shifts={empShiftsScoped as any}
                       advances={empAdvances}
                       isEven={isEven}
                       isLocked={isLocked}
