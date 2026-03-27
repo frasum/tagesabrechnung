@@ -197,7 +197,11 @@ export default function ZtZusammenfassung() {
   };
 
   const getDepartmentTotals = (department: string) => {
-    const deptShifts = shifts?.filter((s) => s.department === department) ?? [];
+    // Only include shifts from employees visible in the filtered list for this department
+    const deptEmployeeIds = new Set(
+      employeesWithShifts.filter(e => e.department === department).map(e => e.id)
+    );
+    const deptShifts = shifts?.filter((s) => s.department === department && deptEmployeeIds.has(s.employee_id)) ?? [];
     return {
       gesamt: deptShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
       soFeiStunden: deptShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
@@ -212,18 +216,21 @@ export default function ZtZusammenfassung() {
   };
 
   const grandTotals = (() => {
-    const allShifts = shifts ?? [];
-    return {
-      gesamt: allShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
-      soFeiStunden: allShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      sonntagStunden: allShifts.filter(s => !s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      feiertagStunden: allShifts.filter(s => s.is_holiday).reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
-      evening: allShifts.reduce((sum, s) => sum + effectiveEveningHours(s, isExtended), 0),
-      night: allShifts.reduce((sum, s) => sum + effectiveNightHours(s, isExtended), 0),
-      schichten: allShifts.filter(s => s.start_time && s.end_time && !s.absence_type).length,
-      urlaubTage: countVacationDays(allShifts),
-      krankTage: countSickDays(allShifts),
-    };
+    // Sum only over filtered employees (matching Buchhaltung logic)
+    const totals = { gesamt: 0, soFeiStunden: 0, sonntagStunden: 0, feiertagStunden: 0, evening: 0, night: 0, schichten: 0, urlaubTage: 0, krankTage: 0 };
+    for (const emp of employeesWithShifts) {
+      const t = getEmployeeTotals(emp.id, emp.department, (emp as any).restaurant_id);
+      totals.gesamt += t.gesamt;
+      totals.soFeiStunden += t.soFeiStunden;
+      totals.sonntagStunden += t.sonntagStunden;
+      totals.feiertagStunden += t.feiertagStunden;
+      totals.evening += t.evening;
+      totals.night += t.night;
+      totals.schichten += t.schichten;
+      totals.urlaubTage += t.urlaubTage;
+      totals.krankTage += t.krankTage;
+    }
+    return totals;
   })();
 
   const getWeeklyHours = (empId: string, weekNumber: number, department?: string, empRestaurantId?: string) => {
