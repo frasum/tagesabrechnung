@@ -22,6 +22,7 @@ import BuchhaltungRow from "./buchhaltung/BuchhaltungRow";
 import BuchhaltungFooter from "./buchhaltung/BuchhaltungFooter";
 import { useCumulatedZtData } from "@/hooks/useCumulatedZtData";
 import { useHolidayRates } from "@/hooks/useHolidayRates";
+import RestaurantBadge from "@/components/zeiterfassung/RestaurantBadge";
 import { useCommissionData } from "@/hooks/useCommissionData";
 import { useCommissionAddToGross } from "@/hooks/useSettings";
 import type { Shift, PayrollNote, AdvanceEntry } from "./buchhaltung/types";
