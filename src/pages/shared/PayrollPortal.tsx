@@ -1152,6 +1152,7 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
                   <React.Fragment key={`${emp.id}-${emp.department}`}>
                     {showDeptHeader && !searchTerm.trim() && <BuchhaltungDeptHeader department={emp.department} sfnMode={sfnMode} showCommission={showCommission} />}
                     <BuchhaltungRow
+                      showRestaurantBadge={!!searchTerm.trim()}
                       emp={emp}
                       totals={totals}
                       note={note as PayrollNote | undefined}
