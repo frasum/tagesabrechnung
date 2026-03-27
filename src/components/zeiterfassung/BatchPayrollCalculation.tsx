@@ -409,10 +409,24 @@ export default function BatchPayrollCalculation({
           </AlertDescription>
         </Alert>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          {periods && periods.length > 0 && (
+            <Select value={selectedBatchPeriodId} onValueChange={setSelectedBatchPeriodId}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Periode wählen" />
+              </SelectTrigger>
+              <SelectContent>
+                {periods.map(p => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Button
             onClick={handleBatchCalculate}
-            disabled={batchCalculating || !dateFrom || !dateTo}
+            disabled={batchCalculating || !effectiveDates.from || !effectiveDates.to}
             size="lg"
           >
             <Calculator className="h-4 w-4 mr-2" />
@@ -420,9 +434,9 @@ export default function BatchPayrollCalculation({
               ? `Berechne ${batchProgress.current}/${batchProgress.total}...`
               : "Alle Mitarbeiter berechnen"}
           </Button>
-          {dateFrom && dateTo && (
+          {effectiveDates.from && effectiveDates.to && (
             <span className="text-sm text-muted-foreground">
-              {new Date(dateFrom).toLocaleDateString("de-DE")} – {new Date(dateTo).toLocaleDateString("de-DE")}
+              {new Date(effectiveDates.from + "T00:00:00").toLocaleDateString("de-DE")} – {new Date(effectiveDates.to + "T00:00:00").toLocaleDateString("de-DE")}
             </span>
           )}
         </div>
