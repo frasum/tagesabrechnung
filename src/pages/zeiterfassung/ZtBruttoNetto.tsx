@@ -19,6 +19,7 @@ import { SFN_RATES } from "@/lib/sfnRates";
 import { GERMAN_STATES, TAX_CLASSES, type PayrollResult } from "@/types/payroll";
 import { useZt } from "@/contexts/ZtContext";
 import type { SfnMode } from "@/hooks/useSfnMode";
+import BatchPayrollCalculation from "@/components/zeiterfassung/BatchPayrollCalculation";
 
 const CHILD_ALLOWANCE_OPTIONS = Array.from({ length: 17 }, (_, i) => i * 0.5);
 
@@ -339,6 +340,17 @@ export default function ZtBruttoNetto() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Brutto-Netto-Rechner</h1>
+
+      {/* Batch-Berechnung für alle Restaurants */}
+      <BatchPayrollCalculation
+        dateFrom={dateFrom}
+        dateTo={dateTo}
+        sfnMode={sfnMode}
+        holidays={holidays}
+        calculationYear={calculationYear}
+        calculationMonth={calculationMonth}
+        onSelectEmployee={(staffId) => setEmployeeId(staffId)}
+      />
 
       {/* Eingabeformular */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
