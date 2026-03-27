@@ -127,7 +127,7 @@ export default function ZtZusammenfassung() {
   const shifts = (cumulated || isSearchActive) ? (cumData.shifts as Shift[] | undefined) : singleShifts;
 
   // Build a map: weekNumber -> weekIds
-  const weekNumberToIds: Record<number, string[]> = cumulated
+  const weekNumberToIds: Record<number, string[]> = (cumulated || isSearchActive)
     ? cumData.weekNumberToAllIds
     : (() => {
         const map: Record<number, string[]> = {};
