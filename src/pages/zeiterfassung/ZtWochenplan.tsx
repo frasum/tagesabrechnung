@@ -547,8 +547,13 @@ export default function ZtWochenplan() {
 
   const isExtended = sfnMode === "extended";
 
-  const getEmployeeWeekTotals = (employeeId: string, department?: string) => {
-    const empShifts = shifts?.filter((s) => s.employee_id === employeeId && (!department || s.department === department)) ?? [];
+  const getEmployeeWeekTotals = (employeeId: string, department?: string, restaurantId?: string) => {
+    const empShifts = shifts?.filter((s) => {
+      if (s.employee_id !== employeeId) return false;
+      if (department && s.department !== department) return false;
+      if (isSearchActive && restaurantId && cumData.weekIdToRestaurantId[s.week_id] && cumData.weekIdToRestaurantId[s.week_id] !== restaurantId) return false;
+      return true;
+    }) ?? [];
     let sonntagStunden = 0;
     let feiertag125Stunden = 0;
     let feiertag150Stunden = 0;

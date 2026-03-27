@@ -229,7 +229,11 @@ export default function ZtBuchhaltung() {
 
                 const totals = getEmployeeTotals(emp.id, shifts ?? [], emp.department, isExtended);
                 const note = payrollNotes?.find((n) => n.employee_id === emp.id);
-                const empShifts = shifts?.filter(s => s.employee_id === emp.id && s.department === emp.department) ?? [];
+                const empShifts = shifts?.filter(s => {
+                  if (s.employee_id !== emp.id || s.department !== emp.department) return false;
+                  if (isSearchActive && (emp as any).restaurant_id && cumData.weekIdToRestaurantId[s.week_id] && cumData.weekIdToRestaurantId[s.week_id] !== (emp as any).restaurant_id) return false;
+                  return true;
+                }) ?? [];
 
                 return (
                   <React.Fragment key={`${emp.id}-${emp.department}-${selectedPeriodId}`}>
