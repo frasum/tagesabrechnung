@@ -268,7 +268,7 @@ export default function ZtZusammenfassung() {
               const showDeptHeader = emp.department !== prevDept;
               const nextDept = idx < employeesWithShifts.length - 1 ? employeesWithShifts[idx + 1].department : null;
               const showDeptSubtotal = emp.department !== nextDept;
-              const totals = getEmployeeTotals(emp.id, emp.department);
+              const totals = getEmployeeTotals(emp.id, emp.department, (emp as any).restaurant_id);
 
               return (
                 <React.Fragment key={`${emp.id}-${emp.department}`}>
