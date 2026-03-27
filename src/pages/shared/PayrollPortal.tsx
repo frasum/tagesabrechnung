@@ -595,6 +595,7 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
             commissionMap={showCommission ? commissionMap : undefined}
             searchTerm={searchTerm}
             onEmployeeClick={handleEmployeeClick}
+            weekToRestaurant={effectiveRestaurant === "all" ? weekToRestaurant : undefined}
           />
         </TabsContent>
 
