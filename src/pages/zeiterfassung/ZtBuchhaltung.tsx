@@ -211,6 +211,8 @@ export default function ZtBuchhaltung() {
         }
       />
 
+      {showSfn && <EmployeeSearchFilter value={searchTerm} onChange={setSearchTerm} />}
+
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm table-fixed">
