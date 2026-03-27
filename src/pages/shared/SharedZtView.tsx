@@ -807,7 +807,7 @@ function ZusammenfassungTab({ weeks, shifts, employees, periodLabel, weekNumberT
 }
 
 // ========== Buchhaltung Tab ==========
-function BuchhaltungTab({ shifts, employees, payrollNotes, advances, periodLabel, isLocked, onUpsertNote, weekNumberToAllIds }: {
+function BuchhaltungTab({ shifts, employees, payrollNotes, advances, periodLabel, isLocked, onUpsertNote, weekNumberToAllIds, weekToRestaurant }: {
   shifts: Shift[];
   employees: SharedData["employees"];
   payrollNotes: PayrollNote[];
@@ -816,7 +816,20 @@ function BuchhaltungTab({ shifts, employees, payrollNotes, advances, periodLabel
   isLocked: boolean;
   onUpsertNote: (p: { employee_id: string; field: string; value: any }) => void;
   weekNumberToAllIds?: Record<number, string[]>;
+  weekToRestaurant?: Record<string, string>;
 }) {
+  // Pre-scope shifts for exports
+  const exportShifts = useMemo(() => {
+    if (!weekToRestaurant) return shifts;
+    const empRestMap = new Map<string, string>();
+    employees.forEach(emp => { if (emp.restaurant_id) empRestMap.set(`${emp.id}-${emp.department}`, emp.restaurant_id); });
+    return shifts.filter(s => {
+      const restId = weekToRestaurant[s.week_id];
+      if (!restId) return true;
+      const empRest = empRestMap.get(`${s.employee_id}-${s.department}`);
+      return !empRest || empRest === restId;
+    });
+  }, [shifts, weekToRestaurant, employees]);
   const advancesByName = useMemo(() => {
     const map: Record<string, AdvanceEntry[]> = {};
     advances.forEach(a => { (map[a.staff_name] ??= []).push(a); });
