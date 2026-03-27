@@ -370,7 +370,7 @@ export default function BatchPayrollCalculation({
     } finally {
       setBatchCalculating(false);
     }
-  }, [dateFrom, dateTo, isExtended, holidays, restaurants, calculationYear, calculationMonth]);
+  }, [effectiveDates, isExtended, holidays, restaurants, calculationYear, calculationMonth]);
 
   // Group results by restaurant
   const groupedResults = batchResults.reduce<Record<string, BatchResult[]>>((acc, r) => {
