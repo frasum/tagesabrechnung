@@ -57,10 +57,22 @@ export default function ZtBuchhaltung() {
   const showCommission = commissionAddToGross;
 
   const allEmployees = (cumulated || isSearchActive) ? cumData.employees : restaurantEmployees;
-  const employees = allEmployees?.filter(emp => {
-    if (restaurantFilter === "all" || !cumulated) return true;
-    return (emp as any).restaurant_id === restaurantFilter;
-  });
+  const employees = (() => {
+    let list = allEmployees?.filter(emp => {
+      if (restaurantFilter === "all" || !cumulated) return true;
+      return (emp as any).restaurant_id === restaurantFilter;
+    }) ?? [];
+    if (restaurantFilter === "all" && cumulated) {
+      const seen = new Set<string>();
+      list = list.filter(emp => {
+        const key = `${emp.id}-${emp.department}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+    return list;
+  })();
   const weekIds = (cumulated || isSearchActive)
     ? (cumData.allWeekIds ?? [])
     : (weeks?.map(w => w.id) ?? []);
@@ -172,7 +184,7 @@ export default function ZtBuchhaltung() {
     shifts?.some((s) => {
       if (s.employee_id !== emp.id || s.department !== emp.department) return false;
       if (!(Number(s.total_hours) > 0 || s.absence_type)) return false;
-      if ((cumulated || isSearchActive) && (emp as any).restaurant_id && cumData.weekIdToRestaurantId[s.week_id] && cumData.weekIdToRestaurantId[s.week_id] !== (emp as any).restaurant_id) return false;
+      if (restaurantFilter !== "all" && (cumulated || isSearchActive) && (emp as any).restaurant_id && cumData.weekIdToRestaurantId[s.week_id] && cumData.weekIdToRestaurantId[s.week_id] !== (emp as any).restaurant_id) return false;
       return true;
     })
   );
@@ -235,7 +247,7 @@ export default function ZtBuchhaltung() {
 
                 const empShifts = shifts?.filter(s => {
                   if (s.employee_id !== emp.id || s.department !== emp.department) return false;
-                  if ((cumulated || isSearchActive) && (emp as any).restaurant_id && cumData.weekIdToRestaurantId[s.week_id] && cumData.weekIdToRestaurantId[s.week_id] !== (emp as any).restaurant_id) return false;
+                  if (restaurantFilter !== "all" && (cumulated || isSearchActive) && (emp as any).restaurant_id && cumData.weekIdToRestaurantId[s.week_id] && cumData.weekIdToRestaurantId[s.week_id] !== (emp as any).restaurant_id) return false;
                   return true;
                 }) ?? [];
                 const totals = getEmployeeTotals(emp.id, empShifts, emp.department, isExtended);
@@ -256,7 +268,7 @@ export default function ZtBuchhaltung() {
                       showSfn={showSfn}
                       showCommission={showCommission}
                       commission={emp.department === "Service" ? (commissionMap.get(emp.id) ?? 0) : 0}
-                      showRestaurantBadge={isSearchActive}
+                      showRestaurantBadge={isSearchActive || (cumulated && restaurantFilter !== "all")}
                       onUpsertNote={(params) => upsertNote.mutate(params)}
                     />
                   </React.Fragment>

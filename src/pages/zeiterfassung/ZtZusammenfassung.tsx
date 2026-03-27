@@ -105,10 +105,23 @@ export default function ZtZusammenfassung() {
   });
 
   const allEmployees = (cumulated || isSearchActive) ? cumData.employees : restaurantEmployees;
-  const employees = allEmployees?.filter(emp => {
-    if (restaurantFilter === "all" || !cumulated) return true;
-    return (emp as any).restaurant_id === restaurantFilter;
-  });
+  const employees = (() => {
+    let list = allEmployees?.filter(emp => {
+      if (restaurantFilter === "all" || !cumulated) return true;
+      return (emp as any).restaurant_id === restaurantFilter;
+    }) ?? [];
+    // In "all" mode, deduplicate by id+department (merge cross-restaurant entries)
+    if (restaurantFilter === "all" && cumulated) {
+      const seen = new Set<string>();
+      list = list.filter(emp => {
+        const key = `${emp.id}-${emp.department}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+    return list;
+  })();
   const weeks = (cumulated || isSearchActive) ? cumData.weeks : contextWeeks;
 
   // Load all shifts for all weeks of the selected period
@@ -157,18 +170,18 @@ export default function ZtZusammenfassung() {
     shifts?.some((s) => {
       if (s.employee_id !== emp.id || s.department !== emp.department) return false;
       if (!(Number(s.total_hours) > 0 || !!s.absence_type)) return false;
-      if ((cumulated || isSearchActive) && (emp as any).restaurant_id && cumData.weekIdToRestaurantId[s.week_id] && cumData.weekIdToRestaurantId[s.week_id] !== (emp as any).restaurant_id) return false;
+      if (restaurantFilter !== "all" && (cumulated || isSearchActive) && (emp as any).restaurant_id && cumData.weekIdToRestaurantId[s.week_id] && cumData.weekIdToRestaurantId[s.week_id] !== (emp as any).restaurant_id) return false;
       return true;
     })
   );
 
   const employeesWithShifts = filterEmployeesBySearch(employeesWithShiftsUnfiltered, searchTerm);
 
-  const getEmployeeTotals = (empId: string, department?: string, restaurantId?: string) => {
+  const getEmployeeTotals = (empId: string, department?: string, empRestaurantId?: string) => {
     const empShifts = shifts?.filter((s) => {
       if (s.employee_id !== empId) return false;
       if (department && s.department !== department) return false;
-      if (isSearchActive && restaurantId && cumData.weekIdToRestaurantId[s.week_id] && cumData.weekIdToRestaurantId[s.week_id] !== restaurantId) return false;
+      if (restaurantFilter !== "all" && (cumulated || isSearchActive) && empRestaurantId && cumData.weekIdToRestaurantId[s.week_id] && cumData.weekIdToRestaurantId[s.week_id] !== empRestaurantId) return false;
       return true;
     }) ?? [];
     return {
@@ -214,12 +227,12 @@ export default function ZtZusammenfassung() {
     };
   })();
 
-  const getWeeklyHours = (empId: string, weekNumber: number, department?: string, restaurantId?: string) => {
+  const getWeeklyHours = (empId: string, weekNumber: number, department?: string, empRestaurantId?: string) => {
     const wIds = weekNumberToIds[weekNumber] ?? [];
     const weekShifts = shifts?.filter((s) => {
       if (s.employee_id !== empId || !wIds.includes(s.week_id)) return false;
       if (department && s.department !== department) return false;
-      if (isSearchActive && restaurantId && cumData.weekIdToRestaurantId[s.week_id] && cumData.weekIdToRestaurantId[s.week_id] !== restaurantId) return false;
+      if (restaurantFilter !== "all" && (cumulated || isSearchActive) && empRestaurantId && cumData.weekIdToRestaurantId[s.week_id] && cumData.weekIdToRestaurantId[s.week_id] !== empRestaurantId) return false;
       return true;
     }) ?? [];
     return weekShifts.reduce((sum, s) => sum + Number(s.total_hours), 0);
@@ -300,7 +313,7 @@ export default function ZtZusammenfassung() {
                           : emp.name;
                       })()}
                       {emp.perso_nr && emp.perso_nr > 0 && <span className="text-xs text-muted-foreground ml-1">{emp.perso_nr}</span>}
-                      <RestaurantBadge restaurantName={(emp as any).restaurant_name} department={emp.department} show={isSearchActive} />
+                      <RestaurantBadge restaurantName={(emp as any).restaurant_name} department={emp.department} show={isSearchActive || (cumulated && restaurantFilter !== "all")} />
                     </td>
                     {weeks?.map((w) => {
                       const h = getWeeklyHours(emp.id, w.week_number, emp.department, (emp as any).restaurant_id);

@@ -138,10 +138,22 @@ export default function ZtWochenplan() {
 
   // Effective employees: cumulated or restaurant-specific
   const allEmployees = (cumulated || isSearchActive) ? cumData.employees : restaurantEmployees;
-  const employees = allEmployees?.filter(emp => {
-    if (restaurantFilter === "all" || !cumulated) return true;
-    return (emp as any).restaurant_id === restaurantFilter;
-  });
+  const employees = (() => {
+    let list = allEmployees?.filter(emp => {
+      if (restaurantFilter === "all" || !cumulated) return true;
+      return (emp as any).restaurant_id === restaurantFilter;
+    }) ?? [];
+    if (restaurantFilter === "all" && cumulated) {
+      const seen = new Set<string>();
+      list = list.filter(emp => {
+        const key = `${emp.id}-${emp.department}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+    return list;
+  })();
 
   // Effective weeks: cumulated (deduplicated by week_number) or restaurant-specific
   const effectiveWeeks = (cumulated || isSearchActive) ? cumData.weeks : weeks;
@@ -556,7 +568,7 @@ export default function ZtWochenplan() {
     const empShifts = shifts?.filter((s) => {
       if (s.employee_id !== employeeId) return false;
       if (department && s.department !== department) return false;
-      if ((cumulated || isSearchActive) && restaurantId && cumData.weekIdToRestaurantId[s.week_id] && cumData.weekIdToRestaurantId[s.week_id] !== restaurantId) return false;
+      if (restaurantFilter !== "all" && (cumulated || isSearchActive) && restaurantId && cumData.weekIdToRestaurantId[s.week_id] && cumData.weekIdToRestaurantId[s.week_id] !== restaurantId) return false;
       return true;
     }) ?? [];
     let sonntagStunden = 0;
@@ -720,7 +732,7 @@ export default function ZtWochenplan() {
                           <div className="flex items-center gap-1.5">
                             <div className={`w-0.5 h-4 rounded-full ${deptColor} opacity-60`}></div>
                             <span className="truncate">{emp.nickname || (emp.name !== emp.first_name && emp.name !== emp.last_name ? emp.name : null) || emp.first_name || emp.name}</span>
-                            <RestaurantBadge restaurantName={(emp as any).restaurant_name} department={emp.department} show={isSearchActive} />
+                            <RestaurantBadge restaurantName={(emp as any).restaurant_name} department={emp.department} show={isSearchActive || (cumulated && restaurantFilter !== "all")} />
                           </div>
                         </td>
                         {weekDays.map((day, dayIdx) => {
