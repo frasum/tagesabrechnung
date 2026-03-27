@@ -1,6 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { formatHours, DEPARTMENT_ORDER, countVacationDays, countSickDays, getSickDateRanges, getVacationDateRanges, formatSickRanges, effectiveEveningHours, effectiveNightHours } from "./shiftCalculations";
+import { formatHours, DEPARTMENT_ORDER, countVacationDays, countSickDays, getSickDateRanges, getVacationDateRanges, formatSickRanges, formatVacationRanges, effectiveEveningHours, effectiveNightHours } from "./shiftCalculations";
 import type { SfnMode } from "@/hooks/useSfnMode";
 
 interface Employee {
@@ -126,7 +126,7 @@ export function exportBuchhaltungPdf(
     const sickRanges = getSickDateRanges(empShifts);
     const sickText = sickRanges.length > 0 ? `K: ${formatSickRanges(sickRanges).join(", ")}` : "";
     const vacRanges = getVacationDateRanges(empShifts);
-    const vacText = vacRanges.length > 0 ? `U: ${formatSickRanges(vacRanges).join(", ")}` : "";
+    const vacText = vacRanges.length > 0 ? `U: ${formatVacationRanges(vacRanges, empShifts).join(", ")}` : "";
     const besText = [note?.besonderheiten, vacText, sickText].filter(Boolean).join(" | ");
 
     const nicknameAlreadyInName = emp.nickname && (emp.first_name?.includes(emp.nickname) || emp.last_name?.includes(emp.nickname));
