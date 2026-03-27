@@ -25,6 +25,7 @@ import { useHolidayRates } from "@/hooks/useHolidayRates";
 import { useCommissionData } from "@/hooks/useCommissionData";
 import { useCommissionAddToGross } from "@/hooks/useSettings";
 import type { Shift, PayrollNote, AdvanceEntry } from "./buchhaltung/types";
+import EmployeeSearchFilter, { filterEmployeesBySearch } from "@/components/zeiterfassung/EmployeeSearchFilter";
 
 export default function ZtBuchhaltung() {
   const queryClient = useQueryClient();
