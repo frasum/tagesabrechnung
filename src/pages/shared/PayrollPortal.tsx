@@ -1202,6 +1202,7 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
                       showCommission={showCommission}
                       commission={emp.department === "Service" ? (commissionMap?.get(emp.id) ?? 0) : 0}
                       onUpsertNote={onUpsertNote}
+                      onEmployeeClick={onEmployeeClick}
                     />
                   </React.Fragment>
                 );
