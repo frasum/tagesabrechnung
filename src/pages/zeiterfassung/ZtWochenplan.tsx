@@ -710,6 +710,7 @@ export default function ZtWochenplan() {
                           <div className="flex items-center gap-1.5">
                             <div className={`w-0.5 h-4 rounded-full ${deptColor} opacity-60`}></div>
                             <span className="truncate">{emp.nickname || (emp.name !== emp.first_name && emp.name !== emp.last_name ? emp.name : null) || emp.first_name || emp.name}</span>
+                            <RestaurantBadge restaurantName={(emp as any).restaurant_name} department={emp.department} show={isSearchActive} />
                           </div>
                         </td>
                         {weekDays.map((day, dayIdx) => {
