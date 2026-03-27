@@ -545,7 +545,6 @@ export default function ShiftTimeOverride({
     );
   };
 
-  const [isOpen, setIsOpen] = useState(false);
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
