@@ -695,7 +695,7 @@ export default function ZtWochenplan() {
                   const deptColor = emp.department === "Küche" ? "dept-kueche" : emp.department === "GL" ? "dept-gl" : "dept-service";
 
                   return (
-                    <React.Fragment key={`${emp.id}-${emp.department}`}>
+                    <React.Fragment key={`${emp.id}-${emp.department}-${(emp as any).restaurant_id ?? ''}`}>
                       {showDeptHeader && (
                         <tr className="dept-header-row">
                           <td
