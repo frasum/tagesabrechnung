@@ -552,6 +552,7 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
             weekNumberToAllIds={effectiveWeekNumberToAllIds}
             onShiftsChanged={() => queryClient.invalidateQueries({ queryKey: ["payroll-data"] })}
             searchTerm={searchTerm}
+            onEmployeeClick={handleEmployeeClick}
           />
         </TabsContent>
 
@@ -565,6 +566,7 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
             periodLabel={period.label}
             weekNumberToAllIds={effectiveWeekNumberToAllIds}
             searchTerm={searchTerm}
+            onEmployeeClick={handleEmployeeClick}
           />
         </TabsContent>
 
