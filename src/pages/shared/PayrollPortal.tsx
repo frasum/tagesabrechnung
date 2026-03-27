@@ -977,7 +977,7 @@ function PayrollWochenplanTab({ weeks, shifts, employees, holidays, periodLabel,
 
 // =================== Zusammenfassung Tab ===================
 
-function PayrollZusammenfassungTab({ sfnMode, weeks, shifts, employees, periodLabel, weekNumberToAllIds, searchTerm = "" }: {
+function PayrollZusammenfassungTab({ sfnMode, weeks, shifts, employees, periodLabel, weekNumberToAllIds, searchTerm = "", onEmployeeClick }: {
   sfnMode: SfnMode;
   weeks: any[];
   shifts: Shift[];
@@ -985,6 +985,7 @@ function PayrollZusammenfassungTab({ sfnMode, weeks, shifts, employees, periodLa
   periodLabel: string;
   weekNumberToAllIds: Record<number, string[]>;
   searchTerm?: string;
+  onEmployeeClick?: (empId: string) => void;
 }) {
   const additive = sfnMode === "extended";
   const isExtended = sfnMode === "extended";
