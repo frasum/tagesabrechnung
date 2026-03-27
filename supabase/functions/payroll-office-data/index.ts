@@ -319,7 +319,7 @@ Deno.serve(async (req) => {
     const seen = new Set<string>();
     const employees: any[] = [];
     for (const row of (employeesRes.data as any[] ?? [])) {
-      const key = `${row.staff.id}-${row.zt_department}`;
+      const key = `${row.staff.id}-${row.zt_department}-${row.restaurant_id}`;
       if (seen.has(key)) continue;
       seen.add(key);
       employees.push({
