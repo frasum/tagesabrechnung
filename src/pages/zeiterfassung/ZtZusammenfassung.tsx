@@ -282,6 +282,7 @@ export default function ZtZusammenfassung() {
                           : emp.name;
                       })()}
                       {emp.perso_nr && emp.perso_nr > 0 && <span className="text-xs text-muted-foreground ml-1">{emp.perso_nr}</span>}
+                      <RestaurantBadge restaurantName={emp.restaurant_name} department={emp.department} show={isSearchActive} />
                     </td>
                     {weeks?.map((w) => {
                       const h = getWeeklyHours(emp.id, w.week_number, emp.department);
