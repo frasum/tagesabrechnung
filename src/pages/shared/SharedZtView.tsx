@@ -272,6 +272,7 @@ export default function SharedZtView() {
               token={token!}
               onShiftsChanged={() => queryClient.invalidateQueries({ queryKey: ["shared-zt", token] })}
               weekNumberToAllIds={effectiveWeekNumberToAllIds}
+              weekToRestaurant={effectiveRestaurant === "all" ? weekToRestaurant : undefined}
             />
           </TabsContent>
 
