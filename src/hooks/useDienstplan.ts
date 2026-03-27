@@ -157,24 +157,45 @@ export function useDeleteAbsence() {
   });
 }
 
-export function useConflictingShifts(restaurantId: string, staffIds: string[], startDate: string, endDate: string) {
+export function useConflictingShifts(restaurantId: string, department: string, staffIds: string[], startDate: string, endDate: string) {
   return useQuery({
-    queryKey: ['conflicting_shifts', restaurantId, staffIds, startDate, endDate],
+    queryKey: ['conflicting_shifts', restaurantId, department, staffIds, startDate, endDate],
     queryFn: async () => {
       if (staffIds.length === 0) return new Map<string, string>();
-      const { data, error } = await supabase
+
+      // Query 1: other restaurants (existing logic)
+      const { data: crossRestaurant, error: err1 } = await supabase
         .from('shift_assignments')
         .select('staff_id, shift_date, restaurants(name)')
         .in('staff_id', staffIds)
         .neq('restaurant_id', restaurantId)
         .gte('shift_date', startDate)
         .lte('shift_date', endDate);
-      if (error) throw error;
+      if (err1) throw err1;
+
+      // Query 2: same restaurant, different department
+      const { data: crossDepartment, error: err2 } = await supabase
+        .from('shift_assignments')
+        .select('staff_id, shift_date, department')
+        .in('staff_id', staffIds)
+        .eq('restaurant_id', restaurantId)
+        .neq('department', department)
+        .gte('shift_date', startDate)
+        .lte('shift_date', endDate);
+      if (err2) throw err2;
+
       const map = new Map<string, string>();
-      for (const row of data || []) {
+      for (const row of crossRestaurant || []) {
         const r = row.restaurants as unknown as { name: string } | null;
         if (r?.name) {
           map.set(`${row.staff_id}-${row.shift_date}`, r.name);
+        }
+      }
+      for (const row of crossDepartment || []) {
+        const key = `${row.staff_id}-${row.shift_date}`;
+        if (!map.has(key)) {
+          const label = row.department === 'kitchen' ? 'Küche' : 'Service';
+          map.set(key, label);
         }
       }
       return map;

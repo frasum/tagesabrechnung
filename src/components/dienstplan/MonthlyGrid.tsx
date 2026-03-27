@@ -92,7 +92,7 @@ export function MonthlyGrid({ department, month, year, restaurantIdOverride, act
 
   const staffIds = filteredEmployees.map(e => e.id);
   const { data: absences = [] } = useAbsences(staffIds, startDate, endDate);
-  const { data: conflictMap = new Map<string, string>() } = useConflictingShifts(restaurantId, staffIds, startDate, endDate);
+  const { data: conflictMap = new Map<string, string>() } = useConflictingShifts(restaurantId, department, staffIds, startDate, endDate);
 
   const { data: holidayMap = new Map<string, string>() } = useQuery({
     queryKey: ['bavarian-holidays-dienstplan', startDate, endDate],
