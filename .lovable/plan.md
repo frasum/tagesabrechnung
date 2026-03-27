@@ -1,40 +1,44 @@
 
 
-## Prüfung: Mitarbeiter-Anzeige über alle Tabs
+## Mitarbeiter-Suchfeld für Wochenplan, Zusammenfassung & Buchhaltung
 
-### Gefundene Probleme
+### Idee
+Ein Suchfeld oberhalb der Tabelle, das Mitarbeiter nach Name filtert. Bei Eingabe werden nur passende Mitarbeiter angezeigt, alle anderen ausgeblendet. Sichtbar nur für Admins (in der Manager-App) und im Lohnbüro-Portal.
 
-**1. Fehlender `is_active`-Filter im kumulierten Modus**
-- `useCumulatedZtData.ts` (Zeile 82): Lädt Mitarbeiter aus `staff_restaurants` ohne `is_active`-Filter. Inaktive Mitarbeiter mit bestehenden Schichten könnten doppelt oder fehlerhaft angezeigt werden.
-- `payroll-office-data` Edge Function (Zeile 243): Gleiches Problem — kein `is_active`-Filter auf dem Staff-Join.
+### Umsetzung
 
-**2. Supabase 1000-Zeilen-Limit bei Schichtabfragen**
-Alle Schicht-Queries nutzen die Standardgrenze von 1000 Zeilen. Bei kumuliertem Modus (2 Restaurants × 5 Wochen × ~30 Mitarbeiter × ~30 Tage) können leicht über 1000 Schichten existieren. **Betroffene Stellen:**
-- `useCumulatedZtData.ts`: `zt_shifts` Query (Zeile 64-76)
-- `ZtBuchhaltung.tsx`: `zt_shifts` Query (Zeile 58-70)
-- `ZtZusammenfassung.tsx`: `zt_shifts` Query (Zeile 108-120)
-- `payroll-office-data/index.ts`: `zt_shifts` Query (Zeile 240-242)
+**1. Neue Komponente `EmployeeSearchFilter`**
+- Einfaches Input-Feld mit Such-Icon und "Mitarbeiter suchen…" Placeholder
+- Kontrollierter State (`searchTerm`), gibt gefilterten String nach oben weiter
+- Löschen-Button (X) wenn Text eingegeben ist
+- Kompakt gestaltet, passt in die Toolbar-Zeile
 
-Dies bedeutet: **Im kumulierten Modus könnten Schichten fehlen**, was zu falschen Stundensummen führt.
+**2. Integration in 3 Ansichten (Manager-App)**
+- `ZtWochenplan.tsx`: State `searchTerm`, Filter auf sortierte Mitarbeiterliste (Name/Nickname/Vorname enthält Suchbegriff). Nur sichtbar wenn `hasPermission('admin')`.
+- `ZtZusammenfassung.tsx`: Gleiche Logik.
+- `ZtBuchhaltung.tsx`: Gleiche Logik. Department-Header werden nur angezeigt, wenn mindestens ein Mitarbeiter im Department dem Filter entspricht.
 
-**3. Konsistenz über die Tabs**
-Die Logik selbst (Sortierung, Filterung, Stunden-Berechnung) ist konsistent über Wochenplan, Zusammenfassung und Buchhaltung. Das Problem liegt ausschließlich bei den obigen zwei Punkten.
+**3. Integration im Lohnbüro-Portal**
+- `PayrollPortal.tsx`: Gleiches Suchfeld in allen 3 Tabs (Wochenplan, Zusammenfassung, Buchhaltung). Hier immer sichtbar (Lohnbüro hat per Definition Zugriff).
 
-### Lösung
+**4. Filter-Logik**
+```
+const filtered = employees.filter(emp => {
+  if (!searchTerm) return true;
+  const term = searchTerm.toLowerCase();
+  const displayName = (emp.nickname || emp.name || emp.first_name || "").toLowerCase();
+  return displayName.includes(term) || 
+         (emp.first_name?.toLowerCase().includes(term)) ||
+         (emp.last_name?.toLowerCase().includes(term));
+});
+```
 
-**Datei 1: `src/hooks/useCumulatedZtData.ts`**
-- `is_active`-Filter hinzufügen: `.eq("staff.is_active", true)` bei der Mitarbeiter-Query
-- Schicht-Query mit `.limit(5000)` ergänzen (oder Pagination — aber Limit reicht für realistische Datenmengen)
+### Dateien
+- `src/components/zeiterfassung/EmployeeSearchFilter.tsx` — Neue Komponente (Input + X-Button)
+- `src/pages/zeiterfassung/ZtWochenplan.tsx` — State + Filter + Komponente einbinden (nur Admin)
+- `src/pages/zeiterfassung/ZtZusammenfassung.tsx` — State + Filter + Komponente einbinden (nur Admin)
+- `src/pages/zeiterfassung/ZtBuchhaltung.tsx` — State + Filter + Komponente einbinden (nur Admin)
+- `src/pages/shared/PayrollPortal.tsx` — State + Filter + Komponente in allen 3 Tabs einbinden (immer sichtbar)
 
-**Datei 2: `src/pages/zeiterfassung/ZtBuchhaltung.tsx`**
-- Schicht-Query mit `.limit(5000)` ergänzen
-
-**Datei 3: `src/pages/zeiterfassung/ZtZusammenfassung.tsx`**
-- Schicht-Query mit `.limit(5000)` ergänzen
-
-**Datei 4: `supabase/functions/payroll-office-data/index.ts`**
-- `is_active`-Filter auf Staff-Join hinzufügen
-- Schicht-Query mit `.limit(5000)` ergänzen
-
-4 Dateien, jeweils 1-2 Zeilen Änderung.
+5 Dateien, keine DB-Änderungen nötig.
 
