@@ -139,8 +139,28 @@ export default function BatchPayrollCalculation({
 
       if (srErr) throw srErr;
 
-      // Filter to active staff only
-      const activeStaffRest = (allStaffRest || []).filter((sr: any) => sr.staff?.is_active === true);
+      // Filter to active staff only, then deduplicate by (restaurant_id, staff_id)
+      const activeRaw = (allStaffRest || []).filter((sr: any) => sr.staff?.is_active === true);
+      const dedupMap = new Map<string, any>();
+      for (const sr of activeRaw) {
+        const key = `${sr.restaurant_id}::${sr.staff_id}`;
+        const existing = dedupMap.get(key);
+        if (existing) {
+          // Merge departments
+          const existingDept = existing.zt_department || "";
+          const newDept = sr.zt_department || "";
+          if (newDept && !existingDept.includes(newDept)) {
+            existing.zt_department = existingDept ? `${existingDept}, ${newDept}` : newDept;
+          }
+          // Keep highest hourly rate
+          if ((sr.zt_hourly_rate || 0) > (existing.zt_hourly_rate || 0)) {
+            existing.zt_hourly_rate = sr.zt_hourly_rate;
+          }
+        } else {
+          dedupMap.set(key, { ...sr });
+        }
+      }
+      const activeStaffRest = Array.from(dedupMap.values());
 
       // 2. Load all zt_shifts in date range
       const { data: allShifts, error: shiftErr } = await supabase
