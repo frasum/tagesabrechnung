@@ -8,6 +8,7 @@ import type { EmployeeTotals, PayrollNote, Shift, AdvanceEntry } from "./types";
 import type { RestaurantEmployee } from "@/hooks/useRestaurantEmployees";
 import type { SfnMode } from "@/hooks/useSfnMode";
 import { format, parseISO } from "date-fns";
+import RestaurantBadge from "@/components/zeiterfassung/RestaurantBadge";
 
 interface BuchhaltungRowProps {
   emp: RestaurantEmployee;
