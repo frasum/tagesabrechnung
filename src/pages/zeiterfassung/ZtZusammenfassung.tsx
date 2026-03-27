@@ -226,6 +226,8 @@ export default function ZtZusammenfassung() {
         }
       />
 
+      {showSfn && <EmployeeSearchFilter value={searchTerm} onChange={setSearchTerm} />}
+
       <div className="overflow-x-auto border rounded-lg">
         <table className="w-full text-sm">
           <thead>
