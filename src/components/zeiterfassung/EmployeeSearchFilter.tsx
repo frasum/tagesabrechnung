@@ -35,12 +35,27 @@ export function filterEmployeesBySearch<T extends { nickname?: string | null; na
   searchTerm: string
 ): T[] {
   if (!searchTerm.trim()) return employees;
-  const term = searchTerm.toLowerCase();
+  const term = searchTerm.toLowerCase().trim();
+  const isShort = term.length <= 2;
+
   return employees.filter(emp => {
-    const displayName = (emp.nickname || emp.name || emp.first_name || "").toLowerCase();
-    return displayName.includes(term) ||
-      (emp.first_name?.toLowerCase().includes(term)) ||
-      (emp.last_name?.toLowerCase().includes(term)) ||
-      (emp.name?.toLowerCase().includes(term));
+    const nickname = (emp.nickname || "").toLowerCase();
+    const firstName = (emp.first_name || "").toLowerCase();
+    const lastName = (emp.last_name || "").toLowerCase();
+    const name = (emp.name || "").toLowerCase();
+
+    if (isShort) {
+      // Exact nickname match or startsWith on name parts
+      return nickname === term ||
+        firstName.startsWith(term) ||
+        lastName.startsWith(term) ||
+        name.startsWith(term);
+    }
+
+    // 3+ chars: broad substring search
+    return nickname.includes(term) ||
+      firstName.includes(term) ||
+      lastName.includes(term) ||
+      name.includes(term);
   });
 }
