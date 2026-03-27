@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Download, FileSpreadsheet } from "lucide-react";
-import { useRestaurant } from "@/hooks/useRestaurant";
+import { useRestaurant, useRestaurants } from "@/hooks/useRestaurant";
 import { useRestaurantEmployees } from "@/hooks/useRestaurantEmployees";
 import { useZt } from "@/contexts/ZtContext";
 import { DEPARTMENT_ORDER } from "@/lib/shiftCalculations";
