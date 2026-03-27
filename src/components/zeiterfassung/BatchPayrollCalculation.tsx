@@ -124,6 +124,7 @@ export default function BatchPayrollCalculation({
   holidays,
   calculationYear,
   calculationMonth,
+  periods,
   onSelectEmployee,
 }: BatchPayrollCalculationProps) {
   const { data: restaurants = [] } = useRestaurants();
@@ -131,11 +132,27 @@ export default function BatchPayrollCalculation({
   const [batchCalculating, setBatchCalculating] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
   const [batchError, setBatchError] = useState<string | null>(null);
+  const [selectedBatchPeriodId, setSelectedBatchPeriodId] = useState<string>("");
 
-  const isExtended = sfnMode === "extended";
+  // Auto-select the last completed period (end_date < today)
+  useEffect(() => {
+    if (!periods?.length || selectedBatchPeriodId) return;
+    const today = format(new Date(), "yyyy-MM-dd");
+    const completed = periods.filter(p => p.end_date < today);
+    if (completed.length > 0) {
+      // periods are sorted desc, so first completed is the most recent
+      setSelectedBatchPeriodId(completed[0].id);
+    } else {
+      setSelectedBatchPeriodId(periods[0].id);
+    }
+  }, [periods, selectedBatchPeriodId]);
 
-  const handleBatchCalculate = useCallback(async () => {
-    if (!dateFrom || !dateTo) return;
+  // Derive effective date range from selected period
+  const effectiveDates = useMemo(() => {
+    const sel = periods?.find(p => p.id === selectedBatchPeriodId);
+    if (sel) return { from: sel.start_date, to: sel.end_date };
+    return { from: dateFrom, to: dateTo };
+  }, [selectedBatchPeriodId, periods, dateFrom, dateTo]);
     setBatchCalculating(true);
     setBatchResults([]);
     setBatchError(null);
