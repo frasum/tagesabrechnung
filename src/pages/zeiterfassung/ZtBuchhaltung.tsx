@@ -246,7 +246,6 @@ export default function ZtBuchhaltung() {
 
                 const empShifts = shifts?.filter(s => {
                   if (s.employee_id !== emp.id || s.department !== emp.department) return false;
-                  if (restaurantFilter !== "all" && (cumulated || isSearchActive) && (emp as any).restaurant_id && cumData.weekIdToRestaurantId[s.week_id] && cumData.weekIdToRestaurantId[s.week_id] !== (emp as any).restaurant_id) return false;
                   return true;
                 }) ?? [];
                 const totals = getEmployeeTotals(emp.id, empShifts, emp.department, isExtended);
