@@ -238,12 +238,13 @@ Deno.serve(async (req) => {
     // 3. Load shifts, employees, notes, advances, holidays, waiter data, staff roles, commission settings in parallel
     const [shiftsRes, employeesRes, notesRes, advancesRes, holidaysRes, waiterShiftsRes, staffRolesRes, commissionSettingsRes] = await Promise.all([
       weekIds.length > 0
-        ? supabase.from("zt_shifts").select("*").in("week_id", weekIds)
+        ? supabase.from("zt_shifts").select("*").in("week_id", weekIds).limit(5000)
         : { data: [], error: null },
       supabase
         .from("staff_restaurants")
         .select("zt_department, staff_id, restaurant_id, staff!inner(id, name, perso_nr, first_name, last_name, nickname)")
         .not("zt_department", "is", null)
+        .eq("staff.is_active", true)
         .in("restaurant_id", restaurantIds),
       supabase
         .from("payroll_notes")

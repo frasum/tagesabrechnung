@@ -112,7 +112,8 @@ export default function ZtZusammenfassung() {
       const { data, error } = await supabase
         .from("zt_shifts")
         .select("*")
-        .in("week_id", weekIds);
+        .in("week_id", weekIds)
+        .limit(5000);
       if (error) throw error;
       return data as Shift[];
     },
