@@ -272,6 +272,7 @@ export default function SharedZtView() {
               token={token!}
               onShiftsChanged={() => queryClient.invalidateQueries({ queryKey: ["shared-zt", token] })}
               weekNumberToAllIds={effectiveWeekNumberToAllIds}
+              weekToRestaurant={effectiveRestaurant === "all" ? weekToRestaurant : undefined}
             />
           </TabsContent>
 
@@ -282,6 +283,7 @@ export default function SharedZtView() {
               employees={employeesWithShifts}
               periodLabel={`${period.label} — ${restaurantLabel}`}
               weekNumberToAllIds={effectiveWeekNumberToAllIds}
+              weekToRestaurant={effectiveRestaurant === "all" ? weekToRestaurant : undefined}
             />
           </TabsContent>
 
@@ -295,6 +297,7 @@ export default function SharedZtView() {
               isLocked={effectiveStatus === "locked"}
               onUpsertNote={(p) => upsertNote.mutate(p)}
               weekNumberToAllIds={effectiveWeekNumberToAllIds}
+              weekToRestaurant={effectiveRestaurant === "all" ? weekToRestaurant : undefined}
             />
           </TabsContent>
         </Tabs>
@@ -336,7 +339,7 @@ function handleTimeKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
   if (target >= 0 && target < allFields.length) { allFields[target].focus(); allFields[target].select(); }
 }
 
-function WochenplanTab({ weeks, shifts, employees, holidays, periodLabel, selectedWeekId, onSelectWeek, isLocked, token, onShiftsChanged, weekNumberToAllIds }: {
+function WochenplanTab({ weeks, shifts, employees, holidays, periodLabel, selectedWeekId, onSelectWeek, isLocked, token, onShiftsChanged, weekNumberToAllIds, weekToRestaurant }: {
   weeks: SharedData["weeks"];
   shifts: Shift[];
   employees: SharedData["employees"];
@@ -348,6 +351,7 @@ function WochenplanTab({ weeks, shifts, employees, holidays, periodLabel, select
   token: string;
   onShiftsChanged: () => void;
   weekNumberToAllIds?: Record<number, string[]>;
+  weekToRestaurant?: Record<string, string>;
 }) {
   const [editingTime, setEditingTime] = useState<Record<string, string>>({});
   const [absenceDialog, setAbsenceDialog] = useState<{
@@ -381,7 +385,19 @@ function WochenplanTab({ weeks, shifts, employees, holidays, periodLabel, select
     ? weekNumberToAllIds[selectedWeekNumber] ?? [selectedWeekId]
     : [selectedWeekId];
   const weekShifts = shifts.filter(s => allWeekIdsForSelected.includes(s.week_id));
-  const allPeriodShifts = shifts;
+
+  // Pre-scope shifts for exports: each shift only belongs to the employee's restaurant
+  const exportShifts = useMemo(() => {
+    if (!weekToRestaurant) return shifts;
+    const empRestMap = new Map<string, string>();
+    employees.forEach(emp => { if (emp.restaurant_id) empRestMap.set(`${emp.id}-${emp.department}`, emp.restaurant_id); });
+    return shifts.filter(s => {
+      const restId = weekToRestaurant[s.week_id];
+      if (!restId) return true;
+      const empRest = empRestMap.get(`${s.employee_id}-${s.department}`);
+      return !empRest || empRest === restId;
+    });
+  }, [shifts, weekToRestaurant, employees]);
 
   const upsertShift = useMutation({
     mutationFn: async (params: {
@@ -465,10 +481,10 @@ function WochenplanTab({ weeks, shifts, employees, holidays, periodLabel, select
           ))}
         </div>
         <div className="ml-auto flex gap-1">
-          <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" disabled={!allPeriodShifts.length} onClick={() => exportWochenplanPdf(periodLabel, employees, weeks, allPeriodShifts as any, holidays)}>
+          <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" disabled={!exportShifts.length} onClick={() => exportWochenplanPdf(periodLabel, employees, weeks, exportShifts as any, holidays)}>
             <FileDown className="h-3.5 w-3.5" /> PDF
           </Button>
-          <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" disabled={!allPeriodShifts.length} onClick={() => exportWochenplanExcel(periodLabel, employees, weeks, allPeriodShifts as any, holidays)}>
+          <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" disabled={!exportShifts.length} onClick={() => exportWochenplanExcel(periodLabel, employees, weeks, exportShifts as any, holidays)}>
             <FileSpreadsheet className="h-3.5 w-3.5" /> Excel
           </Button>
         </div>
@@ -681,13 +697,26 @@ function WochenplanTab({ weeks, shifts, employees, holidays, periodLabel, select
 }
 
 // ========== Zusammenfassung Tab ==========
-function ZusammenfassungTab({ weeks, shifts, employees, periodLabel, weekNumberToAllIds }: {
+function ZusammenfassungTab({ weeks, shifts, employees, periodLabel, weekNumberToAllIds, weekToRestaurant }: {
   weeks: SharedData["weeks"];
   shifts: Shift[];
   employees: SharedData["employees"];
   periodLabel: string;
   weekNumberToAllIds?: Record<number, string[]>;
+  weekToRestaurant?: Record<string, string>;
 }) {
+  // Pre-scope shifts for exports
+  const exportShifts = useMemo(() => {
+    if (!weekToRestaurant) return shifts;
+    const empRestMap = new Map<string, string>();
+    employees.forEach(emp => { if (emp.restaurant_id) empRestMap.set(`${emp.id}-${emp.department}`, emp.restaurant_id); });
+    return shifts.filter(s => {
+      const restId = weekToRestaurant[s.week_id];
+      if (!restId) return true;
+      const empRest = empRestMap.get(`${s.employee_id}-${s.department}`);
+      return !empRest || empRest === restId;
+    });
+  }, [shifts, weekToRestaurant, employees]);
   const getWeeklyHours = (empId: string, weekNumber: number, department?: string) => {
     const wIds = weekNumberToAllIds
       ? (weekNumberToAllIds[weekNumber] ?? weeks.filter(w => w.week_number === weekNumber).map(w => w.id))
@@ -712,10 +741,10 @@ function ZusammenfassungTab({ weeks, shifts, employees, periodLabel, weekNumberT
   return (
     <div className="space-y-3">
       <div className="flex justify-end gap-1">
-        <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => exportZusammenfassungPdf(periodLabel, employees, weeks, shifts as any, weekNumberToAllIds)}>
+        <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => exportZusammenfassungPdf(periodLabel, employees, weeks, exportShifts as any, weekNumberToAllIds)}>
           <FileDown className="mr-1 h-4 w-4" /> PDF
         </Button>
-        <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => exportZusammenfassungExcel(periodLabel, employees, weeks, shifts as any, weekNumberToAllIds)}>
+        <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => exportZusammenfassungExcel(periodLabel, employees, weeks, exportShifts as any, weekNumberToAllIds)}>
           <FileSpreadsheet className="mr-1 h-4 w-4" /> Excel
         </Button>
       </div>
@@ -778,7 +807,7 @@ function ZusammenfassungTab({ weeks, shifts, employees, periodLabel, weekNumberT
 }
 
 // ========== Buchhaltung Tab ==========
-function BuchhaltungTab({ shifts, employees, payrollNotes, advances, periodLabel, isLocked, onUpsertNote, weekNumberToAllIds }: {
+function BuchhaltungTab({ shifts, employees, payrollNotes, advances, periodLabel, isLocked, onUpsertNote, weekNumberToAllIds, weekToRestaurant }: {
   shifts: Shift[];
   employees: SharedData["employees"];
   payrollNotes: PayrollNote[];
@@ -787,7 +816,20 @@ function BuchhaltungTab({ shifts, employees, payrollNotes, advances, periodLabel
   isLocked: boolean;
   onUpsertNote: (p: { employee_id: string; field: string; value: any }) => void;
   weekNumberToAllIds?: Record<number, string[]>;
+  weekToRestaurant?: Record<string, string>;
 }) {
+  // Pre-scope shifts for exports
+  const exportShifts = useMemo(() => {
+    if (!weekToRestaurant) return shifts;
+    const empRestMap = new Map<string, string>();
+    employees.forEach(emp => { if (emp.restaurant_id) empRestMap.set(`${emp.id}-${emp.department}`, emp.restaurant_id); });
+    return shifts.filter(s => {
+      const restId = weekToRestaurant[s.week_id];
+      if (!restId) return true;
+      const empRest = empRestMap.get(`${s.employee_id}-${s.department}`);
+      return !empRest || empRest === restId;
+    });
+  }, [shifts, weekToRestaurant, employees]);
   const advancesByName = useMemo(() => {
     const map: Record<string, AdvanceEntry[]> = {};
     advances.forEach(a => { (map[a.staff_name] ??= []).push(a); });
@@ -811,10 +853,10 @@ function BuchhaltungTab({ shifts, employees, payrollNotes, advances, periodLabel
   return (
     <div className="space-y-3">
       <div className="flex justify-end gap-1">
-        <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungPdf(periodLabel, employees, shifts, payrollNotes); toast.success("PDF erstellt"); }}>
+        <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungPdf(periodLabel, employees, exportShifts, payrollNotes); toast.success("PDF erstellt"); }}>
           <FileDown className="mr-1 h-4 w-4" /> PDF
         </Button>
-        <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungExcel(periodLabel, employees, shifts, payrollNotes); toast.success("Excel erstellt"); }}>
+        <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungExcel(periodLabel, employees, exportShifts, payrollNotes); toast.success("Excel erstellt"); }}>
           <FileSpreadsheet className="mr-1 h-4 w-4" /> Excel
         </Button>
       </div>
