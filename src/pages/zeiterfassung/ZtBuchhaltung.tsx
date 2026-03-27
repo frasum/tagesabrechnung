@@ -87,7 +87,7 @@ export default function ZtBuchhaltung() {
       if (error) throw error;
       return data as PayrollNote[];
     },
-    enabled: !cumulated && !!selectedPeriodId,
+    enabled: !cumulated && !isSearchActive && !!selectedPeriodId,
   });
 
   const payrollNotes = cumulated ? (cumData.payrollNotes as PayrollNote[] | undefined) : singlePayrollNotes;
