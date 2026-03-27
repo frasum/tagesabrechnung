@@ -138,10 +138,22 @@ export default function ZtWochenplan() {
 
   // Effective employees: cumulated or restaurant-specific
   const allEmployees = (cumulated || isSearchActive) ? cumData.employees : restaurantEmployees;
-  const employees = allEmployees?.filter(emp => {
-    if (restaurantFilter === "all" || !cumulated) return true;
-    return (emp as any).restaurant_id === restaurantFilter;
-  });
+  const employees = (() => {
+    let list = allEmployees?.filter(emp => {
+      if (restaurantFilter === "all" || !cumulated) return true;
+      return (emp as any).restaurant_id === restaurantFilter;
+    }) ?? [];
+    if (restaurantFilter === "all" && cumulated) {
+      const seen = new Set<string>();
+      list = list.filter(emp => {
+        const key = `${emp.id}-${emp.department}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+    return list;
+  })();
 
   // Effective weeks: cumulated (deduplicated by week_number) or restaurant-specific
   const effectiveWeeks = (cumulated || isSearchActive) ? cumData.weeks : weeks;
