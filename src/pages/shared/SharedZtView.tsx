@@ -853,10 +853,10 @@ function BuchhaltungTab({ shifts, employees, payrollNotes, advances, periodLabel
   return (
     <div className="space-y-3">
       <div className="flex justify-end gap-1">
-        <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungPdf(periodLabel, employees, shifts, payrollNotes); toast.success("PDF erstellt"); }}>
+        <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungPdf(periodLabel, employees, exportShifts, payrollNotes); toast.success("PDF erstellt"); }}>
           <FileDown className="mr-1 h-4 w-4" /> PDF
         </Button>
-        <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungExcel(periodLabel, employees, shifts, payrollNotes); toast.success("Excel erstellt"); }}>
+        <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungExcel(periodLabel, employees, exportShifts, payrollNotes); toast.success("Excel erstellt"); }}>
           <FileSpreadsheet className="mr-1 h-4 w-4" /> Excel
         </Button>
       </div>
