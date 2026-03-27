@@ -544,15 +544,22 @@ export default function ShiftTimeOverride({
     );
   };
 
+  const [isOpen, setIsOpen] = useState(false);
+
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-2">
-          <Settings className="h-4 w-4" />
-          Schichtzeiten anpassen (Admin)
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Card>
+        <CollapsibleTrigger asChild>
+          <CardHeader className="pb-3 cursor-pointer hover:bg-muted/50 transition-colors">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Schichtzeiten anpassen (Admin)
+              <ChevronDown className={`h-4 w-4 ml-auto transition-transform ${isOpen ? "rotate-180" : ""}`} />
+            </CardTitle>
+          </CardHeader>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent className="space-y-4">
         <div className="text-sm text-muted-foreground space-y-1">
           <p>Unter der Woche: <span className="font-medium text-foreground">17:00 – 01:00</span></p>
           <p>Sonn-/Feiertage: <span className="font-medium text-foreground">15:00 – 02:00</span></p>
