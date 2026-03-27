@@ -526,6 +526,7 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
             employees={filterEmployeesBySearch(employeesWithShifts, searchTerm)}
             periodLabel={period.label}
             weekNumberToAllIds={effectiveWeekNumberToAllIds}
+            searchTerm={searchTerm}
           />
         </TabsContent>
 
