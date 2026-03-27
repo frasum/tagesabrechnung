@@ -112,7 +112,7 @@ export default function ZtBuchhaltung() {
     enabled: !cumulated && !isSearchActive && !!selectedPeriod && !!restaurantId,
   });
 
-  const advances = cumulated ? (cumData.advances as AdvanceEntry[] | undefined) : singleAdvances;
+  const advances = (cumulated || isSearchActive) ? (cumData.advances as AdvanceEntry[] | undefined) : singleAdvances;
 
   const advancesByName = useMemo(() => {
     const map: Record<string, AdvanceEntry[]> = {};
