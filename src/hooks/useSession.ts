@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
@@ -100,8 +101,26 @@ export function useWaiterShifts(sessionId: string | undefined) {
           table: 'waiter_shifts',
           filter: `session_id=eq.${sessionId}`,
         },
-        () => {
+        (payload) => {
           queryClient.invalidateQueries({ queryKey: ['waiter-shifts', sessionId] });
+
+          // Notify manager when a waiter submits their settlement
+          if (
+            payload.eventType === 'UPDATE' &&
+            payload.new?.submitted_at &&
+            !payload.old?.submitted_at
+          ) {
+            const name = (payload.new as any).waiter_name || 'Ein Kellner';
+            toast.success(`${name} hat abgerechnet`, {
+              description: 'Die Abrechnung wurde eingereicht.',
+              duration: 6000,
+            });
+            try {
+              new Audio('/notification.mp3').play();
+            } catch {
+              // Sound playback may be blocked by browser autoplay policy
+            }
+          }
         }
       )
       .subscribe();
