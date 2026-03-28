@@ -386,12 +386,17 @@ export default function CashBalance() {
                       <TableCell className="text-right tabular-nums font-bold text-destructive">
                         -{formatCurrency(filteredData.reduce((sum, row) => sum + row.ausgaben, 0))}
                       </TableCell>
-                      <TableCell className={cn(
-                        'text-right tabular-nums font-bold',
-                        cumulativeCash >= 0 ? 'text-success' : 'text-destructive'
-                      )}>
-                        {formatCurrency(cumulativeCash)}
-                      </TableCell>
+                      {(() => {
+                        const totalBargeld = filteredData.reduce((sum, row) => sum + row.bargeld, 0);
+                        return (
+                          <TableCell className={cn(
+                            'text-right tabular-nums font-bold',
+                            totalBargeld >= 0 ? 'text-success' : 'text-destructive'
+                          )}>
+                            {formatCurrency(totalBargeld)}
+                          </TableCell>
+                        );
+                      })()}
                     </TableRow>
                   </TableFooter>
                 )}
