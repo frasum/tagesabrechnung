@@ -1132,6 +1132,7 @@ function PayrollZusammenfassungTab({ sfnMode, weeks, shifts, employees, periodLa
                       </span>
                       {emp.perso_nr && emp.perso_nr > 0 && <span className="text-xs text-muted-foreground ml-1">{emp.perso_nr}</span>}
                       <RestaurantBadge restaurantName={emp.restaurant_name} department={emp.department} show={!!searchTerm.trim()} />
+                      {dualDeptIds?.has(emp.id) && <Badge className="ml-1 text-[10px] px-1.5 py-0 bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-100" variant="outline">K+S</Badge>}
                     </td>
                     {weeks.map(w => {
                       const h = getWeeklyHours(emp.id, w.week_number, emp.department);
