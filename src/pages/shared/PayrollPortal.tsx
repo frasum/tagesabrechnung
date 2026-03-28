@@ -600,6 +600,7 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
             searchTerm={searchTerm}
             onEmployeeClick={handleEmployeeClick}
             weekToRestaurant={effectiveRestaurant === "all" ? weekToRestaurant : undefined}
+            dualDeptIds={dualDeptIds}
           />
         </TabsContent>
 
