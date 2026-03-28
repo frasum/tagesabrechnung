@@ -45,6 +45,7 @@ const SharedZtView = lazy(() => import("./pages/shared/SharedZtView"));
 const PayrollPortal = lazy(() => import("./pages/shared/PayrollPortal"));
 const KuechePlan = lazy(() => import("./pages/KuechePlan"));
 const SkillSettings = lazy(() => import("./pages/SkillSettings"));
+const SofortmeldungDashboard = lazy(() => import("./pages/SofortmeldungDashboard"));
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -140,6 +141,7 @@ function AppContent() {
           <Route path="/telegram" element={<ProtectedRoute requiredLevel="admin"><TelegramSettings /></ProtectedRoute>} />
           <Route path="/kueche-plan" element={<ProtectedRoute requiredLevel="admin"><KuechePlan /></ProtectedRoute>} />
           <Route path="/skill-settings" element={<ProtectedRoute requiredLevel="admin"><SkillSettings /></ProtectedRoute>} />
+          <Route path="/sofortmeldung" element={<ProtectedRoute requiredLevel="admin"><SofortmeldungDashboard /></ProtectedRoute>} />
 
           {/* Redirect root to restaurant selection */}
           <Route path="/" element={<Navigate to="/select-restaurant" replace />} />
