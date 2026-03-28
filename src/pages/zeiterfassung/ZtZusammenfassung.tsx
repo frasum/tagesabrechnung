@@ -55,6 +55,15 @@ export default function ZtZusammenfassung() {
   const selectedPeriod = periods?.find(p => p.id === selectedPeriodId);
   const isSearchActive = !!searchTerm.trim();
   const cumData = useCumulatedZtData(cumulated || isSearchActive, selectedPeriod);
+  const weekIdToRestaurantId = cumData.weekIdToRestaurantId;
+
+  const isShiftInScope = (s: Shift) => {
+    if (cumulated && restaurantFilter !== "all") {
+      const shiftRestaurant = weekIdToRestaurantId[s.week_id];
+      if (shiftRestaurant && shiftRestaurant !== restaurantFilter) return false;
+    }
+    return true;
+  };
 
   // Load employees from ALL restaurants for ShiftTimeOverride
   const { data: allRestaurantEmployees } = useQuery({
@@ -170,7 +179,7 @@ export default function ZtZusammenfassung() {
     shifts?.some((s) => {
       if (s.employee_id !== emp.id || s.department !== emp.department) return false;
       if (!(Number(s.total_hours) > 0 || !!s.absence_type)) return false;
-      
+      if (!isShiftInScope(s)) return false;
       return true;
     })
   );
@@ -181,6 +190,7 @@ export default function ZtZusammenfassung() {
     const empShifts = shifts?.filter((s) => {
       if (s.employee_id !== empId) return false;
       if (department && s.department !== department) return false;
+      if (!isShiftInScope(s)) return false;
       return true;
     }) ?? [];
     return {
@@ -201,7 +211,7 @@ export default function ZtZusammenfassung() {
     const deptEmployeeIds = new Set(
       employeesWithShifts.filter(e => e.department === department).map(e => e.id)
     );
-    const deptShifts = shifts?.filter((s) => s.department === department && deptEmployeeIds.has(s.employee_id)) ?? [];
+    const deptShifts = shifts?.filter((s) => s.department === department && deptEmployeeIds.has(s.employee_id) && isShiftInScope(s)) ?? [];
     return {
       gesamt: deptShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
       soFeiStunden: deptShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
@@ -238,7 +248,7 @@ export default function ZtZusammenfassung() {
     const weekShifts = shifts?.filter((s) => {
       if (s.employee_id !== empId || !wIds.includes(s.week_id)) return false;
       if (department && s.department !== department) return false;
-      
+      if (!isShiftInScope(s)) return false;
       return true;
     }) ?? [];
     return weekShifts.reduce((sum, s) => sum + Number(s.total_hours), 0);
