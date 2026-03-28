@@ -383,7 +383,16 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
       ...e,
       restaurant_name: e.restaurant_name ?? restaurantIdToName.get(e.restaurant_id) ?? undefined,
     }));
-    if (effectiveRestaurant === "all") return enriched;
+    if (effectiveRestaurant === "all") {
+      // Deduplicate by id+department for cumulated view
+      const seen = new Set<string>();
+      return enriched.filter((e: any) => {
+        const key = `${e.id}-${e.department}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
     return enriched.filter((e: any) => e.restaurant_id === effectiveRestaurant);
   }, [employees, effectiveRestaurant, restaurantIdToName]);
 
@@ -1028,25 +1037,18 @@ function PayrollZusammenfassungTab({ sfnMode, weeks, shifts, employees, periodLa
   const isExtended = sfnMode === "extended";
 
   // Scope shifts to a specific employee's restaurant (for "Alle" mode)
-  const scopeShifts = useCallback((empId: string, department?: string, restaurantId?: string) => {
-    let s = shifts.filter(sh => sh.employee_id === empId && (!department || sh.department === department));
-    if (restaurantId && weekToRestaurant) {
-      s = s.filter(sh => weekToRestaurant[sh.week_id] === restaurantId);
-    }
-    return s;
-  }, [shifts, weekToRestaurant]);
+  const scopeShifts = useCallback((empId: string, department?: string) => {
+    return shifts.filter(sh => sh.employee_id === empId && (!department || sh.department === department));
+  }, [shifts]);
 
-  const getWeeklyHours = (empId: string, weekNumber: number, department?: string, restaurantId?: string) => {
+  const getWeeklyHours = (empId: string, weekNumber: number, department?: string) => {
     const wIds = weekNumberToAllIds[weekNumber] ?? weeks.filter(w => w.week_number === weekNumber).map(w => w.id);
-    const filteredWIds = restaurantId && weekToRestaurant
-      ? wIds.filter(id => weekToRestaurant[id] === restaurantId)
-      : wIds;
-    return shifts.filter(s => s.employee_id === empId && filteredWIds.includes(s.week_id) && (!department || s.department === department))
+    return shifts.filter(s => s.employee_id === empId && wIds.includes(s.week_id) && (!department || s.department === department))
       .reduce((sum, s) => sum + Number(s.total_hours), 0);
   };
 
-  const getEmpTotals = (empId: string, department?: string, restaurantId?: string) => {
-    const empShifts = scopeShifts(empId, department, restaurantId);
+  const getEmpTotals = (empId: string, department?: string) => {
+    const empShifts = scopeShifts(empId, department);
     return {
       gesamt: empShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
       soFeiStunden: empShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
@@ -1116,10 +1118,10 @@ function PayrollZusammenfassungTab({ sfnMode, weeks, shifts, employees, periodLa
             {employees.map((emp, idx) => {
               const prevDept = idx > 0 ? employees[idx - 1].department : null;
               const showDeptHeader = emp.department !== prevDept;
-              const totals = getEmpTotals(emp.id, emp.department, emp.restaurant_id);
+              const totals = getEmpTotals(emp.id, emp.department);
 
               return (
-                <React.Fragment key={`${emp.id}-${emp.department}-${emp.restaurant_id || ''}`}>
+                <React.Fragment key={`${emp.id}-${emp.department}`}>
                    {showDeptHeader && !searchTerm.trim() && (
                     <tr>
                       <td colSpan={weeks.length + (isExtended ? 9 : 8)} className={`p-2 font-bold text-xs uppercase tracking-wide ${getDepartmentBgClass(emp.department)}`}>
@@ -1141,7 +1143,7 @@ function PayrollZusammenfassungTab({ sfnMode, weeks, shifts, employees, periodLa
                       <RestaurantBadge restaurantName={emp.restaurant_name} department={emp.department} show={!!searchTerm.trim()} />
                     </td>
                     {weeks.map(w => {
-                      const h = getWeeklyHours(emp.id, w.week_number, emp.department, emp.restaurant_id);
+                      const h = getWeeklyHours(emp.id, w.week_number, emp.department);
                       return <td key={w.id} className="text-center p-2">{h > 0 ? formatHours(h) : ""}</td>;
                     })}
                     <td className="text-center p-2 font-medium">{formatHours(totals.gesamt)}</td>
@@ -1191,13 +1193,9 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
   const isExtended = sfnMode === "extended";
 
   // Scope shifts to a specific employee's restaurant (for "Alle" mode)
-  const scopeShiftsForEmp = useCallback((empId: string, department: string, restaurantId?: string) => {
-    let s = shifts.filter(sh => sh.employee_id === empId && sh.department === department);
-    if (restaurantId && weekToRestaurant) {
-      s = s.filter(sh => weekToRestaurant[sh.week_id] === restaurantId);
-    }
-    return s;
-  }, [shifts, weekToRestaurant]);
+  const scopeShiftsForEmp = useCallback((empId: string, department: string) => {
+    return shifts.filter(sh => sh.employee_id === empId && sh.department === department);
+  }, [shifts]);
 
   const advancesByName = useMemo(() => {
     const map: Record<string, AdvanceEntry[]> = {};
@@ -1208,7 +1206,7 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
   const grandTotals = useMemo(() => {
     const t = { gesamt: 0, schichten: 0, soFeiStunden: 0, sonntagStunden: 0, feiertagStunden: 0, evening: 0, night: 0, urlaubTage: 0, krankTage: 0 };
     employees.forEach(emp => {
-      const empShifts = scopeShiftsForEmp(emp.id, emp.department, emp.restaurant_id);
+      const empShifts = scopeShiftsForEmp(emp.id, emp.department);
       const row = getEmployeeTotals(emp.id, empShifts as any, undefined, additive);
       t.gesamt += row.gesamt; t.schichten += row.schichten; t.soFeiStunden += row.soFeiStunden;
       t.sonntagStunden += row.sonntagStunden; t.feiertagStunden += row.feiertagStunden;
@@ -1268,13 +1266,13 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
                 const isEven = zebraIdx % 2 === 1;
                 zebraIdx++;
 
-                const empShiftsScoped = scopeShiftsForEmp(emp.id, emp.department, emp.restaurant_id);
+                const empShiftsScoped = scopeShiftsForEmp(emp.id, emp.department);
                 const totals = getEmployeeTotals(emp.id, empShiftsScoped as any, undefined, additive);
                 const note = payrollNotes.find(n => n.employee_id === emp.id);
                 const empAdvances = advancesByName[emp.name] ?? [];
 
                 return (
-                  <React.Fragment key={`${emp.id}-${emp.department}-${emp.restaurant_id || ''}`}>
+                  <React.Fragment key={`${emp.id}-${emp.department}`}>
                     {showDeptHeader && !searchTerm.trim() && <BuchhaltungDeptHeader department={emp.department} sfnMode={sfnMode} showCommission={showCommission} />}
                     <BuchhaltungRow
                       showRestaurantBadge={!!searchTerm.trim()}
