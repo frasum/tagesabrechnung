@@ -1,23 +1,31 @@
 
 
-# Fix: "Bargeld bis März" zeigt einfache Summe der Tageswerte
+# Fix: Monatswechsel — W1 oder aktuelle Woche
 
-## Problem
-Die `cumulativeCash`-Berechnung (Zeilen 55–69) nutzt eine Skimming-Simulation, die den Wert auf -368 € drückt. Der Nutzer möchte stattdessen die einfache Summe (1.806,56 €) sehen — identisch mit der GESAMT-Zeile der Tabelle.
+## Verhalten
+- Manueller Periodenwechsel → **immer W1 öffnen**
+- **Ausnahme**: Wenn die gewählte Periode den heutigen Tag enthält → die **aktuelle Woche** öffnen
 
-## Lösung
+## Änderung
 
-### `src/pages/CashBalance.tsx` (Zeilen 55–69)
-Die Skimming-Simulation durch eine einfache Summe ersetzen:
+### `src/contexts/ZtContext.tsx` — `handleSetPeriodId` (Zeile ~128–135)
 
 ```tsx
-const cumulativeCash = useMemo(() => {
-  if (!data || !selectedMonth) return 0;
-  return data
-    .filter((row) => row.date <= `${selectedMonth}-31`)
-    .reduce((sum, row) => sum + (row.rawBargeld ?? row.bargeld), 0);
-}, [data, selectedMonth]);
+const handleSetPeriodId = (id: string) => {
+  setSelectedPeriodId(id);
+  const periodWeeks = allWeeks?.filter(w => w.period_id === id) ?? [];
+  const today = format(new Date(), "yyyy-MM-dd");
+  const selectedPeriod = periods?.find(p => p.id === id);
+  const isCurrentPeriod = selectedPeriod && selectedPeriod.start_date <= today && selectedPeriod.end_date >= today;
+  
+  if (isCurrentPeriod) {
+    const currentWeek = periodWeeks.find(w => w.start_date <= today && w.end_date >= today);
+    setSelectedWeekId(currentWeek?.id ?? periodWeeks[0]?.id ?? "");
+  } else {
+    setSelectedWeekId(periodWeeks[0]?.id ?? "");
+  }
+};
 ```
 
-Einzeilige Änderung, keine anderen Dateien betroffen.
+Einzige Datei betroffen. Keine anderen Änderungen nötig.
 
