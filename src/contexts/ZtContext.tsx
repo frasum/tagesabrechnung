@@ -127,11 +127,17 @@ export function ZtProvider({ children }: { children: React.ReactNode }) {
   // Reset week when period changes manually (but not on initial auto-select)
   const handleSetPeriodId = (id: string) => {
     setSelectedPeriodId(id);
-    // Auto-select first week of new period
     const periodWeeks = allWeeks?.filter(w => w.period_id === id) ?? [];
     const today = format(new Date(), "yyyy-MM-dd");
-    const currentWeek = periodWeeks.find(w => w.start_date <= today && w.end_date >= today);
-    setSelectedWeekId(currentWeek?.id ?? periodWeeks[0]?.id ?? "");
+    const selectedPrd = periods?.find(p => p.id === id);
+    const isCurrentPeriod = selectedPrd && selectedPrd.start_date <= today && selectedPrd.end_date >= today;
+
+    if (isCurrentPeriod) {
+      const currentWeek = periodWeeks.find(w => w.start_date <= today && w.end_date >= today);
+      setSelectedWeekId(currentWeek?.id ?? periodWeeks[0]?.id ?? "");
+    } else {
+      setSelectedWeekId(periodWeeks[0]?.id ?? "");
+    }
   };
 
   const selectedPeriod = periods?.find(p => p.id === selectedPeriodId);
