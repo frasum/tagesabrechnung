@@ -1209,19 +1209,6 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
     return sum;
   }, [employees, commissionMap]);
 
-  // Pre-scope shifts for exports
-  const exportShifts = useMemo(() => {
-    if (!weekToRestaurant) return shifts;
-    const empRestMap = new Map<string, string>();
-    employees.forEach(emp => { if (emp.restaurant_id) empRestMap.set(`${emp.id}-${emp.department}`, emp.restaurant_id); });
-    return shifts.filter(s => {
-      const restId = weekToRestaurant[s.week_id];
-      if (!restId) return true;
-      const empRest = empRestMap.get(`${s.employee_id}-${s.department}`);
-      return !empRest || empRest === restId;
-    });
-  }, [shifts, weekToRestaurant, employees]);
-
   let zebraIdx = 0;
   let lastDept: string | null = null;
 
@@ -1230,13 +1217,13 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
       <div className="flex items-center justify-between">
         <Badge variant="outline" className="text-xs">Modus: {sfnMode === "extended" ? "§3b EStG (erweitert)" : "Einfach"}</Badge>
         <div className="flex gap-1">
-          <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungPdf(periodLabel, employees, exportShifts, payrollNotes, sfnMode, holidayRates, showCommission ? commissionMap : undefined); toast.success("PDF erstellt"); }}>
+          <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungPdf(periodLabel, employees, shifts, payrollNotes, sfnMode, holidayRates, showCommission ? commissionMap : undefined); toast.success("PDF erstellt"); }}>
             <FileDown className="mr-1 h-4 w-4" /> PDF
           </Button>
-          <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungExcel(periodLabel, employees, exportShifts, payrollNotes, sfnMode, holidayRates, showCommission ? commissionMap : undefined); toast.success("Excel erstellt"); }}>
+          <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungExcel(periodLabel, employees, shifts, payrollNotes, sfnMode, holidayRates, showCommission ? commissionMap : undefined); toast.success("Excel erstellt"); }}>
             <FileSpreadsheet className="mr-1 h-4 w-4" /> Excel
           </Button>
-          <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungCsv(periodLabel, employees, exportShifts, payrollNotes, sfnMode, holidayRates, showCommission ? commissionMap : undefined); toast.success("CSV erstellt"); }}>
+          <Button variant="outline" size="sm" disabled={!employees.length} onClick={() => { exportBuchhaltungCsv(periodLabel, employees, shifts, payrollNotes, sfnMode, holidayRates, showCommission ? commissionMap : undefined); toast.success("CSV erstellt"); }}>
             <FileDown className="mr-1 h-4 w-4" /> CSV
           </Button>
         </div>
