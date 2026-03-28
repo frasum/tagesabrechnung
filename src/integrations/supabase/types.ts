@@ -933,13 +933,115 @@ export type Database = {
         }
         Relationships: []
       }
+      sofortmeldung: {
+        Row: {
+          created_at: string
+          created_by_name: string | null
+          error_message: string | null
+          export_format: string | null
+          exported_at: string | null
+          id: string
+          missing_fields: Json | null
+          reported_at: string | null
+          sofortmeldung_required: boolean | null
+          staff_id: string
+          status: string
+          updated_at: string
+          validated_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by_name?: string | null
+          error_message?: string | null
+          export_format?: string | null
+          exported_at?: string | null
+          id?: string
+          missing_fields?: Json | null
+          reported_at?: string | null
+          sofortmeldung_required?: boolean | null
+          staff_id: string
+          status?: string
+          updated_at?: string
+          validated_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by_name?: string | null
+          error_message?: string | null
+          export_format?: string | null
+          exported_at?: string | null
+          id?: string
+          missing_fields?: Json | null
+          reported_at?: string | null
+          sofortmeldung_required?: boolean | null
+          staff_id?: string
+          status?: string
+          updated_at?: string
+          validated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sofortmeldung_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sofortmeldung_log: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          new_status: string | null
+          old_status: string | null
+          performed_by_name: string | null
+          sofortmeldung_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          new_status?: string | null
+          old_status?: string | null
+          performed_by_name?: string | null
+          sofortmeldung_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          new_status?: string | null
+          old_status?: string | null
+          performed_by_name?: string | null
+          sofortmeldung_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sofortmeldung_log_sofortmeldung_id_fkey"
+            columns: ["sofortmeldung_id"]
+            isOneToOne: false
+            referencedRelation: "sofortmeldung"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff: {
         Row: {
+          activity_description: string | null
+          address_city: string | null
+          address_street: string | null
+          address_zip: string | null
           contracted_hours_per_month: number | null
           created_at: string
           date_of_birth: string | null
           employment_end: string | null
           employment_start: string | null
+          employment_type: string | null
           first_name: string | null
           health_insurance: string | null
           hourly_rate: number | null
@@ -965,13 +1067,19 @@ export type Database = {
           vacation_days_current: number | null
           vacation_days_previous: number | null
           vacation_days_taken: number | null
+          work_start_time: string | null
         }
         Insert: {
+          activity_description?: string | null
+          address_city?: string | null
+          address_street?: string | null
+          address_zip?: string | null
           contracted_hours_per_month?: number | null
           created_at?: string
           date_of_birth?: string | null
           employment_end?: string | null
           employment_start?: string | null
+          employment_type?: string | null
           first_name?: string | null
           health_insurance?: string | null
           hourly_rate?: number | null
@@ -997,13 +1105,19 @@ export type Database = {
           vacation_days_current?: number | null
           vacation_days_previous?: number | null
           vacation_days_taken?: number | null
+          work_start_time?: string | null
         }
         Update: {
+          activity_description?: string | null
+          address_city?: string | null
+          address_street?: string | null
+          address_zip?: string | null
           contracted_hours_per_month?: number | null
           created_at?: string
           date_of_birth?: string | null
           employment_end?: string | null
           employment_start?: string | null
+          employment_type?: string | null
           first_name?: string | null
           health_insurance?: string | null
           hourly_rate?: number | null
@@ -1029,6 +1143,7 @@ export type Database = {
           vacation_days_current?: number | null
           vacation_days_previous?: number | null
           vacation_days_taken?: number | null
+          work_start_time?: string | null
         }
         Relationships: []
       }
