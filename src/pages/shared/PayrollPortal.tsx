@@ -133,6 +133,7 @@ export default function PayrollPortal() {
     },
     enabled: isAuthenticated,
     refetchInterval: 30_000,
+    staleTime: 60_000,
     refetchOnWindowFocus: true,
   });
 
