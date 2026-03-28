@@ -765,8 +765,18 @@ function ZusammenfassungTab({ weeks, shifts, employees, periodLabel, weekNumberT
             </tr>
           </thead>
           <tbody>
-            {employees.map((emp, idx) => {
-              const prevDept = idx > 0 ? employees[idx - 1].department : null;
+            {(() => {
+              // Safety dedup by id+department
+              const seen = new Set<string>();
+              const deduped = employees.filter(e => {
+                const key = `${e.id}-${e.department}`;
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+              });
+              return deduped;
+            })().map((emp, idx, arr) => {
+              const prevDept = idx > 0 ? arr[idx - 1].department : null;
               const showDeptHeader = emp.department !== prevDept;
               const totals = getEmpTotals(emp.id, emp.department);
 

@@ -319,7 +319,8 @@ Deno.serve(async (req) => {
           .select("holiday_date, name"),
       ]);
 
-    const employees = (employeesRes.data as any[] ?? []).map((row: any) => ({
+    // Deduplicate employees by id + department (keep first occurrence)
+    const employeesRaw = (employeesRes.data as any[] ?? []).map((row: any) => ({
       id: row.staff.id,
       name: row.staff.name,
       perso_nr: row.staff.perso_nr,
@@ -329,6 +330,13 @@ Deno.serve(async (req) => {
       department: row.zt_department,
       restaurant_id: row.restaurant_id,
     }));
+    const seenEmps = new Set<string>();
+    const employees = employeesRaw.filter((e: any) => {
+      const key = `${e.id}-${e.department}`;
+      if (seenEmps.has(key)) return false;
+      seenEmps.add(key);
+      return true;
+    });
 
     const advances = (advancesRes.data as any[] ?? []).map((d: any) => ({
       staff_name: d.staff_name,
