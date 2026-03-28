@@ -383,7 +383,16 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
       ...e,
       restaurant_name: e.restaurant_name ?? restaurantIdToName.get(e.restaurant_id) ?? undefined,
     }));
-    if (effectiveRestaurant === "all") return enriched;
+    if (effectiveRestaurant === "all") {
+      // Deduplicate by id+department for cumulated view
+      const seen = new Set<string>();
+      return enriched.filter((e: any) => {
+        const key = `${e.id}-${e.department}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
     return enriched.filter((e: any) => e.restaurant_id === effectiveRestaurant);
   }, [employees, effectiveRestaurant, restaurantIdToName]);
 
