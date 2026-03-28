@@ -273,10 +273,28 @@ Deno.serve(async (req) => {
     const restaurantIds = (matchingPeriods ?? []).map((p: any) => p.restaurant_id).filter(Boolean);
 
     // 3. Load shifts, employees, notes, advances, holidays, waiter data, staff roles, commission settings in parallel
-    const [shiftsRes, employeesRes, notesRes, advancesRes, holidaysRes, waiterShiftsRes, staffRolesRes, commissionSettingsRes] = await Promise.all([
-      weekIds.length > 0
-        ? supabase.from("zt_shifts").select("*").in("week_id", weekIds).limit(5000)
-        : { data: [], error: null },
+    // Paginated fetch for zt_shifts to avoid silent truncation
+    async function fetchAllShifts(weekIds: string[]) {
+      if (!weekIds.length) return [];
+      const PAGE_SIZE = 5000;
+      let allRows: any[] = [];
+      let offset = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from("zt_shifts")
+          .select("*")
+          .in("week_id", weekIds)
+          .range(offset, offset + PAGE_SIZE - 1);
+        if (error) throw error;
+        allRows = allRows.concat(data ?? []);
+        if (!data || data.length < PAGE_SIZE) break;
+        offset += PAGE_SIZE;
+      }
+      return allRows;
+    }
+
+    const [shiftsArr, employeesRes, notesRes, advancesRes, holidaysRes, waiterShiftsRes, staffRolesRes, commissionSettingsRes] = await Promise.all([
+      fetchAllShifts(weekIds),
       supabase
         .from("staff_restaurants")
         .select("zt_department, staff_id, restaurant_id, staff!inner(id, name, perso_nr, first_name, last_name, nickname, date_of_birth, employment_start, employment_end, hourly_rate, contracted_hours_per_month, tax_id, tax_class, social_security_nr, health_insurance, nationality, personnel_group, is_minijob, is_sv_exempt, vacation_days_contractual, vacation_days_current, vacation_days_previous, vacation_days_taken, sick_days_total, role)")
