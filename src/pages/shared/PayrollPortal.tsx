@@ -1037,13 +1037,9 @@ function PayrollZusammenfassungTab({ sfnMode, weeks, shifts, employees, periodLa
   const isExtended = sfnMode === "extended";
 
   // Scope shifts to a specific employee's restaurant (for "Alle" mode)
-  const scopeShifts = useCallback((empId: string, department?: string, restaurantId?: string) => {
-    let s = shifts.filter(sh => sh.employee_id === empId && (!department || sh.department === department));
-    if (restaurantId && weekToRestaurant) {
-      s = s.filter(sh => weekToRestaurant[sh.week_id] === restaurantId);
-    }
-    return s;
-  }, [shifts, weekToRestaurant]);
+  const scopeShifts = useCallback((empId: string, department?: string) => {
+    return shifts.filter(sh => sh.employee_id === empId && (!department || sh.department === department));
+  }, [shifts]);
 
   const getWeeklyHours = (empId: string, weekNumber: number, department?: string, restaurantId?: string) => {
     const wIds = weekNumberToAllIds[weekNumber] ?? weeks.filter(w => w.week_number === weekNumber).map(w => w.id);
