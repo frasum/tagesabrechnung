@@ -109,7 +109,8 @@ export default function ZtWochenplan() {
   const showSfn = hasPermission('admin');
 
   const [restaurantFilter, setRestaurantFilter] = useState<string | "all">(restaurantId);
-  const cumulated = restaurantFilter !== restaurantId;
+  const isCrossRestaurantMode = restaurantFilter !== restaurantId;
+  const cumulated = restaurantFilter === "all";
   const [searchTerm, setSearchTerm] = useState("");
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -128,22 +129,27 @@ export default function ZtWochenplan() {
 
   const isSearchActive = !!searchTerm.trim();
 
-  // Cumulated data hook
+  // Cross-restaurant data hook
   const cumData = useCumulatedZtData(
-    cumulated || isSearchActive,
+    isCrossRestaurantMode || isSearchActive,
     selectedPeriod ? { start_date: selectedPeriod.start_date, end_date: selectedPeriod.end_date } : undefined
   );
 
   const { data: restaurantEmployees } = useRestaurantEmployees(restaurantId);
 
+  const filteredRestaurantWeeks = useMemo(() => {
+    if (!isCrossRestaurantMode || cumulated || !cumData.rawWeeks?.length) return [];
+    return cumData.rawWeeks.filter(w => cumData.weekIdToRestaurantId[w.id] === restaurantFilter);
+  }, [cumData.rawWeeks, cumData.weekIdToRestaurantId, isCrossRestaurantMode, cumulated, restaurantFilter]);
+
   // Effective employees: cumulated or restaurant-specific
-  const allEmployees = (cumulated || isSearchActive) ? cumData.employees : restaurantEmployees;
+  const allEmployees = (isCrossRestaurantMode || isSearchActive) ? cumData.employees : restaurantEmployees;
   const employees = (() => {
     let list = allEmployees?.filter(emp => {
-      if (restaurantFilter === "all" || !cumulated) return true;
+      if (restaurantFilter === "all" || !isCrossRestaurantMode) return true;
       return (emp as any).restaurant_id === restaurantFilter;
     }) ?? [];
-    if (restaurantFilter === "all" && cumulated) {
+    if (restaurantFilter === "all" && isCrossRestaurantMode) {
       const seen = new Set<string>();
       list = list.filter(emp => {
         const key = `${emp.id}-${emp.department}`;
@@ -155,8 +161,12 @@ export default function ZtWochenplan() {
     return list;
   })();
 
-  // Effective weeks: cumulated (deduplicated by week_number) or restaurant-specific
-  const effectiveWeeks = (cumulated || isSearchActive) ? cumData.weeks : weeks;
+  // Effective weeks: cumulated, cross-restaurant single outlet, or current restaurant
+  const effectiveWeeks = (cumulated || isSearchActive)
+    ? cumData.weeks
+    : isCrossRestaurantMode
+      ? filteredRestaurantWeeks
+      : weeks;
 
   // When cumulated, map selectedWeekId to the deduplicated week
   // We need a "virtual" selectedWeekId for cumulated mode
@@ -164,23 +174,40 @@ export default function ZtWochenplan() {
 
   // Derive selectedWeek based on mode
   const selectedWeek = useMemo(() => {
-    if (cumulated) {
+    if (cumulated || isSearchActive) {
       return cumData.weeks?.find(w => w.week_number === cumSelectedWeekNum) ?? null;
     }
+    if (isCrossRestaurantMode) {
+      return filteredRestaurantWeeks.find(w => w.id === selectedWeekId) ?? null;
+    }
     return weeks?.find(w => w.id === selectedWeekId) ?? null;
-  }, [cumulated, cumData.weeks, cumSelectedWeekNum, weeks, selectedWeekId]);
+  }, [cumulated, isSearchActive, isCrossRestaurantMode, cumData.weeks, cumSelectedWeekNum, filteredRestaurantWeeks, weeks, selectedWeekId]);
 
   // All week IDs for the selected week (cumulated: all restaurants, normal: just one)
   const selectedWeekIds = useMemo(() => {
-    if (cumulated && cumSelectedWeekNum !== null) {
+    if ((cumulated || isSearchActive) && cumSelectedWeekNum !== null) {
       return cumData.weekNumberToAllIds[cumSelectedWeekNum] ?? [];
     }
     return selectedWeekId ? [selectedWeekId] : [];
-  }, [cumulated, cumSelectedWeekNum, cumData.weekNumberToAllIds, selectedWeekId]);
+  }, [cumulated, isSearchActive, cumSelectedWeekNum, cumData.weekNumberToAllIds, selectedWeekId]);
+
+  useEffect(() => {
+    if (restaurantFilter === restaurantId || restaurantFilter === "all" || !filteredRestaurantWeeks.length) return;
+
+    const today = format(new Date(), "yyyy-MM-dd");
+    const isCurrentPeriod = selectedPeriod && selectedPeriod.start_date <= today && selectedPeriod.end_date >= today;
+    const targetWeek = isCurrentPeriod
+      ? filteredRestaurantWeeks.find(w => w.start_date <= today && w.end_date >= today) ?? filteredRestaurantWeeks[0]
+      : filteredRestaurantWeeks[0];
+
+    if (targetWeek?.id && selectedWeekId !== targetWeek.id) {
+      setSelectedWeekId(targetWeek.id);
+    }
+  }, [restaurantFilter, restaurantId, filteredRestaurantWeeks, selectedPeriod, selectedWeekId, setSelectedWeekId]);
 
   // Shifts for current week
   const { data: shifts } = useQuery({
-    queryKey: ["zt-shifts", cumulated ? `cum-${cumSelectedWeekNum}` : selectedWeekId, selectedWeekIds],
+    queryKey: ["zt-shifts", (cumulated || isSearchActive) ? `cum-${cumSelectedWeekNum}` : selectedWeekId, selectedWeekIds],
     queryFn: async () => {
       if (!selectedWeekIds.length) return [];
       const { data, error } = await supabase.from("zt_shifts").select("*").in("week_id", selectedWeekIds);
@@ -201,14 +228,17 @@ export default function ZtWochenplan() {
 
   // All shifts for entire period (for totals)
   const allPeriodWeekIds = useMemo(() => {
-    if (cumulated) {
+    if (cumulated || isSearchActive) {
       return cumData.allWeekIds;
     }
+    if (isCrossRestaurantMode) {
+      return filteredRestaurantWeeks.map(w => w.id);
+    }
     return weeks?.map(w => w.id) ?? [];
-  }, [cumulated, cumData.allWeekIds, weeks]);
+  }, [cumulated, isSearchActive, isCrossRestaurantMode, cumData.allWeekIds, filteredRestaurantWeeks, weeks]);
 
   const { data: allPeriodShifts } = useQuery({
-    queryKey: ["zt-shifts-period", cumulated ? "cum" : selectedPeriodId, allPeriodWeekIds],
+    queryKey: ["zt-shifts-period", (cumulated || isSearchActive) ? "cum" : selectedPeriodId, allPeriodWeekIds],
     queryFn: async () => {
       if (!allPeriodWeekIds.length) return [];
       const { data, error } = await supabase.from("zt_shifts").select("*").in("week_id", allPeriodWeekIds);

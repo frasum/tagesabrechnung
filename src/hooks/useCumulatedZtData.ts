@@ -186,6 +186,7 @@ export function useCumulatedZtData(
   return {
     employees,
     shifts,
+    rawWeeks: weeks,
     weeks: deduplicatedWeeks,
     allWeekIds: weekIds,
     weekNumberToAllIds,
