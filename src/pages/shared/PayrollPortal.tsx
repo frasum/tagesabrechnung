@@ -1193,13 +1193,9 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
   const isExtended = sfnMode === "extended";
 
   // Scope shifts to a specific employee's restaurant (for "Alle" mode)
-  const scopeShiftsForEmp = useCallback((empId: string, department: string, restaurantId?: string) => {
-    let s = shifts.filter(sh => sh.employee_id === empId && sh.department === department);
-    if (restaurantId && weekToRestaurant) {
-      s = s.filter(sh => weekToRestaurant[sh.week_id] === restaurantId);
-    }
-    return s;
-  }, [shifts, weekToRestaurant]);
+  const scopeShiftsForEmp = useCallback((empId: string, department: string) => {
+    return shifts.filter(sh => sh.employee_id === empId && sh.department === department);
+  }, [shifts]);
 
   const advancesByName = useMemo(() => {
     const map: Record<string, AdvanceEntry[]> = {};
