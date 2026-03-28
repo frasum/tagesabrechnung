@@ -296,36 +296,36 @@ export default function CashBalance() {
                         </TableCell>
                         <TableCell className="text-right tabular-nums">{formatCurrency(row.kellnerUmsatz)}</TableCell>
                         <TableCell className="text-right tabular-nums text-destructive">
-                          -{formatCurrency(row.kreditkarten)}
+                          {formatCurrency(row.kreditkarten)}
                         </TableCell>
                         <TableCell className="text-right tabular-nums text-destructive">
-                          -{formatCurrency(row.ordersmart)}
+                          {formatCurrency(row.ordersmart)}
                         </TableCell>
                         <TableCell className="text-right tabular-nums text-destructive">
-                          -{formatCurrency(row.wolt)}
+                          {formatCurrency(row.wolt)}
                         </TableCell>
                         <TableCell className="text-right tabular-nums text-destructive">
-                          -{formatCurrency(row.gutscheineEL)}
+                          {formatCurrency(row.gutscheineEL)}
                         </TableCell>
                         {!isFieldHidden('finedine_vouchers') && (
                           <TableCell className="text-right tabular-nums text-destructive">
-                            -{formatCurrency(row.finedine)}
+                            {formatCurrency(row.finedine)}
                           </TableCell>
                         )}
                         <TableCell className="text-right tabular-nums text-success">
-                          +{formatCurrency(row.gutscheineVK)}
+                          {formatCurrency(row.gutscheineVK)}
                         </TableCell>
                         <TableCell className="text-right tabular-nums text-destructive">
-                          -{formatCurrency(row.einladung)}
+                          {formatCurrency(row.einladung)}
                         </TableCell>
                         <TableCell className="text-right tabular-nums text-destructive">
-                          -{formatCurrency(row.offeneRE)}
+                          {formatCurrency(row.offeneRE)}
                         </TableCell>
                         <TableCell className="text-right tabular-nums text-destructive">
-                          -{formatCurrency(row.vorschuss)}
+                          {formatCurrency(row.vorschuss)}
                         </TableCell>
                         <TableCell className="text-right tabular-nums text-destructive">
-                          -{formatCurrency(row.ausgaben)}
+                          {formatCurrency(row.ausgaben)}
                         </TableCell>
                         <TableCell
                           className={cn(
@@ -355,36 +355,36 @@ export default function CashBalance() {
                         {formatCurrency(filteredData.reduce((sum, row) => sum + row.kellnerUmsatz, 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-destructive">
-                        -{formatCurrency(filteredData.reduce((sum, row) => sum + row.kreditkarten, 0))}
+                        {formatCurrency(filteredData.reduce((sum, row) => sum + row.kreditkarten, 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-destructive">
-                        -{formatCurrency(filteredData.reduce((sum, row) => sum + row.ordersmart, 0))}
+                        {formatCurrency(filteredData.reduce((sum, row) => sum + row.ordersmart, 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-destructive">
-                        -{formatCurrency(filteredData.reduce((sum, row) => sum + row.wolt, 0))}
+                        {formatCurrency(filteredData.reduce((sum, row) => sum + row.wolt, 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-destructive">
-                        -{formatCurrency(filteredData.reduce((sum, row) => sum + row.gutscheineEL, 0))}
+                        {formatCurrency(filteredData.reduce((sum, row) => sum + row.gutscheineEL, 0))}
                       </TableCell>
                       {!isFieldHidden('finedine_vouchers') && (
                         <TableCell className="text-right tabular-nums font-bold text-destructive">
-                          -{formatCurrency(filteredData.reduce((sum, row) => sum + row.finedine, 0))}
+                          {formatCurrency(filteredData.reduce((sum, row) => sum + row.finedine, 0))}
                         </TableCell>
                       )}
                       <TableCell className="text-right tabular-nums font-bold text-success">
-                        +{formatCurrency(filteredData.reduce((sum, row) => sum + row.gutscheineVK, 0))}
+                        {formatCurrency(filteredData.reduce((sum, row) => sum + row.gutscheineVK, 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-destructive">
-                        -{formatCurrency(filteredData.reduce((sum, row) => sum + row.einladung, 0))}
+                        {formatCurrency(filteredData.reduce((sum, row) => sum + row.einladung, 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-destructive">
-                        -{formatCurrency(filteredData.reduce((sum, row) => sum + row.offeneRE, 0))}
+                        {formatCurrency(filteredData.reduce((sum, row) => sum + row.offeneRE, 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-destructive">
-                        -{formatCurrency(filteredData.reduce((sum, row) => sum + row.vorschuss, 0))}
+                        {formatCurrency(filteredData.reduce((sum, row) => sum + row.vorschuss, 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-destructive">
-                        -{formatCurrency(filteredData.reduce((sum, row) => sum + row.ausgaben, 0))}
+                        {formatCurrency(filteredData.reduce((sum, row) => sum + row.ausgaben, 0))}
                       </TableCell>
                       {(() => {
                         const totalBargeld = filteredData.reduce((sum, row) => sum + row.rawBargeld, 0);
