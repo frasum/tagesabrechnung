@@ -29,6 +29,7 @@ interface ZtToolbarProps {
   weeks?: Week[] | null;
   selectedWeekId?: string;
   cumSelectedWeekNum?: number | null;
+  isCumulatedWeekSelection?: boolean;
   onWeekSelect?: (weekId: string, weekNumber: number) => void;
   /** Right-side actions (export buttons etc.) */
   actions?: ReactNode;
@@ -45,6 +46,7 @@ export function ZtToolbar({
   weeks,
   selectedWeekId,
   cumSelectedWeekNum,
+  isCumulatedWeekSelection,
   onWeekSelect,
   actions,
 }: ZtToolbarProps) {
