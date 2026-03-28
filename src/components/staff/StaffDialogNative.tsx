@@ -111,6 +111,13 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
   const [vacDaysCurrent, setVacDaysCurrent] = useState('');
   const [vacDaysTaken, setVacDaysTaken] = useState('');
   const [sickDaysTotal, setSickDaysTotal] = useState('');
+  // Sofortmeldung fields
+  const [addressStreet, setAddressStreet] = useState('');
+  const [addressZip, setAddressZip] = useState('');
+  const [addressCity, setAddressCity] = useState('');
+  const [workStartTime, setWorkStartTime] = useState('');
+  const [employmentType, setEmploymentType] = useState('');
+  const [activityDescription, setActivityDescription] = useState('');
 
   const { data: restaurants = [] } = useRestaurants();
   const { data: unlinkedProfiles = [], isLoading: profilesLoading } = useUnlinkedProfiles();
