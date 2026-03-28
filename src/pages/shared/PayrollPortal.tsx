@@ -783,19 +783,6 @@ function PayrollWochenplanTab({ weeks, shifts, employees, holidays, periodLabel,
     });
   };
 
-  // Pre-scope shifts for exports
-  const exportShifts = useMemo(() => {
-    if (!weekToRestaurant) return shifts;
-    const empRestMap = new Map<string, string>();
-    employees.forEach(emp => { if (emp.restaurant_id) empRestMap.set(`${emp.id}-${emp.department}`, emp.restaurant_id); });
-    return shifts.filter(s => {
-      const restId = weekToRestaurant[s.week_id];
-      if (!restId) return true;
-      const empRest = empRestMap.get(`${s.employee_id}-${s.department}`);
-      return !empRest || empRest === restId;
-    });
-  }, [shifts, weekToRestaurant, employees]);
-
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2 flex-wrap">
@@ -807,13 +794,13 @@ function PayrollWochenplanTab({ weeks, shifts, employees, holidays, periodLabel,
           ))}
         </div>
         <div className="ml-auto flex gap-1">
-          <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" disabled={!shifts.length} onClick={() => exportWochenplanPdf(periodLabel, employees, weeks, exportShifts as any, holidays)}>
+          <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" disabled={!shifts.length} onClick={() => exportWochenplanPdf(periodLabel, employees, weeks, shifts as any, holidays)}>
             <FileDown className="h-3.5 w-3.5" /> PDF
           </Button>
-          <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" disabled={!shifts.length} onClick={() => exportWochenplanExcel(periodLabel, employees, weeks, exportShifts as any, holidays)}>
+          <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" disabled={!shifts.length} onClick={() => exportWochenplanExcel(periodLabel, employees, weeks, shifts as any, holidays)}>
             <FileSpreadsheet className="h-3.5 w-3.5" /> Excel
           </Button>
-          <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" disabled={!shifts.length} onClick={() => { exportWochenplanCsv(periodLabel, employees, weeks, exportShifts as any, holidays); toast.success("CSV erstellt"); }}>
+          <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" disabled={!shifts.length} onClick={() => { exportWochenplanCsv(periodLabel, employees, weeks, shifts as any, holidays); toast.success("CSV erstellt"); }}>
             <FileDown className="h-3.5 w-3.5" /> CSV
           </Button>
         </div>
