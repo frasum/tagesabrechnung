@@ -55,6 +55,15 @@ export default function ZtZusammenfassung() {
   const selectedPeriod = periods?.find(p => p.id === selectedPeriodId);
   const isSearchActive = !!searchTerm.trim();
   const cumData = useCumulatedZtData(cumulated || isSearchActive, selectedPeriod);
+  const weekIdToRestaurantId = cumData.weekIdToRestaurantId;
+
+  const isShiftInScope = (s: Shift) => {
+    if (cumulated && restaurantFilter !== "all") {
+      const shiftRestaurant = weekIdToRestaurantId[s.week_id];
+      if (shiftRestaurant && shiftRestaurant !== restaurantFilter) return false;
+    }
+    return true;
+  };
 
   // Load employees from ALL restaurants for ShiftTimeOverride
   const { data: allRestaurantEmployees } = useQuery({
