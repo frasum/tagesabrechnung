@@ -292,6 +292,13 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       vacation_days_current: toInt(vacDaysCurrent),
       vacation_days_taken: toInt(vacDaysTaken),
       sick_days_total: toInt(sickDaysTotal),
+      // Sofortmeldung
+      address_street: addressStreet || null,
+      address_zip: addressZip || null,
+      address_city: addressCity || null,
+      work_start_time: workStartTime || null,
+      employment_type: employmentType || null,
+      activity_description: activityDescription || null,
     });
 
     // Update permission level for existing staff
