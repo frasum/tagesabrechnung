@@ -726,7 +726,7 @@ function ZusammenfassungTab({ weeks, shifts, employees, periodLabel, weekNumberT
   };
 
   const getEmpTotals = (empId: string, department?: string) => {
-    const empShifts = shifts.filter(s => s.employee_id === empId && (!department || s.department === department));
+    const empShifts = exportShifts.filter(s => s.employee_id === empId && (!department || s.department === department));
     return {
       gesamt: empShifts.reduce((sum, s) => sum + Number(s.total_hours), 0),
       soFeiStunden: empShifts.reduce((sum, s) => sum + Number(s.sunday_holiday_hours), 0),
