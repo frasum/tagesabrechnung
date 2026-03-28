@@ -32,7 +32,7 @@ export function useSofortmeldungList() {
         .select('*')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (data ?? []) as Sofortmeldung[];
+      return (data ?? []) as unknown as Sofortmeldung[];
     },
   });
 }
