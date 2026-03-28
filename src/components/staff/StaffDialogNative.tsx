@@ -125,6 +125,7 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
   const linkMutation = useAdminLinkAccount();
   const { data: currentRole } = useUserRole(staff?.id);
   const updateRoleMutation = useUpdateUserRole();
+  const { data: sofortmeldung } = useSofortmeldung(staff?.id ?? null);
 
   const didInitRef = useRef(false);
 
