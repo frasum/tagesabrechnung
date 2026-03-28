@@ -1,41 +1,40 @@
 
 
-# Fix: Schichten-Aggregation in Buchhaltung bei Restaurant-Filter
+# Fix: Restaurant-Scoping in Zusammenfassung (wie in Buchhaltung)
 
 ## Problem
-Beim Mitarbeiter "Appel": Spicery zeigt 2 Schichten, YUM zeigt 16 Schichten, aber "Alle" zeigt ebenfalls nur 16 statt der erwarteten 18. Die Schichten werden beim Restaurant-Wechsel nicht korrekt nach Restaurant gefiltert bzw. zusammengefasst.
-
-## Ursache
-In `ZtBuchhaltung.tsx` werden `empShifts` nur nach `employee_id` und `department` gefiltert — ohne Restaurant-Zuordnung. Es fehlt die Nutzung von `weekIdToRestaurantId` aus dem `cumData`-Hook, um Schichten dem richtigen Restaurant zuzuordnen.
-
-Zusätzlich: Wenn ein spezifisches Restaurant (z.B. YUM) ausgewählt ist, werden trotzdem ALLE Schichten beider Restaurants gezählt — oder umgekehrt nur die eines Restaurants.
+Die Zusammenfassung (`ZtZusammenfassung.tsx`) filtert Schichten **nicht** nach Restaurant — im Gegensatz zur Buchhaltung, wo `isShiftInScope` mit `weekIdToRestaurantId` eingebaut wurde. Das Lohnbüro-Portal (`SharedZtView.tsx`) nutzt bereits `weekToRestaurant` korrekt.
 
 ## Lösung
 
-### `src/pages/zeiterfassung/ZtBuchhaltung.tsx`
+### `src/pages/zeiterfassung/ZtZusammenfassung.tsx`
 
-1. **`weekIdToRestaurantId` aus `cumData` verwenden** — bereits vom Hook bereitgestellt, aber nie genutzt.
+Gleiche `isShiftInScope`-Logik wie in Buchhaltung einbauen:
 
-2. **empShifts-Filter erweitern** (Zeile ~247–250): Wenn ein spezifisches Restaurant gewählt ist, nur Schichten zählen, deren `week_id` zu diesem Restaurant gehört. Bei "Alle" alle Schichten einbeziehen.
+1. **`weekIdToRestaurantId` aus `cumData` extrahieren** (nach Zeile ~57)
 
+2. **Helper `isShiftInScope` hinzufügen** — identisch zur Buchhaltung:
 ```tsx
 const weekIdToRestaurantId = cumData.weekIdToRestaurantId;
-
-// In der Render-Schleife:
-const empShifts = shifts?.filter(s => {
-  if (s.employee_id !== emp.id || s.department !== emp.department) return false;
-  // Restaurant-Scoping im kumulierten Modus
+const isShiftInScope = (s: Shift) => {
   if (cumulated && restaurantFilter !== "all") {
     const shiftRestaurant = weekIdToRestaurantId[s.week_id];
     if (shiftRestaurant && shiftRestaurant !== restaurantFilter) return false;
   }
   return true;
-}) ?? [];
+};
 ```
 
-3. **Gleiche Logik für `grandTotals`** (Zeile ~193–208): Selber Restaurant-Filter bei der Berechnung der Gesamtsummen.
+3. **4 Stellen anpassen**, an denen Schichten gefiltert werden:
+   - **`employeesWithShiftsUnfiltered`** (Zeile 169–176): `&& isShiftInScope(s)` hinzufügen
+   - **`getEmployeeTotals`** (Zeile 181–185): `&& isShiftInScope(s)` hinzufügen
+   - **`getDepartmentTotals`** (Zeile 204): `&& isShiftInScope(s)` hinzufügen
+   - **`getWeeklyHours`** (Zeile 238–243): `&& isShiftInScope(s)` hinzufügen
 
-4. **Gleiche Logik für `employeesWithShiftsUnfiltered`** (Zeile ~183–189): Sicherstellen, dass nur Mitarbeiter mit Schichten im gewählten Restaurant angezeigt werden.
+### Kein Handlungsbedarf
+- **Buchhaltung** — bereits gefixt
+- **Lohnbüro-Portal (SharedZtView)** — nutzt bereits `weekToRestaurant` für korrektes Scoping
+- **Wochenplan** — nutzt bereits `weekIdToRestaurantId`
 
-Einzige Datei betroffen: `src/pages/zeiterfassung/ZtBuchhaltung.tsx`.
+Einzige Datei betroffen: `src/pages/zeiterfassung/ZtZusammenfassung.tsx`.
 
