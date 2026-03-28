@@ -721,7 +721,7 @@ function ZusammenfassungTab({ weeks, shifts, employees, periodLabel, weekNumberT
     const wIds = weekNumberToAllIds
       ? (weekNumberToAllIds[weekNumber] ?? weeks.filter(w => w.week_number === weekNumber).map(w => w.id))
       : weeks.filter(w => w.week_number === weekNumber).map(w => w.id);
-    return shifts.filter(s => s.employee_id === empId && wIds.includes(s.week_id) && (!department || s.department === department))
+    return exportShifts.filter(s => s.employee_id === empId && wIds.includes(s.week_id) && (!department || s.department === department))
       .reduce((sum, s) => sum + Number(s.total_hours), 0);
   };
 
