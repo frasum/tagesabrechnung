@@ -190,6 +190,7 @@ export default function ZtZusammenfassung() {
     const empShifts = shifts?.filter((s) => {
       if (s.employee_id !== empId) return false;
       if (department && s.department !== department) return false;
+      if (!isShiftInScope(s)) return false;
       return true;
     }) ?? [];
     return {
