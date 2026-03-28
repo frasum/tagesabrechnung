@@ -578,10 +578,6 @@ export default function BatchPayrollCalculation({
                   {batchResults.filter(r => r.warning).length} mit Hinweis
                 </Badge>
               )}
-              <Button variant="outline" size="sm" onClick={handleExcelExport}>
-                <Download className="h-3.5 w-3.5 mr-1" />
-                Excel Export
-              </Button>
             </div>
           </div>
         )}
