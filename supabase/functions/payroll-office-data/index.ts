@@ -319,7 +319,8 @@ Deno.serve(async (req) => {
         .select("staff_id, waiter_name, second_waiter_name, additional_waiters, pos_sales, hours_worked, sessions!inner(session_date, restaurant_id)")
         .in("sessions.restaurant_id", restaurantIds)
         .gte("sessions.session_date", period_start_date)
-        .lte("sessions.session_date", period_end_date),
+        .lte("sessions.session_date", period_end_date)
+        .limit(5000),
       // Staff roles for GL exclusion
       supabase
         .from("staff")
