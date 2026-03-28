@@ -48,6 +48,15 @@ export default function ZtBuchhaltung() {
   const selectedPeriod = periods?.find(p => p.id === selectedPeriodId);
   const isSearchActive = !!searchTerm.trim();
   const cumData = useCumulatedZtData(cumulated || isSearchActive, selectedPeriod);
+  const weekIdToRestaurantId = cumData.weekIdToRestaurantId;
+
+  const isShiftInScope = (s: Shift) => {
+    if (cumulated && restaurantFilter !== "all") {
+      const shiftRestaurant = weekIdToRestaurantId[s.week_id];
+      if (shiftRestaurant && shiftRestaurant !== restaurantFilter) return false;
+    }
+    return true;
+  };
 
   const { commissionMap, totalCommission } = useCommissionData(
     restaurantId,
