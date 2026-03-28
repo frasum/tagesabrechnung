@@ -1,54 +1,51 @@
 
 
-# Echtzeit-Benachrichtigung bei Kellner-Abrechnung
+# Realtime für Sessions-Tabelle
 
-## Aktueller Stand
-Die Realtime-Subscription in `useWaiterShifts` (Zeile 90–112) lauscht auf `postgres_changes` und invalidiert den Query-Cache — aber **ohne Benachrichtigung** an den Manager.
+## Problem
+Wenn ein Kellner über die PWA eine neue Tagesabrechnung startet (`useCreateSession`), bekommt der Manager das erst nach manuellem Reload mit — es fehlt eine Realtime-Subscription auf der `sessions`-Tabelle.
 
 ## Lösung
-Die bestehende Realtime-Callback erweitern: Bei einem `UPDATE`-Event, bei dem `submitted_at` neu gesetzt wird (vorher null → jetzt gesetzt), einen **Toast mit Sound** anzeigen.
 
-## Technische Änderungen
+### `src/hooks/useSession.ts` — `useSession` Hook erweitern (Zeile 9–29)
 
-### 1. Sound-Datei hinzufügen
-Eine kurze Notification-Sound-Datei (`public/notification.mp3`) bereitstellen — ca. 1 Sekunde, dezenter Ton.
-
-### 2. `src/hooks/useSession.ts` — Realtime-Callback erweitern (Zeile ~93–107)
-
-Statt nur den Cache zu invalidieren, prüfen ob es ein `UPDATE` ist, bei dem `submitted_at` neu gesetzt wurde (das passiert, wenn ein Kellner seine Abrechnung absendet). Falls ja:
-- Einen `toast()` (sonner) mit dem Kellner-Namen anzeigen
-- Einen kurzen Sound abspielen via `new Audio('/notification.mp3').play()`
+Einen `useEffect` mit Supabase Realtime Channel auf `sessions` hinzufügen, gefiltert auf `restaurant_id`. Bei INSERT oder UPDATE wird der Query-Cache invalidiert.
 
 ```tsx
-.on(
-  'postgres_changes',
-  {
-    event: '*',
-    schema: 'public',
-    table: 'waiter_shifts',
-    filter: `session_id=eq.${sessionId}`,
-  },
-  (payload) => {
-    queryClient.invalidateQueries({ queryKey: ['waiter-shifts', sessionId] });
-    
-    // Notify manager when a waiter submits
-    if (
-      payload.eventType === 'UPDATE' &&
-      payload.new?.submitted_at &&
-      !payload.old?.submitted_at
-    ) {
-      const name = payload.new.waiter_name || 'Ein Kellner';
-      toast.success(`${name} hat abgerechnet`, {
-        description: 'Die Abrechnung wurde eingereicht.',
-        duration: 6000,
-      });
-      try {
-        new Audio('/notification.mp3').play();
-      } catch {}
-    }
-  }
-)
+export function useSession(date: Date, restaurantId: string | null) {
+  const dateStr = format(date, 'yyyy-MM-dd');
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!restaurantId) return;
+
+    const channel = supabase
+      .channel(`sessions-realtime-${restaurantId}-${dateStr}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'sessions',
+          filter: `restaurant_id=eq.${restaurantId}`,
+        },
+        (payload) => {
+          const row = payload.new as any;
+          if (row?.session_date === dateStr) {
+            queryClient.invalidateQueries({ queryKey: ['session', dateStr, restaurantId] });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [restaurantId, dateStr, queryClient]);
+
+  return useQuery({ ... }); // bestehende Query bleibt unverändert
+}
 ```
 
-Zwei Dateien betroffen: `useSession.ts` (Logik) + `public/notification.mp3` (Asset).
+Bei einem neuen INSERT (Kellner startet Abrechnung) wird die Manager-Ansicht sofort aktualisiert — Toast + Sound kommen dann automatisch über die bestehende `waiter_shifts` Subscription, sobald die Session da ist.
+
+Einzige Datei betroffen: `src/hooks/useSession.ts`.
 
