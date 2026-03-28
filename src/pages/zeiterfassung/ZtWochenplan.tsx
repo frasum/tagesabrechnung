@@ -663,16 +663,21 @@ export default function ZtWochenplan() {
           setRestaurantFilter(v);
           const today = format(new Date(), "yyyy-MM-dd");
           const isCurrentPeriod = selectedPeriod && selectedPeriod.start_date <= today && selectedPeriod.end_date >= today;
-          const targetWeek = isCurrentPeriod
-            ? weeks?.find(w => w.start_date <= today && w.end_date >= today) ?? weeks?.[0]
-            : weeks?.[0];
+          const targetWeekNumber = isCurrentPeriod
+            ? weeks?.find(w => w.start_date <= today && w.end_date >= today)?.week_number ?? weeks?.[0]?.week_number ?? null
+            : weeks?.[0]?.week_number ?? null;
 
-          if (v === restaurantId) {
-            setCumSelectedWeekNum(null);
-            setSelectedWeekId(targetWeek?.id ?? "");
-          } else {
-            setCumSelectedWeekNum(targetWeek?.week_number ?? null);
+          if (v === "all") {
+            setCumSelectedWeekNum(targetWeekNumber);
+            return;
           }
+
+          setCumSelectedWeekNum(null);
+          const targetRestaurantWeek = v === restaurantId
+            ? (isCurrentPeriod ? weeks?.find(w => w.start_date <= today && w.end_date >= today) ?? weeks?.[0] : weeks?.[0])
+            : (cumData.rawWeeks?.find(w => w.week_number === targetWeekNumber && cumData.weekIdToRestaurantId[w.id] === v)
+              ?? cumData.rawWeeks?.find(w => cumData.weekIdToRestaurantId[w.id] === v));
+          setSelectedWeekId(targetRestaurantWeek?.id ?? "");
         }}
         weeks={effectiveWeeks}
         selectedWeekId={selectedWeekId}
