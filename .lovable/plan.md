@@ -1,51 +1,41 @@
 
 
-# Realtime für Sessions-Tabelle
+# Fix: Schichten-Aggregation in Buchhaltung bei Restaurant-Filter
 
 ## Problem
-Wenn ein Kellner über die PWA eine neue Tagesabrechnung startet (`useCreateSession`), bekommt der Manager das erst nach manuellem Reload mit — es fehlt eine Realtime-Subscription auf der `sessions`-Tabelle.
+Beim Mitarbeiter "Appel": Spicery zeigt 2 Schichten, YUM zeigt 16 Schichten, aber "Alle" zeigt ebenfalls nur 16 statt der erwarteten 18. Die Schichten werden beim Restaurant-Wechsel nicht korrekt nach Restaurant gefiltert bzw. zusammengefasst.
+
+## Ursache
+In `ZtBuchhaltung.tsx` werden `empShifts` nur nach `employee_id` und `department` gefiltert — ohne Restaurant-Zuordnung. Es fehlt die Nutzung von `weekIdToRestaurantId` aus dem `cumData`-Hook, um Schichten dem richtigen Restaurant zuzuordnen.
+
+Zusätzlich: Wenn ein spezifisches Restaurant (z.B. YUM) ausgewählt ist, werden trotzdem ALLE Schichten beider Restaurants gezählt — oder umgekehrt nur die eines Restaurants.
 
 ## Lösung
 
-### `src/hooks/useSession.ts` — `useSession` Hook erweitern (Zeile 9–29)
+### `src/pages/zeiterfassung/ZtBuchhaltung.tsx`
 
-Einen `useEffect` mit Supabase Realtime Channel auf `sessions` hinzufügen, gefiltert auf `restaurant_id`. Bei INSERT oder UPDATE wird der Query-Cache invalidiert.
+1. **`weekIdToRestaurantId` aus `cumData` verwenden** — bereits vom Hook bereitgestellt, aber nie genutzt.
+
+2. **empShifts-Filter erweitern** (Zeile ~247–250): Wenn ein spezifisches Restaurant gewählt ist, nur Schichten zählen, deren `week_id` zu diesem Restaurant gehört. Bei "Alle" alle Schichten einbeziehen.
 
 ```tsx
-export function useSession(date: Date, restaurantId: string | null) {
-  const dateStr = format(date, 'yyyy-MM-dd');
-  const queryClient = useQueryClient();
+const weekIdToRestaurantId = cumData.weekIdToRestaurantId;
 
-  useEffect(() => {
-    if (!restaurantId) return;
-
-    const channel = supabase
-      .channel(`sessions-realtime-${restaurantId}-${dateStr}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'sessions',
-          filter: `restaurant_id=eq.${restaurantId}`,
-        },
-        (payload) => {
-          const row = payload.new as any;
-          if (row?.session_date === dateStr) {
-            queryClient.invalidateQueries({ queryKey: ['session', dateStr, restaurantId] });
-          }
-        }
-      )
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [restaurantId, dateStr, queryClient]);
-
-  return useQuery({ ... }); // bestehende Query bleibt unverändert
-}
+// In der Render-Schleife:
+const empShifts = shifts?.filter(s => {
+  if (s.employee_id !== emp.id || s.department !== emp.department) return false;
+  // Restaurant-Scoping im kumulierten Modus
+  if (cumulated && restaurantFilter !== "all") {
+    const shiftRestaurant = weekIdToRestaurantId[s.week_id];
+    if (shiftRestaurant && shiftRestaurant !== restaurantFilter) return false;
+  }
+  return true;
+}) ?? [];
 ```
 
-Bei einem neuen INSERT (Kellner startet Abrechnung) wird die Manager-Ansicht sofort aktualisiert — Toast + Sound kommen dann automatisch über die bestehende `waiter_shifts` Subscription, sobald die Session da ist.
+3. **Gleiche Logik für `grandTotals`** (Zeile ~193–208): Selber Restaurant-Filter bei der Berechnung der Gesamtsummen.
 
-Einzige Datei betroffen: `src/hooks/useSession.ts`.
+4. **Gleiche Logik für `employeesWithShiftsUnfiltered`** (Zeile ~183–189): Sicherstellen, dass nur Mitarbeiter mit Schichten im gewählten Restaurant angezeigt werden.
+
+Einzige Datei betroffen: `src/pages/zeiterfassung/ZtBuchhaltung.tsx`.
 
