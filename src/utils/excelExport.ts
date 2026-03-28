@@ -77,17 +77,17 @@ export function generateCashBalanceExcel({ rows, deposits, month, year, restaura
     wsData.push([
       formatDateShort(row.date),
       row.kellnerUmsatz,
-      -row.kreditkarten,
-      -row.ordersmart,
-      -row.wolt,
-      -row.gutscheineEL,
-      ...(showFinedine ? [-row.finedine] : []),
+      row.kreditkarten,
+      row.ordersmart,
+      row.wolt,
+      row.gutscheineEL,
+      ...(showFinedine ? [row.finedine] : []),
       row.gutscheineVK,
-      -row.einladung,
-      -row.offeneRE,
-      -row.vorschuss,
-      -row.ausgaben,
-      row.bargeld,
+      row.einladung,
+      row.offeneRE,
+      row.vorschuss,
+      row.ausgaben,
+      row.rawBargeld,
     ]);
   });
 
