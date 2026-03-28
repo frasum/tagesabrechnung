@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback } from 'react';
-import { UserMinus, UserCheck } from 'lucide-react';
+import { UserMinus, UserCheck, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -15,6 +15,8 @@ import { cn } from '@/lib/utils';
 import type { Staff, PermissionLevel } from '@/hooks/useStaff';
 import { useSkills, useEmployeeSkills, useToggleEmployeeSkill } from '@/hooks/useSkills';
 import { useUpdateUserRole } from '@/hooks/useUserRole';
+import { useSofortmeldungList } from '@/hooks/useSofortmeldung';
+import { SOFORTMELDUNG_STATUS_CONFIG, type SofortmeldungStatus } from '@/types/sofortmeldung';
 
 interface Restaurant {
   id: string;
