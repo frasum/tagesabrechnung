@@ -462,8 +462,19 @@ function CumulatedView({ data, pin, onBack, queryClient }: {
     return nameA.localeCompare(nameB, "de");
   }), [filteredEmployees]);
 
+  // O(1) lookup instead of O(n²) .some() per employee
+  const shiftEmployeeLookup = useMemo(() => {
+    const set = new Set<string>();
+    filteredShifts.forEach((s) => {
+      if (Number(s.total_hours) > 0 || !!s.absence_type) {
+        set.add(`${s.employee_id}-${s.department}`);
+      }
+    });
+    return set;
+  }, [filteredShifts]);
+
   const employeesWithShifts = sortedEmployees.filter((emp) =>
-    filteredShifts.some((s) => s.employee_id === emp.id && s.department === emp.department && (Number(s.total_hours) > 0 || !!s.absence_type))
+    shiftEmployeeLookup.has(`${emp.id}-${emp.department}`)
   );
 
   const isLocked = effectiveStatus === "locked";

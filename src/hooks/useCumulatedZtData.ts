@@ -65,13 +65,22 @@ export function useCumulatedZtData(
     queryKey: ["cumulated-shifts", weekIds],
     queryFn: async () => {
       if (!weekIds.length) return [];
-      const { data, error } = await supabase
-        .from("zt_shifts")
-        .select("id, week_id, employee_id, shift_date, start_time, end_time, total_hours, evening_hours, night_hours, night_deep_hours, sunday_holiday_hours, is_holiday, absence_type, department")
-        .in("week_id", weekIds)
-        .limit(5000);
-      if (error) throw error;
-      return data;
+      // Paginated fetch to avoid silent truncation at 5000 rows
+      const PAGE_SIZE = 5000;
+      let allRows: any[] = [];
+      let offset = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from("zt_shifts")
+          .select("id, week_id, employee_id, shift_date, start_time, end_time, total_hours, evening_hours, night_hours, night_deep_hours, sunday_holiday_hours, is_holiday, absence_type, department")
+          .in("week_id", weekIds)
+          .range(offset, offset + PAGE_SIZE - 1);
+        if (error) throw error;
+        allRows = allRows.concat(data ?? []);
+        if (!data || data.length < PAGE_SIZE) break;
+        offset += PAGE_SIZE;
+      }
+      return allRows;
     },
     enabled: enabled && weekIds.length > 0,
   });

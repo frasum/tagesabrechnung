@@ -423,7 +423,7 @@ Deno.serve(async (req) => {
       allWeekIds: weekIds,
       weekNumberToAllIds,
       weekToRestaurant,
-      shifts: shiftsRes.data ?? [],
+      shifts: shiftsArr,
       employees,
       payrollNotes: notesRes.data ?? [],
       advances,
