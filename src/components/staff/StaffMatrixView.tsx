@@ -53,6 +53,17 @@ export function StaffMatrixView({ staff, restaurants, onEdit, onDelete, onReacti
   const { data: employeeSkills = [] } = useEmployeeSkills(staffIds);
   const toggleSkill = useToggleEmployeeSkill();
   const updateRole = useUpdateUserRole();
+  const { data: sofortmeldungen = [] } = useSofortmeldungList();
+
+  const sofortmeldungMap = useMemo(() => {
+    const map = new Map<string, { status: SofortmeldungStatus }>();
+    for (const sm of sofortmeldungen) {
+      if (!map.has(sm.staff_id)) {
+        map.set(sm.staff_id, { status: sm.status as SofortmeldungStatus });
+      }
+    }
+    return map;
+  }, [sofortmeldungen]);
 
   const deptMapByStaff = useMemo(() => {
     const map = new Map<string, Map<string, Set<string>>>();
