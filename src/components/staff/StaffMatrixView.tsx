@@ -208,21 +208,38 @@ export function StaffMatrixView({ staff, restaurants, onEdit, onDelete, onReacti
               const staffSkills = employeeSkillMap.get(s.id) ?? new Set();
               const staffDepts = allDeptsPerStaff.get(s.id) ?? new Set();
               const permLevel = (s.permission_level || 'staff') as PermissionLevel;
+              const sm = sofortmeldungMap.get(s.id);
+              const smConfig = sm ? SOFORTMELDUNG_STATUS_CONFIG[sm.status] : null;
 
               return (
                 <TableRow key={s.id} className={cn("group", !s.is_active && 'opacity-50')}>
                   {/* Name */}
                   <TableCell className="sticky left-0 bg-card z-10 font-medium">
-                    <button
-                      type="button"
-                      onClick={() => onEdit(s)}
-                      className="font-semibold hover:text-primary hover:underline underline-offset-2 transition-colors text-left text-sm"
-                    >
-                      {s.name}
-                    </button>
-                    {!s.is_active && (
-                      <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-1.5">Inaktiv</Badge>
-                    )}
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => onEdit(s)}
+                        className="font-semibold hover:text-primary hover:underline underline-offset-2 transition-colors text-left text-sm"
+                      >
+                        {s.name}
+                      </button>
+                      {!s.is_active && (
+                        <Badge variant="secondary" className="text-[10px] px-1 py-0">Inaktiv</Badge>
+                      )}
+                      {sm && sm.status !== 'gemeldet' && smConfig && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0 text-[9px] font-semibold ${smConfig.bgClass} ${smConfig.textClass}`}>
+                              <Zap className="w-2.5 h-2.5" />
+                              {smConfig.label}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-xs">Sofortmeldung: {smConfig.label}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
                   </TableCell>
 
                   {/* Permission */}
