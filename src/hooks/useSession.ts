@@ -8,7 +8,33 @@ import { syncWaiterShiftToZt, syncKitchenShiftToZt, deleteKitchenShiftFromZt } f
 
 export function useSession(date: Date, restaurantId: string | null) {
   const dateStr = format(date, 'yyyy-MM-dd');
-  
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!restaurantId) return;
+
+    const channel = supabase
+      .channel(`sessions-realtime-${restaurantId}-${dateStr}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'sessions',
+          filter: `restaurant_id=eq.${restaurantId}`,
+        },
+        (payload) => {
+          const row = payload.new as any;
+          if (row?.session_date === dateStr) {
+            queryClient.invalidateQueries({ queryKey: ['session', dateStr, restaurantId] });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [restaurantId, dateStr, queryClient]);
+
   return useQuery({
     queryKey: ['session', dateStr, restaurantId],
     queryFn: async () => {
