@@ -1277,13 +1277,13 @@ function PayrollBuchhaltungTab({ shifts, employees, payrollNotes, advances, peri
                 const isEven = zebraIdx % 2 === 1;
                 zebraIdx++;
 
-                const empShiftsScoped = scopeShiftsForEmp(emp.id, emp.department, emp.restaurant_id);
+                const empShiftsScoped = scopeShiftsForEmp(emp.id, emp.department);
                 const totals = getEmployeeTotals(emp.id, empShiftsScoped as any, undefined, additive);
                 const note = payrollNotes.find(n => n.employee_id === emp.id);
                 const empAdvances = advancesByName[emp.name] ?? [];
 
                 return (
-                  <React.Fragment key={`${emp.id}-${emp.department}-${emp.restaurant_id || ''}`}>
+                  <React.Fragment key={`${emp.id}-${emp.department}`}>
                     {showDeptHeader && !searchTerm.trim() && <BuchhaltungDeptHeader department={emp.department} sfnMode={sfnMode} showCommission={showCommission} />}
                     <BuchhaltungRow
                       showRestaurantBadge={!!searchTerm.trim()}
