@@ -448,6 +448,12 @@ export default function BatchPayrollCalculation({
               ? `Berechne ${batchProgress.current}/${batchProgress.total}...`
               : "Alle Mitarbeiter berechnen"}
           </Button>
+          {batchResults.length > 0 && (
+            <Button variant="outline" size="lg" onClick={handleExcelExport}>
+              <Download className="h-4 w-4 mr-2" />
+              Excel Export
+            </Button>
+          )}
           {dateFrom && dateTo && (
             <span className="text-sm text-muted-foreground">
               {new Date(dateFrom).toLocaleDateString("de-DE")} – {new Date(dateTo).toLocaleDateString("de-DE")}
