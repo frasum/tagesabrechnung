@@ -29,6 +29,7 @@ interface ZtToolbarProps {
   weeks?: Week[] | null;
   selectedWeekId?: string;
   cumSelectedWeekNum?: number | null;
+  isCumulatedWeekSelection?: boolean;
   onWeekSelect?: (weekId: string, weekNumber: number) => void;
   /** Right-side actions (export buttons etc.) */
   actions?: ReactNode;
@@ -45,6 +46,7 @@ export function ZtToolbar({
   weeks,
   selectedWeekId,
   cumSelectedWeekNum,
+  isCumulatedWeekSelection,
   onWeekSelect,
   actions,
 }: ZtToolbarProps) {
@@ -106,13 +108,13 @@ export function ZtToolbar({
       {weeks && weeks.length > 0 && (
         <div className="inline-flex rounded-lg bg-muted p-1 gap-0">
           {weeks.map((w) => {
-            const isCumulated = restaurantFilter && restaurantFilter !== "all" ? false : restaurantFilter === "all";
-            const isSelected = isCumulated
+            const isCumulatedSelection = isCumulatedWeekSelection ?? restaurantFilter === "all";
+            const isSelected = isCumulatedSelection
               ? w.week_number === cumSelectedWeekNum
               : w.id === selectedWeekId;
             return (
               <button
-                key={isCumulated ? `cum-${w.week_number}` : w.id}
+                key={isCumulatedSelection ? `cum-${w.week_number}` : w.id}
                 onClick={() => onWeekSelect?.(w.id, w.week_number)}
                 className={cn(
                   "relative px-3 py-1.5 text-xs font-medium rounded-md transition-all whitespace-nowrap",
