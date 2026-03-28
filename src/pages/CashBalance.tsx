@@ -355,36 +355,36 @@ export default function CashBalance() {
                         {formatCurrency(filteredData.reduce((sum, row) => sum + row.kellnerUmsatz, 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-destructive">
-                        -{formatCurrency(filteredData.reduce((sum, row) => sum + row.kreditkarten, 0))}
+                        {formatCurrency(filteredData.reduce((sum, row) => sum + row.kreditkarten, 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-destructive">
-                        -{formatCurrency(filteredData.reduce((sum, row) => sum + row.ordersmart, 0))}
+                        {formatCurrency(filteredData.reduce((sum, row) => sum + row.ordersmart, 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-destructive">
-                        -{formatCurrency(filteredData.reduce((sum, row) => sum + row.wolt, 0))}
+                        {formatCurrency(filteredData.reduce((sum, row) => sum + row.wolt, 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-destructive">
-                        -{formatCurrency(filteredData.reduce((sum, row) => sum + row.gutscheineEL, 0))}
+                        {formatCurrency(filteredData.reduce((sum, row) => sum + row.gutscheineEL, 0))}
                       </TableCell>
                       {!isFieldHidden('finedine_vouchers') && (
                         <TableCell className="text-right tabular-nums font-bold text-destructive">
-                          -{formatCurrency(filteredData.reduce((sum, row) => sum + row.finedine, 0))}
+                          {formatCurrency(filteredData.reduce((sum, row) => sum + row.finedine, 0))}
                         </TableCell>
                       )}
                       <TableCell className="text-right tabular-nums font-bold text-success">
-                        +{formatCurrency(filteredData.reduce((sum, row) => sum + row.gutscheineVK, 0))}
+                        {formatCurrency(filteredData.reduce((sum, row) => sum + row.gutscheineVK, 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-destructive">
-                        -{formatCurrency(filteredData.reduce((sum, row) => sum + row.einladung, 0))}
+                        {formatCurrency(filteredData.reduce((sum, row) => sum + row.einladung, 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-destructive">
-                        -{formatCurrency(filteredData.reduce((sum, row) => sum + row.offeneRE, 0))}
+                        {formatCurrency(filteredData.reduce((sum, row) => sum + row.offeneRE, 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-destructive">
-                        -{formatCurrency(filteredData.reduce((sum, row) => sum + row.vorschuss, 0))}
+                        {formatCurrency(filteredData.reduce((sum, row) => sum + row.vorschuss, 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-destructive">
-                        -{formatCurrency(filteredData.reduce((sum, row) => sum + row.ausgaben, 0))}
+                        {formatCurrency(filteredData.reduce((sum, row) => sum + row.ausgaben, 0))}
                       </TableCell>
                       {(() => {
                         const totalBargeld = filteredData.reduce((sum, row) => sum + row.rawBargeld, 0);
