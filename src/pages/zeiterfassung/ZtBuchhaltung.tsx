@@ -48,6 +48,15 @@ export default function ZtBuchhaltung() {
   const selectedPeriod = periods?.find(p => p.id === selectedPeriodId);
   const isSearchActive = !!searchTerm.trim();
   const cumData = useCumulatedZtData(cumulated || isSearchActive, selectedPeriod);
+  const weekIdToRestaurantId = cumData.weekIdToRestaurantId;
+
+  const isShiftInScope = (s: Shift) => {
+    if (cumulated && restaurantFilter !== "all") {
+      const shiftRestaurant = weekIdToRestaurantId[s.week_id];
+      if (shiftRestaurant && shiftRestaurant !== restaurantFilter) return false;
+    }
+    return true;
+  };
 
   const { commissionMap, totalCommission } = useCommissionData(
     restaurantId,
@@ -184,7 +193,7 @@ export default function ZtBuchhaltung() {
     shifts?.some((s) => {
       if (s.employee_id !== emp.id || s.department !== emp.department) return false;
       if (!(Number(s.total_hours) > 0 || s.absence_type)) return false;
-      return true;
+      return isShiftInScope(s);
     })
   );
 
@@ -193,7 +202,8 @@ export default function ZtBuchhaltung() {
   const grandTotals = useMemo(() => {
     const t = { gesamt: 0, schichten: 0, soFeiStunden: 0, sonntagStunden: 0, feiertagStunden: 0, evening: 0, night: 0, urlaubTage: 0, krankTage: 0 };
     employeesWithShifts.forEach((emp) => {
-      const row = getEmployeeTotals(emp.id, shifts ?? [], emp.department, isExtended);
+      const scopedShifts = (shifts ?? []).filter(s => s.employee_id === emp.id && s.department === emp.department && isShiftInScope(s));
+      const row = getEmployeeTotals(emp.id, scopedShifts, emp.department, isExtended);
       t.gesamt += row.gesamt;
       t.schichten += row.schichten;
       t.soFeiStunden += row.soFeiStunden;
@@ -246,7 +256,7 @@ export default function ZtBuchhaltung() {
 
                 const empShifts = shifts?.filter(s => {
                   if (s.employee_id !== emp.id || s.department !== emp.department) return false;
-                  return true;
+                  return isShiftInScope(s);
                 }) ?? [];
                 const totals = getEmployeeTotals(emp.id, empShifts, emp.department, isExtended);
                 const note = payrollNotes?.find((n) => n.employee_id === emp.id);
