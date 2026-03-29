@@ -152,10 +152,20 @@ export async function syncWaiterShiftToZt(params: SyncParams): Promise<SyncResul
       return result;
     }
 
-    const dateObj = new Date(params.sessionDate + 'T12:00:00');
-    const isSunday = dateObj.getDay() === 0;
-    const holiday = await isHoliday(params.sessionDate);
-    const isSundayOrHoliday = isSunday || holiday;
+    let isSundayOrHoliday = false;
+    let holidayFlag = false;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(params.sessionDate)) {
+      const dateObj = new Date(params.sessionDate + 'T12:00:00');
+      if (!isNaN(dateObj.getTime())) {
+        const isSunday = dateObj.getDay() === 0;
+        holidayFlag = await isHoliday(params.sessionDate);
+        isSundayOrHoliday = isSunday || holidayFlag;
+      } else {
+        console.warn(`Invalid session date (NaN): ${params.sessionDate}`);
+      }
+    } else {
+      console.warn(`Invalid session date format: ${params.sessionDate}`);
+    }
 
     const allWaiters = [params.waiterName, ...params.additionalWaiters];
 
@@ -190,7 +200,7 @@ export async function syncWaiterShiftToZt(params: SyncParams): Promise<SyncResul
         startTime: params.shiftStart,
         endTime: params.shiftEnd,
         isSundayOrHoliday,
-        isHoliday: holiday,
+        isHoliday: holidayFlag,
       });
       result.synced.push(name);
     }));

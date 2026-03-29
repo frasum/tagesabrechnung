@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { format, isToday, isYesterday } from 'date-fns';
 import { getAllTeamMembers, countPoolShares } from '@/lib/waiterTeamUtils';
+import { useToggleLock } from '@/hooks/useToggleLock';
 import { de } from 'date-fns/locale';
 import { useSelectedDate } from '@/contexts/DateContext';
 import { Plus, FileText, Euro, CreditCard, Truck, Receipt, Download, Trash2, Settings, Wallet, ClipboardList, Clock, CheckCircle2, AlertTriangle, FileDown, X } from 'lucide-react';
@@ -52,32 +53,6 @@ export default function DailySummary() {
   const { settings } = useTelegramSettings();
   const { user } = useAuth();
   
-
-  const handleToggleLock = async (unlock: boolean) => {
-    if (!session?.id || !restaurantId) return;
-    try {
-      await supabase.from('sessions').update({
-        is_unlocked: unlock,
-        unlocked_at: unlock ? new Date().toISOString() : null,
-        unlocked_by_name: unlock ? (user?.name || null) : null,
-      } as any).eq('id', session.id);
-      // Audit log
-      await supabase.from('audit_logs').insert({
-        table_name: 'sessions',
-        record_id: session.id,
-        action: unlock ? 'unlock' : 'lock',
-        changed_by_name: user?.name || 'Unbekannt',
-        restaurant_id: restaurantId,
-        old_values: { is_unlocked: !unlock },
-        new_values: { is_unlocked: unlock, unlocked_by_name: unlock ? user?.name : null },
-      });
-      toast({ title: unlock ? 'Abrechnung entsperrt' : 'Abrechnung gesperrt' });
-      // Refetch session
-      window.location.reload();
-    } catch (error) {
-      toast({ title: 'Fehler', variant: 'destructive' });
-    }
-  };
   
 
   // Form state for editable fields
@@ -112,6 +87,12 @@ export default function DailySummary() {
   // Data hooks
   const { data: session, isLoading: sessionLoading } = useSession(selectedDate, restaurantId);
   const locked = isSessionLocked(selectedDate, !!(session as any)?.is_unlocked);
+  const { handleToggleLock } = useToggleLock({
+    sessionId: session?.id,
+    restaurantId,
+    userName: user?.name,
+    selectedDate,
+  });
   const createSession = useCreateSession();
   const updateSession = useUpdateSession();
   const { data: waiterShifts = [] } = useWaiterShifts(session?.id);

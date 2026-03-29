@@ -97,10 +97,13 @@ export function useRestaurants() {
         .eq('staff_id', staffId!);
 
       if (error) throw error;
-      const mapped = (data ?? [])
+      return (data ?? [])
         .map((sr: any) => sr.restaurants as Restaurant)
         .filter(Boolean);
-      return Array.from(new Map(mapped.map(r => [r.id, r])).values());
+    },
+    select: (restaurants) => {
+      // Deduplicate by restaurant id
+      return Array.from(new Map(restaurants.map(r => [r.id, r])).values());
     },
     enabled: isAdmin || !!staffId,
   });
