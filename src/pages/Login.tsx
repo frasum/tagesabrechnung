@@ -84,7 +84,11 @@ export default function Login() {
     if (success) {
       // Check if user needs role selection (read from localStorage since login just stored it)
       const stored = localStorage.getItem('spicery_auth_user');
-      const staffRole = stored ? JSON.parse(stored).staffRole : null;
+      let staffRole = null;
+      if (stored) {
+        try { staffRole = JSON.parse(stored).staffRole; }
+        catch { localStorage.removeItem('spicery_auth_user'); }
+      }
       const roleOptions = staffRole ? getRoleOptions(staffRole) : null;
 
       if (roleOptions) {
