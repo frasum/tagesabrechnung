@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { format, isToday, isYesterday } from 'date-fns';
 import { getAllTeamMembers, countPoolShares } from '@/lib/waiterTeamUtils';
+import { useToggleLock } from '@/hooks/useToggleLock';
 import { de } from 'date-fns/locale';
 import { useSelectedDate } from '@/contexts/DateContext';
 import { Plus, FileText, Euro, CreditCard, Truck, Receipt, Download, Trash2, Settings, Wallet, ClipboardList, Clock, CheckCircle2, AlertTriangle, FileDown, X } from 'lucide-react';
