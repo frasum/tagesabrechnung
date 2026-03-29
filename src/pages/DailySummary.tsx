@@ -53,13 +53,6 @@ export default function DailySummary() {
   const { settings } = useTelegramSettings();
   const { user } = useAuth();
   
-
-  const { handleToggleLock } = useToggleLock({
-    sessionId: session?.id,
-    restaurantId,
-    userName: user?.name,
-    selectedDate,
-  });
   
 
   // Form state for editable fields
