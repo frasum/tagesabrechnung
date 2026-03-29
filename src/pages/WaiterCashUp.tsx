@@ -80,8 +80,7 @@ export default function WaiterCashUp() {
     }
   };
 
-    data: waiterShifts = []
-  } = useWaiterShifts(session?.id);
+  const { data: waiterShifts = [] } = useWaiterShifts(session?.id);
   const createWaiterShift = useCreateWaiterShift();
   const deleteWaiterShift = useDeleteWaiterShift();
   const updateWaiterShift = useUpdateWaiterShiftWithAudit();
