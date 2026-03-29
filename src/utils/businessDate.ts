@@ -4,18 +4,11 @@ import { format } from 'date-fns';
  * Berechnet das "Geschäftsdatum" für die Tagesabrechnung.
  * Der Geschäftstag endet erst um 3:00 Uhr nachts - alles zwischen 
  * 00:00 und 02:59 Uhr wird noch dem Vortag zugeordnet.
- * 
- * Beispiele:
- * - 07.02.2026 um 23:30 → Geschäftsdatum: 07.02.2026
- * - 08.02.2026 um 00:30 → Geschäftsdatum: 07.02.2026 (noch Vortag!)
- * - 08.02.2026 um 02:59 → Geschäftsdatum: 07.02.2026 (noch Vortag!)
- * - 08.02.2026 um 03:00 → Geschäftsdatum: 08.02.2026 (neuer Tag beginnt)
  */
 export function getBusinessDate(referenceDate?: Date): Date {
   const now = referenceDate || new Date();
   const hour = now.getHours();
   
-  // Vor 3 Uhr nachts = noch der vorherige Geschäftstag
   if (hour < 3) {
     const yesterday = new Date(now);
     yesterday.setDate(yesterday.getDate() - 1);
@@ -36,19 +29,17 @@ export function isBusinessToday(date: Date): boolean {
 }
 
 /**
- * Prüft ob eine Session gesperrt ist (älter als 3 Tage und kein Admin).
- * Admins können immer bearbeiten.
+ * Prüft ob eine Session gesperrt ist.
+ * Gesperrt wenn: Datum liegt vor dem heutigen Geschäftstag UND nicht manuell entsperrt.
+ * Gilt für ALLE Rollen gleichermaßen (staff, manager, admin).
+ * Admin und Manager können den Schreibschutz manuell aufheben.
  */
-export function isSessionLocked(sessionDate: Date, permissionLevel: 'staff' | 'manager' | 'admin'): boolean {
-  if (permissionLevel === 'admin') return false;
+export function isSessionLocked(sessionDate: Date, isUnlocked: boolean = false): boolean {
+  if (isUnlocked) return false;
   
   const today = getBusinessDate();
   const todayStr = format(today, 'yyyy-MM-dd');
   const sessionStr = format(sessionDate, 'yyyy-MM-dd');
   
-  const todayMs = new Date(todayStr).getTime();
-  const sessionMs = new Date(sessionStr).getTime();
-  const diffDays = (todayMs - sessionMs) / (1000 * 60 * 60 * 24);
-  
-  return diffDays > 3;
+  return sessionStr < todayStr;
 }

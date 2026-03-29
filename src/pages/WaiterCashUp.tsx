@@ -32,7 +32,6 @@ export default function WaiterCashUp() {
   const { restaurantId } = useRestaurant();
   const { user, hasPermission } = useAuth();
   const isAdmin = hasPermission('admin');
-  const locked = isSessionLocked(selectedDate, user?.permissionLevel || 'staff');
 
   // Form state for new waiter
   const [newWaiterName, setNewWaiterName] = useState('');
@@ -54,9 +53,34 @@ export default function WaiterCashUp() {
     isLoading: sessionLoading
   } = useSession(selectedDate, restaurantId);
   const createSession = useCreateSession();
-  const {
-    data: waiterShifts = []
-  } = useWaiterShifts(session?.id);
+  const locked = isSessionLocked(selectedDate, !!(session as any)?.is_unlocked);
+
+  const handleToggleLock = async (unlock: boolean) => {
+    if (!session?.id || !restaurantId) return;
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      await supabase.from('sessions').update({
+        is_unlocked: unlock,
+        unlocked_at: unlock ? new Date().toISOString() : null,
+        unlocked_by_name: unlock ? (user?.name || null) : null,
+      } as any).eq('id', session.id);
+      await supabase.from('audit_logs').insert({
+        table_name: 'sessions',
+        record_id: session.id,
+        action: unlock ? 'unlock' : 'lock',
+        changed_by_name: user?.name || 'Unbekannt',
+        restaurant_id: restaurantId,
+        old_values: { is_unlocked: !unlock },
+        new_values: { is_unlocked: unlock, unlocked_by_name: unlock ? user?.name : null },
+      });
+      toast({ title: unlock ? 'Abrechnung entsperrt' : 'Abrechnung gesperrt' });
+      window.location.reload();
+    } catch (error) {
+      toast({ title: 'Fehler', variant: 'destructive' });
+    }
+  };
+
+  const { data: waiterShifts = [] } = useWaiterShifts(session?.id);
   const createWaiterShift = useCreateWaiterShift();
   const deleteWaiterShift = useDeleteWaiterShift();
   const updateWaiterShift = useUpdateWaiterShiftWithAudit();
@@ -281,7 +305,14 @@ export default function WaiterCashUp() {
         {/* Session Content */}
         {session && <div className="space-y-6">
 
-            {locked && <SessionLockedBanner />}
+            {(locked || !!(session as any)?.is_unlocked) && (
+              <SessionLockedBanner
+                isUnlocked={!!(session as any)?.is_unlocked}
+                permissionLevel={user?.permissionLevel || 'staff'}
+                onUnlock={() => handleToggleLock(true)}
+                onLock={() => handleToggleLock(false)}
+              />
+            )}
 
             <div className="grid lg:grid-cols-2 gap-6">
             {/* Add/Edit Waiter Form */}
