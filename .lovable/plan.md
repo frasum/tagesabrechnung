@@ -1,49 +1,57 @@
 
 
-# Schreibschutz: Admin UND Manager können entsperren
+# 6 Code-Qualitäts-Verbesserungen — Umsetzungsplan
 
-## Konzept
+## Schritt 1: Neuer `useToggleLock` Hook + Query-Invalidierung (Punkte 1 + 5)
 
-Die bestehende Sperrlogik wird erweitert: Vergangene Tagesabrechnungen sind automatisch schreibgeschützt. Sowohl **Admins als auch Manager** können den Schreibschutz aufheben.
+**Neue Datei: `src/hooks/useToggleLock.ts`**
 
-## Änderungen
-
-### 1. DB-Migration — neue Spalten in `sessions`
-- `is_unlocked` (boolean, DEFAULT `false`) — manuelles Entsperr-Flag
-- `unlocked_at` (timestamptz, nullable)
-- `unlocked_by_name` (text, nullable)
-
-### 2. Sperrlogik (`src/utils/businessDate.ts`)
-
-`isSessionLocked` wird vereinfacht — kein Rollen-Check mehr, nur zeitbasiert + Override:
+Extrahiert die identische `handleToggleLock`-Logik aus allen 3 Seiten. Nutzt `useQueryClient().invalidateQueries()` statt `window.location.reload()`. Der Query-Key `['session', dateStr, restaurantId]` wird bereits von `useSession` verwendet — passt also direkt.
 
 ```typescript
-export function isSessionLocked(sessionDate: Date, isUnlocked: boolean = false): boolean {
-  if (isUnlocked) return false;
-  const today = getBusinessDate();
-  return format(sessionDate, 'yyyy-MM-dd') < format(today, 'yyyy-MM-dd');
-}
+// Parameter: sessionId, restaurantId, userName, selectedDate
+// Returns: { handleToggleLock: (unlock: boolean) => Promise<void> }
+// Invalidiert: ['session', dateStr, restaurantId]
 ```
 
-### 3. `SessionLockedBanner.tsx` erweitern
+**Geändert**: `DailySummary.tsx`, `WaiterCashUp.tsx`, `KitchenTipSplit.tsx` — `handleToggleLock` entfernen, durch Hook ersetzen.
 
-- Props: `permissionLevel`, `onUnlock`, `onLock`, `isUnlocked`
-- **Admin und Manager** sehen den Button "Zur Bearbeitung freigeben"
-- Wenn entsperrt: anderer Banner mit "Wieder sperren"-Button
+---
 
-### 4. Alle 3 Seiten anpassen
+## Schritt 2: Safe JSON.parse in `Login.tsx` (Punkt 2)
 
-`DailySummary.tsx`, `WaiterCashUp.tsx`, `KitchenTipSplit.tsx`:
-- Session-Daten laden inkl. `is_unlocked`
-- `isSessionLocked(selectedDate, session?.is_unlocked)` aufrufen
-- Unlock/Lock-Handlers: `supabase.from('sessions').update(...)` mit `is_unlocked`, `unlocked_at`, `unlocked_by_name`
-- Audit-Log-Eintrag bei jeder Entsperrung/Sperrung
+Zeilen 87 und 113: `JSON.parse(stored)` in try-catch wrappen. Bei Fehler → `localStorage.removeItem('spicery_auth_user')`, Variable auf `null` setzen.
 
-### Betroffene Dateien
-- **Migration**: 1 neue Migration (3 Spalten in `sessions`)
-- `src/utils/businessDate.ts` — Signatur + Logik ändern
-- `src/components/shared/SessionLockedBanner.tsx` — Unlock/Lock-Buttons für Admin+Manager
-- `src/pages/DailySummary.tsx` — Lock-Check + Handler
-- `src/pages/WaiterCashUp.tsx` — Lock-Check + Handler
-- `src/pages/KitchenTipSplit.tsx` — Lock-Check + Handler
+---
+
+## Schritt 3: Session-Date-Validierung in `syncWaiterToZt.ts` (Punkt 3)
+
+Vor Zeile 155: Regex `/^\d{4}-\d{2}-\d{2}$/` prüfen + `isNaN(dateObj.getTime())`. Bei ungültigem Datum → `console.warn()`, `isSundayOrHoliday = false` setzen (Zuschläge überspringen).
+
+---
+
+## Schritt 4: Time-Validierung in `shiftCalculations.ts` (Punkt 4)
+
+In `timeToMinutes`: Nach dem Split prüfen ob `h` (0–23) und `m` (0–59) gültig sind. Bei ungültigem Wert → `throw new Error(`Invalid time: ${time}`)`.
+
+---
+
+## Schritt 5: `useMemo` in `RestaurantContext.tsx` (Punkt 6)
+
+Die Dedup-Logik (Zeile 100–103) liegt bereits **innerhalb der `queryFn`** von React Query — sie wird also nur bei Datenabruf ausgeführt, nicht bei jedem Render. Ein `useMemo` wäre hier technisch unnötig, da React Query das Ergebnis bereits cached. Ich werde trotzdem ein `select`-Transform auf die Query setzen, um die Intention klar zu machen.
+
+---
+
+## Zusammenfassung
+
+| Datei | Änderung |
+|---|---|
+| `src/hooks/useToggleLock.ts` | **NEU** — shared Hook |
+| `src/pages/DailySummary.tsx` | handleToggleLock → useToggleLock |
+| `src/pages/WaiterCashUp.tsx` | handleToggleLock → useToggleLock |
+| `src/pages/KitchenTipSplit.tsx` | handleToggleLock → useToggleLock |
+| `src/pages/Login.tsx` | try-catch um JSON.parse |
+| `src/lib/syncWaiterToZt.ts` | Date-Validierung |
+| `src/lib/shiftCalculations.ts` | Time-Validierung |
+| `src/contexts/RestaurantContext.tsx` | Klarstellung der Dedup-Logik |
 
