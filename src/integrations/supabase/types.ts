@@ -722,6 +722,7 @@ export type Database = {
           guest_count: number | null
           id: string
           is_finalized: boolean | null
+          is_unlocked: boolean
           last_settlement_sent_at: string | null
           notes: string | null
           ordersmart_revenue: number | null
@@ -734,6 +735,8 @@ export type Database = {
           takeaway_total: number | null
           terminal_1_total: number | null
           terminal_2_total: number | null
+          unlocked_at: string | null
+          unlocked_by_name: string | null
           updated_at: string
           updated_by_name: string | null
           vorschuss: number | null
@@ -750,6 +753,7 @@ export type Database = {
           guest_count?: number | null
           id?: string
           is_finalized?: boolean | null
+          is_unlocked?: boolean
           last_settlement_sent_at?: string | null
           notes?: string | null
           ordersmart_revenue?: number | null
@@ -762,6 +766,8 @@ export type Database = {
           takeaway_total?: number | null
           terminal_1_total?: number | null
           terminal_2_total?: number | null
+          unlocked_at?: string | null
+          unlocked_by_name?: string | null
           updated_at?: string
           updated_by_name?: string | null
           vorschuss?: number | null
@@ -778,6 +784,7 @@ export type Database = {
           guest_count?: number | null
           id?: string
           is_finalized?: boolean | null
+          is_unlocked?: boolean
           last_settlement_sent_at?: string | null
           notes?: string | null
           ordersmart_revenue?: number | null
@@ -790,6 +797,8 @@ export type Database = {
           takeaway_total?: number | null
           terminal_1_total?: number | null
           terminal_2_total?: number | null
+          unlocked_at?: string | null
+          unlocked_by_name?: string | null
           updated_at?: string
           updated_by_name?: string | null
           vorschuss?: number | null
