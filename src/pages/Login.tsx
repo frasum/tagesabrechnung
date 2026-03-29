@@ -114,7 +114,9 @@ export default function Login() {
     // Update stored user with the selected active role
     const stored = localStorage.getItem('spicery_auth_user');
     if (stored) {
-      const parsed = JSON.parse(stored);
+      let parsed;
+      try { parsed = JSON.parse(stored); }
+      catch { localStorage.removeItem('spicery_auth_user'); return; }
       parsed.role = role === 'gl' ? 'waiter' : role; // GL maps to waiter for routing
       parsed.activeRole = role; // Keep the precise selection
       // Service/Küche = nur Staff-Berechtigung, GL = Manager behalten

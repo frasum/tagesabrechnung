@@ -54,31 +54,12 @@ export default function DailySummary() {
   const { user } = useAuth();
   
 
-  const handleToggleLock = async (unlock: boolean) => {
-    if (!session?.id || !restaurantId) return;
-    try {
-      await supabase.from('sessions').update({
-        is_unlocked: unlock,
-        unlocked_at: unlock ? new Date().toISOString() : null,
-        unlocked_by_name: unlock ? (user?.name || null) : null,
-      } as any).eq('id', session.id);
-      // Audit log
-      await supabase.from('audit_logs').insert({
-        table_name: 'sessions',
-        record_id: session.id,
-        action: unlock ? 'unlock' : 'lock',
-        changed_by_name: user?.name || 'Unbekannt',
-        restaurant_id: restaurantId,
-        old_values: { is_unlocked: !unlock },
-        new_values: { is_unlocked: unlock, unlocked_by_name: unlock ? user?.name : null },
-      });
-      toast({ title: unlock ? 'Abrechnung entsperrt' : 'Abrechnung gesperrt' });
-      // Refetch session
-      window.location.reload();
-    } catch (error) {
-      toast({ title: 'Fehler', variant: 'destructive' });
-    }
-  };
+  const { handleToggleLock } = useToggleLock({
+    sessionId: session?.id,
+    restaurantId,
+    userName: user?.name,
+    selectedDate,
+  });
   
 
   // Form state for editable fields
