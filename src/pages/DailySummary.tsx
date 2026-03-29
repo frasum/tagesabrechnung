@@ -87,6 +87,12 @@ export default function DailySummary() {
   // Data hooks
   const { data: session, isLoading: sessionLoading } = useSession(selectedDate, restaurantId);
   const locked = isSessionLocked(selectedDate, !!(session as any)?.is_unlocked);
+  const { handleToggleLock } = useToggleLock({
+    sessionId: session?.id,
+    restaurantId,
+    userName: user?.name,
+    selectedDate,
+  });
   const createSession = useCreateSession();
   const updateSession = useUpdateSession();
   const { data: waiterShifts = [] } = useWaiterShifts(session?.id);
