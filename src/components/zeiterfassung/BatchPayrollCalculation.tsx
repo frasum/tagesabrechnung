@@ -388,10 +388,9 @@ export default function BatchPayrollCalculation({
 
       const { data: allShifts, error: shiftErr } = await supabase
         .from("zt_shifts")
-        .select("employee_id, total_hours, night_hours, night_deep_hours, sunday_holiday_hours, is_holiday, evening_hours, shift_date")
+        .select("employee_id, total_hours, night_hours, night_deep_hours, sunday_holiday_hours, is_holiday, evening_hours, shift_date, absence_type")
         .gte("shift_date", dateFrom)
         .lte("shift_date", dateTo)
-        .is("absence_type", null)
         .limit(5000);
 
       if (shiftErr) throw shiftErr;
