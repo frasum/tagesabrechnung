@@ -1020,8 +1020,11 @@ export default function BatchPayrollCalculation({
                             onClick={() => onSelectEmployee?.(r.staffId)}
                           >
                             <td className="py-2 pr-2">
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-1.5 flex-wrap">
                                 {r.staffName}
+                                {r.restaurantName && r.restaurantName.includes(",") && (
+                                  <span className="inline-flex items-center rounded bg-accent px-1.5 py-0.5 text-[10px] font-medium text-accent-foreground">{r.restaurantName}</span>
+                                )}
                                 {r.persoNr && <span className="text-xs text-muted-foreground">({r.persoNr})</span>}
                                 {r.warning && (
                                   <span title={r.warning}>
