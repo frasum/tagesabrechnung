@@ -72,9 +72,11 @@ serve(async (req) => {
             role: "system",
             content: `Du bist ein Experte für deutsche Lohnabrechnungen. Du extrahierst strukturierte Daten aus PDF-Lohnabrechnungen.
 Jede Seite enthält typischerweise eine individuelle Lohnabrechnung eines Mitarbeiters.
-Extrahiere für jeden Mitarbeiter: Personalnummer, Name, Brutto-Gehalt, Netto-Gehalt, steuerfreie SFN-Zuschläge (Sonntags-/Feiertags-/Nachtzuschläge), und den Auszahlungsbetrag.
+Extrahiere für jeden Mitarbeiter: Personalnummer, Name, Brutto-Gehalt, Netto-Gehalt, steuerfreie SFN-Zuschläge (Sonntags-/Feiertags-/Nachtzuschläge), den Auszahlungsbetrag, die Gesamtstunden und den Stundenlohn.
 Wenn ein Wert nicht gefunden werden kann, setze ihn auf null.
 Achte besonders auf: "Personalnummer"/"Pers.-Nr."/"P.-Nr.", "Gesamt-Brutto", "Netto-Verdienst"/"Netto", "steuerfreie Bezüge"/"SFN", "Auszahlung"/"Überweisungsbetrag".
+Für Stunden achte auf: "Gesamtstunden"/"Std."/"Stunden gesamt"/"Arbeitsstunden".
+Für Stundenlohn achte auf: "Stundenlohn"/"Std.-Lohn"/"€/Std."/"Grundlohn je Stunde".
 Die Personalnummer ist besonders wichtig für die Zuordnung — extrahiere sie immer wenn vorhanden.`,
           },
           {
