@@ -819,68 +819,109 @@ export default function BatchPayrollCalculation({
                             <thead>
                               <tr className="border-b border-border text-muted-foreground">
                                 <th className="text-left py-1.5 pr-2">Mitarbeiter</th>
-                                <th className="text-right py-1.5 px-2">Std. (eigen)</th>
-                                <th className="text-right py-1.5 px-2">Std. (Lohnb.)</th>
-                                <th className="text-right py-1.5 px-2">€/h (eigen)</th>
-                                <th className="text-right py-1.5 px-2">€/h (Lohnb.)</th>
-                                <th className="text-right py-1.5 px-2">Brutto (eigen)</th>
-                                <th className="text-right py-1.5 px-2">Brutto (Lohnb.)</th>
-                                <th className="text-right py-1.5 px-2">Netto (eigen)</th>
-                                <th className="text-right py-1.5 px-2">Netto (Lohnb.)</th>
-                                <th className="text-right py-1.5 px-2">SFN (eigen)</th>
-                                <th className="text-right py-1.5 px-2">SFN (Lohnb.)</th>
-                                <th className="text-right py-1.5 px-2">Auszahl. (eigen)</th>
-                                <th className="text-right py-1.5 pl-2">Auszahl. (Lohnb.)</th>
+                                <th className="text-right py-1.5 px-2">Stunden</th>
+                                <th className="text-right py-1.5 px-2">€/h</th>
+                                <th className="text-right py-1.5 px-2">Brutto</th>
+                                <th className="text-right py-1.5 px-2">Netto</th>
+                                <th className="text-right py-1.5 px-2">SFN</th>
+                                <th className="text-right py-1.5 pl-2">Auszahlung</th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-border/50">
+                            <tbody>
                               {comparisonData.results.map((r) => {
                                 const ext = comparisonData.matched.get(r.staffId);
-                                const diffStunden = ext?.stunden != null ? Math.abs(r.hours - ext.stunden) : null;
-                                const diffStundenlohn = ext?.stundenlohn != null ? Math.abs(r.hourlyRate - ext.stundenlohn) : null;
-                                const diffBrutto = ext?.brutto != null ? Math.abs(r.gross - ext.brutto) : null;
-                                const diffNetto = ext?.netto != null ? Math.abs(r.net - ext.netto) : null;
-                                const diffSfn = ext?.sfn != null ? Math.abs(r.sfnBonus - ext.sfn) : null;
-                                const diffPayout = ext?.auszahlung != null ? Math.abs(r.payout - ext.auszahlung) : null;
-
-                                const cellClass = (diff: number | null) =>
-                                  diff == null ? "" : diff > 1 ? "text-red-600 font-semibold" : "text-green-600";
-
                                 const fmtHours = (n: number) => n > 0 ? n.toFixed(2).replace(".", ",") : "—";
 
+                                const metrics: { own: number; ext: number | null | undefined; isHours?: boolean }[] = [
+                                  { own: r.hours, ext: ext?.stunden, isHours: true },
+                                  { own: r.hourlyRate, ext: ext?.stundenlohn },
+                                  { own: r.gross, ext: ext?.brutto },
+                                  { own: r.net, ext: ext?.netto },
+                                  { own: r.sfnBonus, ext: ext?.sfn },
+                                  { own: r.payout, ext: ext?.auszahlung },
+                                ];
+
+                                const allMatch = ext && metrics.every(m =>
+                                  m.ext != null && Math.abs(m.own - m.ext) <= 1
+                                );
+
+                                const renderDelta = (own: number, extVal: number | null | undefined, isHours?: boolean) => {
+                                  if (extVal == null) return null;
+                                  const diff = extVal - own;
+                                  if (Math.abs(diff) <= (isHours ? 0.05 : 1)) {
+                                    return <span className="text-green-600">✓</span>;
+                                  }
+                                  const arrow = diff > 0 ? "↑" : "↓";
+                                  const color = diff > 0 ? "text-red-600" : "text-amber-600";
+                                  const val = isHours
+                                    ? Math.abs(diff).toFixed(2).replace(".", ",")
+                                    : fmt(Math.abs(diff));
+                                  return <span className={color}>{arrow} {val}</span>;
+                                };
+
                                 return (
-                                  <tr key={`${r.restaurantId}-${r.staffId}`} className="hover:bg-muted/50">
-                                    <td className="py-1.5 pr-2">
-                                      {r.staffName}
-                                      {!ext && <span className="text-muted-foreground ml-1">(kein Match)</span>}
+                                  <React.Fragment key={`${r.restaurantId}-${r.staffId}`}>
+                                    {/* Row 1: Own values */}
+                                    <tr className="border-t border-border/50 hover:bg-muted/50">
+                                      <td className="py-1.5 pr-2 align-top">
+                                        <div className="flex items-center gap-1.5">
+                                          {ext && (
+                                            <span className={`inline-block h-2 w-2 rounded-full ${allMatch ? "bg-green-500" : "bg-amber-500"}`} />
+                                          )}
+                                          <span>{r.staffName}</span>
+                                          {!ext && <span className="text-muted-foreground">(kein Match)</span>}
+                                        </div>
+                                      </td>
+                                      <td className="py-1.5 px-2 text-right tabular-nums">{fmtHours(r.hours)}</td>
+                                      <td className="py-1.5 px-2 text-right tabular-nums">{r.hourlyRate > 0 ? fmt(r.hourlyRate) : "—"}</td>
+                                      <td className="py-1.5 px-2 text-right tabular-nums">{r.gross > 0 ? fmt(r.gross) : "—"}</td>
+                                      <td className="py-1.5 px-2 text-right tabular-nums">{r.net > 0 ? fmt(r.net) : "—"}</td>
+                                      <td className="py-1.5 px-2 text-right tabular-nums">{r.sfnBonus > 0 ? fmt(r.sfnBonus) : "—"}</td>
+                                      <td className="py-1.5 pl-2 text-right tabular-nums">{r.payout > 0 ? fmt(r.payout) : "—"}</td>
+                                    </tr>
+                                    {/* Row 2: Delta to payroll office (only if matched) */}
+                                    {ext && (
+                                      <tr className="hover:bg-muted/50">
+                                        <td className="pb-1.5 pr-2 text-muted-foreground text-[10px]">Δ Lohnbüro</td>
+                                        {metrics.map((m, i) => (
+                                          <td key={i} className="pb-1.5 px-2 text-right tabular-nums text-[11px]">
+                                            {renderDelta(m.own, m.ext, m.isHours)}
+                                          </td>
+                                        ))}
+                                      </tr>
+                                    )}
+                                  </React.Fragment>
+                                );
+                              })}
+                              {/* Summary row: total deviations */}
+                              {(() => {
+                                let totalOwnGross = 0, totalExtGross = 0, hasExt = false;
+                                let totalOwnPayout = 0, totalExtPayout = 0;
+                                comparisonData.results.forEach((r) => {
+                                  const ext = comparisonData.matched.get(r.staffId);
+                                  totalOwnGross += r.gross;
+                                  totalOwnPayout += r.payout;
+                                  if (ext?.brutto != null) { totalExtGross += ext.brutto; hasExt = true; }
+                                  if (ext?.auszahlung != null) { totalExtPayout += ext.auszahlung; }
+                                });
+                                if (!hasExt) return null;
+                                const diffGross = totalExtGross - totalOwnGross;
+                                const diffPayout = totalExtPayout - totalOwnPayout;
+                                return (
+                                  <tr className="border-t-2 border-border font-semibold">
+                                    <td className="py-2 pr-2">Gesamt-Δ</td>
+                                    <td colSpan={2} />
+                                    <td className={`py-2 px-2 text-right tabular-nums ${Math.abs(diffGross) > 1 ? "text-red-600" : "text-green-600"}`}>
+                                      {Math.abs(diffGross) <= 1 ? "✓" : `${diffGross > 0 ? "↑" : "↓"} ${fmt(Math.abs(diffGross))}`}
                                     </td>
-                                    <td className="py-1.5 px-2 text-right tabular-nums">{fmtHours(r.hours)}</td>
-                                    <td className={`py-1.5 px-2 text-right tabular-nums ${cellClass(diffStunden)}`}>
-                                      {ext?.stunden != null ? fmtHours(ext.stunden) : "—"}
-                                    </td>
-                                    <td className="py-1.5 px-2 text-right tabular-nums">{r.hourlyRate > 0 ? fmt(r.hourlyRate) : "—"}</td>
-                                    <td className={`py-1.5 px-2 text-right tabular-nums ${cellClass(diffStundenlohn)}`}>
-                                      {ext?.stundenlohn != null ? fmt(ext.stundenlohn) : "—"}
-                                    </td>
-                                    <td className="py-1.5 px-2 text-right tabular-nums">{r.gross > 0 ? fmt(r.gross) : "—"}</td>
-                                    <td className={`py-1.5 px-2 text-right tabular-nums ${cellClass(diffBrutto)}`}>
-                                      {ext?.brutto != null ? fmt(ext.brutto) : "—"}
-                                    </td>
-                                    <td className="py-1.5 px-2 text-right tabular-nums">{r.net > 0 ? fmt(r.net) : "—"}</td>
-                                    <td className={`py-1.5 px-2 text-right tabular-nums ${cellClass(diffNetto)}`}>
-                                      {ext?.netto != null ? fmt(ext.netto) : "—"}
-                                    </td>
-                                    <td className="py-1.5 px-2 text-right tabular-nums">{r.sfnBonus > 0 ? fmt(r.sfnBonus) : "—"}</td>
-                                    <td className={`py-1.5 px-2 text-right tabular-nums ${cellClass(diffSfn)}`}>
-                                      {ext?.sfn != null ? fmt(ext.sfn) : "—"}
-                                    </td>
-                                    <td className="py-1.5 px-2 text-right tabular-nums">{r.payout > 0 ? fmt(r.payout) : "—"}</td>
-                                    <td className={`py-1.5 pl-2 text-right tabular-nums ${cellClass(diffPayout)}`}>
-                                      {ext?.auszahlung != null ? fmt(ext.auszahlung) : "—"}
+                                    <td />
+                                    <td />
+                                    <td className={`py-2 pl-2 text-right tabular-nums ${Math.abs(diffPayout) > 1 ? "text-red-600" : "text-green-600"}`}>
+                                      {Math.abs(diffPayout) <= 1 ? "✓" : `${diffPayout > 0 ? "↑" : "↓"} ${fmt(Math.abs(diffPayout))}`}
                                     </td>
                                   </tr>
                                 );
-                              })}
+                              })()}
                             </tbody>
                           </table>
                         </div>
