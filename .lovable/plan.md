@@ -1,41 +1,26 @@
 
 
-# Vergleichstabelle kompakter und eindeutiger gestalten
+# Mitarbeiter über alle Restaurants kumulieren
 
 ## Problem
 
-Die aktuelle Tabelle hat 13 Spalten mit Doppel-Spalten (eigen/Lohnbüro) für jeden Wert. Das ist schwer lesbar und erfordert horizontales Scrollen.
+Die Deduplizierung verwendet den Key `restaurant_id::staff_id`. Ein Mitarbeiter, der in 2 Restaurants arbeitet (z.B. Spicery + YUM), erscheint als **2 separate Zeilen** — die Schichten werden dabei sogar doppelt gezählt, weil die Shift-Query nicht nach Restaurant filtert.
 
-## Neues Layout: Delta-basierte Darstellung
+## Lösung
 
-Statt zwei Spalten pro Kennzahl (eigen + Lohnbüro) wird **eine Spalte pro Kennzahl** mit dem eigenen Wert gezeigt. Der Lohnbüro-Wert erscheint als **Delta darunter** — nur wenn es eine Abweichung gibt.
+Den Dedup-Key auf `staff_id` allein ändern. Restaurant-Namen und Abteilungen werden zusammengeführt (z.B. "Spicery, YUM" / "Service, Küche"). Der höchste Stundenlohn wird verwendet.
 
-```text
-Vorher (13 Spalten):
-| Name | Std. (eigen) | Std. (Lohnb.) | €/h (eigen) | €/h (Lohnb.) | Brutto (eigen) | Brutto (Lohnb.) | ...
+### Konkrete Änderungen in `BatchPayrollCalculation.tsx`
 
-Nachher (7 Spalten):
-| Name | Stunden | €/h | Brutto | Netto | SFN | Auszahlung |
-|      | 166,88  | 14,00 | 2.336 | 1.673 | 373 | 2.046      |
-|      | ↑ 0,12  |   ✓   | ↑ 532 | ↑ 544 | ↑ 2 | ↑ 16       |
-```
-
-### Konkrete Änderungen
-
-1. **Spalten reduzieren**: Von 13 auf 7 Spalten (Name + 6 Kennzahlen)
-2. **Zwei-Zeilen-Layout pro Mitarbeiter**:
-   - Zeile 1: Eigener Wert (schwarz)
-   - Zeile 2: Delta zum Lohnbüro — grün bei Übereinstimmung (✓), rot mit Pfeil + Betrag bei Abweichung
-3. **Farbige Status-Icons**:
-   - `✓` grün = Werte stimmen überein (< 1 € Differenz)
-   - `↑ 532 €` rot = Lohnbüro höher
-   - `↓ 50 €` orange = Lohnbüro niedriger
-4. **Match-Status als Badge** am Namen: grüner Punkt bei Match, grauer "(kein Match)" Text
-5. **Gesamt-Abweichungs-Summe** am Ende der Tabelle
+1. **Dedup-Key ändern**: Von `${sr.restaurant_id}::${sr.staff_id}` auf `sr.staff_id`
+2. **Restaurant-Namen mergen**: Wenn ein Mitarbeiter in mehreren Restaurants ist, alle Namen komma-separiert anzeigen
+3. **Abteilungen mergen**: Wie bisher, aber auch über Restaurants hinweg
+4. **Restaurant-ID**: Erste Restaurant-ID behalten (für eventuelle Verlinkung)
+5. **Stundenlohn**: Höchsten Wert verwenden (wie bisher)
 
 ### Betroffene Datei
 
 | Datei | Änderung |
 |---|---|
-| `src/components/zeiterfassung/BatchPayrollCalculation.tsx` | Vergleichstabelle von Doppel-Spalten auf Delta-Layout umbauen (Zeilen 818–885) |
+| `src/components/zeiterfassung/BatchPayrollCalculation.tsx` | Dedup-Key auf `staff_id` ändern, Restaurant-Namen zusammenführen |
 
