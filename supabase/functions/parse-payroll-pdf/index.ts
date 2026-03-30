@@ -109,6 +109,7 @@ Die Personalnummer ist besonders wichtig für die Zuordnung — extrahiere sie i
                       type: "object",
                       properties: {
                         name: { type: "string", description: "Full name of the employee" },
+                        perso_nr: { type: "number", description: "Personalnummer / Pers.-Nr. / P.-Nr. des Mitarbeiters" },
                         brutto: { type: "number", description: "Gross salary (Brutto-Gehalt) in EUR" },
                         netto: { type: "number", description: "Net salary (Netto-Gehalt) in EUR" },
                         sfn: { type: "number", description: "Tax-free SFN surcharges (steuerfreie Zuschläge) in EUR" },
