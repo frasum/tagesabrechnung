@@ -36,6 +36,8 @@ interface ExternalEmployee {
   netto: number | null;
   sfn: number | null;
   auszahlung: number | null;
+  stunden: number | null;
+  stundenlohn: number | null;
 }
 
 interface BatchPayrollCalculationProps {
@@ -809,6 +811,10 @@ export default function BatchPayrollCalculation({
                             <thead>
                               <tr className="border-b border-border text-muted-foreground">
                                 <th className="text-left py-1.5 pr-2">Mitarbeiter</th>
+                                <th className="text-right py-1.5 px-2">Std. (eigen)</th>
+                                <th className="text-right py-1.5 px-2">Std. (Lohnb.)</th>
+                                <th className="text-right py-1.5 px-2">€/h (eigen)</th>
+                                <th className="text-right py-1.5 px-2">€/h (Lohnb.)</th>
                                 <th className="text-right py-1.5 px-2">Brutto (eigen)</th>
                                 <th className="text-right py-1.5 px-2">Brutto (Lohnb.)</th>
                                 <th className="text-right py-1.5 px-2">Netto (eigen)</th>
@@ -822,6 +828,8 @@ export default function BatchPayrollCalculation({
                             <tbody className="divide-y divide-border/50">
                               {comparisonData.results.map((r) => {
                                 const ext = comparisonData.matched.get(r.staffId);
+                                const diffStunden = ext?.stunden != null ? Math.abs(r.hours - ext.stunden) : null;
+                                const diffStundenlohn = ext?.stundenlohn != null ? Math.abs(r.hourlyRate - ext.stundenlohn) : null;
                                 const diffBrutto = ext?.brutto != null ? Math.abs(r.gross - ext.brutto) : null;
                                 const diffNetto = ext?.netto != null ? Math.abs(r.net - ext.netto) : null;
                                 const diffSfn = ext?.sfn != null ? Math.abs(r.sfnBonus - ext.sfn) : null;
@@ -830,11 +838,21 @@ export default function BatchPayrollCalculation({
                                 const cellClass = (diff: number | null) =>
                                   diff == null ? "" : diff > 1 ? "text-red-600 font-semibold" : "text-green-600";
 
+                                const fmtHours = (n: number) => n > 0 ? n.toFixed(2).replace(".", ",") : "—";
+
                                 return (
                                   <tr key={`${r.restaurantId}-${r.staffId}`} className="hover:bg-muted/50">
                                     <td className="py-1.5 pr-2">
                                       {r.staffName}
                                       {!ext && <span className="text-muted-foreground ml-1">(kein Match)</span>}
+                                    </td>
+                                    <td className="py-1.5 px-2 text-right tabular-nums">{fmtHours(r.hours)}</td>
+                                    <td className={`py-1.5 px-2 text-right tabular-nums ${cellClass(diffStunden)}`}>
+                                      {ext?.stunden != null ? fmtHours(ext.stunden) : "—"}
+                                    </td>
+                                    <td className="py-1.5 px-2 text-right tabular-nums">{r.hourlyRate > 0 ? fmt(r.hourlyRate) : "—"}</td>
+                                    <td className={`py-1.5 px-2 text-right tabular-nums ${cellClass(diffStundenlohn)}`}>
+                                      {ext?.stundenlohn != null ? fmt(ext.stundenlohn) : "—"}
                                     </td>
                                     <td className="py-1.5 px-2 text-right tabular-nums">{r.gross > 0 ? fmt(r.gross) : "—"}</td>
                                     <td className={`py-1.5 px-2 text-right tabular-nums ${cellClass(diffBrutto)}`}>
