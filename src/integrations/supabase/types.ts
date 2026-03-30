@@ -486,8 +486,10 @@ export type Database = {
           created_by_name: string | null
           date_from: string
           date_to: string
+          external_results: Json | null
           id: string
           label: string | null
+          pdf_path: string | null
           period_id: string
           results: Json
           sfn_mode: string
@@ -497,8 +499,10 @@ export type Database = {
           created_by_name?: string | null
           date_from: string
           date_to: string
+          external_results?: Json | null
           id?: string
           label?: string | null
+          pdf_path?: string | null
           period_id: string
           results?: Json
           sfn_mode?: string
@@ -508,8 +512,10 @@ export type Database = {
           created_by_name?: string | null
           date_from?: string
           date_to?: string
+          external_results?: Json | null
           id?: string
           label?: string | null
+          pdf_path?: string | null
           period_id?: string
           results?: Json
           sfn_mode?: string
