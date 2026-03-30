@@ -116,6 +116,8 @@ Die Personalnummer ist besonders wichtig für die Zuordnung — extrahiere sie i
                         netto: { type: "number", description: "Net salary (Netto-Gehalt) in EUR" },
                         sfn: { type: "number", description: "Tax-free SFN surcharges (steuerfreie Zuschläge) in EUR" },
                         auszahlung: { type: "number", description: "Payout amount (Auszahlungsbetrag) in EUR" },
+                        stunden: { type: "number", description: "Total hours worked (Gesamtstunden/Std.) in the period" },
+                        stundenlohn: { type: "number", description: "Hourly rate (Stundenlohn/Std.-Lohn) in EUR" },
                       },
                       required: ["name"],
                     },
