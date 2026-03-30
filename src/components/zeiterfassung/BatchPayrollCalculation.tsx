@@ -442,7 +442,7 @@ export default function BatchPayrollCalculation({
           staffName: staff.name,
           persoNr: staff.perso_nr,
           restaurantId: sr.restaurant_id,
-          restaurantName: restMap.get(sr.restaurant_id) || "Unbekannt",
+          restaurantName: (sr._restaurant_names || []).join(", ") || restMap.get(sr.restaurant_id) || "Unbekannt",
           department: sr.zt_department || "",
           hourlyRate: hrRate,
           taxClass: staff.tax_class || "I",
