@@ -875,11 +875,14 @@ export default function BatchPayrollCalculation({
                                     {/* Row 1: Own values */}
                                     <tr className="border-t border-border/50 hover:bg-muted/50">
                                       <td className="py-1.5 pr-2 align-top">
-                                        <div className="flex items-center gap-1.5">
+                                        <div className="flex items-center gap-1.5 flex-wrap">
                                           {ext && (
-                                            <span className={`inline-block h-2 w-2 rounded-full ${allMatch ? "bg-green-500" : "bg-amber-500"}`} />
+                                            <span className={`inline-block h-2 w-2 rounded-full flex-shrink-0 ${allMatch ? "bg-green-500" : "bg-amber-500"}`} />
                                           )}
                                           <span>{r.staffName}</span>
+                                          {r.restaurantName && r.restaurantName.includes(",") && (
+                                            <span className="inline-flex items-center rounded bg-accent px-1.5 py-0.5 text-[10px] font-medium text-accent-foreground">{r.restaurantName}</span>
+                                          )}
                                           {!ext && <span className="text-muted-foreground">(kein Match)</span>}
                                         </div>
                                       </td>
