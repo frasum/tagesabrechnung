@@ -1,57 +1,28 @@
 
 
-# 6 Code-Qualitäts-Verbesserungen — Umsetzungsplan
+# Fix: Seite springt nach Entsperren der Tagesabrechnung
 
-## Schritt 1: Neuer `useToggleLock` Hook + Query-Invalidierung (Punkte 1 + 5)
+## Problem
 
-**Neue Datei: `src/hooks/useToggleLock.ts`**
+Wenn der Manager auf „Zur Bearbeitung freigeben" klickt, wird `queryClient.invalidateQueries` aufgerufen. Das setzt den Query in den `fetching`-Zustand — React Query zeigt dabei kurz `undefined`/`null` für die Session-Daten, was eine Kaskade auslöst (alle abhängigen Queries wie Waiter-Shifts, Expenses usw. verlieren ihre `sessionId` und werden ebenfalls neu geladen). Das verursacht den visuellen „Sprung".
 
-Extrahiert die identische `handleToggleLock`-Logik aus allen 3 Seiten. Nutzt `useQueryClient().invalidateQueries()` statt `window.location.reload()`. Der Query-Key `['session', dateStr, restaurantId]` wird bereits von `useSession` verwendet — passt also direkt.
+## Lösung: Optimistisches Update statt Invalidierung
+
+Statt die Query zu invalidieren und neu zu laden, wird die Session-Data **direkt im Cache aktualisiert** via `queryClient.setQueryData`. So bleibt die Session die ganze Zeit im Cache und es gibt keinen kurzen `null`-Zustand.
+
+## Änderung
+
+**`src/hooks/useToggleLock.ts`** — eine Zeile ändern:
 
 ```typescript
-// Parameter: sessionId, restaurantId, userName, selectedDate
-// Returns: { handleToggleLock: (unlock: boolean) => Promise<void> }
-// Invalidiert: ['session', dateStr, restaurantId]
+// VORHER:
+queryClient.invalidateQueries({ queryKey: ['session', dateStr, restaurantId] });
+
+// NACHHER:
+queryClient.setQueryData(['session', dateStr, restaurantId], (old: any) =>
+  old ? { ...old, is_unlocked: unlock, unlocked_at: unlock ? new Date().toISOString() : null, unlocked_by_name: unlock ? (userName || null) : null } : old
+);
 ```
 
-**Geändert**: `DailySummary.tsx`, `WaiterCashUp.tsx`, `KitchenTipSplit.tsx` — `handleToggleLock` entfernen, durch Hook ersetzen.
-
----
-
-## Schritt 2: Safe JSON.parse in `Login.tsx` (Punkt 2)
-
-Zeilen 87 und 113: `JSON.parse(stored)` in try-catch wrappen. Bei Fehler → `localStorage.removeItem('spicery_auth_user')`, Variable auf `null` setzen.
-
----
-
-## Schritt 3: Session-Date-Validierung in `syncWaiterToZt.ts` (Punkt 3)
-
-Vor Zeile 155: Regex `/^\d{4}-\d{2}-\d{2}$/` prüfen + `isNaN(dateObj.getTime())`. Bei ungültigem Datum → `console.warn()`, `isSundayOrHoliday = false` setzen (Zuschläge überspringen).
-
----
-
-## Schritt 4: Time-Validierung in `shiftCalculations.ts` (Punkt 4)
-
-In `timeToMinutes`: Nach dem Split prüfen ob `h` (0–23) und `m` (0–59) gültig sind. Bei ungültigem Wert → `throw new Error(`Invalid time: ${time}`)`.
-
----
-
-## Schritt 5: `useMemo` in `RestaurantContext.tsx` (Punkt 6)
-
-Die Dedup-Logik (Zeile 100–103) liegt bereits **innerhalb der `queryFn`** von React Query — sie wird also nur bei Datenabruf ausgeführt, nicht bei jedem Render. Ein `useMemo` wäre hier technisch unnötig, da React Query das Ergebnis bereits cached. Ich werde trotzdem ein `select`-Transform auf die Query setzen, um die Intention klar zu machen.
-
----
-
-## Zusammenfassung
-
-| Datei | Änderung |
-|---|---|
-| `src/hooks/useToggleLock.ts` | **NEU** — shared Hook |
-| `src/pages/DailySummary.tsx` | handleToggleLock → useToggleLock |
-| `src/pages/WaiterCashUp.tsx` | handleToggleLock → useToggleLock |
-| `src/pages/KitchenTipSplit.tsx` | handleToggleLock → useToggleLock |
-| `src/pages/Login.tsx` | try-catch um JSON.parse |
-| `src/lib/syncWaiterToZt.ts` | Date-Validierung |
-| `src/lib/shiftCalculations.ts` | Time-Validierung |
-| `src/contexts/RestaurantContext.tsx` | Klarstellung der Dedup-Logik |
+Das ist die einzige Änderung. Die Realtime-Subscription wird die Daten ohnehin im Hintergrund synchronisieren, aber ohne den kurzen `null`-Zustand.
 
