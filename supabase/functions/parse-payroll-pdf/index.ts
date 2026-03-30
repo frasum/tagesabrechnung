@@ -72,9 +72,10 @@ serve(async (req) => {
             role: "system",
             content: `Du bist ein Experte für deutsche Lohnabrechnungen. Du extrahierst strukturierte Daten aus PDF-Lohnabrechnungen.
 Jede Seite enthält typischerweise eine individuelle Lohnabrechnung eines Mitarbeiters.
-Extrahiere für jeden Mitarbeiter: Name, Brutto-Gehalt, Netto-Gehalt, steuerfreie SFN-Zuschläge (Sonntags-/Feiertags-/Nachtzuschläge), und den Auszahlungsbetrag.
+Extrahiere für jeden Mitarbeiter: Personalnummer, Name, Brutto-Gehalt, Netto-Gehalt, steuerfreie SFN-Zuschläge (Sonntags-/Feiertags-/Nachtzuschläge), und den Auszahlungsbetrag.
 Wenn ein Wert nicht gefunden werden kann, setze ihn auf null.
-Achte besonders auf: "Gesamt-Brutto", "Netto-Verdienst"/"Netto", "steuerfreie Bezüge"/"SFN", "Auszahlung"/"Überweisungsbetrag".`,
+Achte besonders auf: "Personalnummer"/"Pers.-Nr."/"P.-Nr.", "Gesamt-Brutto", "Netto-Verdienst"/"Netto", "steuerfreie Bezüge"/"SFN", "Auszahlung"/"Überweisungsbetrag".
+Die Personalnummer ist besonders wichtig für die Zuordnung — extrahiere sie immer wenn vorhanden.`,
           },
           {
             role: "user",
@@ -108,6 +109,7 @@ Achte besonders auf: "Gesamt-Brutto", "Netto-Verdienst"/"Netto", "steuerfreie Be
                       type: "object",
                       properties: {
                         name: { type: "string", description: "Full name of the employee" },
+                        perso_nr: { type: "number", description: "Personalnummer / Pers.-Nr. / P.-Nr. des Mitarbeiters" },
                         brutto: { type: "number", description: "Gross salary (Brutto-Gehalt) in EUR" },
                         netto: { type: "number", description: "Net salary (Netto-Gehalt) in EUR" },
                         sfn: { type: "number", description: "Tax-free SFN surcharges (steuerfreie Zuschläge) in EUR" },

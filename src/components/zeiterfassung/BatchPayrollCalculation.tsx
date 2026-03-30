@@ -31,6 +31,7 @@ interface BatchResult {
 
 interface ExternalEmployee {
   name: string;
+  perso_nr: number | null;
   brutto: number | null;
   netto: number | null;
   sfn: number | null;
@@ -127,7 +128,7 @@ function normalizeName(name: string): string {
     .trim();
 }
 
-/** Match external employees to internal results by name similarity */
+/** Match external employees to internal results — primarily by perso_nr, fallback to name */
 function matchExternal(
   internalResults: BatchResult[],
   externalEmployees: ExternalEmployee[]
@@ -135,7 +136,22 @@ function matchExternal(
   const matched = new Map<string, ExternalEmployee>();
   const usedExternal = new Set<number>();
 
+  // Pass 1: Match by perso_nr (exact)
   for (const r of internalResults) {
+    if (r.persoNr == null) continue;
+    for (let i = 0; i < externalEmployees.length; i++) {
+      if (usedExternal.has(i)) continue;
+      if (externalEmployees[i].perso_nr != null && externalEmployees[i].perso_nr === r.persoNr) {
+        matched.set(r.staffId, externalEmployees[i]);
+        usedExternal.add(i);
+        break;
+      }
+    }
+  }
+
+  // Pass 2: Fallback — name matching for remaining unmatched
+  for (const r of internalResults) {
+    if (matched.has(r.staffId)) continue;
     const normInternal = normalizeName(r.staffName);
     const internalParts = normInternal.split(" ");
 
@@ -146,14 +162,12 @@ function matchExternal(
       if (usedExternal.has(i)) continue;
       const normExt = normalizeName(externalEmployees[i].name);
 
-      // Exact match
       if (normExt === normInternal) {
         bestIdx = i;
         bestScore = 100;
         break;
       }
 
-      // Partial match: check if all parts of internal name appear in external name or vice versa
       const extParts = normExt.split(" ");
       const forwardMatch = internalParts.filter(p => extParts.some(ep => ep.includes(p) || p.includes(ep))).length;
       const score = forwardMatch / Math.max(internalParts.length, extParts.length);
