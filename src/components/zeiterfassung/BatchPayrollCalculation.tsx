@@ -118,14 +118,87 @@ export default function BatchPayrollCalculation({
   calculationYear,
   calculationMonth,
   onSelectEmployee,
+  periodId,
+  periodLabel,
 }: BatchPayrollCalculationProps) {
   const { data: restaurants = [] } = useRestaurants();
+  const queryClient = useQueryClient();
   const [batchResults, setBatchResults] = useState<BatchResult[]>([]);
   const [batchCalculating, setBatchCalculating] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
   const [batchError, setBatchError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [loadedSnapshotId, setLoadedSnapshotId] = useState<string | null>(null);
 
   const isExtended = sfnMode === "extended";
+
+  // Fetch saved calculations for the current period
+  const { data: savedCalcs = [] } = useQuery({
+    queryKey: ["payroll-calculations", periodId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("payroll_calculations")
+        .select("id, label, sfn_mode, created_at, created_by_name")
+        .eq("period_id", periodId!)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!periodId,
+  });
+
+  const handleSave = useCallback(async () => {
+    if (!periodId || batchResults.length === 0) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("payroll_calculations").insert({
+        period_id: periodId,
+        sfn_mode: sfnMode,
+        date_from: dateFrom,
+        date_to: dateTo,
+        label: periodLabel || null,
+        results: batchResults as any,
+      });
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["payroll-calculations", periodId] });
+      toast.success("Berechnung gespeichert");
+    } catch (e: any) {
+      toast.error("Speichern fehlgeschlagen: " + (e.message || "Unbekannt"));
+    } finally {
+      setSaving(false);
+    }
+  }, [periodId, batchResults, sfnMode, dateFrom, dateTo, periodLabel, queryClient]);
+
+  const handleDelete = useCallback(async (id: string) => {
+    try {
+      const { error } = await supabase.from("payroll_calculations").delete().eq("id", id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["payroll-calculations", periodId] });
+      if (loadedSnapshotId === id) {
+        setLoadedSnapshotId(null);
+        setBatchResults([]);
+      }
+      toast.success("Berechnung gelöscht");
+    } catch (e: any) {
+      toast.error("Löschen fehlgeschlagen: " + (e.message || "Unbekannt"));
+    }
+  }, [periodId, loadedSnapshotId, queryClient]);
+
+  const handleLoadSnapshot = useCallback(async (id: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("payroll_calculations")
+        .select("results")
+        .eq("id", id)
+        .single();
+      if (error) throw error;
+      setBatchResults((data.results as any) || []);
+      setLoadedSnapshotId(id);
+      toast.success("Gespeicherte Berechnung geladen");
+    } catch (e: any) {
+      toast.error("Laden fehlgeschlagen: " + (e.message || "Unbekannt"));
+    }
+  }, []);
 
   const handleBatchCalculate = useCallback(async () => {
     if (!dateFrom || !dateTo) return;
