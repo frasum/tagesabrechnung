@@ -36,8 +36,10 @@ export function useToggleLock({ sessionId, restaurantId, userName, selectedDate 
 
       toast({ title: unlock ? 'Abrechnung entsperrt' : 'Abrechnung gesperrt' });
 
-      // Invalidate session query instead of full page reload
-      queryClient.invalidateQueries({ queryKey: ['session', dateStr, restaurantId] });
+      // Optimistic cache update — no flicker, no cascade
+      queryClient.setQueryData(['session', dateStr, restaurantId], (old: any) =>
+        old ? { ...old, is_unlocked: unlock, unlocked_at: unlock ? new Date().toISOString() : null, unlocked_by_name: unlock ? (userName || null) : null } : old
+      );
     } catch (error) {
       toast({ title: 'Fehler', variant: 'destructive' });
     }
