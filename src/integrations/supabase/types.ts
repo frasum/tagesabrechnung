@@ -480,6 +480,42 @@ export type Database = {
           },
         ]
       }
+      payroll_calculations: {
+        Row: {
+          created_at: string
+          created_by_name: string | null
+          date_from: string
+          date_to: string
+          id: string
+          label: string | null
+          period_id: string
+          results: Json
+          sfn_mode: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_name?: string | null
+          date_from: string
+          date_to: string
+          id?: string
+          label?: string | null
+          period_id: string
+          results?: Json
+          sfn_mode?: string
+        }
+        Update: {
+          created_at?: string
+          created_by_name?: string | null
+          date_from?: string
+          date_to?: string
+          id?: string
+          label?: string | null
+          period_id?: string
+          results?: Json
+          sfn_mode?: string
+        }
+        Relationships: []
+      }
       payroll_notes: {
         Row: {
           besonderheiten: string | null
