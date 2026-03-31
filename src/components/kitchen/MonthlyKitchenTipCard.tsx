@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCurrentMonthTips } from '@/hooks/useMonthlyStaffTips';
-import { useRestaurant } from '@/hooks/useRestaurant';
+import { useRestaurants } from '@/hooks/useRestaurant';
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value);
