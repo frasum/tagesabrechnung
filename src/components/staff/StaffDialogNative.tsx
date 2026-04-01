@@ -571,6 +571,25 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
                 </div>
               </div>
 
+              {/* Bankverbindung */}
+              <Label className="text-base font-semibold">Bankverbindung</Label>
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label htmlFor="bank-name" className="text-xs">Bankname</Label>
+                  <Input id="bank-name" value={bankName} onChange={e => setBankName(e.target.value)} placeholder="z.B. Sparkasse München" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="bank-iban" className="text-xs">IBAN</Label>
+                    <Input id="bank-iban" value={iban} onChange={e => setIban(e.target.value)} placeholder="DE89 3704 0044 0532 0130 00" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="bank-bic" className="text-xs">BIC</Label>
+                    <Input id="bank-bic" value={bic} onChange={e => setBic(e.target.value)} placeholder="COBADEFFXXX" />
+                  </div>
+                </div>
+              </div>
+
               {/* Beschäftigung */}
               <Label className="text-base font-semibold">Beschäftigung</Label>
               <div className="grid grid-cols-2 gap-3">
