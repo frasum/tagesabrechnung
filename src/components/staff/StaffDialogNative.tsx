@@ -118,6 +118,10 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
   const [workStartTime, setWorkStartTime] = useState('');
   const [employmentType, setEmploymentType] = useState('');
   const [activityDescription, setActivityDescription] = useState('');
+  // Bank fields
+  const [bankName, setBankName] = useState('');
+  const [iban, setIban] = useState('');
+  const [bic, setBic] = useState('');
 
   const { data: restaurants = [] } = useRestaurants();
   const { data: unlinkedProfiles = [], isLoading: profilesLoading } = useUnlinkedProfiles();
@@ -174,6 +178,10 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       setWorkStartTime((staff as any).work_start_time ?? '');
       setEmploymentType((staff as any).employment_type ?? '');
       setActivityDescription((staff as any).activity_description ?? '');
+      // Bank fields init
+      setBankName((staff as any).bank_name ?? '');
+      setIban((staff as any).iban ?? '');
+      setBic((staff as any).bic ?? '');
       // Build restaurantDepts from existing staff_restaurants
       const depts: Record<string, Set<string>> = {};
       for (const sr of staff.staff_restaurants ?? []) {
@@ -201,6 +209,8 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       // Sofortmeldung reset
       setAddressStreet(''); setAddressZip(''); setAddressCity('');
       setWorkStartTime(''); setEmploymentType(''); setActivityDescription('');
+      // Bank reset
+      setBankName(''); setIban(''); setBic('');
       // For new staff, select all restaurants with no departments yet
       const depts: Record<string, Set<string>> = {};
       restaurants.forEach((r) => { depts[r.id] = new Set(); });
@@ -299,6 +309,10 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
       work_start_time: workStartTime || null,
       employment_type: employmentType || null,
       activity_description: activityDescription || null,
+      // Bank
+      bank_name: bankName || null,
+      iban: iban || null,
+      bic: bic || null,
     });
 
     // Update permission level for existing staff
@@ -553,6 +567,25 @@ export function StaffDialog({ open, onOpenChange, staff, onSave, isLoading }: St
                   <div className="space-y-1">
                     <Label htmlFor="pay-city" className="text-xs">Ort</Label>
                     <Input id="pay-city" value={addressCity} onChange={e => setAddressCity(e.target.value)} placeholder="z.B. München" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Bankverbindung */}
+              <Label className="text-base font-semibold">Bankverbindung</Label>
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label htmlFor="bank-name" className="text-xs">Bankname</Label>
+                  <Input id="bank-name" value={bankName} onChange={e => setBankName(e.target.value)} placeholder="z.B. Sparkasse München" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="bank-iban" className="text-xs">IBAN</Label>
+                    <Input id="bank-iban" value={iban} onChange={e => setIban(e.target.value)} placeholder="DE89 3704 0044 0532 0130 00" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="bank-bic" className="text-xs">BIC</Label>
+                    <Input id="bank-bic" value={bic} onChange={e => setBic(e.target.value)} placeholder="COBADEFFXXX" />
                   </div>
                 </div>
               </div>

@@ -1,0 +1,1 @@
+ALTER TABLE public.staff ADD COLUMN bank_name text, ADD COLUMN iban text, ADD COLUMN bic text;

@@ -101,6 +101,10 @@ export interface Staff {
   vacation_days_current?: number | null;
   vacation_days_taken?: number | null;
   sick_days_total?: number | null;
+  // Bank fields
+  bank_name?: string | null;
+  iban?: string | null;
+  bic?: string | null;
   // Sofortmeldung fields
   address_street?: string | null;
   address_zip?: string | null;
@@ -140,6 +144,10 @@ export interface StaffInput {
   vacation_days_current?: number | null;
   vacation_days_taken?: number | null;
   sick_days_total?: number | null;
+  // Bank fields
+  bank_name?: string | null;
+  iban?: string | null;
+  bic?: string | null;
   // Sofortmeldung fields
   address_street?: string | null;
   address_zip?: string | null;

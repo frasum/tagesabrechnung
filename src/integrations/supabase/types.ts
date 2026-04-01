@@ -1087,6 +1087,8 @@ export type Database = {
           address_city: string | null
           address_street: string | null
           address_zip: string | null
+          bank_name: string | null
+          bic: string | null
           contracted_hours_per_month: number | null
           created_at: string
           date_of_birth: string | null
@@ -1096,6 +1098,7 @@ export type Database = {
           first_name: string | null
           health_insurance: string | null
           hourly_rate: number | null
+          iban: string | null
           id: string
           is_active: boolean | null
           is_minijob: boolean | null
@@ -1125,6 +1128,8 @@ export type Database = {
           address_city?: string | null
           address_street?: string | null
           address_zip?: string | null
+          bank_name?: string | null
+          bic?: string | null
           contracted_hours_per_month?: number | null
           created_at?: string
           date_of_birth?: string | null
@@ -1134,6 +1139,7 @@ export type Database = {
           first_name?: string | null
           health_insurance?: string | null
           hourly_rate?: number | null
+          iban?: string | null
           id?: string
           is_active?: boolean | null
           is_minijob?: boolean | null
@@ -1163,6 +1169,8 @@ export type Database = {
           address_city?: string | null
           address_street?: string | null
           address_zip?: string | null
+          bank_name?: string | null
+          bic?: string | null
           contracted_hours_per_month?: number | null
           created_at?: string
           date_of_birth?: string | null
@@ -1172,6 +1180,7 @@ export type Database = {
           first_name?: string | null
           health_insurance?: string | null
           hourly_rate?: number | null
+          iban?: string | null
           id?: string
           is_active?: boolean | null
           is_minijob?: boolean | null
