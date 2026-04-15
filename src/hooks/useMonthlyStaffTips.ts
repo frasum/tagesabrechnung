@@ -133,7 +133,7 @@ async function fetchMonthlyStaffTips(monthsBack: number = 12, restaurantIds?: st
     for (const [sessionId, shiftsInSession] of Object.entries(waiterShiftsBySession)) {
       // Calculate session pool: sum of all differenz values (tip contributions)
       const sessionPool = shiftsInSession.reduce((sum, s) => {
-        const expected = (s.pos_sales || 0) + (s.hilf_mahl || 0) - (s.open_invoices || 0) - (s.card_total || 0);
+        const expected = (s.kassiert_brutto || 0) + (s.hilf_mahl || 0) - (s.open_invoices || 0) - (s.card_total || 0);
         return sum + ((s.cash_handed_in || 0) - expected - (s.kitchen_tip || 0));
       }, 0);
       

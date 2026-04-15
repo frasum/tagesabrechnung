@@ -210,9 +210,9 @@ export default function WaiterCashUp() {
       });
     }
   };
-  // Calculate expected cash: pos_sales + hilf_mahl - open_invoices - card_total (matches DB generated column)
+  // Calculate expected cash: kassiert_brutto + hilf_mahl - open_invoices - card_total (accounts for table transfers)
   const calculateExpected = (shift: typeof waiterShifts[0]) => {
-    return (shift.pos_sales || 0) + (shift.hilf_mahl || 0) - (shift.open_invoices || 0) - (shift.card_total || 0);
+    return (shift.kassiert_brutto || 0) + (shift.hilf_mahl || 0) - (shift.open_invoices || 0) - (shift.card_total || 0);
   };
 
   // Calculate individual contribution to the tip pool

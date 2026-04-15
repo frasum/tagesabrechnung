@@ -591,7 +591,7 @@ export function useWaiterTipAverages(restaurantId: string | null) {
           if (!shift.participates_in_pool) continue;
 
           const posSales = shift.pos_sales || 0;
-          const expected = (shift.pos_sales || 0) + (shift.hilf_mahl || 0) - (shift.open_invoices || 0) - (shift.card_total || 0);
+          const expected = (shift.kassiert_brutto || 0) + (shift.hilf_mahl || 0) - (shift.open_invoices || 0) - (shift.card_total || 0);
           const totalTip = (shift.cash_handed_in || 0) - expected; // before kitchen deduction
           
           // Primary waiter

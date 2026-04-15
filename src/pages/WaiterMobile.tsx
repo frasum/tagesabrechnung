@@ -77,9 +77,9 @@ export default function WaiterMobile() {
     }
   }, [myShift, shiftsLoading]);
 
-  // Calculate expected cash (uses pos_sales to match DB generated column)
+  // Calculate expected cash (uses kassiert_brutto = actual amount collected, accounts for table transfers)
   const expectedCash = useMemo(() => {
-    return formData.pos_sales + formData.hilf_mahl - formData.open_invoices - formData.card_total;
+    return formData.kassiert_brutto + formData.hilf_mahl - formData.open_invoices - formData.card_total;
   }, [formData]);
 
   // Calculate kitchen tip (2% of POS sales)

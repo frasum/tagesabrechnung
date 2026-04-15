@@ -247,9 +247,9 @@ export default function DailySummary() {
     + formData.wolt_revenue
     + formData.takeaway_total;
   
-  // Waiter tip pool calculation (uses pos_sales to match DB generated column)
+  // Waiter tip pool calculation (uses kassiert_brutto = actual amount collected, accounts for table transfers)
   const calculateExpected = (w: typeof waiterShifts[0]) => 
-    (w.pos_sales || 0) + (w.hilf_mahl || 0) - (w.open_invoices || 0) - (w.card_total || 0);
+    (w.kassiert_brutto || 0) + (w.hilf_mahl || 0) - (w.open_invoices || 0) - (w.card_total || 0);
   const waiterTipPool = waiterShifts.reduce((sum, w) => 
     sum + ((w.cash_handed_in || 0) - calculateExpected(w) - (w.kitchen_tip || 0)), 0);
   

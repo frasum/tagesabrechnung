@@ -66,7 +66,7 @@ export function useWaiterRanking() {
         for (const shift of sessionShifts) {
           const key = waiterKey(shift);
           const sales = shift.pos_sales || 0;
-          const expected = (shift.pos_sales || 0) + (shift.hilf_mahl || 0) - (shift.open_invoices || 0) - (shift.card_total || 0);
+          const expected = (shift.kassiert_brutto || 0) + (shift.hilf_mahl || 0) - (shift.open_invoices || 0) - (shift.card_total || 0);
           const totalTip = (shift.cash_handed_in || 0) - expected;
           const tipPercent = sales > 0 ? (totalTip / sales) * 100 : 0;
 
