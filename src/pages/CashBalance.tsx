@@ -63,7 +63,7 @@ export default function CashBalance() {
   const cumulativeDeposits = useMemo(() => {
     if (!deposits || !selectedMonth) return 0;
     return deposits
-      .filter((d) => d.deposit_date <= `${selectedMonth}-31`)
+      .filter((d) => d.deposit_date.startsWith(selectedMonth))
       .reduce((sum, d) => sum + d.amount, 0);
   }, [deposits, selectedMonth]);
 
