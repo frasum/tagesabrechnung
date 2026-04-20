@@ -1,0 +1,1 @@
+UPDATE public.staff SET is_active = true WHERE LOWER(name) = 'lasse';
