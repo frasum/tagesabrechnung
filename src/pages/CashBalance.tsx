@@ -67,13 +67,18 @@ export default function CashBalance() {
       .reduce((sum, d) => sum + d.amount, 0);
   }, [deposits, selectedMonth]);
 
-  // Carry-over from all days BEFORE the selected month (within the loaded data window)
+  // Carry-over into the selected month: cash from prior days minus deposits already made in prior months
   const previousMonthCarryOver = useMemo(() => {
     if (!data || !selectedMonth) return 0;
-    return data
-      .filter((row) => row.date < `${selectedMonth}-01`)
+    const monthStart = `${selectedMonth}-01`;
+    const priorCash = data
+      .filter((row) => row.date < monthStart)
       .reduce((sum, row) => sum + (row.rawBargeld ?? row.bargeld), 0);
-  }, [data, selectedMonth]);
+    const priorDeposits = (deposits || [])
+      .filter((d) => d.deposit_date < monthStart)
+      .reduce((sum, d) => sum + d.amount, 0);
+    return priorCash - priorDeposits;
+  }, [data, deposits, selectedMonth]);
 
   // Get month label for display
   const selectedMonthLabel = useMemo(() => {
