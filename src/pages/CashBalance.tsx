@@ -189,7 +189,8 @@ export default function CashBalance() {
           totalCash={cumulativeCash}
           totalDeposits={cumulativeDeposits}
           pettyCash={pettyCash}
-          wechselgeldbestand={pettyCash + cumulativeCash}
+          wechselgeldbestand={pettyCash + cumulativeCash + previousMonthCarryOver}
+          carryOverFromPreviousMonth={previousMonthCarryOver}
           latestDeposit={latestDeposit}
           monthLabel={selectedMonthLabel}
           onAddDeposit={() => setDepositDialogOpen(true)}
