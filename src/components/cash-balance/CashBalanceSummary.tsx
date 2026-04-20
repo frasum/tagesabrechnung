@@ -52,7 +52,7 @@ export function CashBalanceSummary({
 
             <div className="space-y-3">
                 <PettyCashSetting />
-                <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                      <p className="text-sm text-muted-foreground">
                        {monthLabel ? `Bargeld im ${monthLabel}` : 'Bargeld gesamt'}
