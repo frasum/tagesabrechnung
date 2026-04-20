@@ -18,6 +18,7 @@ interface CashBalanceSummaryProps {
   totalDeposits: number;
   pettyCash: number;
   wechselgeldbestand: number;
+  carryOverFromPreviousMonth?: number;
   latestDeposit: { deposit_date: string; amount: number } | null;
   monthLabel?: string;
   onAddDeposit: () => void;
@@ -28,11 +29,12 @@ export function CashBalanceSummary({
   totalDeposits,
   pettyCash,
   wechselgeldbestand,
+  carryOverFromPreviousMonth = 0,
   latestDeposit,
   monthLabel,
   onAddDeposit,
 }: CashBalanceSummaryProps) {
-  const remainingCash = pettyCash + totalCash - totalDeposits;
+  const remainingCash = pettyCash + totalCash + carryOverFromPreviousMonth - totalDeposits;
 
   return (
     <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
