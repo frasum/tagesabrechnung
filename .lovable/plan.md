@@ -1,32 +1,59 @@
 
 
-# YUM Übertrag aus Vormonat auf −141 € korrigieren
-
-## Aktueller Stand
-- Berechneter Übertrag (vor 01.04.2026): **−281,36 €**
-- Gewünschter Übertrag: **−141,00 €**
-- Fehlbetrag im System: **140,36 €** zu wenig Bargeld
+# Bug: „Übertrag aus Vormonat" zeigt 10.228,43 € statt −141,00 €
 
 ## Ursache
-Es fehlt eine Bareinlage / Tresor-Übertrag von **140,36 €** in der Historie vor April 2026.
 
-## Lösung
-Einen `register_transfers`-Eintrag mit Richtung `to_restaurant` (erhöht Bargeld im Restaurant) anlegen:
+In `src/pages/CashBalance.tsx` (Zeilen 70–81) wird der Übertrag **selbst neu berechnet**, statt den korrekten Wert aus der DB-Funktion `compute_carry_over` zu verwenden:
 
-| Feld | Wert |
-|---|---|
-| restaurant_id | `3065f458-…` (YUM) |
-| transfer_date | `2026-03-31` |
-| amount | `140.36` |
-| direction | `to_restaurant` |
-| reason | „Korrektur Übertragsabgleich März 2026" |
-| created_by_name | `System` |
+```ts
+const priorCash = data
+  .filter((row) => row.date < monthStart)
+  .reduce((sum, row) => sum + (row.rawBargeld ?? row.bargeld), 0);
+const priorDeposits = (deposits || [])
+  .filter((d) => d.deposit_date < monthStart)
+  .reduce((sum, d) => sum + d.amount, 0);
+return priorCash - priorDeposits;
+```
 
-## Ergebnis nach Insert
-- Übertrag aus Vormonat im April 2026: **−141,00 €** ✅
-- Tageswerte bleiben unverändert
-- Keine Code- oder Schema-Änderungen
+Diese Berechnung ist aus zwei Gründen falsch:
 
-## Alternative
-Falls der Betrag stattdessen als **Bankeinzahlung** (`bank_deposits`) verbucht werden soll, würde das den Übertrag in die *falsche* Richtung verschieben (auf −421,72 €). Daher ist `register_transfers / to_restaurant` der korrekte Weg. Sag Bescheid, falls du ein anderes Datum (z. B. innerhalb März verteilt) oder eine andere Begründung möchtest.
+1. **Fehlender historischer Übertrag vor dem Datenfenster**: `useCashBalanceData` lädt Sessions nur für die letzten 6 Monate (ab 20.10.2025). Der Übertrag, der sich vor diesem Fenster angesammelt hat (z. B. die −141 € aus der Korrekturbuchung am 31.03.2026 sowie alle früheren Sessions/Transfers/Deposits), fließt nicht ein.
+2. **Bei YUM existieren 0 Bankeinzahlungen** in `bank_deposits` (alles wurde historisch über `register_transfers` abgewickelt). Dadurch wird das gesamte aufgelaufene Bargeld der Sessions seit Februar 2026 (~10.228 €) als „Übertrag" angezeigt, obwohl es regelmäßig physisch in den Tresor/zur Bank gebracht wurde.
+
+Die korrekte serverseitige Funktion `compute_carry_over('YUM', '2026-04-01')` liefert dagegen genau **−141,00 €** – das ist der wahre Wert.
+
+## Fix
+
+**Datei:** `src/pages/CashBalance.tsx`
+
+`previousMonthCarryOver` nicht länger im Frontend aus `data`/`deposits` berechnen, sondern direkt per RPC `compute_carry_over` ermitteln (genau dieselbe Funktion, die bereits in `useCashBalanceData` für den Tageswert verwendet wird).
+
+### Konkret
+
+1. Neuer Hook-Aufruf in `CashBalance.tsx`:
+   ```ts
+   const { data: carryOver = 0 } = useQuery({
+     queryKey: ['cash-carry-over', restaurantId, selectedMonth],
+     queryFn: async () => {
+       const { data, error } = await supabase.rpc('compute_carry_over', {
+         p_restaurant_id: restaurantId,
+         p_before_date: `${selectedMonth}-01`,
+       });
+       if (error) throw error;
+       return Number(data) || 0;
+     },
+     enabled: !!restaurantId && !!selectedMonth,
+   });
+   ```
+2. Den bisherigen `previousMonthCarryOver`-`useMemo`-Block (Zeilen 70–81) entfernen.
+3. Übergabe an `<CashBalanceSummary>` (Zeilen 197–198) auf `carryOver` umstellen.
+
+## Ergebnis
+
+YUM zeigt im April **−141,00 €** als „Übertrag aus Vormonat" (statt 10.228,43 €). Spicery und alle anderen Restaurants bleiben korrekt, weil dort nun ebenfalls die autoritative DB-Funktion verwendet wird – die alle historischen Sessions, Bankeinzahlungen und Tresor-Transfers vollständig berücksichtigt, unabhängig vom 6-Monats-Ladefenster.
+
+## Keine weiteren Änderungen
+- Keine DB-Migration
+- Keine Logikänderung der Tageszeilen oder von „Gesamt verfügbar"
 
