@@ -8,7 +8,8 @@ import {
   Home,
   Shield,
   ChefHat,
-  Palette
+  Palette,
+  ClipboardCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -89,6 +90,14 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
       >
         <Palette className={iconClasses('/skill-settings')} />
         Farben
+      </Link>
+      <Link
+        to="/checklist"
+        onClick={onClickLink}
+        className={linkClasses('/checklist')}
+      >
+        <ClipboardCheck className={iconClasses('/checklist')} />
+        Checkliste
       </Link>
     </>
   );
