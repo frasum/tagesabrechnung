@@ -20,7 +20,8 @@ import {
   MessageCircle,
   CalendarDays,
   Palette,
-  ShieldCheck
+  ShieldCheck,
+  ClipboardCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -71,6 +72,7 @@ const adminNavItems: NavItem[] = [
   { path: '/sofortmeldung', label: 'Sofortmeldung', icon: ShieldCheck, minLevel: 'admin' },
   { path: '/telegram', label: 'Telegram', icon: Send, minLevel: 'admin' },
   { path: '/skill-settings', label: 'Farben', icon: Palette, minLevel: 'admin' },
+  { path: '/checklist', label: 'Checkliste', icon: ClipboardCheck, minLevel: 'admin' },
   { path: 'chat', label: 'Chat', icon: MessageCircle, minLevel: 'admin' },
 ];
 
@@ -78,7 +80,7 @@ const navGroups: NavGroup[] = [
   { label: 'Tagesgeschäft', paths: ['', 'kitchen', 'summary', 'zeiterfassung', 'qr-poster'] },
   { label: 'Auswertung', paths: ['statistics', 'history', 'cash-balance'] },
   { label: 'Planung', paths: ['dienstplan', '/kueche-plan'] },
-  { label: 'Verwaltung', paths: ['/staff', '/sofortmeldung', '/telegram', '/skill-settings', 'chat'], adminOnly: true },
+  { label: 'Verwaltung', paths: ['/staff', '/sofortmeldung', '/telegram', '/skill-settings', '/checklist', 'chat'], adminOnly: true },
 ];
 
 export function AppLayout({ children }: AppLayoutProps) {
