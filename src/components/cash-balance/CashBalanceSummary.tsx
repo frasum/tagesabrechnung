@@ -65,14 +65,14 @@ export function CashBalanceSummary({
                      <Separator orientation="horizontal" className="sm:hidden mb-2" />
                      <p className="text-sm text-muted-foreground">Übertrag aus Vormonat</p>
                      <p className={`text-xl font-semibold tabular-nums ${carryOverFromPreviousMonth >= 0 ? 'text-success' : 'text-destructive'}`}>
-                       {carryOverFromPreviousMonth >= 0 ? '+' : ''}{formatCurrency(carryOverFromPreviousMonth)}
+                       {formatCurrency(carryOverFromPreviousMonth)}
                      </p>
                    </div>
                   <div>
                     <Separator orientation="horizontal" className="sm:hidden mb-2" />
                     <p className="text-sm text-muted-foreground">Gesamt verfügbar</p>
                     <p className={`text-xl font-semibold tabular-nums ${(totalCash + carryOverFromPreviousMonth) >= 0 ? 'text-success' : 'text-destructive'}`}>
-                      {(totalCash + carryOverFromPreviousMonth) >= 0 ? '+' : ''}{formatCurrency(totalCash + carryOverFromPreviousMonth)}
+                      {formatCurrency(totalCash + carryOverFromPreviousMonth)}
                     </p>
                   </div>
                   <div>
