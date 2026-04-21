@@ -1,51 +1,129 @@
 
+## Bargeld-Logik auf beiden Seiten vereinheitlichen
 
-# Falscher "Fehlbetrag Vortag" durch doppelte Korrekturbuchung
+## Problem
+Auf der Tagesabrechnung ist die Logik aktuell nicht konsistent mit der Bargeldbestand-Seite. Deshalb erscheinen Werte wie:
 
-## Was du siehst
-Auf der Tagesabrechnung wird **„Fehlbetrag Vortag: −6.971,35 €"** angezeigt. Das ist sachlich falsch — das tatsächliche Bargeld war zum 31.03. **+2.866 €** (inkl. 2.000 € Wechselgeld).
+- „Fehlbetrag Vortag“ zu hoch
+- „Differenz zum Wechselgeldbestand“ als falsche Zahl
+- „Wechselgeldbestand (soll ist 2000 €)“ ebenfalls falsch
 
-## Ursache: Doppelte Verbuchung am 31.03.2026
+Der Screenshot zeigt genau diese Folgefehler: Die Seite rechnet mit einem falschen Vortagsübertrag weiter.
 
-In `register_transfers` existieren für den **31.03.2026** zwei manuelle Buchungen, die sich überlagern:
+## Hauptursache
+Die Bargeldberechnung ist derzeit auf mehrere Stellen verteilt und widersprüchlich:
 
-| Datum | Betrag | Richtung | Grund |
-|---|---|---|---|
-| 31.03. | +866,00 € | to_restaurant | „Anfangsbestand-Korrektur 2.866 € inkl. 2.000 € Wechselgeld" (gestern angelegt) |
-| 31.03. | **−8.940,93 €** | to_safe | „Korrektur Übertragsabgleich März 2026" |
+1. `compute_carry_over` berücksichtigt nur `sessions` und `register_transfers`, aber **keine `bank_deposits`**.
+2. `compute_carry_over` kappt positive Überträge weiterhin auf `0`, obwohl laut Projektlogik **positive und negative Salden weitergeführt** werden sollen.
+3. `useRemainingCash` simuliert den Kassenbestand lokal neu, aber **ohne Bankeinzahlungen, ohne Transfers und ohne vollständigen Vorlauf**.
+4. `CashBalanceSummary` berechnet `wechselgeldbestand={pettyCash + cumulativeCash}` und ignoriert dabei ebenfalls Bankeinzahlungen.
+5. Die Tagesseite zeigt bei „Differenz zum Wechselgeldbestand“ aktuell faktisch den verketteten Bargeldwert statt der echten Differenz zum Soll-Wechselgeld.
 
-Zusätzlich gibt es am **31.03.** eine **Bankeinzahlung von 8.940,93 €** in `bank_deposits`.
+## Ziel
+Eine einzige, konsistente Bargeldlogik für:
 
-→ Der Übertragsabgleich von **−8.940,93 €** wurde **doppelt erfasst**: einmal als `register_transfers` (to_safe) und einmal als reguläre `bank_deposits`. Beide werden in der Bargeld-Kette abgezogen.
+- Bargeldbestand-Seite
+- Tagesabrechnung
+- Fehlbetrag Vortag
+- Wechselgeldbestand
+- Abschöpfung / „in den Tresor legen“
 
-Effektrechnung am 31.03.:
-- Tages-Bargeld 31.03. (geschätzt): ca. **+1.970 €**
-- + 866 € (Korrektur Anfangsbestand) ✓ richtig
-- − 8.940,93 € (Transfer to_safe) ✗ doppelt
-- (Bankeinzahlung 8.940,93 € wirkt zusätzlich in der Summary-Karte)
-- Carry-Over zum 01.04.: **≈ −6.104 €** (passt zu den −6.971 €, die du siehst, nach weiteren Effekten)
+## Umsetzung
 
-## Lösung
+### 1. Serverseitige Bargeld-Kette korrigieren
+Die Backend-Funktion für den Übertrag wird so angepasst, dass sie alle Bargeld-bewegenden Ereignisse pro Tag berücksichtigt:
 
-Den **fälschlich doppelt erfassten Transfer** vom 31.03. löschen. Die Bankeinzahlung von 8.940,93 € bleibt korrekt bestehen, da Bankeinzahlungen ohnehin separat in der Summary-Karte abgezogen werden.
+- Tages-Bargeld aus `sessions`
+- Kassentransfers aus `register_transfers`
+- Bankeinzahlungen aus `bank_deposits`
+- Startwert aus `initial_cash_deficit`
 
-### SQL-Bereinigung
+Dabei wird die Tageskette vollständig berechnet, statt positive Salden auf 0 abzuschneiden.
 
-```sql
-DELETE FROM register_transfers
-WHERE restaurant_id = 'a1710390-ea4d-4bc2-b869-c0c047056b15'
-  AND transfer_date = '2026-03-31'
-  AND direction = 'to_safe'
-  AND amount = 8940.93
-  AND reason = 'Korrektur Übertragsabgleich März 2026';
-```
+### 2. Einheitliches Tagesmodell erzeugen
+Die gemeinsame Datengrundlage für jeden Tag soll diese Werte liefern:
 
-## Erwartetes Ergebnis nach Bereinigung
+- `rawBargeld` = reines Tages-Bargeld
+- `transferEffect`
+- `depositEffect`
+- `balanceBeforeSkim`
+- `skimAmount`
+- `remainingCash`
+- `previousDeficit`
 
-- Carry-Over zum 01.04.: **0 €** (oder leicht positiv) — kein „Fehlbetrag Vortag" mehr
-- „Differenz zum Wechselgeldbestand" und „Wechselgeldbestand (soll 2.000 €)" zeigen wieder plausible Werte
-- 866 € Anfangsbestand-Korrektur bleibt korrekt aktiv
+So greifen beide Seiten auf dieselbe Wahrheit zu.
 
-## Hinweis
-Die `compute_carry_over`-Logik selbst funktioniert korrekt — es handelt sich um einen **Datenfehler**, keinen Formelfehler. Die DELETE-Operation benötigt deine Freigabe und wird über eine Migration ausgeführt.
+### 3. `useCashBalanceData` auf die korrigierte Logik umstellen
+Der Hook wird so umgebaut, dass er nicht mehr eine unvollständige Client-Kette nachbildet, sondern die korrigierte Bargeldlogik verwendet.
 
+Damit verschwinden Abweichungen zwischen:
+
+- Tabelle „Bargeldbestand“
+- Summary-Karten
+- Tagesabrechnung
+
+### 4. `usePreviousDayDeficit` vereinfachen
+Der Hook soll den Vortags-Fehlbetrag direkt aus dem einheitlichen Tagesmodell beziehen, statt indirekt aus einer unvollständigen Kette.
+
+Ergebnis:
+- „Fehlbetrag Vortag“ wird auf beiden Seiten identisch.
+
+### 5. `useRemainingCash` ersetzen
+Die lokale Neusimulation wird entfernt bzw. auf das gemeinsame Tagesmodell umgestellt.
+
+Dann werden korrekt berücksichtigt:
+
+- historischer Übertrag
+- Bankeinzahlungen
+- Tresor-/Kassentransfers
+- Abschöpfung auf Wechselgeldbestand
+
+### 6. Tagesabrechnung-Anzeige korrigieren
+In `DailySummary` / `ExcelLayout` werden die Kennzahlen semantisch richtig befüllt:
+
+- „Tages-Bargeld“ = nur heutiger Tageswert
+- „Fehlbetrag Vortag“ = echter negativer Übertrag vom Vortag
+- „Differenz zum Wechselgeldbestand“ = tatsächliche Abweichung gegenüber Soll-Wechselgeld
+- „Wechselgeldbestand (soll ist 2000 €)“ = echter verbleibender Kassenbestand nach Tageseffekten
+
+### 7. Bargeldbestand-Summary korrigieren
+`CashBalanceSummary` wird so angepasst, dass der angezeigte Wechselgeldbestand nicht mehr aus `pettyCash + cumulativeCash` kommt, sondern aus dem tatsächlich verbleibenden Bargeld nach Einzahlungen.
+
+### 8. Datenaktualisierung sauber machen
+Nach Änderungen an:
+
+- Bankeinzahlungen
+- Anfangsfehlbetrag
+- Transfers
+
+werden alle relevanten Queries gezielt invalidiert, damit keine alten Werte hängen bleiben.
+
+## Prüfung nach Umsetzung
+Für Spicery werden gezielt diese Daten geprüft:
+
+- 31.03.2026
+- 01.04.2026
+- der im Screenshot gezeigte Tag
+
+Dabei wird kontrolliert:
+
+- 866 € Korrekturbuchung ist enthalten
+- die historische Bankeinzahlung wirkt nur einmal und korrekt
+- „Fehlbetrag Vortag“ passt rechnerisch
+- „Differenz zum Wechselgeldbestand“ ist nicht mehr identisch mit einem falschen Kettenwert
+- „Wechselgeldbestand“ entspricht dem realen Kassenbestand
+
+## Technische Details
+Betroffene Stellen:
+
+- `supabase/migrations/...` für die korrigierte Bargeldfunktion
+- `src/hooks/useCashBalanceData.ts`
+- `src/hooks/usePreviousDayDeficit.ts`
+- `src/hooks/useRemainingCash.ts`
+- `src/pages/DailySummary.tsx`
+- `src/components/daily-summary/layouts/ExcelLayout.tsx`
+- `src/pages/CashBalance.tsx`
+- `src/components/cash-balance/CashBalanceSummary.tsx`
+
+## Erwartetes Ergebnis
+Nach der Korrektur zeigen beide Seiten dieselben, plausiblen Bargeldwerte. Der Fehlbetrag vom Vortag läuft korrekt weiter, Bankeinzahlungen werden sauber abgezogen, und der Wechselgeldbestand zeigt wieder den echten Kassenstand statt eines Formelfehlers.
