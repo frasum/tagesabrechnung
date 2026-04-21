@@ -35,9 +35,9 @@ export function useRemainingCash(restaurantId: string | null, selectedDate: Date
     // Suggested skim for today: amount above the petty cash target on today only
     let todaySkimAmount = 0;
     const todayRow = cashRows.find(r => r.date === dateStr);
-    if (todayRow && todayRow.bargeld > 0) {
-      // Skim only the surplus beyond what's already deposited / required
-      todaySkimAmount = Math.max(0, todayRow.bargeld - todayRow.depositEffect);
+    if (todayRow && todayRow.chainedBargeld > 0) {
+      // Skim only the surplus beyond what's already deposited today
+      todaySkimAmount = Math.max(0, todayRow.chainedBargeld - todayRow.depositEffect);
     }
 
     return { remainingCash, todaySkimAmount, totalSkimmed: 0 };

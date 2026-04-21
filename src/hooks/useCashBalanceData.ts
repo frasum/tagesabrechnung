@@ -17,15 +17,20 @@ export interface CashBalanceRow {
   ausgaben: number;
   /** Pure daily cash for the day (without any carry-over), including transferEffect */
   rawBargeld: number;
-  /** Cumulative chained cash including previous deficit/surplus */
+  /**
+   * Backwards-compatible per-day cash value (equal to rawBargeld).
+   * Used by exports that sum daily values without chaining.
+   */
   bargeld: number;
   /** Net effect of register transfers on this day */
   transferEffect: number;
   /** Net effect of bank deposits on this day (always >= 0, subtracted from cash) */
   depositEffect: number;
-  /** Carry-over (positive or negative) from previous day */
+  /** Carry-over (positive or negative) from previous day, after deposits */
   previousCarry: number;
-  /** Cumulative balance after all daily effects (cash chain incl. deposits) */
+  /** Daily chained cash before bank deposits (= rawBargeld + previousCarry) */
+  chainedBargeld: number;
+  /** Cumulative balance after all daily effects incl. deposits (single source of truth) */
   remainingCash: number;
 }
 
@@ -164,8 +169,8 @@ export function useCashBalanceData(restaurantId: string | null, fromDate?: strin
 
         const previousCarry = carryOver;
         const rawBargeld = dailyCash + transferEffect;
-        const bargeld = rawBargeld + previousCarry;
-        const remainingCash = bargeld - depositEffect;
+        const chainedBargeld = rawBargeld + previousCarry;
+        const remainingCash = chainedBargeld - depositEffect;
 
         // Chain forward (positive AND negative)
         carryOver = remainingCash;
@@ -184,10 +189,12 @@ export function useCashBalanceData(restaurantId: string | null, fromDate?: strin
           vorschuss,
           ausgaben: totalExpenses,
           rawBargeld,
-          bargeld,
+          // Keep legacy `bargeld` semantics for exports = pure daily (no carry)
+          bargeld: rawBargeld,
           transferEffect,
           depositEffect,
           previousCarry,
+          chainedBargeld,
           remainingCash,
         };
       });
