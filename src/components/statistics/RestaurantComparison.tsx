@@ -117,7 +117,7 @@ export function RestaurantComparison({ restaurants }: RestaurantComparisonProps)
     const dA = sa.daysWithData || 1;
     const dB = sb.daysWithData || 1;
     return [
-      { label: 'Gesamtumsatz', valA: sa.totalRevenue, valB: sb.totalRevenue },
+      { label: 'Kellner-Umsatz (Σ Schichten)', valA: sa.totalRevenue, valB: sb.totalRevenue },
       { label: 'Ø Tagesumsatz', valA: sa.avgDailyRevenue, valB: sb.avgDailyRevenue },
       { label: 'Küchen Trinkgeld', valA: sa.totalKitchenTip, valB: sb.totalKitchenTip },
       { label: 'Service Trinkgeld', valA: sa.totalWaiterTip, valB: sb.totalWaiterTip },
@@ -153,7 +153,7 @@ export function RestaurantComparison({ restaurants }: RestaurantComparisonProps)
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div className="text-center">
-              <span className="text-[11px] text-muted-foreground">Gesamtumsatz</span>
+              <span className="text-[11px] text-muted-foreground">Kellner-Umsatz</span>
               <div className="text-lg font-bold tabular-nums text-foreground">{formatCurrency(totalSummary.totalRevenue)}</div>
             </div>
             <div className="text-center">

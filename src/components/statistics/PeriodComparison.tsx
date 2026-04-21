@@ -114,7 +114,7 @@ export function PeriodComparison({ data }: PeriodComparisonProps) {
         </div>
 
         <MetricRow
-          label="Gesamtumsatz"
+          label="Kellner-Umsatz (Σ Schichten)"
           current={data.current.totalRevenue}
           previous={data.previous.totalRevenue}
           change={data.changes.revenue}
