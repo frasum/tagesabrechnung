@@ -51,19 +51,23 @@ export default function CashBalance() {
   const [pdfPreview, setPdfPreview] = useState<{ blobUrl: string; fileName: string } | null>(null);
   const [depositDialogOpen, setDepositDialogOpen] = useState(false);
 
-  // Simple sum of daily cash values (matches GESAMT row in table)
+  // Sum of daily cash values for the SELECTED MONTH only (matches GESAMT row in table)
   const cumulativeCash = useMemo(() => {
     if (!data || !selectedMonth) return 0;
+    const monthStart = `${selectedMonth}-01`;
+    const monthEnd = `${selectedMonth}-31`;
     return data
-      .filter((row) => row.date <= `${selectedMonth}-31`)
+      .filter((row) => row.date >= monthStart && row.date <= monthEnd)
       .reduce((sum, row) => sum + (row.rawBargeld ?? row.bargeld), 0);
   }, [data, selectedMonth]);
 
-  // Calculate cumulative deposits up to selected month
+  // Sum of bank deposits for the SELECTED MONTH only
   const cumulativeDeposits = useMemo(() => {
     if (!deposits || !selectedMonth) return 0;
+    const monthStart = `${selectedMonth}-01`;
+    const monthEnd = `${selectedMonth}-31`;
     return deposits
-      .filter((d) => d.deposit_date <= `${selectedMonth}-31`)
+      .filter((d) => d.deposit_date >= monthStart && d.deposit_date <= monthEnd)
       .reduce((sum, d) => sum + d.amount, 0);
   }, [deposits, selectedMonth]);
 

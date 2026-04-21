@@ -53,7 +53,7 @@ export function CashBalanceSummary({
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                   <div>
                      <p className="text-sm text-muted-foreground">
-                       {monthLabel ? `Bargeld bis ${monthLabel}` : 'Bargeld gesamt'}
+                       {monthLabel ? `Bargeld im ${monthLabel}` : 'Bargeld gesamt'}
                      </p>
                      <p className={`text-xl font-semibold tabular-nums ${totalCash >= 0 ? 'text-success' : 'text-destructive'}`}>
                        {formatCurrency(totalCash)}
@@ -62,7 +62,7 @@ export function CashBalanceSummary({
                   <div>
                     <p className="text-sm text-muted-foreground flex items-center gap-1">
                       <Landmark className="h-3 w-3" />
-                      Bankeinzahlungen
+                      {monthLabel ? `Bankeinzahlungen im ${monthLabel}` : 'Bankeinzahlungen'}
                     </p>
                     <p className="text-xl font-semibold tabular-nums text-destructive">
                       -{formatCurrency(totalDeposits)}
@@ -70,7 +70,9 @@ export function CashBalanceSummary({
                   </div>
                    <div>
                       <Separator orientation="horizontal" className="sm:hidden mb-2" />
-                      <p className="text-sm text-muted-foreground font-medium">Verbleibendes Bargeld</p>
+                      <p className="text-sm text-muted-foreground font-medium">
+                        {monthLabel ? `Saldo ${monthLabel} (vereinfacht)` : 'Verbleibendes Bargeld'}
+                      </p>
                       <p className={`text-2xl font-bold tabular-nums ${remainingCash >= 0 ? 'text-success' : 'text-destructive'}`}>
                         {formatCurrency(remainingCash)}
                       </p>
