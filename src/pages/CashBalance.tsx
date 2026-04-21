@@ -306,6 +306,8 @@ export default function CashBalance() {
                     <TableHead className="text-right min-w-[90px]">Offene RE</TableHead>
                     <TableHead className="text-right min-w-[90px]">Vorschuss</TableHead>
                     <TableHead className="text-right min-w-[90px]">Ausgaben</TableHead>
+                    {showSonstige && <TableHead className="text-right min-w-[100px]">Sonst. Einn.</TableHead>}
+                    {showTransfer && <TableHead className="text-right min-w-[110px]">Kassentransfer</TableHead>}
                     <TableHead className="text-right min-w-[110px] font-bold">Bargeld</TableHead>
                   </TableRow>
                 </TableHeader>
