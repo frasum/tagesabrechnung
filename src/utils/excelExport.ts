@@ -81,18 +81,18 @@ export function generateCashBalanceExcel({ rows, deposits, month, year, restaura
   rows.forEach((row) => {
     wsData.push([
       formatDateShort(row.date),
-      row.kellnerUmsatz,
-      row.kreditkarten,
-      row.ordersmart,
-      row.wolt,
-      row.gutscheineEL,
-      ...(showFinedine ? [row.finedine] : []),
-      row.gutscheineVK,
-      row.einladung,
-      row.offeneRE,
-      row.vorschuss,
-      row.ausgaben,
-      row.rawBargeld,
+      n(row.kellnerUmsatz),
+      n(row.kreditkarten),
+      n(row.ordersmart),
+      n(row.wolt),
+      n(row.gutscheineEL),
+      ...(showFinedine ? [n(row.finedine)] : []),
+      n(row.gutscheineVK),
+      n(row.einladung),
+      n(row.offeneRE),
+      n(row.vorschuss),
+      n(row.ausgaben),
+      n(row.rawBargeld),
     ]);
   });
 
