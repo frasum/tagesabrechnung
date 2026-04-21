@@ -1,92 +1,40 @@
 
 
-# Tagesabrechnung: Wechselgeldbestand-Logik korrigieren
+# „Bargeld bis April 2026" auf den ausgewählten Monat einschränken
 
-## Was du siehst (Spicery, 21.04.)
-- Tages-Bargeld: **−200 €** (nur Vorschuss)
-- Differenz zum Wechselgeldbestand: **+3.261,96 €** ❌
-- Bargeld in den Tresor legen: **3.261,96 €** ❌
-- Wechselgeldbestand: **5.261,96 €** ❌
+## Problem
+Die Karte **„Bargeld bis April 2026"** zeigt aktuell die kumulierte Summe **aller Tage bis zum Monatsende** (also auch alle Vormonate). Du willst stattdessen nur die **Tageswerte vom 01.04. bis 30.04.2026** aufaddieren.
 
-## Was korrekt wäre
-- Tages-Bargeld: −200 € ✓
-- Differenz zum Wechselgeldbestand: **−200 €** (Fehlbetrag, da heute nur Ausgang)
-- Bargeld in den Tresor legen: **0 €** (kein Überschuss zum Skimmen)
-- Wechselgeldbestand: **1.800 €** (2000 − 200)
+Dasselbe gilt analog für die Karte **„Bankeinzahlungen"** — auch dort werden aktuell alle Einzahlungen bis Monatsende summiert.
 
-## Ursache
-Die Tagesabrechnung mischt heute zwei Dinge in einer Zahl:
-1. den **heutigen Bargeldeffekt** (−200 €)
-2. den **gesamten historischen Übertrag** (+3.461,96 € aus alten Überschüssen)
+## Lösung
+In `src/pages/CashBalance.tsx` werden die Filter so angepasst, dass nur Zeilen des **gewählten Monats** berücksichtigt werden:
 
-Konkret im Code (`src/pages/DailySummary.tsx`):
-- `bargeld = …Tageswerte… + previousDeficit` (≈ +3.261,96 €)
-- Diese Zahl wird als **„Differenz zum Wechselgeldbestand"** gelabelt — falsch.
-- `useRemainingCash` rechnet dann **`pettyCash (2000) + remainingCash-Kette`** und addiert damit den Überschuss erneut auf das Soll-Wechselgeld auf — **doppelte Zählung**.
+```ts
+const monthStart = `${selectedMonth}-01`;
+const monthEnd   = `${selectedMonth}-31`;
 
-Der Carry-Over enthält (nach der Vereinheitlichung) auch positive Salden. Solange diese Überschüsse nicht per Bankeinzahlung abgeführt sind, hängen sie als „virtuelles Bargeld" in der Kette und blähen die heutige Anzeige auf.
-
-## Fachliche Definition (aus deiner Aussage)
-- **Wechselgeldbestand-Soll: 2.000 € konstant.**
-- **Skim-Logik:** Nur der Betrag **oberhalb von 2.000 €** wird in den Tresor gelegt → Kasse fällt am Ende jedes Tages wieder auf 2.000 € (es sei denn, es ist ein Fehlbetrag).
-- Nicht abgeschöpfte historische Überschüsse gehören in die Bankeinzahlungs-Pipeline, **nicht** in die heutige „Differenz".
-
-## Lösung — die Anzeige auf den heutigen Tag normieren
-
-### 1. „Differenz zum Wechselgeldbestand" = nur heutiger Effekt + ggf. Vortags-Fehlbetrag (negativ)
-Statt `bargeld` (mit vollem Carry) wird angezeigt:
+cumulativeCash    = Σ row.rawBargeld     wobei monthStart ≤ row.date ≤ monthEnd
+totalDeposits     = Σ deposit.amount     wobei monthStart ≤ deposit_date ≤ monthEnd
 ```
-diffWechselgeld = bargeldRaw + min(previousDeficit, 0)
-```
-- positiver Vortagsübertrag fließt **nicht** mehr in diese Zeile (gehört in Bankeinzahlung)
-- negativer Vortagsübertrag (echter Fehlbetrag) bleibt drin
 
-Im Beispiel: −200 + 0 = **−200 €** ✓
+## Auswirkung auf die vier Karten
+| Karte | Vorher | Nachher |
+|---|---|---|
+| **Bargeld im April 2026** | Σ aller Tage bis 30.04. | **Σ nur 01.04.–30.04.** |
+| **Bankeinzahlungen** | Σ aller Einzahlungen bis 30.04. | **Σ nur 01.04.–30.04.** |
+| **Verbleibendes Bargeld** | `2.000 + Bargeld − Einzahlungen` (auf neuer Basis) | identisch berechnet, jetzt rein April-bezogen |
+| **Verbleibendes Bargeld (kumulativ)** | bleibt **kumulativ** (echter Kassenstand zum Monatsende) | unverändert |
 
-### 2. „Bargeld in den Tresor legen" (Skim) = Überschuss heute über 2.000 €
-```
-skim = max(0, diffWechselgeld)   // nur wenn heute Überschuss
-```
-Im Beispiel: max(0, −200) = **0 €** ✓
+## Titel-Anpassung
+- „Bargeld bis April 2026" → **„Bargeld im April 2026"**
+- „Bankeinzahlungen" → **„Bankeinzahlungen im April 2026"**
+- „Verbleibendes Bargeld" → **„Saldo April (vereinfacht)"** — damit klar ist, dass dies eine reine Monatsbetrachtung ohne historische Kette ist
+- „Verbleibendes Bargeld (kumulativ)" bleibt — das ist der einzige echte Gesamt-Kassenstand
 
-### 3. „Wechselgeldbestand (soll 2000 €)" = 2000 + diffWechselgeld − skim
-Da `skim` den positiven Anteil entfernt, landet die Anzeige bei:
-- Überschuss-Tag: 2000 € (perfekt aufgefüllt)
-- Fehlbetrag-Tag: 2000 + Fehlbetrag (z. B. 1.800 €)
+## Betroffene Datei
+- `src/pages/CashBalance.tsx` — Filter auf `monthStart`/`monthEnd` einschränken, Karten-Labels anpassen
 
-Im Beispiel: 2000 + (−200) − 0 = **1.800 €** ✓
-
-### 4. „Fehlbetrag Vortag"-Zeile bleibt
-Wird wie bisher nur eingeblendet, wenn `previousDeficit < 0` — bildet die Brücke zwischen Tagesabrechnung und Bargeldbestand-Seite.
-
-### 5. `useRemainingCash` umbauen
-Liefert künftig:
-- `remainingCash` = 2000 + diffWechselgeld − skim (für die Tagesanzeige)
-- `todaySkimAmount` = skim (siehe oben)
-- `previousDeficit` = wie gehabt aus `useCashBalanceData`
-
-Damit ist die Hook-Ausgabe semantisch eindeutig: **Stand der Wechselgeldkasse am Ende des Tages**, nicht „Wechselgeld + alle historischen Überschüsse".
-
-### 6. StatCard „Wechselgeldbestand" oben rechts
-Erbt automatisch den korrigierten `remainingCash` — keine separate Änderung nötig.
-
-### 7. Bargeldbestand-Seite (`CashBalance.tsx` / `CashBalanceSummary`)
-Bleibt bei der **kumulativen Sicht** (zeigt also weiterhin auch nicht-eingezahlte Altüberschüsse), denn das ist dort gewünscht. Die Karte „Wechselgeldbestand" dort wird umbenannt zu **„Verbleibendes Bargeld (kumulativ)"**, damit die Begriffe nicht mehr kollidieren mit dem Tages-Wechselgeldbestand.
-
-## Betroffene Dateien
-- `src/pages/DailySummary.tsx` — neue Variable `diffWechselgeld`, Übergabe an Layout
-- `src/components/daily-summary/layouts/ExcelLayout.tsx` — zeigt `diffWechselgeld` statt `bargeld` in der „Differenz"-Zeile
-- `src/hooks/useRemainingCash.ts` — neue Formel (Tages-normiert)
-- `src/utils/pdfExport.ts` — gleiche Formel im PDF
-- `src/components/cash-balance/CashBalanceSummary.tsx` — Karte umbenennen zu „Verbleibendes Bargeld (kumulativ)"
-
-## Erwartetes Ergebnis am 21.04. Spicery
-| Zeile | Vorher | Nachher |
-|---|---:|---:|
-| Tages-Bargeld | −200 € | −200 € |
-| Differenz zum Wechselgeldbestand | 3.261,96 € | **−200 €** |
-| In den Tresor legen | 3.261,96 € | **0 €** |
-| Wechselgeldbestand (soll 2000) | 5.261,96 € | **1.800 €** |
-
-Die historischen Überschüsse bleiben als „Verbleibendes Bargeld (kumulativ)" auf der Bargeldbestand-Seite sichtbar und verschwinden dort erst, wenn sie per Bankeinzahlung abgeführt werden.
+## Hinweis
+Die **Tabelle „Tägliche Bargeldübersicht"** darunter zeigt ohnehin schon nur den gewählten Monat — die Karten sind danach also konsistent mit der Tabelle.
 
