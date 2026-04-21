@@ -248,6 +248,78 @@ export type Database = {
           },
         ]
       }
+      checklist_edge_functions: {
+        Row: {
+          created_at: string
+          function_name: string
+          id: string
+          label: string
+        }
+        Insert: {
+          created_at?: string
+          function_name: string
+          id?: string
+          label: string
+        }
+        Update: {
+          created_at?: string
+          function_name?: string
+          id?: string
+          label?: string
+        }
+        Relationships: []
+      }
+      checklist_priorities: {
+        Row: {
+          category: string
+          feature_key: string
+          id: string
+          is_worked_on: boolean
+          notes: string | null
+          priority: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          category: string
+          feature_key: string
+          id?: string
+          is_worked_on?: boolean
+          notes?: string | null
+          priority?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          category?: string
+          feature_key?: string
+          id?: string
+          is_worked_on?: boolean
+          notes?: string | null
+          priority?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      checklist_settings: {
+        Row: {
+          id: number
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       daily_revenue: {
         Row: {
           created_at: string
@@ -1740,6 +1812,7 @@ export type Database = {
         Args: { p_staff_id: string }
         Returns: Database["public"]["Enums"]["app_permission_level"]
       }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
       update_telegram_cron_schedule: {
         Args: { p_time: string }
         Returns: undefined
