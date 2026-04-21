@@ -1,53 +1,59 @@
 
 
-# Spicery: Übertrag aus Vormonat auf +866 € setzen
+# Diskrepanz Gesamtumsatz: Statistiken (94.479,90 €) vs. Bargeldbestand (101.126,10 €)
 
-## Aktueller Stand
-- Spicery, April 2026: Übertrag = **0,00 €**
-- Gewünscht: **+866,00 €**
+## Befund
+
+Beide Werte beziehen sich auf YUM, 01.–21.04.2026, und sollten identisch sein. Die Differenz beträgt **6.646,20 €**.
 
 ## Ursache
-`compute_carry_over` überträgt nur **negative** Salden (Defizit-Chaining). Positive Tagessalden werden auf 0 zurückgesetzt — daher kommt im April nichts an, obwohl rechnerisch Bargeld übrig war.
 
-## Lösungsansatz (zwei Schritte)
+Beide Seiten lesen `sessions.pos_total` als „Tagesumsatz" — aber **mit unterschiedlicher Datums-Definition**:
 
-### Schritt 1 — DB-Funktion erweitern
-`compute_carry_over` so anpassen, dass **sowohl negative als auch positive** Salden übertragen werden:
+| Seite | Datums-Spalte | Was gefiltert wird |
+|---|---|---|
+| **Bargeldbestand** (`useCashBalanceData`) | `session_date` | Geschäftstag (3-Uhr-Rollover beachtet) |
+| **Statistiken** (`useStatistics`) | vermutlich `created_at` oder anderer Filter, oder zusätzliche Aggregation pro Schicht | weicht ab |
 
-```sql
-v_carry_over := v_bargeld;  -- statt: CASE WHEN v_bargeld < 0 THEN v_bargeld ELSE 0 END
-```
+Außerdem möglich:
+- Statistiken zählen `pos_total` **nur einmal pro Session**, Bargeldbestand ebenfalls — aber wenn `useStatistics` über `waiter_shifts` summiert (`sum(pos_sales)`) statt `pos_total`, ergibt sich genau diese Art von Lücke.
+- Eine Session enthält Umsatz, aber keine zugeordneten Schichten → Bargeldbestand zählt sie, Statistiken nicht (umgekehrter Fall: 6.646 € fehlen in Statistik).
 
-**Auswirkung auf alle Restaurants**:
-- YUM: bleibt bei −141,00 € (Wert ist negativ, also unverändert)
-- Spicery: zeigt den realen kumulierten Saldo aus allen historischen Sessions, Bankeinzahlungen und Tresor-Transfers
+## Diagnose-Schritt (vor jeder Korrektur)
 
-### Schritt 2 — Korrekturbuchung für Spicery
-Da der reale historische Saldo vermutlich nicht exakt 866 € ergibt (wegen fehlender Bankeinzahlungen/Transfers in der Vergangenheit), wird ein **`register_transfers`-Eintrag** auf den 31.03.2026 gebucht, der den Saldo punktgenau auf +866 € einstellt:
+Pro Tag (01.–21.04.2026, YUM) vergleichen:
+- `sessions.pos_total`
+- Σ `waiter_shifts.pos_sales` derselben Session
+- Differenz markieren
 
-| Feld | Wert |
-|---|---|
-| restaurant_id | `a1710390-…` (Spicery) |
-| transfer_date | `2026-03-31` |
-| direction | `from_restaurant` (verringert) **oder** `to_restaurant` (erhöht), je nach errechnetem Ist-Saldo |
-| amount | Differenz zwischen errechnetem Ist-Saldo und 866 € |
-| reason | „Korrektur Übertragsabgleich März 2026" |
-| created_by_name | `System` |
+So wird sichtbar, an welchem Tag (oder welchen Tagen) die 6.646,20 € entstehen und ob die Ursache fehlende Schicht-Zuordnung, doppelte Sessions oder ein Filter-Bug ist.
 
-Der genaue Betrag/Richtung wird **nach** der Funktionsänderung berechnet, indem `compute_carry_over('spicery', '2026-04-01')` erneut aufgerufen wird.
+## Anschließende Korrektur (abhängig vom Diagnose-Ergebnis)
 
-### Schritt 3 — Memory aktualisieren
-`mem://features/cash-reconciliation/core-logic` anpassen: „Cumulative Deficit Chaining" → **„Cumulative Balance Chaining"** (positive UND negative Salden werden übertragen).
+Genau **eine** der folgenden Maßnahmen:
 
-## Ergebnis
-- Spicery, April 2026: **+866,00 €** Übertrag aus Vormonat
-- YUM, April 2026: **−141,00 €** (unverändert)
-- Künftig zeigt der Übertrag den realen kumulierten Bargeldbestand — auch wenn er positiv ist.
+### A — `useStatistics` auf `sessions.pos_total` vereinheitlichen
+Statistiken summieren künftig `sessions.pos_total` (gleiche Quelle wie Bargeldbestand). Werte sind dann immer identisch. **Konsequenz**: Tage ohne Schichten fließen in Durchschnitte ein (siehe `mem://features/statistics/data-logic-ui-behavior` — die bisherige Ausschluss-Logik wird hinfällig).
 
-## Hinweis / Konsequenz
-Mit dieser Änderung akkumulieren positive Bargeldbestände sichtbar über Monate. Wenn das Restaurant Bargeld physisch zur Bank bringt oder in den Tresor überträgt, **muss** dies künftig als Bankeinzahlung oder Tresor-Transfer erfasst werden, sonst wächst der Übertrag dauerhaft an. Das war bisher implizit „verziehen", weil positive Salden sowieso verworfen wurden.
+### B — `useCashBalanceData` auf Σ `waiter_shifts.pos_sales` umstellen
+Bargeldbestand zeigt künftig den kellner-zugeordneten Umsatz. **Nicht empfohlen**: bricht die Bargeld-Plausibilisierung, wenn Schichten den Brutto-Umsatz nicht vollständig abbilden.
+
+### C — Datenkorrektur in den Schichten
+Falls die Diagnose zeigt, dass an konkreten Tagen Schichten fehlen oder `pos_sales` falsch eingetragen wurde: Schichten ergänzen / `pos_sales` anpassen. **Empfohlen**, wenn die Differenz auf wenige Tage konzentriert ist.
+
+### D — Label-Klarstellung (additiv zu A/B/C)
+- Bargeldbestand: „Tagesumsatz" → **„Kassenumsatz (Brutto)"**
+- Statistiken: „Gesamtumsatz" → **„Kellner-Umsatz (Σ Schichten)"**
+
+Reine UI-Änderung, macht zwei verschiedene Kennzahlen unmissverständlich.
+
+## Empfohlener Ablauf
+
+1. **Diagnose-Query** ausführen (Tag-für-Tag-Vergleich `pos_total` vs. Σ `pos_sales` für YUM, 01.–21.04.2026).
+2. Ergebnis bewerten: Ist es ein **Daten-Loch** (→ C) oder ein **systematischer Logik-Unterschied** (→ A oder D)?
+3. Entsprechende Korrektur umsetzen.
 
 ## Keine weiteren Änderungen
-- Keine UI-Änderung
-- Keine Änderung an Tageszeilen-Berechnung
+- Keine Layout-/Style-Änderung
+- Keine DB-Migration in der Diagnose-Phase
 
