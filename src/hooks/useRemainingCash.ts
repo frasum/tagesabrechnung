@@ -2,46 +2,45 @@ import { useMemo } from 'react';
 import { format } from 'date-fns';
 import { useCashBalanceData } from './useCashBalanceData';
 import { usePettyCash } from './useSettings';
+import { usePreviousDayDeficit } from './usePreviousDayDeficit';
 
 /**
- * Returns the remaining cash in the till on the selected day, plus the
- * suggested skim amount to bring the till back to the petty-cash target.
+ * Day-normalized cash logic for the Daily Summary view.
  *
- * Single source of truth: the chained cash data from useCashBalanceData,
- * which now includes sessions + register transfers + bank deposits.
+ * Semantics (per project memory: petty-cash target is 2000 €):
+ *   diffWechselgeld = today's raw cash effect + min(previousCarry, 0)
+ *     → only NEGATIVE previous-day carry counts as today's deficit;
+ *       positive historical surplus belongs to the bank-deposit pipeline
+ *       and is NOT mixed into today's display.
+ *   skim            = max(0, diffWechselgeld)        // only today's surplus
+ *   remainingCash   = pettyCash + diffWechselgeld - skim
+ *     → exactly pettyCash on a balanced/surplus day;
+ *       below pettyCash on a deficit day (e.g. 1.800 €).
+ *
+ * Cumulative carry-over (incl. positive historical surplus) is shown
+ * separately on the Cash Balance page, not here.
  */
 export function useRemainingCash(restaurantId: string | null, selectedDate: Date) {
   const { data: cashRows, isLoading: cashLoading } = useCashBalanceData(restaurantId);
   const { pettyCash, isLoading: pettyCashLoading } = usePettyCash(restaurantId);
+  const { data: previousCarry = 0 } = usePreviousDayDeficit(selectedDate, restaurantId);
 
   const result = useMemo(() => {
-    if (!cashRows || cashRows.length === 0) {
-      return { remainingCash: pettyCash, todaySkimAmount: 0, totalSkimmed: 0 };
-    }
-
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
 
-    // Find the row for the selected date, or the latest row before it.
-    let referenceRow = cashRows.find(r => r.date === dateStr);
-    if (!referenceRow) {
-      const previousRows = cashRows.filter(r => r.date < dateStr);
-      referenceRow = previousRows[previousRows.length - 1];
-    }
+    // Today's pure daily cash effect (without any carry-over)
+    const todayRow = cashRows?.find(r => r.date === dateStr);
+    const rawBargeld = todayRow ? todayRow.rawBargeld : 0;
 
-    const cashAfterDay = referenceRow ? referenceRow.remainingCash : 0;
-    // Wechselgeldbestand = soll-Wechselgeld + verbleibendes Bargeld
-    const remainingCash = pettyCash + cashAfterDay;
+    // Only NEGATIVE previous carry leaks into the daily petty-cash view
+    const previousDeficitOnly = Math.min(previousCarry, 0);
 
-    // Suggested skim for today: amount above the petty cash target on today only
-    let todaySkimAmount = 0;
-    const todayRow = cashRows.find(r => r.date === dateStr);
-    if (todayRow && todayRow.chainedBargeld > 0) {
-      // Skim only the surplus beyond what's already deposited today
-      todaySkimAmount = Math.max(0, todayRow.chainedBargeld - todayRow.depositEffect);
-    }
+    const diffWechselgeld = rawBargeld + previousDeficitOnly;
+    const todaySkimAmount = Math.max(0, diffWechselgeld);
+    const remainingCash = pettyCash + diffWechselgeld - todaySkimAmount;
 
-    return { remainingCash, todaySkimAmount, totalSkimmed: 0 };
-  }, [cashRows, pettyCash, selectedDate]);
+    return { remainingCash, todaySkimAmount, totalSkimmed: 0, diffWechselgeld };
+  }, [cashRows, pettyCash, selectedDate, previousCarry]);
 
   return {
     ...result,

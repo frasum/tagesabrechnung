@@ -104,11 +104,11 @@ export default function DailySummary() {
   const createAdvance = useCreateAdvance();
   const deleteAdvance = useDeleteAdvance();
   
-  // Previous day deficit
+  // Previous day carry (negative = deficit, positive = historical surplus)
   const { data: previousDeficit = 0 } = usePreviousDayDeficit(selectedDate, restaurantId);
 
-  // Remaining cash (Kassenbestand) with skimming
-  const { remainingCash, todaySkimAmount } = useRemainingCash(restaurantId, selectedDate);
+  // Day-normalized cash logic (petty-cash target = 2000 €)
+  const { remainingCash, todaySkimAmount, diffWechselgeld } = useRemainingCash(restaurantId, selectedDate);
 
   // Labels
   const { getLabel, allLabels, isFieldHidden, hiddenFields } = useLabels(restaurantId);
@@ -283,8 +283,8 @@ export default function DailySummary() {
   const waiterCardTotal = waiterShifts.reduce((sum, w) => sum + (w.card_total || 0), 0);
   const cardTerminalMismatch = terminalTotal - totalCardTotal;
 
-  // BARGELD calculation - uses pos_total (Vectron total) as base
-  const bargeld = 
+  // Raw daily cash (today only, without previous-day carry-over)
+  const bargeldRaw =
     formData.pos_total +
     formData.vouchers_sold +
     formData.sonstige_einnahme -
@@ -297,11 +297,11 @@ export default function DailySummary() {
     formData.einladung -
     totalOpenInvoices -
     totalAdvances -
-    totalExpenses +
-    previousDeficit;
+    totalExpenses;
 
-  // Raw daily cash (without previous deficit carry-over)
-  const bargeldRaw = bargeld - previousDeficit;
+  // "Differenz zum Wechselgeldbestand" = today's effect + only NEGATIVE previous carry.
+  // Positive historical surplus belongs to the bank-deposit pipeline (see Cash Balance page).
+  const bargeld = bargeldRaw + Math.min(previousDeficit, 0);
 
   // Format submission timestamp
   const formatSubmittedAt = (timestamp: string | null) => {
