@@ -67,6 +67,15 @@ export default function CashBalance() {
       .reduce((sum, d) => sum + d.amount, 0);
   }, [deposits, selectedMonth]);
 
+  // True remaining cash = pettyCash + chained remainingCash from latest row in/up to selected month
+  const wechselgeldbestand = useMemo(() => {
+    if (!data || data.length === 0) return pettyCash;
+    const cutoff = selectedMonth ? `${selectedMonth}-31` : data[data.length - 1].date;
+    const upTo = data.filter(r => r.date <= cutoff);
+    if (upTo.length === 0) return pettyCash;
+    return pettyCash + upTo[upTo.length - 1].remainingCash;
+  }, [data, selectedMonth, pettyCash]);
+
   // Get month label for display
   const selectedMonthLabel = useMemo(() => {
     if (!selectedMonth) return '';
@@ -181,7 +190,7 @@ export default function CashBalance() {
           totalCash={cumulativeCash}
           totalDeposits={cumulativeDeposits}
           pettyCash={pettyCash}
-          wechselgeldbestand={pettyCash + cumulativeCash}
+          wechselgeldbestand={wechselgeldbestand}
           latestDeposit={latestDeposit}
           monthLabel={selectedMonthLabel}
           onAddDeposit={() => setDepositDialogOpen(true)}

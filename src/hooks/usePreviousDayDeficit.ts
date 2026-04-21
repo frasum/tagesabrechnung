@@ -3,28 +3,30 @@ import { format } from 'date-fns';
 import { useCashBalanceData } from './useCashBalanceData';
 
 /**
- * Derives the previous-day deficit from the shared useCashBalanceData hook.
- * No additional DB queries needed – this eliminates duplicate fetching.
+ * Returns the carry-over from the day before the selected date.
+ * Negative = deficit, positive = surplus, 0 = none.
+ * Sourced from the unified cash chain in useCashBalanceData (includes
+ * sessions, register transfers AND bank deposits).
  */
 export function usePreviousDayDeficit(date: Date, restaurantId: string | null) {
   const { data: cashRows, isLoading, error } = useCashBalanceData(restaurantId);
   const dateStr = format(date, 'yyyy-MM-dd');
 
-  const deficit = useMemo(() => {
+  const carry = useMemo(() => {
     if (!cashRows || cashRows.length === 0) return 0;
 
-    // Find all rows before the selected date
+    // If today exists in the chain, use its previousCarry directly
+    const today = cashRows.find(r => r.date === dateStr);
+    if (today) return today.previousCarry;
+
+    // Otherwise: take the remainingCash of the latest row strictly before today
     const previousRows = cashRows.filter(r => r.date < dateStr);
     if (previousRows.length === 0) return 0;
-
-    // The last row's chained bargeld tells us the carry-over
-    const lastRow = previousRows[previousRows.length - 1];
-    // bargeld already includes deficit chaining, so if negative it IS the deficit
-    return lastRow.bargeld < 0 ? lastRow.bargeld : 0;
+    return previousRows[previousRows.length - 1].remainingCash;
   }, [cashRows, dateStr]);
 
   return {
-    data: deficit,
+    data: carry,
     isLoading,
     error,
   };

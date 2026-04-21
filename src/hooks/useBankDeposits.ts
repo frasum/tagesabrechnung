@@ -56,6 +56,7 @@ export function useBankDeposits(restaurantId: string | null) {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['bank-deposits', data.restaurant_id] });
+      queryClient.invalidateQueries({ queryKey: ['cash-balance', data.restaurant_id] });
       toast.success('Bankeinzahlung erfolgreich hinzugefügt');
     },
     onError: (error) => {
@@ -76,6 +77,7 @@ export function useBankDeposits(restaurantId: string | null) {
     },
     onSuccess: (restId) => {
       queryClient.invalidateQueries({ queryKey: ['bank-deposits', restId] });
+      queryClient.invalidateQueries({ queryKey: ['cash-balance', restId] });
       toast.success('Bankeinzahlung gelöscht');
     },
     onError: (error) => {

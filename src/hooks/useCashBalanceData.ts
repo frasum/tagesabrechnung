@@ -15,8 +15,23 @@ export interface CashBalanceRow {
   offeneRE: number;
   vorschuss: number;
   ausgaben: number;
-  bargeld: number;
+  /** Pure daily cash for the day (without any carry-over), including transferEffect */
   rawBargeld: number;
+  /**
+   * Backwards-compatible per-day cash value (equal to rawBargeld).
+   * Used by exports that sum daily values without chaining.
+   */
+  bargeld: number;
+  /** Net effect of register transfers on this day */
+  transferEffect: number;
+  /** Net effect of bank deposits on this day (always >= 0, subtracted from cash) */
+  depositEffect: number;
+  /** Carry-over (positive or negative) from previous day, after deposits */
+  previousCarry: number;
+  /** Daily chained cash before bank deposits (= rawBargeld + previousCarry) */
+  chainedBargeld: number;
+  /** Cumulative balance after all daily effects incl. deposits (single source of truth) */
+  remainingCash: number;
 }
 
 function defaultFromDate(): string {
@@ -51,9 +66,8 @@ export function useCashBalanceData(restaurantId: string | null, fromDate?: strin
 
       const sessions = sessionsResult.data;
       if (sessionsResult.error) throw sessionsResult.error;
-      if (!sessions || sessions.length === 0) return [];
 
-      const sessionIds = sessions.map(s => s.id);
+      const sessionIds = (sessions || []).map(s => s.id);
 
       // Batch session IDs in chunks of 500
       const chunkSize = 500;
@@ -62,8 +76,8 @@ export function useCashBalanceData(restaurantId: string | null, fromDate?: strin
         chunks.push(sessionIds.slice(i, i + chunkSize));
       }
 
-      // Load waiter_shifts, expenses, advances in parallel per chunk
-      const [allShifts, allExpenses, allAdvances] = await Promise.all([
+      // Load waiter_shifts, expenses, advances, transfers, deposits in parallel
+      const [allShifts, allExpenses, allAdvances, transfersResult, depositsResult] = await Promise.all([
         Promise.all(chunks.map(chunk =>
           supabase.from('waiter_shifts').select('session_id, open_invoices').in('session_id', chunk).limit(10000)
         )).then(results => results.flatMap(r => { if (r.error) throw r.error; return r.data || []; })),
@@ -73,35 +87,39 @@ export function useCashBalanceData(restaurantId: string | null, fromDate?: strin
         Promise.all(chunks.map(chunk =>
           supabase.from('advances').select('session_id, amount').in('session_id', chunk).limit(10000)
         )).then(results => results.flatMap(r => { if (r.error) throw r.error; return r.data || []; })),
+        supabase
+          .from('register_transfers')
+          .select('transfer_date, amount, direction')
+          .eq('restaurant_id', restaurantId)
+          .gte('transfer_date', effectiveFromDate)
+          .limit(10000),
+        supabase
+          .from('bank_deposits')
+          .select('deposit_date, amount')
+          .eq('restaurant_id', restaurantId)
+          .gte('deposit_date', effectiveFromDate)
+          .limit(10000),
       ]);
 
-      // Load register transfers (filtered)
-      const { data: transfers, error: transfersError } = await supabase
-        .from('register_transfers')
-        .select('transfer_date, amount, direction')
-        .eq('restaurant_id', restaurantId)
-        .gte('transfer_date', effectiveFromDate)
-        .limit(10000);
+      if (transfersResult.error) throw transfersResult.error;
+      if (depositsResult.error) throw depositsResult.error;
 
-      if (transfersError) throw transfersError;
+      const transfers = transfersResult.data || [];
+      const deposits = depositsResult.data || [];
 
       // Build unified date map
-      const sessionMap = new Map<string, typeof sessions[0]>();
-      for (const s of sessions) {
+      const sessionMap = new Map<string, NonNullable<typeof sessions>[0]>();
+      for (const s of (sessions || [])) {
         sessionMap.set(s.session_date, s);
       }
 
-      const transferOnlyDates = new Set<string>();
-      for (const t of (transfers || [])) {
-        if (!sessionMap.has(t.transfer_date)) {
-          transferOnlyDates.add(t.transfer_date);
-        }
-      }
-
       const allDates = [...new Set([
-        ...sessions.map(s => s.session_date),
-        ...transferOnlyDates,
+        ...(sessions || []).map(s => s.session_date),
+        ...transfers.map(t => t.transfer_date).filter(d => !sessionMap.has(d)),
+        ...deposits.map(d => d.deposit_date).filter(d => !sessionMap.has(d)),
       ])].sort();
+
+      if (allDates.length === 0) return [];
 
       let carryOver = initialCarryOver;
 
@@ -127,7 +145,7 @@ export function useCashBalanceData(restaurantId: string | null, fromDate?: strin
         const totalOpenInvoices = shifts.reduce((sum, w) => sum + (w.open_invoices || 0), 0);
         const totalExpenses = sessionExpenses.reduce((sum, e) => sum + e.amount, 0);
 
-        const rawBargeld =
+        const dailyCash =
           tagesumsatz +
           gutscheineVK +
           sonstigeEinnahme -
@@ -141,13 +159,21 @@ export function useCashBalanceData(restaurantId: string | null, fromDate?: strin
           vorschuss -
           totalExpenses;
 
-        const dayTransfers = (transfers || []).filter(t => t.transfer_date === date);
-        const transferEffect = dayTransfers.reduce((sum, t) => {
-          return t.direction === 'to_restaurant' ? sum + Number(t.amount) : sum - Number(t.amount);
-        }, 0);
+        const transferEffect = transfers
+          .filter(t => t.transfer_date === date)
+          .reduce((sum, t) => t.direction === 'to_restaurant' ? sum + Number(t.amount) : sum - Number(t.amount), 0);
 
-        const bargeld = rawBargeld + transferEffect + carryOver;
-        carryOver = bargeld < 0 ? bargeld : 0;
+        const depositEffect = deposits
+          .filter(d => d.deposit_date === date)
+          .reduce((sum, d) => sum + Number(d.amount), 0);
+
+        const previousCarry = carryOver;
+        const rawBargeld = dailyCash + transferEffect;
+        const chainedBargeld = rawBargeld + previousCarry;
+        const remainingCash = chainedBargeld - depositEffect;
+
+        // Chain forward (positive AND negative)
+        carryOver = remainingCash;
 
         return {
           date,
@@ -162,8 +188,14 @@ export function useCashBalanceData(restaurantId: string | null, fromDate?: strin
           offeneRE: totalOpenInvoices,
           vorschuss,
           ausgaben: totalExpenses,
-          bargeld,
-          rawBargeld: rawBargeld + transferEffect,
+          rawBargeld,
+          // Keep legacy `bargeld` semantics for exports = pure daily (no carry)
+          bargeld: rawBargeld,
+          transferEffect,
+          depositEffect,
+          previousCarry,
+          chainedBargeld,
+          remainingCash,
         };
       });
     },
