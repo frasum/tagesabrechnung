@@ -66,7 +66,7 @@ export function RestaurantCompareCards({ nameA, nameB, summaryA, summaryB }: Res
   return (
     <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <CompareCard
-        label="Gesamtumsatz"
+        label="Kellner-Umsatz (Σ Schichten)"
         icon={<Euro className="w-5 h-5" />}
         valueA={summaryA.totalRevenue}
         valueB={summaryB.totalRevenue}

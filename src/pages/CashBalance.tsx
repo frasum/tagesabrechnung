@@ -265,7 +265,7 @@ export default function CashBalance() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="sticky left-0 bg-background z-10 min-w-[100px]">Datum</TableHead>
-                    <TableHead className="text-right min-w-[100px]">Tagesumsatz</TableHead>
+                    <TableHead className="text-right min-w-[100px]" title="Brutto-Kassenumsatz aus dem Z-Bon der Session (sessions.pos_total)">Kassenumsatz (Brutto)</TableHead>
                     <TableHead className="text-right min-w-[100px]">Kreditkarten</TableHead>
                     <TableHead className="text-right min-w-[100px]">{getLabel('ordersmart_revenue')}</TableHead>
                     <TableHead className="text-right min-w-[90px]">{getLabel('wolt_revenue')}</TableHead>

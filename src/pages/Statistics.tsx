@@ -321,7 +321,7 @@ export default function Statistics() {
             {/* Summary Cards with Comparison */}
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard
-                label="Gesamtumsatz"
+                label="Kellner-Umsatz (Σ Schichten)"
                 value={summary?.totalRevenue || 0}
                 icon={<Euro className="w-5 h-5" />}
                 variant="success"
