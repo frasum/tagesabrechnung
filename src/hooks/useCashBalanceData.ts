@@ -15,6 +15,8 @@ export interface CashBalanceRow {
   offeneRE: number;
   vorschuss: number;
   ausgaben: number;
+  /** Sonstige Einnahmen (other income) for the day */
+  sonstigeEinnahme: number;
   /** Pure daily cash for the day (without any carry-over), including transferEffect */
   rawBargeld: number;
   /**
