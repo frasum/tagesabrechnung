@@ -153,11 +153,11 @@ export function generateCashBalanceExcel({ rows, deposits, month, year, restaura
   wsData.push(['Datum', 'Betrag']);
 
   filteredDeposits.forEach((deposit) => {
-    wsData.push([formatDateFull(deposit.deposit_date), deposit.amount]);
+    wsData.push([formatDateFull(deposit.deposit_date), n(deposit.amount)]);
   });
 
   // Deposits total
-  const depositsTotal = filteredDeposits.reduce((sum, d) => sum + d.amount, 0);
+  const depositsTotal = filteredDeposits.reduce((sum, d) => sum + n(d.amount), 0);
   wsData.push(['Gesamt', depositsTotal]);
 
   // Create worksheet
@@ -184,8 +184,26 @@ export function generateCashBalanceExcel({ rows, deposits, month, year, restaura
   XLSX.utils.book_append_sheet(wb, ws, 'Bargeldbestand');
 
   // Generate filename
-  const fileName = `Bargeldbestand_${format(monthDate, 'yyyy-MM', { locale: de })}${restaurantName ? `_${restaurantName}` : ''}.xlsx`;
+  const safeRestaurant = restaurantName ? `_${restaurantName}` : '';
+  const fileName = `Bargeldbestand_${format(monthDate, 'yyyy-MM', { locale: de })}${safeRestaurant}.xlsx`;
 
-  // Trigger download
-  XLSX.writeFile(wb, fileName);
+  // Reliable browser-safe download via Blob (works in sandboxed iframes & PWAs)
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([wbout], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+export function getCashBalanceExcelFileName(month: number, year: number, restaurantName?: string): string {
+  const monthDate = new Date(year, month);
+  const safeRestaurant = restaurantName ? `_${restaurantName}` : '';
+  return `Bargeldbestand_${format(monthDate, 'yyyy-MM', { locale: de })}${safeRestaurant}.xlsx`;
 }
