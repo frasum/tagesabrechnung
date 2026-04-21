@@ -442,19 +442,64 @@ export default function CashBalance() {
                         {formatCurrency(filteredData.reduce((sum, row) => sum + row.vorschuss, 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-destructive">
-                        {formatCurrency(filteredData.reduce((sum, row) => sum + row.ausgaben, 0))}
+                        {formatCurrency(totals.ausgaben)}
                       </TableCell>
-                      {(() => {
-                        const totalBargeld = filteredData.reduce((sum, row) => sum + row.rawBargeld, 0);
-                        return (
-                          <TableCell className={cn(
-                            'text-right tabular-nums font-bold',
-                            totalBargeld >= 0 ? 'text-success' : 'text-destructive'
-                          )}>
-                            {formatCurrency(totalBargeld)}
-                          </TableCell>
-                        );
-                      })()}
+                      {showSonstige && (
+                        <TableCell className="text-right tabular-nums font-bold text-success">
+                          {formatCurrency(totals.sonstigeEinnahme)}
+                        </TableCell>
+                      )}
+                      {showTransfer && (
+                        <TableCell className={cn(
+                          'text-right tabular-nums font-bold',
+                          totals.transferEffect >= 0 ? 'text-success' : 'text-destructive'
+                        )}>
+                          {formatCurrency(totals.transferEffect)}
+                        </TableCell>
+                      )}
+                      <TableCell className={cn(
+                        'text-right tabular-nums font-bold',
+                        totals.rawBargeld >= 0 ? 'text-success' : 'text-destructive'
+                      )}>
+                        <TooltipProvider delayDuration={150}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="cursor-help underline decoration-dotted underline-offset-4">
+                                {formatCurrency(totals.rawBargeld)}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="left" className="max-w-sm">
+                              <div className="text-xs font-mono space-y-0.5">
+                                <div className="font-semibold mb-1 text-sm">Bargeld {selectedMonthLabel}</div>
+                                {([
+                                  ['+ Tagesumsätze', totals.kellnerUmsatz],
+                                  ['+ Gutsch. VK', totals.gutscheineVK],
+                                  ['+ Sonst. Einnahmen', totals.sonstigeEinnahme],
+                                  ['+ Kassentransfers', totals.transferEffect],
+                                  ['− Kreditkarten', totals.kreditkarten],
+                                  ['− ' + getLabel('ordersmart_revenue'), totals.ordersmart],
+                                  ['− ' + getLabel('wolt_revenue'), totals.wolt],
+                                  ['− Gutsch. EL', totals.gutscheineEL],
+                                  ...(!isFieldHidden('finedine_vouchers') ? [['− ' + getLabel('finedine_vouchers'), totals.finedine]] : []),
+                                  ['− ' + getLabel('einladung'), totals.einladung],
+                                  ['− Offene RE', totals.offeneRE],
+                                  ['− Vorschuss', totals.vorschuss],
+                                  ['− Ausgaben', totals.ausgaben],
+                                ] as Array<[string, number]>).map(([label, value]) => (
+                                  <div key={label} className="flex justify-between gap-4">
+                                    <span>{label}</span>
+                                    <span className="tabular-nums">{formatCurrency(value)}</span>
+                                  </div>
+                                ))}
+                                <div className="border-t border-border mt-1 pt-1 flex justify-between gap-4 font-semibold">
+                                  <span>= Bargeld GESAMT</span>
+                                  <span className="tabular-nums">{formatCurrency(totals.rawBargeld)}</span>
+                                </div>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TableCell>
                     </TableRow>
                   </TableFooter>
                 )}
