@@ -302,7 +302,7 @@ export default function CashBalance() {
                         <TableCell className="sticky left-0 bg-background z-10 font-medium">
                           {formatDate(row.date)}
                         </TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(row.kellnerUmsatz)}</TableCell>
+                        <TableCell className="text-right tabular-nums text-success">{formatCurrency(row.kellnerUmsatz)}</TableCell>
                         <TableCell className="text-right tabular-nums text-destructive">
                           {formatCurrency(row.kreditkarten)}
                         </TableCell>
@@ -359,7 +359,7 @@ export default function CashBalance() {
                       <TableCell className="sticky left-0 bg-muted/50 z-10 font-bold">
                         GESAMT
                       </TableCell>
-                      <TableCell className="text-right tabular-nums font-bold">
+                      <TableCell className="text-right tabular-nums font-bold text-success">
                         {formatCurrency(filteredData.reduce((sum, row) => sum + row.kellnerUmsatz, 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-destructive">
