@@ -1,59 +1,53 @@
 
 
-# Bug: „Übertrag aus Vormonat" zeigt 10.228,43 € statt −141,00 €
+# Spicery: Übertrag aus Vormonat auf +866 € setzen
+
+## Aktueller Stand
+- Spicery, April 2026: Übertrag = **0,00 €**
+- Gewünscht: **+866,00 €**
 
 ## Ursache
+`compute_carry_over` überträgt nur **negative** Salden (Defizit-Chaining). Positive Tagessalden werden auf 0 zurückgesetzt — daher kommt im April nichts an, obwohl rechnerisch Bargeld übrig war.
 
-In `src/pages/CashBalance.tsx` (Zeilen 70–81) wird der Übertrag **selbst neu berechnet**, statt den korrekten Wert aus der DB-Funktion `compute_carry_over` zu verwenden:
+## Lösungsansatz (zwei Schritte)
 
-```ts
-const priorCash = data
-  .filter((row) => row.date < monthStart)
-  .reduce((sum, row) => sum + (row.rawBargeld ?? row.bargeld), 0);
-const priorDeposits = (deposits || [])
-  .filter((d) => d.deposit_date < monthStart)
-  .reduce((sum, d) => sum + d.amount, 0);
-return priorCash - priorDeposits;
+### Schritt 1 — DB-Funktion erweitern
+`compute_carry_over` so anpassen, dass **sowohl negative als auch positive** Salden übertragen werden:
+
+```sql
+v_carry_over := v_bargeld;  -- statt: CASE WHEN v_bargeld < 0 THEN v_bargeld ELSE 0 END
 ```
 
-Diese Berechnung ist aus zwei Gründen falsch:
+**Auswirkung auf alle Restaurants**:
+- YUM: bleibt bei −141,00 € (Wert ist negativ, also unverändert)
+- Spicery: zeigt den realen kumulierten Saldo aus allen historischen Sessions, Bankeinzahlungen und Tresor-Transfers
 
-1. **Fehlender historischer Übertrag vor dem Datenfenster**: `useCashBalanceData` lädt Sessions nur für die letzten 6 Monate (ab 20.10.2025). Der Übertrag, der sich vor diesem Fenster angesammelt hat (z. B. die −141 € aus der Korrekturbuchung am 31.03.2026 sowie alle früheren Sessions/Transfers/Deposits), fließt nicht ein.
-2. **Bei YUM existieren 0 Bankeinzahlungen** in `bank_deposits` (alles wurde historisch über `register_transfers` abgewickelt). Dadurch wird das gesamte aufgelaufene Bargeld der Sessions seit Februar 2026 (~10.228 €) als „Übertrag" angezeigt, obwohl es regelmäßig physisch in den Tresor/zur Bank gebracht wurde.
+### Schritt 2 — Korrekturbuchung für Spicery
+Da der reale historische Saldo vermutlich nicht exakt 866 € ergibt (wegen fehlender Bankeinzahlungen/Transfers in der Vergangenheit), wird ein **`register_transfers`-Eintrag** auf den 31.03.2026 gebucht, der den Saldo punktgenau auf +866 € einstellt:
 
-Die korrekte serverseitige Funktion `compute_carry_over('YUM', '2026-04-01')` liefert dagegen genau **−141,00 €** – das ist der wahre Wert.
+| Feld | Wert |
+|---|---|
+| restaurant_id | `a1710390-…` (Spicery) |
+| transfer_date | `2026-03-31` |
+| direction | `from_restaurant` (verringert) **oder** `to_restaurant` (erhöht), je nach errechnetem Ist-Saldo |
+| amount | Differenz zwischen errechnetem Ist-Saldo und 866 € |
+| reason | „Korrektur Übertragsabgleich März 2026" |
+| created_by_name | `System` |
 
-## Fix
+Der genaue Betrag/Richtung wird **nach** der Funktionsänderung berechnet, indem `compute_carry_over('spicery', '2026-04-01')` erneut aufgerufen wird.
 
-**Datei:** `src/pages/CashBalance.tsx`
-
-`previousMonthCarryOver` nicht länger im Frontend aus `data`/`deposits` berechnen, sondern direkt per RPC `compute_carry_over` ermitteln (genau dieselbe Funktion, die bereits in `useCashBalanceData` für den Tageswert verwendet wird).
-
-### Konkret
-
-1. Neuer Hook-Aufruf in `CashBalance.tsx`:
-   ```ts
-   const { data: carryOver = 0 } = useQuery({
-     queryKey: ['cash-carry-over', restaurantId, selectedMonth],
-     queryFn: async () => {
-       const { data, error } = await supabase.rpc('compute_carry_over', {
-         p_restaurant_id: restaurantId,
-         p_before_date: `${selectedMonth}-01`,
-       });
-       if (error) throw error;
-       return Number(data) || 0;
-     },
-     enabled: !!restaurantId && !!selectedMonth,
-   });
-   ```
-2. Den bisherigen `previousMonthCarryOver`-`useMemo`-Block (Zeilen 70–81) entfernen.
-3. Übergabe an `<CashBalanceSummary>` (Zeilen 197–198) auf `carryOver` umstellen.
+### Schritt 3 — Memory aktualisieren
+`mem://features/cash-reconciliation/core-logic` anpassen: „Cumulative Deficit Chaining" → **„Cumulative Balance Chaining"** (positive UND negative Salden werden übertragen).
 
 ## Ergebnis
+- Spicery, April 2026: **+866,00 €** Übertrag aus Vormonat
+- YUM, April 2026: **−141,00 €** (unverändert)
+- Künftig zeigt der Übertrag den realen kumulierten Bargeldbestand — auch wenn er positiv ist.
 
-YUM zeigt im April **−141,00 €** als „Übertrag aus Vormonat" (statt 10.228,43 €). Spicery und alle anderen Restaurants bleiben korrekt, weil dort nun ebenfalls die autoritative DB-Funktion verwendet wird – die alle historischen Sessions, Bankeinzahlungen und Tresor-Transfers vollständig berücksichtigt, unabhängig vom 6-Monats-Ladefenster.
+## Hinweis / Konsequenz
+Mit dieser Änderung akkumulieren positive Bargeldbestände sichtbar über Monate. Wenn das Restaurant Bargeld physisch zur Bank bringt oder in den Tresor überträgt, **muss** dies künftig als Bankeinzahlung oder Tresor-Transfer erfasst werden, sonst wächst der Übertrag dauerhaft an. Das war bisher implizit „verziehen", weil positive Salden sowieso verworfen wurden.
 
 ## Keine weiteren Änderungen
-- Keine DB-Migration
-- Keine Logikänderung der Tageszeilen oder von „Gesamt verfügbar"
+- Keine UI-Änderung
+- Keine Änderung an Tageszeilen-Berechnung
 
