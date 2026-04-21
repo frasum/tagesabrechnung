@@ -188,18 +188,33 @@ export default function CashBalance() {
 
   // Handle Excel export
   const handleExcelExport = useCallback(() => {
-    if (!filteredData || filteredData.length === 0 || !selectedMonth) return;
+    if (!selectedMonth) {
+      toast.error('Bitte wähle zuerst einen Monat aus.');
+      return;
+    }
+    if (!filteredData || filteredData.length === 0) {
+      toast.error('Keine Daten für den ausgewählten Monat.');
+      return;
+    }
     const [year, month] = selectedMonth.split('-').map(Number);
-    generateCashBalanceExcel({
-      rows: filteredData,
-      deposits: deposits,
-      month: month - 1,
-      year,
-      restaurantName,
-      labels: { ordersmart_revenue: getLabel('ordersmart_revenue'), wolt_revenue: getLabel('wolt_revenue'), finedine_vouchers: getLabel('finedine_vouchers'), einladung: getLabel('einladung') },
-      hiddenFields,
-    });
-  }, [filteredData, selectedMonth, deposits, restaurantName, getLabel]);
+    try {
+      generateCashBalanceExcel({
+        rows: filteredData,
+        deposits: deposits,
+        month: month - 1,
+        year,
+        restaurantName,
+        labels: { ordersmart_revenue: getLabel('ordersmart_revenue'), wolt_revenue: getLabel('wolt_revenue'), finedine_vouchers: getLabel('finedine_vouchers'), einladung: getLabel('einladung') },
+        hiddenFields,
+      });
+      toast.success('Excel-Datei wurde heruntergeladen.');
+    } catch (err) {
+      console.error('Excel-Export fehlgeschlagen:', err);
+      toast.error('Excel-Export fehlgeschlagen.', {
+        description: err instanceof Error ? err.message : 'Unbekannter Fehler',
+      });
+    }
+  }, [filteredData, selectedMonth, deposits, restaurantName, getLabel, hiddenFields]);
 
   // Handle deposit submission
   const handleDepositSubmit = useCallback((data: { deposit_date: string; amount: number; notes?: string }) => {
