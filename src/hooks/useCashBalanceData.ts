@@ -190,6 +190,7 @@ export function useCashBalanceData(restaurantId: string | null, fromDate?: strin
           offeneRE: totalOpenInvoices,
           vorschuss,
           ausgaben: totalExpenses,
+          sonstigeEinnahme,
           rawBargeld,
           // Keep legacy `bargeld` semantics for exports = pure daily (no carry)
           bargeld: rawBargeld,
