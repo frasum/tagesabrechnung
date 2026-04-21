@@ -1,40 +1,61 @@
 
 
-# „Bargeld bis April 2026" auf den ausgewählten Monat einschränken
+# Variante C — Spalten + Tooltip für volle Transparenz
 
-## Problem
-Die Karte **„Bargeld bis April 2026"** zeigt aktuell die kumulierte Summe **aller Tage bis zum Monatsende** (also auch alle Vormonate). Du willst stattdessen nur die **Tageswerte vom 01.04. bis 30.04.2026** aufaddieren.
+## Ziel
+Die GESAMT-Bargeld-Zahl soll vollständig nachvollziehbar sein. Dafür werden **versteckte Posten als eigene Spalten** sichtbar gemacht UND zusätzlich ein **Breakdown-Tooltip** auf die GESAMT-„Bargeld"-Zelle gelegt.
 
-Dasselbe gilt analog für die Karte **„Bankeinzahlungen"** — auch dort werden aktuell alle Einzahlungen bis Monatsende summiert.
+## Änderungen
 
-## Lösung
-In `src/pages/CashBalance.tsx` werden die Filter so angepasst, dass nur Zeilen des **gewählten Monats** berücksichtigt werden:
+### 1. Datenquelle erweitern (`src/hooks/useCashBalanceData.ts`)
+- `sonstige_einnahme` wird bereits aus der Session geladen, aber nicht im `CashBalanceRow` ausgegeben → als neues Feld `sonstigeEinnahme: number` durchreichen.
+- `transferEffect` ist bereits vorhanden und wird nur weiterverwendet.
 
-```ts
-const monthStart = `${selectedMonth}-01`;
-const monthEnd   = `${selectedMonth}-31`;
+### 2. Tabelle erweitern (`src/pages/CashBalance.tsx`)
+Zwei neue, **bedingt sichtbare** Spalten in der Tagestabelle:
 
-cumulativeCash    = Σ row.rawBargeld     wobei monthStart ≤ row.date ≤ monthEnd
-totalDeposits     = Σ deposit.amount     wobei monthStart ≤ deposit_date ≤ monthEnd
+| Spalte | Sichtbar wenn | Farblogik |
+|---|---|---|
+| **Sonst. Einn.** | mind. ein Tag des Monats hat `sonstigeEinnahme ≠ 0` | grün (positiv) |
+| **Kassentransfer** | mind. ein Tag des Monats hat `transferEffect ≠ 0` | grün/rot je nach Vorzeichen |
+
+- Beide Spalten erhalten eine **GESAMT-Zelle** im Footer.
+- Spaltenposition: direkt vor „Bargeld" (passt zur Lese-Reihenfolge der Formel).
+- Wenn beide Spalten in einem Monat 0 sind → Tabelle bleibt unverändert schlank.
+
+### 3. Tooltip auf GESAMT-„Bargeld" (`src/pages/CashBalance.tsx`)
+Hover über die GESAMT-Zelle der Bargeld-Spalte zeigt einen kompakten Breakdown:
+
+```
++ Tagesumsätze            12.345,67
++ Gutsch. VK                 250,00
++ Sonst. Einnahmen            35,00
++ Kassentransfers            100,00
+− Kreditkarten             6.890,12
+− OrderSmart                 412,30
+− Wolt                       180,00
+− Gutsch. EL                  50,00
+− Finedine                     0,00
+− Einladung                    0,00
+− Offene RE                  120,00
+− Vorschuss                  200,00
+− Ausgaben                   461,89
+─────────────────────────────────
+= Bargeld GESAMT           4.417,36
 ```
 
-## Auswirkung auf die vier Karten
-| Karte | Vorher | Nachher |
-|---|---|---|
-| **Bargeld im April 2026** | Σ aller Tage bis 30.04. | **Σ nur 01.04.–30.04.** |
-| **Bankeinzahlungen** | Σ aller Einzahlungen bis 30.04. | **Σ nur 01.04.–30.04.** |
-| **Verbleibendes Bargeld** | `2.000 + Bargeld − Einzahlungen` (auf neuer Basis) | identisch berechnet, jetzt rein April-bezogen |
-| **Verbleibendes Bargeld (kumulativ)** | bleibt **kumulativ** (echter Kassenstand zum Monatsende) | unverändert |
+- Nutzt den bestehenden `Tooltip`-Baustein (`@/components/ui/tooltip`).
+- Werte werden aus den bereits berechneten GESAMT-Summen pro Spalte gebildet (kein zusätzlicher Fetch).
 
-## Titel-Anpassung
-- „Bargeld bis April 2026" → **„Bargeld im April 2026"**
-- „Bankeinzahlungen" → **„Bankeinzahlungen im April 2026"**
-- „Verbleibendes Bargeld" → **„Saldo April (vereinfacht)"** — damit klar ist, dass dies eine reine Monatsbetrachtung ohne historische Kette ist
-- „Verbleibendes Bargeld (kumulativ)" bleibt — das ist der einzige echte Gesamt-Kassenstand
+## Erwartetes Ergebnis
+- Die horizontale Summe der sichtbaren GESAMT-Zellen entspricht **exakt** der GESAMT-„Bargeld"-Zahl — keine versteckten Posten mehr.
+- Der Tooltip liefert zusätzlich eine kompakte Komplettansicht der Formel mit konkreten Monatswerten.
 
-## Betroffene Datei
-- `src/pages/CashBalance.tsx` — Filter auf `monthStart`/`monthEnd` einschränken, Karten-Labels anpassen
+## Betroffene Dateien
+- `src/hooks/useCashBalanceData.ts` — `sonstigeEinnahme` ins Row-Objekt aufnehmen
+- `src/pages/CashBalance.tsx` — zwei neue Spalten (bedingt) + Footer-Summen + Tooltip auf GESAMT-„Bargeld"
 
-## Hinweis
-Die **Tabelle „Tägliche Bargeldübersicht"** darunter zeigt ohnehin schon nur den gewählten Monat — die Karten sind danach also konsistent mit der Tabelle.
+## Nicht betroffen
+- Bargeldlogik selbst bleibt unverändert (keine neuen Berechnungen, nur Sichtbarmachung).
+- `useRemainingCash`, Tagesabrechnung, PDF-Export bleiben wie sie sind.
 
