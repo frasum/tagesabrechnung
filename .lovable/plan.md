@@ -1,30 +1,51 @@
 
 
-# Trinkgeld-Berechnung korrigieren: kassiert_brutto statt pos_sales
+# Falscher "Fehlbetrag Vortag" durch doppelte Korrekturbuchung
 
-## Problem
-Bei Tisch-Transfers weicht `kassiert_brutto` (was der Kellner tatsächlich kassiert) von `pos_sales` (was er boniert hat) ab. Die Expected-Cash-Berechnung verwendet fälschlicherweise `pos_sales`, was zu falschen Trinkgeld-Werten führt — bei Joy am 7. April sogar ein Minus von -59,54 € statt korrekt +5,46 €.
+## Was du siehst
+Auf der Tagesabrechnung wird **„Fehlbetrag Vortag: −6.971,35 €"** angezeigt. Das ist sachlich falsch — das tatsächliche Bargeld war zum 31.03. **+2.866 €** (inkl. 2.000 € Wechselgeld).
 
-## Betroffene Dateien (6 Stellen)
+## Ursache: Doppelte Verbuchung am 31.03.2026
 
-| Datei | Zeile | Aktuell | Fix |
-|-------|-------|---------|-----|
-| `src/pages/DailySummary.tsx` | 252 | `w.pos_sales` | `w.kassiert_brutto` |
-| `src/pages/WaiterCashUp.tsx` | 215 | `shift.pos_sales` | `shift.kassiert_brutto` |
-| `src/pages/WaiterMobile.tsx` | 82 | `formData.pos_sales` | `formData.kassiert_brutto` |
-| `src/hooks/useStatistics.ts` | 225 | `shift.pos_sales` | `shift.kassiert_brutto` |
-| `src/hooks/useStatisticsComparison.ts` | 80 | `shift.pos_sales` | `shift.kassiert_brutto` |
-| `src/hooks/useMonthlyStaffTips.ts` | 136 | `s.pos_sales` | `s.kassiert_brutto` |
-| `src/hooks/useWaiterRanking.ts` | 69 | `shift.pos_sales` | `shift.kassiert_brutto` |
-| `src/hooks/useSession.ts` | 594 | `shift.pos_sales` | `shift.kassiert_brutto` |
+In `register_transfers` existieren für den **31.03.2026** zwei manuelle Buchungen, die sich überlagern:
 
-`ExcelLayout.tsx` verwendet bereits korrekt `kassiert_brutto` — keine Änderung nötig.
+| Datum | Betrag | Richtung | Grund |
+|---|---|---|---|
+| 31.03. | +866,00 € | to_restaurant | „Anfangsbestand-Korrektur 2.866 € inkl. 2.000 € Wechselgeld" (gestern angelegt) |
+| 31.03. | **−8.940,93 €** | to_safe | „Korrektur Übertragsabgleich März 2026" |
 
-## Wichtig
-- `pos_sales` bleibt weiterhin für die **Leistungs-Anzeige** und **TG%-Berechnung** (Performance-Kennzahl) erhalten
-- Nur die **Expected-Cash-Formel** wird umgestellt: `kassiert_brutto + hilf_mahl - open_invoices - card_total`
-- Das betrifft die Bargeld-Soll-Berechnung und damit Trinkgeld, Differenz und Pool-Berechnung
+Zusätzlich gibt es am **31.03.** eine **Bankeinzahlung von 8.940,93 €** in `bank_deposits`.
 
-## Kein Datenbank-Änderung nötig
-Reine Code-Änderung in 8 Dateien, jeweils eine Zeile.
+→ Der Übertragsabgleich von **−8.940,93 €** wurde **doppelt erfasst**: einmal als `register_transfers` (to_safe) und einmal als reguläre `bank_deposits`. Beide werden in der Bargeld-Kette abgezogen.
+
+Effektrechnung am 31.03.:
+- Tages-Bargeld 31.03. (geschätzt): ca. **+1.970 €**
+- + 866 € (Korrektur Anfangsbestand) ✓ richtig
+- − 8.940,93 € (Transfer to_safe) ✗ doppelt
+- (Bankeinzahlung 8.940,93 € wirkt zusätzlich in der Summary-Karte)
+- Carry-Over zum 01.04.: **≈ −6.104 €** (passt zu den −6.971 €, die du siehst, nach weiteren Effekten)
+
+## Lösung
+
+Den **fälschlich doppelt erfassten Transfer** vom 31.03. löschen. Die Bankeinzahlung von 8.940,93 € bleibt korrekt bestehen, da Bankeinzahlungen ohnehin separat in der Summary-Karte abgezogen werden.
+
+### SQL-Bereinigung
+
+```sql
+DELETE FROM register_transfers
+WHERE restaurant_id = 'a1710390-ea4d-4bc2-b869-c0c047056b15'
+  AND transfer_date = '2026-03-31'
+  AND direction = 'to_safe'
+  AND amount = 8940.93
+  AND reason = 'Korrektur Übertragsabgleich März 2026';
+```
+
+## Erwartetes Ergebnis nach Bereinigung
+
+- Carry-Over zum 01.04.: **0 €** (oder leicht positiv) — kein „Fehlbetrag Vortag" mehr
+- „Differenz zum Wechselgeldbestand" und „Wechselgeldbestand (soll 2.000 €)" zeigen wieder plausible Werte
+- 866 € Anfangsbestand-Korrektur bleibt korrekt aktiv
+
+## Hinweis
+Die `compute_carry_over`-Logik selbst funktioniert korrekt — es handelt sich um einen **Datenfehler**, keinen Formelfehler. Die DELETE-Operation benötigt deine Freigabe und wird über eine Migration ausgeführt.
 
