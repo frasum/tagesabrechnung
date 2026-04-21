@@ -27,6 +27,7 @@ import { PdfPreview } from '@/components/shared/PdfPreview';
 import { CashBalanceSummary } from '@/components/cash-balance/CashBalanceSummary';
 import { BankDepositDialog } from '@/components/cash-balance/BankDepositDialog';
 import { BankDepositList } from '@/components/cash-balance/BankDepositList';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('de-DE', {
