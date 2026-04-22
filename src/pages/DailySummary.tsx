@@ -104,8 +104,9 @@ export default function DailySummary() {
   const createAdvance = useCreateAdvance();
   const deleteAdvance = useDeleteAdvance();
   
-  // Previous day carry (negative = deficit, positive = historical surplus)
-  const { data: previousDeficit = 0 } = usePreviousDayDeficit(selectedDate, restaurantId);
+  // Standalone operative deficit from the immediate previous day with data
+  // (decoupled from cumulative cash balance / transfers / deposits).
+  const { data: previousDeficit = 0, sourceDate: previousDeficitDate } = usePreviousDayDeficit(selectedDate, restaurantId);
 
   // Day-normalized cash logic (petty-cash target = 2000 €)
   const { remainingCash, todaySkimAmount, diffWechselgeld } = useRemainingCash(restaurantId, selectedDate);
@@ -1076,6 +1077,7 @@ export default function DailySummary() {
       getLabel={getLabel}
       isFieldHidden={isFieldHidden}
       previousDeficit={previousDeficit}
+      previousDeficitDate={previousDeficitDate}
       remainingCash={remainingCash}
       todaySkimAmount={todaySkimAmount}
       createdByName={session?.created_by_name || undefined}

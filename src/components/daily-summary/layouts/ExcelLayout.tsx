@@ -66,6 +66,7 @@ interface ExcelLayoutProps {
   getLabel?: (key: LabelKey) => string;
   isFieldHidden?: (key: LabelKey) => boolean;
   previousDeficit?: number;
+  previousDeficitDate?: string | null;
   bargeldRaw?: number;
   remainingCash?: number;
   todaySkimAmount?: number;
@@ -102,6 +103,7 @@ export function ExcelLayout({
   getLabel: gl,
   isFieldHidden: ifh,
   previousDeficit = 0,
+  previousDeficitDate = null,
   bargeldRaw,
   remainingCash,
   todaySkimAmount = 0,
@@ -261,7 +263,19 @@ export function ExcelLayout({
                 {totalAdvances !== 0 && <ExcelReadonlyRow label="Vorschuss" value={totalAdvances} />}
                 <ExcelInputRow label={getLabel('einladung')} value={formData.einladung} onChange={(v) => onFieldChange('einladung', v)} disabled={locked} />
                 <ExcelInputRow label={getLabel('sonstige_einnahme')} value={formData.sonstige_einnahme} onChange={(v) => onFieldChange('sonstige_einnahme', v)} disabled={locked} />
-                {previousDeficit < 0 && <ExcelReadonlyRow label="Fehlbetrag Vortag" value={previousDeficit} />}
+                {previousDeficit < 0 && (
+                  <ExcelReadonlyRow
+                    label={
+                      previousDeficitDate
+                        ? `Fehlbetrag Vortag (${(() => {
+                            const [y, m, d] = previousDeficitDate.split('-');
+                            return `${d}.${m}.${y.slice(2)}`;
+                          })()})`
+                        : 'Fehlbetrag Vortag'
+                    }
+                    value={previousDeficit}
+                  />
+                )}
                 {totalExpenses !== 0 && <ExcelReadonlyRow label="Ausgaben" value={-totalExpenses} />}
               </tbody>
             </table>
