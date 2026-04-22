@@ -67,9 +67,8 @@ export function CashBalanceSummary({
   previousMonthCarryOver = 0,
   onAddDeposit,
 }: CashBalanceSummaryProps) {
-  // Physical cash in the till = petty cash + cumulative operative balance
-  const physicalCash = pettyCash + wechselgeldbestand - pettyCash; // wechselgeldbestand already = pettyCash + remainingCash
-  // Note: in CashBalance.tsx, wechselgeldbestand = pettyCash + remainingCash, so it IS the physical cash.
+  // wechselgeldbestand from CashBalance.tsx is already pettyCash + cumulative remainingCash,
+  // i.e. the physical cash currently in the till.
   const physical = wechselgeldbestand;
   const operative = physical - pettyCash;
   const monthEndBalance = previousMonthCarryOver + totalCash - totalDeposits;
