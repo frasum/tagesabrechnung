@@ -196,15 +196,25 @@ export function CashBalanceSummary({
               </span>
             </div>
 
-            <div className="flex items-center justify-between">
-              <InfoLabel
-                label={
-                  <span className="inline-flex items-center gap-1">
-                    <Landmark className="h-3 w-3" /> Bankeinzahlungen
-                  </span>
-                }
-                hint="Summe der Bankeinzahlungen des laufenden Monats."
-              />
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <InfoLabel
+                  label={
+                    <span className="inline-flex items-center gap-1">
+                      <Landmark className="h-3 w-3" /> Bankeinzahlungen
+                    </span>
+                  }
+                  hint={`Summe der Bankeinzahlungen des laufenden Monats. Maximal mögliche Einzahlung heute: ${formatCurrency(possibleDeposit)} (Wechselgeld-Sockel von ${formatCurrency(pettyCash)} bleibt erhalten).`}
+                />
+                <span
+                  className={cn(
+                    'text-xs tabular-nums',
+                    possibleDeposit <= 0 ? 'text-destructive font-medium' : 'text-muted-foreground'
+                  )}
+                >
+                  (mögl. Einzahlung: {formatCurrency(possibleDeposit)})
+                </span>
+              </div>
               <span className="font-medium tabular-nums text-destructive">
                 {totalDeposits === 0 ? formatCurrency(0) : `-${formatCurrency(totalDeposits)}`}
               </span>
