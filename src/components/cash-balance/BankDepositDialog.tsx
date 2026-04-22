@@ -44,9 +44,18 @@ export function BankDepositDialog({
     }
   }, [open, defaultAmount]);
 
+  // Maximum allowed amount = possible deposit (preserves the change fund).
+  // When defaultAmount is 0, no deposit is possible at all.
+  const maxAmount = defaultAmount;
+  const exceedsLimit = amount > maxAmount + 0.001;
+  const noDepositPossible = maxAmount <= 0;
+
+  const formatEur = (n: number) =>
+    n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!date || amount <= 0) return;
+    if (!date || amount <= 0 || exceedsLimit || noDepositPossible) return;
 
     onSubmit({
       deposit_date: format(date, 'yyyy-MM-dd'),
@@ -101,13 +110,38 @@ export function BankDepositDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="amount">Betrag</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="amount">Betrag</Label>
+              {!noDepositPossible && (
+                <span className="text-xs text-muted-foreground">
+                  Max. {formatEur(maxAmount)}
+                </span>
+              )}
+            </div>
             <CurrencyInput
               id="amount"
               value={amount}
               onChange={setAmount}
               placeholder="0,00 €"
+              className={cn(exceedsLimit && 'border-destructive focus-visible:ring-destructive')}
             />
+            {noDepositPossible && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Aktuell ist keine Einzahlung möglich, ohne den Wechselgeld-Sockel anzutasten.
+                </AlertDescription>
+              </Alert>
+            )}
+            {!noDepositPossible && exceedsLimit && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Betrag überschreitet die mögliche Einzahlung von {formatEur(maxAmount)}.
+                  Andernfalls würde der Wechselgeld-Sockel angetastet.
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -125,7 +159,10 @@ export function BankDepositDialog({
             <Button type="button" variant="outline" onClick={handleClose}>
               Abbrechen
             </Button>
-            <Button type="submit" disabled={!date || amount <= 0 || isSubmitting}>
+            <Button
+              type="submit"
+              disabled={!date || amount <= 0 || exceedsLimit || noDepositPossible || isSubmitting}
+            >
               {isSubmitting ? 'Speichern...' : 'Speichern'}
             </Button>
           </DialogFooter>
