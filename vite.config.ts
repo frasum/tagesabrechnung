@@ -79,6 +79,33 @@ export default defineConfig(({ mode }) => ({
             },
           },
           {
+            // JS/CSS-Bundles (Hash-Namen): zuerst Cache, im Hintergrund neu laden
+            urlPattern: ({ request }) =>
+              request.destination === "script" || request.destination === "style",
+            handler: "StaleWhileRevalidate",
+            options: {
+              cacheName: "assets-cache",
+              expiration: {
+                maxEntries: 60,
+                maxAgeSeconds: 60 * 60 * 24 * 7,
+              },
+            },
+          },
+          {
+            // Bilder, Fonts, Icons: SWR — sofort verfügbar, im Hintergrund aktualisiert
+            urlPattern: ({ request }) =>
+              request.destination === "image" ||
+              request.destination === "font",
+            handler: "StaleWhileRevalidate",
+            options: {
+              cacheName: "media-cache",
+              expiration: {
+                maxEntries: 80,
+                maxAgeSeconds: 60 * 60 * 24 * 30,
+              },
+            },
+          },
+          {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
             handler: "NetworkFirst",
             options: {
