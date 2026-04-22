@@ -4,8 +4,13 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
+const buildTime = new Date().toISOString();
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  define: {
+    __BUILD_TIME__: JSON.stringify(buildTime),
+  },
   server: {
     host: "::",
     port: 8080,
@@ -59,6 +64,20 @@ export default defineConfig(({ mode }) => ({
         navigateFallbackDenylist: [/^\/~oauth\//],
 
         runtimeCaching: [
+          {
+            // index.html / Navigationen: immer zuerst Netzwerk versuchen,
+            // damit neue Versionen sofort sichtbar werden.
+            urlPattern: ({ request }) => request.mode === "navigate",
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "html-cache",
+              networkTimeoutSeconds: 3,
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24,
+              },
+            },
+          },
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
             handler: "NetworkFirst",

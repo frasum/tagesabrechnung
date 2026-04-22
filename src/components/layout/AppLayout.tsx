@@ -1,5 +1,5 @@
 import { ReactNode, useState, useMemo } from 'react';
-import { ManualUpdateButton } from '@/components/pwa/UpdateNotification';
+import { ManualUpdateButton, BuildVersionStamp } from '@/components/pwa/UpdateNotification';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Users, 
@@ -283,6 +283,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           <p className="text-xs text-sidebar-foreground/60">
             Restaurant Abrechnung v.3
           </p>
+          <BuildVersionStamp />
         </div>
       </aside>
 
