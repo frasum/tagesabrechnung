@@ -1,31 +1,43 @@
 
 
-# BankDepositDialog: Garantierter Reset beim Öffnen
+# Karten-Header: Restaurant + Stichdatum anzeigen
 
-## Problem
-Beim Schließen des Dialogs über **Overlay-Klick** oder **ESC-Taste** wird `handleClose` nicht aufgerufen → der lokale State (Betrag, Datum, Notiz) bleibt erhalten. Beim nächsten Öffnen sieht der Nutzer ggf. den zuletzt eingegebenen Wert statt der frischen `defaultAmount`-Vorbelegung.
+## Ziel
+Im Header der Karte „Aktueller Bargeldbestand" wird zusätzlich angezeigt, **für welches Restaurant** und **bis einschließlich welches Datum** der Bestand gilt — damit auf einen Blick klar ist, worauf sich die Zahlen beziehen.
 
-## Lösung
-In `src/components/cash-balance/BankDepositDialog.tsx`:
+## Anzeige
 
-1. **`useEffect` erweitern**, sodass beim Übergang `open: false → true` **alle** Form-Felder zurückgesetzt werden:
-   - `amount` → `defaultAmount`
-   - `date` → `new Date()` (heute)
-   - `notes` → `''`
-   - `calendarOpen` → `false`
+```text
+┌──────────────────────────────────────────────────────────
+│ 💼  Aktueller Bargeldbestand · Spicery
+│     Stand: bis einschließlich 22.04.2026
+└──────────────────────────────────────────────────────────
+```
 
-2. **`onOpenChange`-Handler korrigieren**: Aktuell ruft `<Dialog onOpenChange={handleClose}>` `handleClose` auch beim Öffnen auf (mit `open=true`), was unbeabsichtigt zurücksetzt. Stattdessen: `onOpenChange={(o) => { if (!o) handleClose(); else onOpenChange(true); }}` — oder einfacher: Reset komplett aus `handleClose` entfernen und ausschließlich im `useEffect` beim Öffnen reseten.
+- **Titel-Zeile**: „Aktueller Bargeldbestand · {Restaurant-Name}"
+- **Untertitel**: „Stand: bis einschließlich {dd.MM.yyyy}" (statt bisher „Physisch in der Kasse + Aufschlüsselung")
+- Datum = aktuell ausgewähltes Datum aus dem `DateContext` (das gleiche Datum, das bereits die Berechnung steuert)
+- Restaurant-Name = aktiv ausgewähltes Restaurant aus dem `RestaurantContext`
 
-3. **Cleaner Ansatz**: Einzige Reset-Quelle ist der `useEffect([open])`-Hook. `handleClose` ruft nur `onOpenChange(false)` auf. Das eliminiert doppelte Reset-Logik und garantiert konsistentes Verhalten.
+## Technische Umsetzung
 
-## Betroffene Datei
-- `src/components/cash-balance/BankDepositDialog.tsx`
+In `src/components/cash-balance/CashBalanceSummary.tsx`:
+- Zwei neue optionale Props: `restaurantName: string` und `referenceDate: Date | string`
+- Header-Block anpassen: Restaurant-Name hinter den Titel mit Trenner „·", Untertitel auf „Stand: bis einschließlich …" ändern
+- Datum mit `format(date, 'dd.MM.yyyy', { locale: de })` (date-fns ist bereits importiert)
+
+In `src/pages/CashBalance.tsx`:
+- `restaurantName` aus `useRestaurant()` und `referenceDate` aus `useDateContext()` an `<CashBalanceSummary>` durchreichen
+
+## Betroffene Dateien
+- `src/components/cash-balance/CashBalanceSummary.tsx`
+- `src/pages/CashBalance.tsx`
 
 ## Nicht betroffen
-- `CashBalanceSummary.tsx`, `CashBalance.tsx`, Datenmodell, andere Dialoge.
+- Datenmodell, Berechnungslogik, alle anderen Karten/Tabellen
 
 ## Erwartetes Ergebnis
-- Egal wie der Dialog geschlossen wird (Button, Overlay-Klick, ESC) → beim erneuten Öffnen ist der Betrag immer auf `defaultAmount` (mögliche Einzahlung) gesetzt
-- Datum immer auf „heute", Notizfeld immer leer
-- Keine versehentlich übernommenen Werte aus vorherigem Bearbeitungsversuch
+- Sofort erkennbar: „Das ist der Bestand für **Spicery**, Stand **22.04.2026**"
+- Verwechslungsgefahr beim Restaurant-Wechsel deutlich reduziert
+- Konsistent mit dem ohnehin im Header sichtbaren Restaurant-Switcher
 
