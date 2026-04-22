@@ -18,8 +18,9 @@ import { useCashBalanceData } from '@/hooks/useCashBalanceData';
 import { useBankDeposits } from '@/hooks/useBankDeposits';
 import { usePettyCash } from '@/hooks/useSettings';
 import { useRestaurant } from '@/hooks/useRestaurant';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, subMonths } from 'date-fns';
 import { de } from 'date-fns/locale';
+import { usePreviousMonthCarryOver } from '@/hooks/usePreviousMonthCarryOver';
 import { cn } from '@/lib/utils';
 import { generateCashBalancePDF } from '@/utils/pdfExport';
 import { generateCashBalanceExcel } from '@/utils/excelExport';
@@ -49,6 +50,7 @@ export default function CashBalance() {
   const { pettyCash, updatePettyCash } = usePettyCash(restaurantId);
   const { getLabel, isFieldHidden, hiddenFields } = useLabels(restaurantId);
   const [selectedMonth, setSelectedMonth] = useState<string>('');
+  const { data: previousMonthOperative = 0 } = usePreviousMonthCarryOver(restaurantId, selectedMonth || null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [pdfPreview, setPdfPreview] = useState<{ blobUrl: string; fileName: string } | null>(null);
   const [depositDialogOpen, setDepositDialogOpen] = useState(false);
@@ -88,6 +90,15 @@ export default function CashBalance() {
     const date = parseISO(`${selectedMonth}-01`);
     return format(date, 'MMMM yyyy', { locale: de });
   }, [selectedMonth]);
+
+  const previousMonthLabel = useMemo(() => {
+    if (!selectedMonth) return '';
+    const prev = subMonths(parseISO(`${selectedMonth}-01`), 1);
+    return format(prev, 'MMMM yyyy', { locale: de });
+  }, [selectedMonth]);
+
+  // Physical carry over from end of previous month = operative balance + petty cash
+  const previousMonthCarryOver = previousMonthOperative + pettyCash;
 
   // Extract available months from data
   const availableMonths = useMemo(() => {
@@ -247,6 +258,8 @@ export default function CashBalance() {
           wechselgeldbestand={wechselgeldbestand}
           latestDeposit={latestDeposit}
           monthLabel={selectedMonthLabel}
+          previousMonthLabel={previousMonthLabel}
+          previousMonthCarryOver={previousMonthCarryOver}
           onAddDeposit={() => setDepositDialogOpen(true)}
         />
 
