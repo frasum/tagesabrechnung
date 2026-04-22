@@ -29,6 +29,8 @@ interface CashBalanceSummaryProps {
   monthLabel?: string;
   previousMonthLabel?: string;
   previousMonthCarryOver?: number;
+  restaurantName?: string;
+  referenceDate?: Date | string;
   onAddDeposit: () => void;
 }
 
@@ -65,8 +67,17 @@ export function CashBalanceSummary({
   monthLabel,
   previousMonthLabel,
   previousMonthCarryOver = 0,
+  restaurantName,
+  referenceDate,
   onAddDeposit,
 }: CashBalanceSummaryProps) {
+  const refDateObj =
+    referenceDate instanceof Date
+      ? referenceDate
+      : referenceDate
+        ? parseISO(referenceDate)
+        : null;
+  const formattedRefDate = refDateObj ? format(refDateObj, 'dd.MM.yyyy', { locale: de }) : null;
   // wechselgeldbestand from CashBalance.tsx is already pettyCash + cumulative remainingCash,
   // i.e. the physical cash currently in the till.
   const physical = wechselgeldbestand;
@@ -84,8 +95,17 @@ export function CashBalanceSummary({
             <Wallet className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-foreground">Aktueller Bargeldbestand</h2>
-            <p className="text-sm text-muted-foreground">Physisch in der Kasse + Aufschlüsselung</p>
+            <h2 className="text-lg font-semibold text-foreground">
+              Aktueller Bargeldbestand
+              {restaurantName && (
+                <span className="text-muted-foreground font-normal"> · {restaurantName}</span>
+              )}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {formattedRefDate
+                ? `Stand: bis einschließlich ${formattedRefDate}`
+                : 'Physisch in der Kasse + Aufschlüsselung'}
+            </p>
           </div>
         </div>
 

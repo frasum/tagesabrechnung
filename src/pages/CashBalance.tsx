@@ -18,6 +18,7 @@ import { useCashBalanceData } from '@/hooks/useCashBalanceData';
 import { useBankDeposits } from '@/hooks/useBankDeposits';
 import { usePettyCash } from '@/hooks/useSettings';
 import { useRestaurant } from '@/hooks/useRestaurant';
+import { useSelectedDate } from '@/contexts/DateContext';
 import { format, parseISO, subMonths } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { usePreviousMonthCarryOver } from '@/hooks/usePreviousMonthCarryOver';
