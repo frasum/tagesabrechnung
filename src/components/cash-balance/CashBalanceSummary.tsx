@@ -1,16 +1,22 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { Landmark, Plus, TrendingDown, Wallet } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Landmark, Plus, Wallet, Info } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { PettyCashSetting } from './PettyCashSetting';
+import { cn } from '@/lib/utils';
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('de-DE', {
     style: 'currency',
     currency: 'EUR',
   }).format(value);
+};
+
+const formatSigned = (value: number) => {
+  if (value > 0) return `+${formatCurrency(value)}`;
+  return formatCurrency(value);
 };
 
 interface CashBalanceSummaryProps {
@@ -20,7 +26,33 @@ interface CashBalanceSummaryProps {
   wechselgeldbestand: number;
   latestDeposit: { deposit_date: string; amount: number } | null;
   monthLabel?: string;
+  previousMonthLabel?: string;
+  previousMonthCarryOver?: number;
   onAddDeposit: () => void;
+}
+
+interface InfoLabelProps {
+  label: string;
+  hint: string;
+  className?: string;
+}
+
+function InfoLabel({ label, hint, className }: InfoLabelProps) {
+  return (
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className={cn('inline-flex items-center gap-1 cursor-help text-muted-foreground', className)}>
+            {label}
+            <Info className="h-3 w-3 opacity-60" />
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs text-xs">
+          {hint}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
 }
 
 export function CashBalanceSummary({
@@ -30,79 +62,176 @@ export function CashBalanceSummary({
   wechselgeldbestand,
   latestDeposit,
   monthLabel,
+  previousMonthLabel,
+  previousMonthCarryOver = 0,
   onAddDeposit,
 }: CashBalanceSummaryProps) {
-  const remainingCash = pettyCash + totalCash - totalDeposits;
+  // Physical cash in the till = petty cash + cumulative operative balance
+  const physicalCash = pettyCash + wechselgeldbestand - pettyCash; // wechselgeldbestand already = pettyCash + remainingCash
+  // Note: in CashBalance.tsx, wechselgeldbestand = pettyCash + remainingCash, so it IS the physical cash.
+  const physical = wechselgeldbestand;
+  const operative = physical - pettyCash;
+  const monthEndBalance = previousMonthCarryOver + totalCash - totalDeposits;
 
   return (
     <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-      <CardContent className="p-6">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-          <div className="flex items-start gap-4">
-            <div className="p-3 rounded-full bg-primary/10">
-              <Wallet className="h-6 w-6 text-primary" />
-            </div>
-            <div className="space-y-4">
-              <div>
-                <h2 className="text-lg font-semibold text-foreground">Aktueller Bargeldbestand</h2>
-                <p className="text-sm text-muted-foreground">Bargeld abzüglich Bankeinzahlungen</p>
-              </div>
+      <CardContent className="p-6 space-y-6">
+        {/* Header */}
+        <div className="flex items-start gap-3">
+          <div className="p-3 rounded-full bg-primary/10">
+            <Wallet className="h-6 w-6 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">Aktueller Bargeldbestand</h2>
+            <p className="text-sm text-muted-foreground">Physisch in der Kasse + Aufschlüsselung</p>
+          </div>
+        </div>
 
-            <div className="space-y-3">
-                <PettyCashSetting />
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                  <div>
-                     <p className="text-sm text-muted-foreground">
-                       {monthLabel ? `Bargeld im ${monthLabel}` : 'Bargeld gesamt'}
-                     </p>
-                     <p className={`text-xl font-semibold tabular-nums ${totalCash >= 0 ? 'text-success' : 'text-destructive'}`}>
-                       {formatCurrency(totalCash)}
-                     </p>
-                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground flex items-center gap-1">
-                      <Landmark className="h-3 w-3" />
-                      {monthLabel ? `Bankeinzahlungen im ${monthLabel}` : 'Bankeinzahlungen'}
-                    </p>
-                    <p className="text-xl font-semibold tabular-nums text-destructive">
-                      -{formatCurrency(totalDeposits)}
-                    </p>
-                  </div>
-                   <div>
-                      <Separator orientation="horizontal" className="sm:hidden mb-2" />
-                      <p className="text-sm text-muted-foreground font-medium">
-                        {monthLabel ? `Saldo ${monthLabel} (vereinfacht)` : 'Verbleibendes Bargeld'}
-                      </p>
-                      <p className={`text-2xl font-bold tabular-nums ${remainingCash >= 0 ? 'text-success' : 'text-destructive'}`}>
-                        {formatCurrency(remainingCash)}
-                      </p>
-                    </div>
-                    <div>
-                      <Separator orientation="horizontal" className="sm:hidden mb-2" />
-                      <p className="text-sm text-muted-foreground font-medium flex items-center gap-1">
-                        <Wallet className="h-3 w-3" />
-                        Verbleibendes Bargeld (kumulativ)
-                      </p>
-                      <p className={`text-xl font-semibold tabular-nums ${wechselgeldbestand >= 0 ? 'text-success' : 'text-destructive'}`}>
-                        {formatCurrency(wechselgeldbestand)}
-                      </p>
-                    </div>
-                </div>
-              </div>
-
-              {latestDeposit && (
-                <p className="text-sm text-muted-foreground flex items-center gap-1">
-                  <TrendingDown className="h-3 w-3" />
-                  Letzte Einzahlung: {format(parseISO(latestDeposit.deposit_date), 'dd.MM.yyyy', { locale: de })} - {formatCurrency(latestDeposit.amount)}
-                </p>
+        {/* Hero + Breakdown */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Hero: physical cash */}
+          <div className="rounded-lg border border-primary/20 bg-background/40 p-5 flex flex-col justify-center">
+            <InfoLabel
+              label="Physisch in der Kasse"
+              hint="Tatsächlich in der Kassenschublade vorhandenes Bargeld (Wechselgeld-Sockel + operativer Saldo)."
+              className="text-xs uppercase tracking-wide font-medium"
+            />
+            <p
+              className={cn(
+                'mt-2 text-4xl font-bold tabular-nums',
+                physical >= 0 ? 'text-success' : 'text-destructive'
               )}
+            >
+              {formatCurrency(physical)}
+            </p>
+          </div>
+
+          {/* Breakdown */}
+          <div className="rounded-lg border border-border bg-background/40 p-5 space-y-3">
+            <div className="text-xs uppercase tracking-wide font-medium text-muted-foreground">
+              Aufschlüsselung
+            </div>
+
+            <div className="flex items-center justify-between text-sm">
+              <InfoLabel
+                label="Wechselgeld-Sockel"
+                hint="Fester Bargeldbestand, der immer in der Kasse verbleibt."
+              />
+              <PettyCashSetting />
+            </div>
+
+            <div className="flex items-center justify-between text-sm">
+              <InfoLabel
+                label="Operativer Saldo"
+                hint="Kumulierter Tageskassen-Überschuss bzw. -Defizit seit Aufzeichnungsbeginn (nach allen Bankeinzahlungen und Transfers)."
+              />
+              <span
+                className={cn(
+                  'font-semibold tabular-nums',
+                  operative >= 0 ? 'text-success' : 'text-destructive'
+                )}
+              >
+                {formatSigned(operative)}
+              </span>
+            </div>
+
+            <div className="border-t border-border pt-2 flex items-center justify-between">
+              <span className="text-sm font-medium">Physisch</span>
+              <span
+                className={cn(
+                  'text-base font-bold tabular-nums',
+                  physical >= 0 ? 'text-success' : 'text-destructive'
+                )}
+              >
+                {formatCurrency(physical)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Monatsbewegung */}
+        <div className="rounded-lg border border-border bg-background/40 p-5">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+            <h3 className="text-sm font-semibold text-foreground">
+              Monatsbewegung {monthLabel ?? ''}
+            </h3>
+            <Button onClick={onAddDeposit} size="sm" className="gap-2 self-start sm:self-auto">
+              <Plus className="h-4 w-4" />
+              BANKEINZAHLUNG
+            </Button>
+          </div>
+
+          <div className="space-y-2 text-sm">
+            {previousMonthLabel && (
+              <div className="flex items-center justify-between">
+                <InfoLabel
+                  label={`Übertrag aus ${previousMonthLabel}`}
+                  hint="Physischer Kassenbestand am letzten Tag des Vormonats (inkl. Wechselgeld-Sockel)."
+                />
+                <span
+                  className={cn(
+                    'font-medium tabular-nums',
+                    previousMonthCarryOver >= 0 ? 'text-success' : 'text-destructive'
+                  )}
+                >
+                  {formatSigned(previousMonthCarryOver)}
+                </span>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between">
+              <InfoLabel
+                label="Bargeldzufluss"
+                hint="Summe der täglichen Bargeldbeträge des laufenden Monats (vor Bankeinzahlungen)."
+              />
+              <span
+                className={cn(
+                  'font-medium tabular-nums',
+                  totalCash >= 0 ? 'text-success' : 'text-destructive'
+                )}
+              >
+                {formatSigned(totalCash)}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <InfoLabel
+                label={
+                  <span className="inline-flex items-center gap-1">
+                    <Landmark className="h-3 w-3" /> Bankeinzahlungen
+                  </span> as unknown as string
+                }
+                hint="Summe der Bankeinzahlungen des laufenden Monats."
+              />
+              <span className="font-medium tabular-nums text-destructive">
+                {totalDeposits === 0 ? formatCurrency(0) : `-${formatCurrency(totalDeposits)}`}
+              </span>
+            </div>
+
+            <div className="border-t border-border pt-2 flex items-center justify-between">
+              <InfoLabel
+                label="Saldo Ende Monat"
+                hint="Übertrag Vormonat + Bargeldzufluss − Bankeinzahlungen."
+                className="text-sm font-semibold text-foreground"
+              />
+              <span
+                className={cn(
+                  'text-base font-bold tabular-nums',
+                  monthEndBalance >= 0 ? 'text-success' : 'text-destructive'
+                )}
+              >
+                {formatCurrency(monthEndBalance)}
+              </span>
             </div>
           </div>
 
-          <Button onClick={onAddDeposit} className="gap-2 shrink-0">
-            <Plus className="h-4 w-4" />
-            BANKEINZAHLUNG
-          </Button>
+          {latestDeposit && (
+            <p className="mt-3 text-xs text-muted-foreground">
+              Letzte Einzahlung:{' '}
+              {format(parseISO(latestDeposit.deposit_date), 'dd.MM.yyyy', { locale: de })} ·{' '}
+              {formatCurrency(latestDeposit.amount)}
+            </p>
+          )}
         </div>
       </CardContent>
     </Card>
