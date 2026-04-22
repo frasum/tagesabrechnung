@@ -153,7 +153,7 @@ export function useStatistics(timeRange: TimeRange = 'month', customRange?: Cust
         const sessionShifts = shiftsBySession[session.id] || [];
         const sessionExpenses = expensesBySession[session.id] || [];
 
-        const kellnerUmsatz = sessionShifts.reduce((sum: number, w: any) => sum + (w.pos_sales || 0), 0);
+        const kellnerUmsatz = session.pos_total ?? 0;
         const totalHilfMahl = sessionShifts.reduce((sum: number, w: any) => sum + (w.hilf_mahl || 0), 0);
         const totalOpenInvoices = sessionShifts.reduce((sum: number, w: any) => sum + (w.open_invoices || 0), 0);
         const kitchenTip = sessionShifts.reduce((sum: number, w: any) => sum + (w.kitchen_tip || 0), 0);
