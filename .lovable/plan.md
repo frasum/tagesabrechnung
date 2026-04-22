@@ -1,101 +1,83 @@
 
-# Tagesabrechnung: Fehlbetrag Vortag von Bargeldbestand entkoppeln
 
-## Was gerade schief läuft
-Der angezeigte Wert `-6.078,42 €` passt nicht zur isolierten Tageslogik. Für den gezeigten Fall wäre der operative Vortagsfehlbetrag nur der **unmittelbare Vortageswert**, nicht ein kumulierter Alt-Saldo.
-
-Die Ursache ist sehr wahrscheinlich, dass die Tagesabrechnung ihren `previousDeficit` noch indirekt aus der Bargeldbestand-Datenkette ableitet. Damit kann ein alter kumulierter Übertrag in die Tagesabrechnung „durchsickern“, obwohl diese fachlich separat sein soll.
+# Bargeldbestand-Karte: Übersichtlicher + Vormonats-Saldo integrieren
 
 ## Ziel
-Die Tagesabrechnung soll den **Fehlbetrag des direkten vorherigen Tages mit Daten** berechnen — unabhängig von:
-- kumuliertem Bargeldbestand
-- Bankeinzahlungen
-- Tresor-/Kassentransfers
-- historischen Überträgen aus früheren Wochen
+Die Karte „Aktueller Bargeldbestand" wird visuell aufgeräumt **und** zeigt zusätzlich den Übertrag aus dem Vormonat (Überschuss oder Defizit), damit die Monatsbewegung im Kontext des kumulierten Saldos sichtbar ist.
 
-Formel für Tagesabrechnung:
+## Neuer Aufbau
+
 ```text
-previousDeficit = min(0, rawTagesBargeld(vorheriger Tag mit Daten))
+┌────────────────────────────────────────────────────────────────────────┐
+│  💼 Aktueller Bargeldbestand                                            │
+│                                                                         │
+│  ┌──────────────────────────┐   ┌──────────────────────────────────┐  │
+│  │ PHYSISCH IN DER KASSE    │   │ Aufschlüsselung                  │  │
+│  │                          │   │ Wechselgeld-Sockel    2.000,00 € │  │
+│  │   5.198,13 €             │   │ Operativer Saldo     +3.198,13 € │  │
+│  │   (Hero, groß, farbig)   │   │ ────────────────────────────────│  │
+│  │                          │   │ Physisch               5.198,13 € │  │
+│  └──────────────────────────┘   └──────────────────────────────────┘  │
+│                                                                         │
+│  ▾ Monatsbewegung April 2026                                           │
+│     Übertrag aus März 2026        +2.866,00 €  ← NEU                   │
+│     Bargeldzufluss April          +2.332,13 €                          │
+│     Bankeinzahlungen April             0,00 €                          │
+│     ──────────────────────────────────────────                         │
+│     Saldo Ende April              +5.198,13 €                          │
+│                                                                         │
+│     Letzte Einzahlung: 31.03.2026 · 8.940,93 €     [+ BANKEINZAHLUNG] │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Umsetzung
+## Konkrete Änderungen
 
-### 1) `usePreviousDayDeficit` fachlich neu aufbauen
-Datei: `src/hooks/usePreviousDayDeficit.ts`
+### 1. `CashBalanceSummary.tsx` — UI-Refactor
+- **Hero-Zahl** (groß, prominent): physischer Kassenbestand (`pettyCash + wechselgeldbestand`), grün/rot je nach Vorzeichen
+- **Aufschlüsselungs-Mini-Tabelle** rechts daneben: Wechselgeld-Sockel + Operativer Saldo = Physisch
+- **Monatsbewegungs-Block** als sekundärer Bereich darunter mit 4 Zeilen:
+  - Übertrag Vormonat (NEU, mit Vormonatsname)
+  - Bargeldzufluss aktueller Monat
+  - Bankeinzahlungen aktueller Monat
+  - Saldo Ende Monat (Summenzeile)
+- **Verwirrenden Wert** „Saldo April 2026 (vereinfacht)" entfernen
+- **Wechselgeld-Editor** (`PettyCashSetting`) inline in der Aufschlüsselung
+- **Tooltips** auf jede Zeile für fachliche Erklärung
+- **Button** „BANKEINZAHLUNG" rechts unten im Monatsbewegungs-Block
 
-Den Hook nicht mehr auf `useCashBalanceData()` aufsetzen, sondern direkt aus den Tagesabrechnungs-Daten berechnen:
+### 2. `useCashBalanceData` — Vormonats-Saldo bereitstellen
+Neue Werte berechnen und zurückgeben:
+- `previousMonthCarryOver`: physischer Bestand am letzten Tag des Vormonats (via `compute_carry_over` für Vormonats-Enddatum, plus `pettyCash`)
+- `previousMonthLabel`: z. B. „März 2026" für die Anzeige
 
-- vorherigen Tag mit Session für das Restaurant ermitteln
-- für genau diesen Tag laden:
-  - `sessions`
-  - `waiter_shifts.open_invoices`
-  - `expenses.amount`
-  - `advances.amount`
-- daraus **standalone raw Tages-Bargeld** berechnen:
-```text
-pos_total
-+ vouchers_sold
-+ sonstige_einnahme
-- terminal_1_total
-- terminal_2_total
-- ordersmart_revenue
-- wolt_revenue
-- vouchers_redeemed
-- finedine_vouchers
-- einladung
-- offene_rechnungen
-- vorschuesse
-- ausgaben
-```
-- Rückgabe nur als negativer Wert, sonst `0`
+Damit ist die Zeile „Übertrag aus [Vormonat]" datentechnisch versorgt, ohne neue Server-Logik.
 
-Zusätzlich Rückgabe erweitern um:
-- `sourceDate` des verwendeten Vortags
-- optional `rawPreviousDay`
+### 3. Props-Erweiterung
+`CashBalanceSummary` erhält neue Props:
+- `previousMonthCarryOver: number`
+- `previousMonthLabel: string`
 
-Damit ist transparent, welcher Tag wirklich herangezogen wurde.
+`CashBalance.tsx` reicht diese aus dem Hook durch.
 
-### 2) Daily Summary auf die neue Hook-Semantik umstellen
-Datei: `src/pages/DailySummary.tsx`
-
-- `previousDeficit` weiter für `bargeld`, `diffWechselgeld`, `todaySkimAmount` verwenden
-- Variable/Kommentare sprachlich bereinigen, damit klar ist:
-  - das ist **kein kumulativer Carry**
-  - das ist **nur der isolierte operative Vortagsfehlbetrag**
-
-### 3) Anzeige verständlicher machen
-Datei: `src/components/daily-summary/layouts/ExcelLayout.tsx`
-
-Die Zeile klarer beschriften, z. B.:
-```text
-Fehlbetrag Vortag (20.04.)
-```
-oder kleiner Zusatztext:
-```text
-bezogen auf letzten Tag mit Daten
-```
-
-So ist sofort sichtbar:
-- welcher Tag gemeint ist
-- dass nicht ein alter Monatssaldo angezeigt wird
-
-## Optional sinnvolle Absicherung
-Wenn kein Vortag gefunden wird:
-- kein Fehler
-- `previousDeficit = 0`
-- Zeile bleibt ausgeblendet
+## Tooltips
+- **Physisch in der Kasse** → „Tatsächlich in der Kassenschublade vorhandenes Bargeld"
+- **Wechselgeld-Sockel** → „Fester Bargeldbestand, der immer in der Kasse verbleibt"
+- **Operativer Saldo** → „Kumulierter Tageskassen-Überschuss/-Defizit seit Aufzeichnungsbeginn"
+- **Übertrag Vormonat** → „Physischer Kassenbestand am letzten Tag des Vormonats"
+- **Saldo Ende Monat** → „Übertrag + Zuflüsse − Einzahlungen"
 
 ## Betroffene Dateien
-- `src/hooks/usePreviousDayDeficit.ts`
-- `src/pages/DailySummary.tsx`
-- `src/components/daily-summary/layouts/ExcelLayout.tsx`
+- `src/components/cash-balance/CashBalanceSummary.tsx` (UI-Refactor)
+- `src/hooks/useCashBalanceData.ts` (Vormonats-Saldo berechnen)
+- `src/pages/CashBalance.tsx` (neue Props durchreichen)
 
 ## Nicht betroffen
-- `src/pages/CashBalance.tsx`
-- `src/hooks/useCashBalanceData.ts`
-- `compute_carry_over`
-- Bankeinzahlungen / Kassentransfers im Bargeldbestand
+- `compute_carry_over`, Datenmodell, Tagesabrechnung, `usePreviousDayDeficit`
+- Bestehende Tabelle/Spalten im Bargeldbestand-Verlauf
 
 ## Erwartetes Ergebnis
-Für den gezeigten Fall erscheint **nicht mehr** `-6.078,42 €`, sondern nur der echte isolierte Fehlbetrag des direkten Vortags mit Daten.  
-Die Tagesabrechnung bleibt damit fachlich sauber getrennt vom kumulierten Bargeldbestand.
+- Klare Hauptzahl statt 4 konkurrierender Werte
+- Vormonats-Übertrag explizit sichtbar (Überschuss **oder** Minus)
+- Monat im Kontext: Übertrag + Bewegung = aktueller Saldo
+- Kein verwirrendes „Saldo (vereinfacht)" mehr
+
