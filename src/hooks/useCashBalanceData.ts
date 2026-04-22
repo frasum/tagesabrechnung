@@ -133,6 +133,8 @@ export function useCashBalanceData(restaurantId: string | null, fromDate?: strin
 
       let carryOver = initialCarryOver;
 
+      let prevRawBargeld = 0;
+
       return allDates.map((date) => {
         const session = sessionMap.get(date);
         const shifts = session ? allShifts.filter((s) => s.session_id === session.id) : [];
@@ -182,6 +184,10 @@ export function useCashBalanceData(restaurantId: string | null, fromDate?: strin
         const chainedBargeld = rawBargeld + previousCarry;
         const remainingCash = chainedBargeld - depositEffect;
 
+        // Display value: net previous day's deficit only (surplus stays out)
+        const displayBargeld = rawBargeld + Math.min(0, prevRawBargeld);
+        prevRawBargeld = rawBargeld;
+
         // Chain forward (positive AND negative)
         carryOver = remainingCash;
 
@@ -202,6 +208,7 @@ export function useCashBalanceData(restaurantId: string | null, fromDate?: strin
           rawBargeld,
           // Keep legacy `bargeld` semantics for exports = pure daily (no carry)
           bargeld: rawBargeld,
+          displayBargeld,
           transferEffect,
           depositEffect,
           previousCarry,
