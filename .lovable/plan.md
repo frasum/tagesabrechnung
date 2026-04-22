@@ -1,55 +1,47 @@
 
 
-# Bargeldbestand: Excel-Export reparieren
+# Tagesabrechnung: „Fehlbetrag Vortag" auf isolierten Vortageswert umstellen
 
-## Problem
-Der Klick auf **„Excel Export"** im Dropdown der Bargeldbestand-Seite löst keinen Download aus — keine Datei, keine Fehlermeldung. Ursachen:
+## Ziel
+Die Tagesabrechnung soll **unabhängig vom kumulativen Bargeldbestand** funktionieren:
+- Wechselgeld-Soll = **2.000 €** (mit Skimming bei Tagesüberschuss)
+- Ein **Minus aus dem direkten Vortag** wird heute als „Fehlbetrag Vortag" mitgerechnet
+- Ein **Plus aus dem Vortag** bleibt **außen vor** — gehört in die Bankeinzahlungs-Pipeline / Bargeldbestand-Seite
 
-1. **`XLSX.writeFile(...)`** triggert den Download über einen internen Mechanismus, der in der Lovable-Preview (sandboxed iframe) und teilweise auch in PWA-Kontexten **stumm scheitert**, weil das Browser-Sandbox-Attribut den automatischen Download blockt.
-2. **Stille Early-Returns**: Wenn `filteredData` leer ist oder `selectedMonth` (noch) nicht gesetzt, kehrt die Funktion ohne Rückmeldung zurück — der User sieht nichts.
-3. Keine **Fehler-Toasts** falls die XLSX-Generierung intern fehlschlägt (z. B. durch ungültige Daten).
+## Änderung der Logik
 
-## Lösung
+### Heute (kumulativ — falsch für Tagesabrechnung)
+`previousDeficit` = kumulativer Übertrag aller Vortage (`previousCarry` aus der gechainten Bargeldbestand-Reihe). Wenn die Kette insgesamt im Plus ist, wird ein einzelner Minus-Vortag „verschluckt".
 
-### 1. Zuverlässiger Download via Blob (`src/utils/excelExport.ts`)
-`XLSX.writeFile(wb, fileName)` ersetzen durch den browser-sicheren Blob-Pfad — identisch zu dem Muster, das schon der PDF-Export nutzt:
+### Neu (isoliert — entspricht deinem mentalen Modell)
+`previousDeficit` = **`rawBargeld` des unmittelbar vorhergehenden Tages mit Daten**, gekappt auf ≤ 0:
+- Vortag −91,69 € → Anzeige „Fehlbetrag Vortag −91,69 €", Wechselgeld heute = 2.000 + Tageseffekt − 91,69
+- Vortag +230,43 € → keine Anzeige, Wechselgeld heute = 2.000 + Tageseffekt (Skim)
+- Kein Vortag vorhanden → 0
 
-```ts
-const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-const blob = new Blob([wbout], {
-  type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-});
-const url = URL.createObjectURL(blob);
-const a = document.createElement('a');
-a.href = url;
-a.download = fileName;
-document.body.appendChild(a);
-a.click();
-document.body.removeChild(a);
-setTimeout(() => URL.revokeObjectURL(url), 1000);
-```
-
-Funktioniert auch im sandboxed Preview-iframe und in der installierten PWA.
-
-### 2. Sichtbares Feedback (`src/pages/CashBalance.tsx`)
-Im Handler `handleExcelExport`:
-- Wenn `!filteredData?.length` → **Toast: „Keine Daten für den ausgewählten Monat"** statt stillem Return.
-- Erfolgreicher Export → **Toast: „Excel-Datei wurde heruntergeladen"** mit Dateinamen.
-- `try/catch` um den Aufruf → bei Fehler **Toast destructive** mit Fehlermeldung, plus `console.error` für Debugging.
-
-### 3. Defensive Datenprüfung (`src/utils/excelExport.ts`)
-- Beim Iterieren `Number(value) || 0` verwenden, damit `null`/`undefined` aus den Datenzeilen die Generierung nicht crashen.
-- `restaurantName` & `labels` defensiv mit `??`-Defaults.
-
-## Erwartetes Ergebnis
-- Klick auf **„Excel Export"** → Datei `Bargeldbestand_2026-04_YUM.xlsx` wird zuverlässig heruntergeladen (Preview, Production, PWA).
-- Toast bestätigt Erfolg oder erklärt das Problem.
-- Keine stillen Failures mehr.
+„Unmittelbar vorhergehender Tag mit Daten" = letzter Eintrag in `cashRows` mit `date < heute` (überspringt geschlossene Tage automatisch, identisch zum aktuellen Fallback-Pfad).
 
 ## Betroffene Dateien
-- `src/utils/excelExport.ts` — Download über Blob + defensive Number-Casts
-- `src/pages/CashBalance.tsx` — Toasts + try/catch im `handleExcelExport`
 
-## Nicht betroffen
-- Excel-Inhalt, Spalten, Formate, Filename-Schema, PDF-Export.
+### `src/hooks/usePreviousDayDeficit.ts`
+- Nicht mehr `previousCarry` / `remainingCash` aus der Kette nutzen.
+- Stattdessen: letzten Vortags-Eintrag mit `date < heute` finden und `Math.min(0, row.rawBargeld)` zurückgeben.
+- JSDoc anpassen: „Returns the previous business day's standalone cash result, capped at 0 (only deficits)."
+
+### Keine Änderung nötig in:
+- `useRemainingCash.ts` — die Formel `rawBargeld + min(previousCarry, 0)` bleibt korrekt, da der Hook jetzt den richtigen Wert liefert.
+- `DailySummary.tsx` — `bargeld = bargeldRaw + Math.min(previousDeficit, 0)` bleibt, Variable hat nur jetzt die richtige Semantik.
+- `ExcelLayout.tsx` — Bedingung `previousDeficit < 0` zeigt die Zeile weiterhin korrekt.
+- `pdfExport.ts` — Bedingung identisch, Wert wird richtig im PDF gerendert.
+- `CashBalance.tsx` / Bargeldbestand — bleibt **vollständig unverändert** (kumulative Sicht weiter dort).
+
+## Erwartetes Ergebnis (für YUM, 22.04.)
+- Vortag 21.04. hatte `rawBargeld = +230,43 €` → **keine** „Fehlbetrag Vortag"-Zeile (Vortag im Plus)
+- Wäre der 21.04. negativ gewesen, würde dieser Wert (z. B. die −37,22 € vom 20.04. an einem 21.04.) als Fehlbetrag erscheinen
+- Bargeldbestand-Seite bleibt unverändert kumulativ (+4.521,44 € Übertrag) — keine Doppelzählung, weil die Tagesabrechnung jetzt sauber getrennt ist
+
+## Hinweis zur Konsistenz
+Tagesabrechnung und Bargeldbestand zeigen damit bewusst **unterschiedliche Zahlen** — das ist gewollt:
+- Tagesabrechnung = operative Sicht „Wechselgeldkasse heute"
+- Bargeldbestand = buchhalterische Sicht „Gesamt-Bargeld kumuliert"
 
