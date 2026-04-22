@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,7 @@ interface BankDepositDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: { deposit_date: string; amount: number; notes?: string }) => void;
   isSubmitting?: boolean;
+  defaultAmount?: number;
 }
 
 export function BankDepositDialog({
@@ -24,11 +25,19 @@ export function BankDepositDialog({
   onOpenChange,
   onSubmit,
   isSubmitting = false,
+  defaultAmount = 0,
 }: BankDepositDialogProps) {
   const [date, setDate] = useState<Date | undefined>(new Date());
-  const [amount, setAmount] = useState<number>(0);
+  const [amount, setAmount] = useState<number>(defaultAmount);
   const [notes, setNotes] = useState<string>('');
   const [calendarOpen, setCalendarOpen] = useState(false);
+
+  // Pre-fill amount with the suggested default when dialog opens
+  useEffect(() => {
+    if (open) {
+      setAmount(defaultAmount);
+    }
+  }, [open, defaultAmount]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,14 +51,14 @@ export function BankDepositDialog({
 
     // Reset form
     setDate(new Date());
-    setAmount(0);
+    setAmount(defaultAmount);
     setNotes('');
   };
 
   const handleClose = () => {
     onOpenChange(false);
     setDate(new Date());
-    setAmount(0);
+    setAmount(defaultAmount);
     setNotes('');
   };
 

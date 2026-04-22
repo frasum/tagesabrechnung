@@ -598,6 +598,7 @@ export default function CashBalance() {
         onOpenChange={setDepositDialogOpen}
         onSubmit={handleDepositSubmit}
         isSubmitting={isCreating}
+        defaultAmount={Math.max(0, wechselgeldbestand - pettyCash)}
       />
     </AppLayout>
   );
