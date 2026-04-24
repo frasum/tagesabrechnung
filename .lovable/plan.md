@@ -1,80 +1,40 @@
-# Wechselgeldbestand-Logik – Analyse & Korrektur
+## Ziel
+Verhindern, dass die Sidebar beim Login (besonders nach PIN- oder OAuth-Login) kurzzeitig nur die "staff"-Einträge zeigt und Admin-/Manager-Punkte wie **Zeiterfassung** erst nach 1–2 Sekunden erscheinen.
 
-## Was ich in der DB gefunden habe (Spicery)
+## Ursache
+1. `AuthContext` setzt sofort den **gecachten** Benutzer aus `localStorage` (oft mit veralteter `permissionLevel`) und stößt parallel einen Hintergrund-Refresh an.
+2. `AppLayout` rendert die Navigation sofort mit diesem gecachten Wert → falsche Einträge bis der Refresh durch ist.
+3. Für Manager kommt dazu: `useManagerNavPermissions` lädt asynchron — während `isLoadingPermissions=true` zeigt der bestehende Code nur den Pfad `''` (Mitarbeiter-Abrechnung).
 
-| Tag | rawBargeld | Hinweis |
-|---|---:|---|
-| 18.4. | −44,97 € | Defizit |
-| 19.4. | +1.174,43 € | Überschuss |
-| 20.4. | +383,34 € | Überschuss |
-| 21.4. | −263,83 € | Defizit |
-| 22.4. | −33,41 € | Defizit |
-| 23.4. | +115,76 € | Überschuss |
+## Änderungen
 
-`pettyCash` = 2.000 €, `initial_cash_deficit` = 0, **keine Bankeinzahlungen** seit Anfang April.
+### 1. `src/contexts/AuthContext.tsx` — Sync-Status erweitern
+- Neuer State `isSyncingPermissions: boolean` (zusätzlich zum bestehenden `isLoading`).
+- Wird beim Mount auf `true` gesetzt, sobald ein gecachter PIN-User existiert und der Background-Refresh startet.
+- Wird auf `false` gesetzt:
+  - nach erfolgreichem Refresh (egal ob `permissionLevel` gleich blieb oder sich geänderte hat),
+  - im `catch`-Zweig (Netzwerkfehler → wir akzeptieren den Cache),
+  - direkt `false`, wenn kein `staffId` vorhanden ist oder der User per OAuth/Login frisch eingeloggt ist (dort liefert `convertOAuthUserWithTimeout` bereits live-Daten).
+- Über den Context-Value zusätzlich exportieren: `isSyncingPermissions`.
 
-## Wo der Wert 1.818,52 € herkommt – Hypothese
+### 2. `src/components/layout/AppLayout.tsx` — Render-Gate
+- `isSyncingPermissions` und `isLoading` aus `useAuth()` ziehen.
+- Neue abgeleitete Variable `isAuthReady = !isLoading && !isSyncingPermissions`.
+- Für **Manager** zusätzlich: solange `useManagerNavPermissions` lädt (`isLoadingPermissions`) ebenfalls als nicht bereit behandeln (Manager-spezifisch — Admins müssen darauf nicht warten).
+- Solange `!isAuthReady`:
+  - Desktop: Sidebar-Skelett rendern (Logo + Restaurant-Switcher + 6 graue `Skeleton`-Zeilen via `@/components/ui/skeleton`), Navigation-Items werden **nicht** gerendert. Höhe & Breite bleiben gleich, damit kein Layout-Shift entsteht.
+  - Mobile: Hamburger-Menü zeigt beim Öffnen ebenfalls Skeleton-Zeilen statt der Items.
+- Hauptinhalt (`<main>`) wird wie bisher gerendert — nur die Navigation wartet.
 
-`2.000 − 1.818,52 = 181,48 €`. Das passt zu **keiner einzelnen Vortagszahl**, aber sehr gut zur **Summe der letzten beiden Defizit-Tage**: `33,41 + 263,83 = 297,24` (zu viel) bzw. zur **gechainten Defizit-Kette** über mehrere Tage hinweg, wenn dazwischen Überschüsse den Defizit nicht voll kompensiert haben.
+### 3. `src/pages/zeiterfassung/ZtLayout.tsx` (analoges Mini-Fix)
+- Tab-Leiste prüft bereits Manager-Permissions. Auch hier: solange Manager-Permissions laden, statt der Tabs einen schmalen Skeleton-Streifen rendern, damit der Tab "Zusammenfassung" nicht kurz alleine erscheint.
 
-Es scheint: Du erwartest, dass **alle bisher unbeglichenen Vortagsfehlbeträge** in die Tagesabrechnung einfließen — nicht nur der direkte Vortag.
+## Was sich für den Benutzer ändert
+- Beim ersten Frame nach Login/Reload erscheint **kurz ein Skeleton** in der Sidebar, danach erscheinen alle korrekten Einträge auf einmal.
+- Kein "Zeiterfassung-Eintrag fehlt" mehr für Admins, deren Cache veraltet war.
+- Maximale Wartezeit ist identisch zur bisherigen (gleiche Netzwerk-Calls), nur das Rendering wird zurückgehalten.
 
-## Aktuelle Implementierung
-
-`useRemainingCash` ruft `usePreviousDayDeficit(23.4.)` auf. Diese liefert nur den **direkten Vortag** (22.4. = −33,41 €) zurück, gekappt bei 0. Bankeinzahlungen werden **nicht** berücksichtigt – das ist schon richtig.
-
-**Aber**: Frühere Defizite (z. B. 21.4.: −263,83 €) werden **vergessen**, sobald irgendein Tag dazwischen positiv war. Das passt nicht zu deinem mentalen Modell „rollender operativer Fehlbetrag".
-
-## Vorschlag: Korrigierte Logik
-
-### Neue Definition `previousOperativeDeficit(date)`
-
-Iteriere chronologisch durch alle Sessions vor `date` (ohne Bankeinzahlungen, ohne Register-Transfers!):
-
-```
-operativeBalance = 0
-für jeden Tag d < date:
-    operativeBalance = operativeBalance + rawBargeld(d)
-    skim             = max(0, operativeBalance)         // Überschuss kommt in den Tresor
-    operativeBalance = operativeBalance - skim          // bleibt nur Defizit übrig
-return operativeBalance   // ≤ 0
-```
-
-Damit wird ein Defizit **so lange mitgeschleppt**, bis ein Folgetag es operativ ausgleicht. Überschüsse landen sofort im Tresor (nicht im Vortrag) — exakt das Verhalten der heutigen Tagesabrechnung, nur **mehrtägig statt eintägig**.
-
-### Berechnung 23.4. mit neuer Logik
-
-```
-op_18 = 0 + (-44,97)        = -44,97        → bleibt -44,97
-op_19 = -44,97 + 1174,43    = 1129,46  → skim 1129,46 → 0
-op_20 = 0 + 383,34          = 383,34   → skim 383,34  → 0
-op_21 = 0 + (-263,83)       = -263,83  → bleibt -263,83
-op_22 = -263,83 + (-33,41)  = -297,24  → bleibt -297,24
-```
-
-Vortags-Defizit für 23.4. = **−297,24 €**
-
-```
-diffWechselgeld = 115,76 + (-297,24) = -181,48
-remainingCash   = 2000 + (-181,48) - max(0, -181,48)
-                = 1818,52 €  ✓
-```
-
-**Genau dein erwarteter Wert.**
-
-## Umsetzung
-
-1. **`usePreviousDayDeficit.ts`** umbauen: statt nur direkten Vortag → alle Tage seit „letztem Ausgleich" akkumulieren. Bankeinzahlungen und Register-Transfers werden weiterhin **bewusst ignoriert** (gehören auf die Bargeldbestand-Seite).
-2. **Optional**: Performance-Sicherheit durch Rückwärtssuche bis maximal 60 Tage oder bis `operativeBalance >= 0`.
-3. **Variablenname** in `useRemainingCash` von `previousCarry` → `previousOperativeDeficit` umbenennen, Kommentare anpassen.
-4. **Bargeldbestand-Seite** bleibt unverändert — die zeigt weiter den vollen kumulierten Saldo inkl. Bankeinzahlungen.
-
-## Auswirkung
-
-- **Tagesabrechnung 23.4. Spicery** wird künftig korrekt 1.818,52 € statt 2.000 € zeigen.
-- Kein Schema-Change, nur Hook-Logik.
-- Keine Regression auf der Bargeldbestand-Seite (nutzt eigenen Pfad).
-
-## Was ich von dir noch brauche
-
-Bestätige bitte, dass die obige rollende Defizit-Logik dein gewünschtes Verhalten ist (mehrtägige Akkumulation, Überschüsse werden sofort als Tresor-Skim verbraucht). Danach setze ich es in einem Schritt um.
+## Out of scope
+- Keine Änderung an Edge Functions oder DB.
+- Keine Änderung der Permissions-Logik selbst — nur das Render-Timing.
+- `useUserRole`/`useManagerNavPermissions` bleiben unverändert.
