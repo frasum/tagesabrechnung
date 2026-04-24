@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRestaurant, useRestaurants } from '@/hooks/useRestaurant';
 import { useManagerNavPermissions } from '@/hooks/useManagerNavPermissions';
