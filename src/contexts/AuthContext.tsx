@@ -37,6 +37,7 @@ const AUTH_STORAGE_KEY = 'spicery_auth_user';
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSyncingPermissions, setIsSyncingPermissions] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
 
   // Convert Supabase OAuth user to AuthUser with profile data - single API call
