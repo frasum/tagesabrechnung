@@ -19,6 +19,7 @@ interface AuthUser {
 interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
+  isSyncingPermissions: boolean;
   isLocked: boolean;
   login: (name: string, pinCode: string) => Promise<boolean>;
   logout: () => void;
