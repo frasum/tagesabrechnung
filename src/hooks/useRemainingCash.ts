@@ -8,22 +8,22 @@ import { usePreviousDayDeficit } from './usePreviousDayDeficit';
  * Day-normalized cash logic for the Daily Summary view.
  *
  * Semantics (per project memory: petty-cash target is 2000 €):
- *   diffWechselgeld = today's raw cash effect + min(previousCarry, 0)
- *     → only NEGATIVE previous-day carry counts as today's deficit;
- *       positive historical surplus belongs to the bank-deposit pipeline
- *       and is NOT mixed into today's display.
- *   skim            = max(0, diffWechselgeld)        // only today's surplus
- *   remainingCash   = pettyCash + diffWechselgeld - skim
- *     → exactly pettyCash on a balanced/surplus day;
- *       below pettyCash on a deficit day (e.g. 1.800 €).
+ *   previousOperativeDeficit (≤ 0): rolling unbalanced deficit from prior days.
+ *     A negative day stays "open" until a future day operatively compensates it.
+ *     Surpluses are skimmed away each day (tresor) and never inflate this value.
+ *     Bank deposits and register transfers are intentionally NOT considered here —
+ *     those belong to the cumulative Bargeldbestand pipeline.
  *
- * Cumulative carry-over (incl. positive historical surplus) is shown
- * separately on the Cash Balance page, not here.
+ *   diffWechselgeld = today's rawBargeld + previousOperativeDeficit
+ *   skim            = max(0, diffWechselgeld)
+ *   remainingCash   = pettyCash + diffWechselgeld - skim
+ *     → exactly pettyCash on a balanced/surplus day,
+ *       below pettyCash on an open-deficit day (e.g. 1.818,52 €).
  */
 export function useRemainingCash(restaurantId: string | null, selectedDate: Date) {
   const { data: cashRows, isLoading: cashLoading } = useCashBalanceData(restaurantId);
   const { pettyCash, isLoading: pettyCashLoading } = usePettyCash(restaurantId);
-  const { data: previousCarry = 0 } = usePreviousDayDeficit(selectedDate, restaurantId);
+  const { data: previousOperativeDeficit = 0 } = usePreviousDayDeficit(selectedDate, restaurantId);
 
   const result = useMemo(() => {
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
@@ -32,15 +32,15 @@ export function useRemainingCash(restaurantId: string | null, selectedDate: Date
     const todayRow = cashRows?.find(r => r.date === dateStr);
     const rawBargeld = todayRow ? todayRow.rawBargeld : 0;
 
-    // Only NEGATIVE previous carry leaks into the daily petty-cash view
-    const previousDeficitOnly = Math.min(previousCarry, 0);
+    // Defensive cap: previousOperativeDeficit is already ≤ 0 by construction
+    const safeDeficit = Math.min(previousOperativeDeficit, 0);
 
-    const diffWechselgeld = rawBargeld + previousDeficitOnly;
+    const diffWechselgeld = rawBargeld + safeDeficit;
     const todaySkimAmount = Math.max(0, diffWechselgeld);
     const remainingCash = pettyCash + diffWechselgeld - todaySkimAmount;
 
     return { remainingCash, todaySkimAmount, totalSkimmed: 0, diffWechselgeld };
-  }, [cashRows, pettyCash, selectedDate, previousCarry]);
+  }, [cashRows, pettyCash, selectedDate, previousOperativeDeficit]);
 
   return {
     ...result,
