@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useSfnMode } from "@/hooks/useSfnMode";
 import { Switch } from "@/components/ui/switch";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const allTabs = [
   { label: "Wochenplan", path: "", permPath: "zeiterfassung", adminOnly: false },
