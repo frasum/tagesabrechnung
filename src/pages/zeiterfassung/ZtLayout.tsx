@@ -32,10 +32,11 @@ export default function ZtLayout() {
   const isAdmin = hasPermission(userLevel, 'admin');
   const isManager = userLevel === 'manager';
 
-  const { data: managerPaths = [] } = useManagerNavPermissions(
+  const { data: managerPaths = [], isLoading: isLoadingPermissions } = useManagerNavPermissions(
     isManager ? user?.staffId : undefined
   );
   const hasCustomPermissions = isManager && managerPaths.length > 0;
+  const tabsReady = !isManager || !isLoadingPermissions;
 
   // "Zusammenfassung" is always visible for managers (like Kellnerabrechnung)
   const alwaysVisiblePaths = ["zeiterfassung/zusammenfassung"];
