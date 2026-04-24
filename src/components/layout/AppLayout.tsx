@@ -86,7 +86,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading: isAuthLoading, isSyncingPermissions } = useAuth();
   const { restaurantName, restaurantSlug } = useRestaurant();
   const { data: restaurants = [] } = useRestaurants();
   
@@ -98,6 +98,13 @@ export function AppLayout({ children }: AppLayoutProps) {
     isManager ? user?.staffId : undefined
   );
   const hasCustomPermissions = isManager && managerPaths.length > 0;
+
+  // Navigation erst rendern, wenn Berechtigungen vollständig geladen sind.
+  // Admins müssen NICHT auf Manager-Permissions warten.
+  const isNavReady =
+    !isAuthLoading &&
+    !isSyncingPermissions &&
+    (!isManager || !isLoadingPermissions);
   const alwaysVisibleForManager = [''];
 
   // Combine all items and filter by permissions
