@@ -215,8 +215,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(parsed);
             setIsLoading(false);
           }
-          // Background refresh of permission level
+          // Background refresh of permission level — Sidebar wartet darauf
           if (parsed.staffId) {
+            if (isMounted) setIsSyncingPermissions(true);
             try {
               const response = await fetch(
                 `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-user-role?staff_id=${parsed.staffId}`,
@@ -236,6 +237,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 }
               }
             } catch { /* silent - cached data is still usable */ }
+            finally {
+              if (isMounted) setIsSyncingPermissions(false);
+            }
           }
           return;
         }
