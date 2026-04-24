@@ -1,54 +1,80 @@
+# Wechselgeldbestand-Logik – Analyse & Korrektur
 
+## Was ich in der DB gefunden habe (Spicery)
 
-# Aktualisierungs-Problem auf anderen Geräten beheben
+| Tag | rawBargeld | Hinweis |
+|---|---:|---|
+| 18.4. | −44,97 € | Defizit |
+| 19.4. | +1.174,43 € | Überschuss |
+| 20.4. | +383,34 € | Überschuss |
+| 21.4. | −263,83 € | Defizit |
+| 22.4. | −33,41 € | Defizit |
+| 23.4. | +115,76 € | Überschuss |
 
-## Warum siehst du auf einem anderen Computer eine alte Version?
+`pettyCash` = 2.000 €, `initial_cash_deficit` = 0, **keine Bankeinzahlungen** seit Anfang April.
 
-Zwei Gründe wirken zusammen:
+## Wo der Wert 1.818,52 € herkommt – Hypothese
 
-1. **Frontend ist nicht neu „published"**: In Lovable werden Frontend-Änderungen erst durch Klick auf **Publish → Update** auf der Live-URL (`tagesabrechnung.lovable.app`) aktiv. Solange du nicht erneut publishst, sehen andere Computer weiterhin die letzte veröffentlichte Version — egal wie viele Änderungen du im Editor gemacht hast.
-2. **PWA Service-Worker-Cache**: Die App ist als PWA mit `registerType: "autoUpdate"` konfiguriert. Der Service Worker liefert beim ersten Aufruf die gecachte alte `index.html`/JS-Bundle aus und prüft erst **im Hintergrund** auf Updates. Erst beim **nächsten** Reload sieht der Nutzer die neue Version. Auf einem anderen Computer, der die App schon einmal geöffnet hat, wirkt das wie „bleibt alt".
+`2.000 − 1.818,52 = 181,48 €`. Das passt zu **keiner einzelnen Vortagszahl**, aber sehr gut zur **Summe der letzten beiden Defizit-Tage**: `33,41 + 263,83 = 297,24` (zu viel) bzw. zur **gechainten Defizit-Kette** über mehrere Tage hinweg, wenn dazwischen Überschüsse den Defizit nicht voll kompensiert haben.
 
-Zusätzlich bremsen:
-- **Browser HTTP-Cache** für `index.html`
-- **Bereits installierte PWA**: Service-Worker-Update-Check passiert nur alle 5 Minuten (siehe `UpdateNotification.tsx`)
+Es scheint: Du erwartest, dass **alle bisher unbeglichenen Vortagsfehlbeträge** in die Tagesabrechnung einfließen — nicht nur der direkte Vortag.
 
-## Sofort-Maßnahmen (kein Code nötig)
+## Aktuelle Implementierung
 
-1. **Publish → Update** in Lovable klicken (oben rechts) — sonst ist deine neueste Version gar nicht live.
-2. Auf dem anderen Computer:
-   - **Hard Reload**: Cmd/Ctrl + Shift + R
-   - Oder DevTools → Application → Service Workers → „Unregister" + Storage → „Clear site data"
+`useRemainingCash` ruft `usePreviousDayDeficit(23.4.)` auf. Diese liefert nur den **direkten Vortag** (22.4. = −33,41 €) zurück, gekappt bei 0. Bankeinzahlungen werden **nicht** berücksichtigt – das ist schon richtig.
 
-## Code-Verbesserungen, damit das künftig automatisch klappt
+**Aber**: Frühere Defizite (z. B. 21.4.: −263,83 €) werden **vergessen**, sobald irgendein Tag dazwischen positiv war. Das passt nicht zu deinem mentalen Modell „rollender operativer Fehlbetrag".
 
-### 1. Sichtbares Update-Banner mit „Jetzt neu laden"-Button
-In `src/components/pwa/UpdateNotification.tsx` ist aktuell nur ein Banner **nach** erfolgtem Update sichtbar. Wir ergänzen:
-- Hook in `useRegisterSW` auf `onNeedRefresh` → Banner mit Button **„Neue Version verfügbar — Jetzt aktualisieren"** anzeigen, der `updateServiceWorker(true)` aufruft (sofort reload).
-- So merken Nutzer auf jedem Gerät sofort, dass es ein Update gibt, und können mit einem Klick laden.
+## Vorschlag: Korrigierte Logik
 
-### 2. Update-Intervall verkürzen
-- Polling von **5 min → 60 Sekunden** in `UpdateNotification.tsx` (Zeile mit `setInterval(..., 5 * 60 * 1000)`).
-- Zusätzlich Update-Check beim **Tab-Fokus** (`visibilitychange` → `registration.update()`), damit Rückkehr zum Tab sofort nach neuer Version sucht.
+### Neue Definition `previousOperativeDeficit(date)`
 
-### 3. `index.html` nicht aggressiv cachen
-- Workbox-Konfiguration in `vite.config.ts` um `runtimeCaching` für `navigation`-Requests mit `NetworkFirst` (kurzer Timeout, Fallback auf Cache) erweitern → `index.html` wird bevorzugt frisch geladen, App startet aber offline weiterhin.
+Iteriere chronologisch durch alle Sessions vor `date` (ohne Bankeinzahlungen, ohne Register-Transfers!):
 
-### 4. Versions-Anzeige (optional, sehr hilfreich)
-- Build-Zeitstempel als `import.meta.env`-Konstante in `vite.config.ts` definieren (`define: { __BUILD_TIME__: ... }`).
-- Klein in der Sidebar/Footer anzeigen: „v 2026-04-22 15:30" — so siehst du auf jedem Gerät auf einen Blick, ob es die aktuelle Version ist.
+```
+operativeBalance = 0
+für jeden Tag d < date:
+    operativeBalance = operativeBalance + rawBargeld(d)
+    skim             = max(0, operativeBalance)         // Überschuss kommt in den Tresor
+    operativeBalance = operativeBalance - skim          // bleibt nur Defizit übrig
+return operativeBalance   // ≤ 0
+```
 
-## Betroffene Dateien
-- `vite.config.ts` — `navigateFallback`-Caching + `__BUILD_TIME__` define
-- `src/components/pwa/UpdateNotification.tsx` — `onNeedRefresh`-Banner, kürzeres Polling, visibility-Handler
-- `src/components/layout/AppLayout.tsx` (oder Sidebar-Footer) — kleine Versions-Anzeige
+Damit wird ein Defizit **so lange mitgeschleppt**, bis ein Folgetag es operativ ausgleicht. Überschüsse landen sofort im Tresor (nicht im Vortrag) — exakt das Verhalten der heutigen Tagesabrechnung, nur **mehrtägig statt eintägig**.
 
-## Nicht betroffen
-- Datenmodell, Auth, Berechnungslogik
+### Berechnung 23.4. mit neuer Logik
 
-## Erwartetes Ergebnis
-- Andere Computer holen sich neue Versionen **innerhalb von 1 Minute** (statt frühestens nach 5 Min + Reload).
-- Nutzer sehen ein klares Banner „Neue Version — Jetzt aktualisieren" und können mit einem Klick laden.
-- Versions-Stempel erlaubt schnelle Diagnose, ob Gerät die aktuelle Version hat.
-- **Wichtig vorab**: Der Effekt tritt nur ein, **nachdem du einmalig auf Publish → Update geklickt hast** — sonst lebt der andere Computer weiterhin von der alten Live-Version.
+```
+op_18 = 0 + (-44,97)        = -44,97        → bleibt -44,97
+op_19 = -44,97 + 1174,43    = 1129,46  → skim 1129,46 → 0
+op_20 = 0 + 383,34          = 383,34   → skim 383,34  → 0
+op_21 = 0 + (-263,83)       = -263,83  → bleibt -263,83
+op_22 = -263,83 + (-33,41)  = -297,24  → bleibt -297,24
+```
 
+Vortags-Defizit für 23.4. = **−297,24 €**
+
+```
+diffWechselgeld = 115,76 + (-297,24) = -181,48
+remainingCash   = 2000 + (-181,48) - max(0, -181,48)
+                = 1818,52 €  ✓
+```
+
+**Genau dein erwarteter Wert.**
+
+## Umsetzung
+
+1. **`usePreviousDayDeficit.ts`** umbauen: statt nur direkten Vortag → alle Tage seit „letztem Ausgleich" akkumulieren. Bankeinzahlungen und Register-Transfers werden weiterhin **bewusst ignoriert** (gehören auf die Bargeldbestand-Seite).
+2. **Optional**: Performance-Sicherheit durch Rückwärtssuche bis maximal 60 Tage oder bis `operativeBalance >= 0`.
+3. **Variablenname** in `useRemainingCash` von `previousCarry` → `previousOperativeDeficit` umbenennen, Kommentare anpassen.
+4. **Bargeldbestand-Seite** bleibt unverändert — die zeigt weiter den vollen kumulierten Saldo inkl. Bankeinzahlungen.
+
+## Auswirkung
+
+- **Tagesabrechnung 23.4. Spicery** wird künftig korrekt 1.818,52 € statt 2.000 € zeigen.
+- Kein Schema-Change, nur Hook-Logik.
+- Keine Regression auf der Bargeldbestand-Seite (nutzt eigenen Pfad).
+
+## Was ich von dir noch brauche
+
+Bestätige bitte, dass die obige rollende Defizit-Logik dein gewünschtes Verhalten ist (mehrtägige Akkumulation, Überschüsse werden sofort als Tresor-Skim verbraucht). Danach setze ich es in einem Schritt um.
