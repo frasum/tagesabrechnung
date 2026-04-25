@@ -133,7 +133,11 @@ export function useCashBalanceData(restaurantId: string | null, fromDate?: strin
 
       let carryOver = initialCarryOver;
 
-      let prevRawBargeld = 0;
+      // Rolling operative deficit (≤ 0): mirrors usePreviousDayDeficit /
+      // DailySummary. Surpluses are skimmed each day (tresor); only unbalanced
+      // deficits chain forward. Seeded with the negative portion of the
+      // pre-window operative balance so very old deficits aren't lost.
+      let operativeBalance = Math.min(0, initialCarryOver);
 
       return allDates.map((date) => {
         const session = sessionMap.get(date);
