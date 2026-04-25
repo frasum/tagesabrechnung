@@ -188,9 +188,13 @@ export function useCashBalanceData(restaurantId: string | null, fromDate?: strin
         const chainedBargeld = rawBargeld + previousCarry;
         const remainingCash = chainedBargeld - depositEffect;
 
-        // Display value: net previous day's deficit only (surplus stays out)
-        const displayBargeld = rawBargeld + Math.min(0, prevRawBargeld);
-        prevRawBargeld = rawBargeld;
+        // Display value uses the rolling operative deficit (matches the
+        // "Differenz zum Wechselgeldbestand" shown in the daily summary).
+        // Step 1: read the previous days' carried operative deficit (≤ 0)
+        // and net it into today's raw cash. Step 2: update the rolling
+        // operativeBalance for the next iteration (skim positive surplus).
+        const displayBargeld = rawBargeld + operativeBalance;
+        operativeBalance = Math.min(0, operativeBalance + rawBargeld);
 
         // Chain forward (positive AND negative)
         carryOver = remainingCash;
