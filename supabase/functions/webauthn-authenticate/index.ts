@@ -224,8 +224,8 @@ Deno.serve(async (req) => {
         const valid = await crypto.subtle.verify(
           { name: "ECDSA", hash: "SHA-256" },
           publicKey,
-          rawSig,
-          signedData
+          rawSig as BufferSource,
+          signedData as BufferSource
         );
 
         if (!valid) {
