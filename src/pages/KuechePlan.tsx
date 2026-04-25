@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { MonthlyGrid } from '@/components/dienstplan/MonthlyGrid';
-import { GlobalLayout } from '@/components/layout/GlobalLayout';
+import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getPeriodRange } from '@/lib/periodUtils';
@@ -44,7 +44,7 @@ export default function KuechePlan() {
   };
 
   return (
-    <GlobalLayout>
+    <AppLayout>
       <div className="space-y-6">
         <div className="sticky top-0 z-20 bg-background pb-3 border-b border-border/50 shadow-sm">
           <div className="flex flex-col gap-4">
@@ -91,6 +91,6 @@ export default function KuechePlan() {
           </div>
         ))}
       </div>
-    </GlobalLayout>
+    </AppLayout>
   );
 }
