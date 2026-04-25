@@ -237,7 +237,7 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error("Error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -245,120 +245,105 @@ Deno.serve(async (req) => {
 });
 
 async function calculateCashBalance(supabase: any, restaurantId: string, upToDate: string): Promise<{ kassenbestand: number; details: DayCashDetails | null } | null> {
-  const { data: sessions, error: sessionsError } = await supabase
+  // 1. Get carry-over up to (but not including) upToDate via central RPC
+  //    This mirrors useCashBalanceData / compute_carry_over (positive AND negative chaining,
+  //    bank deposits + register transfers included).
+  const { data: carryOverData, error: carryOverError } = await supabase.rpc('compute_carry_over', {
+    p_restaurant_id: restaurantId,
+    p_before_date: upToDate,
+  });
+  if (carryOverError) {
+    console.error('compute_carry_over error:', carryOverError);
+    return null;
+  }
+  const previousCarry = Number(carryOverData) || 0;
+
+  // 2. Load the session for upToDate (if any)
+  const { data: session } = await supabase
     .from("sessions")
     .select("id, session_date, pos_total, terminal_1_total, terminal_2_total, ordersmart_revenue, wolt_revenue, vouchers_redeemed, finedine_vouchers, vouchers_sold, einladung, vorschuss, sonstige_einnahme")
     .eq("restaurant_id", restaurantId)
-    .lte("session_date", upToDate)
-    .order("session_date", { ascending: true });
+    .eq("session_date", upToDate)
+    .maybeSingle();
 
-  if (sessionsError || !sessions || sessions.length === 0) return null;
-
-  const sessionIds = sessions.map((s: any) => s.id);
-
-  const [shiftsRes, expensesRes, advancesRes, settingsRes, restaurantRes, transfersRes] = await Promise.all([
-    supabase.from("waiter_shifts").select("session_id, open_invoices").in("session_id", sessionIds),
-    supabase.from("expenses").select("session_id, amount").in("session_id", sessionIds),
-    supabase.from("advances").select("session_id, amount").in("session_id", sessionIds),
-    supabase.from("settings").select("value").eq("restaurant_id", restaurantId).eq("key", "petty_cash").maybeSingle(),
-    supabase.from("restaurants").select("initial_cash_deficit").eq("id", restaurantId).single(),
-    supabase.from("register_transfers").select("transfer_date, direction, amount").eq("restaurant_id", restaurantId).lte("transfer_date", upToDate),
+  // 3. Load same-day shifts/expenses/advances/transfers/deposits in parallel
+  const sessionId = session?.id;
+  const [shiftsRes, expensesRes, advancesRes, transfersRes, depositsRes] = await Promise.all([
+    sessionId
+      ? supabase.from("waiter_shifts").select("open_invoices").eq("session_id", sessionId)
+      : Promise.resolve({ data: [] as any[] }),
+    sessionId
+      ? supabase.from("expenses").select("amount").eq("session_id", sessionId)
+      : Promise.resolve({ data: [] as any[] }),
+    sessionId
+      ? supabase.from("advances").select("amount").eq("session_id", sessionId)
+      : Promise.resolve({ data: [] as any[] }),
+    supabase.from("register_transfers").select("direction, amount").eq("restaurant_id", restaurantId).eq("transfer_date", upToDate),
+    supabase.from("bank_deposits").select("amount").eq("restaurant_id", restaurantId).eq("deposit_date", upToDate),
   ]);
 
-  const waiterShifts = shiftsRes.data || [];
-  const expenses = expensesRes.data || [];
-  const advances = advancesRes.data || [];
-  const transfers = transfersRes.data || [];
-  const pettyCashRaw = settingsRes.data?.value;
-  const pettyCash = pettyCashRaw
-    ? (typeof pettyCashRaw === "object" && pettyCashRaw.amount != null ? Number(pettyCashRaw.amount) : Number(pettyCashRaw))
-    : 0;
-  const initialDeficit = restaurantRes.data?.initial_cash_deficit ?? 0;
+  const dayShifts = shiftsRes.data || [];
+  const dayExpenses = expensesRes.data || [];
+  const dayAdvances = advancesRes.data || [];
+  const dayTransfers = transfersRes.data || [];
+  const dayDeposits = depositsRes.data || [];
 
-  // Build session map by date
-  const sessionMap = new Map<string, any>();
-  for (const s of sessions) sessionMap.set(s.session_date, s);
+  // If neither a session nor any movement exists for that day, we still report the carry as Bestand.
+  const hasAnyData = !!session || dayTransfers.length > 0 || dayDeposits.length > 0;
 
-  // Find transfer-only dates (no session)
-  const transferOnlyDates = new Set<string>();
-  for (const t of transfers) {
-    if (!sessionMap.has(t.transfer_date)) transferOnlyDates.add(t.transfer_date);
-  }
+  const tagesumsatz = Number(session?.pos_total) || 0;
+  const kreditkarten = (Number(session?.terminal_1_total) || 0) + (Number(session?.terminal_2_total) || 0);
+  const ordersmart = Number(session?.ordersmart_revenue) || 0;
+  const wolt = Number(session?.wolt_revenue) || 0;
+  const gutscheineEL = Number(session?.vouchers_redeemed) || 0;
+  const finedine = Number(session?.finedine_vouchers) || 0;
+  const gutscheineVK = Number(session?.vouchers_sold) || 0;
+  const einladung = Number(session?.einladung) || 0;
+  const sonstigeEinnahme = Number(session?.sonstige_einnahme) || 0;
 
-  // All dates sorted
-  const allDates = [...new Set([
-    ...sessions.map((s: any) => s.session_date),
-    ...transferOnlyDates,
-  ])].sort();
+  const totalOpenInvoices = dayShifts.reduce((s: number, w: any) => s + (Number(w.open_invoices) || 0), 0);
+  const totalExpenses = dayExpenses.reduce((s: number, e: any) => s + (Number(e.amount) || 0), 0);
+  const vorschuss = dayAdvances.length > 0
+    ? dayAdvances.reduce((s: number, a: any) => s + (Number(a.amount) || 0), 0)
+    : (Number(session?.vorschuss) || 0);
 
-  let carryOver = initialDeficit;
-  const dailyBargeld: number[] = [];
-  let targetDetails: DayCashDetails | null = null;
+  const transferEffect = dayTransfers.reduce((s: number, t: any) => {
+    return t.direction === 'to_restaurant' ? s + Number(t.amount) : s - Number(t.amount);
+  }, 0);
+  const depositEffect = dayDeposits.reduce((s: number, d: any) => s + Number(d.amount), 0);
 
-  for (const date of allDates) {
-    const session = sessionMap.get(date);
+  // Pure daily cash (matches useCashBalanceData.rawBargeld)
+  const rawBargeld =
+    tagesumsatz + gutscheineVK + sonstigeEinnahme
+    - kreditkarten - ordersmart - wolt - gutscheineEL - finedine - einladung
+    - totalOpenInvoices - vorschuss - totalExpenses
+    + transferEffect;
 
-    const tagesumsatz = session?.pos_total || 0;
-    const kreditkarten = (session?.terminal_1_total || 0) + (session?.terminal_2_total || 0);
-    const ordersmart = session?.ordersmart_revenue || 0;
-    const wolt = session?.wolt_revenue || 0;
-    const gutscheineEL = session?.vouchers_redeemed || 0;
-    const finedine = session?.finedine_vouchers || 0;
-    const gutscheineVK = session?.vouchers_sold || 0;
-    const einladung = session?.einladung || 0;
-    const sonstigeEinnahme = session?.sonstige_einnahme || 0;
+  // Cumulative balance after deposits = single source of truth (matches App "Wechselgeldbestand")
+  const remainingCash = previousCarry + rawBargeld - depositEffect;
 
-    const sessionShifts = session ? waiterShifts.filter((s: any) => s.session_id === session.id) : [];
-    const sessionExpenses = session ? expenses.filter((e: any) => e.session_id === session.id) : [];
-    const sessionAdvances = session ? advances.filter((a: any) => a.session_id === session.id) : [];
+  // Daily display cash: nets only previous-day deficit (mirrors Tagesabrechnung "Bargeld" arrow)
+  const displayBargeld = rawBargeld + Math.min(0, previousCarry);
 
-    const totalOpenInvoices = sessionShifts.reduce((sum: number, w: any) => sum + (w.open_invoices || 0), 0);
-    const totalExpenses = sessionExpenses.reduce((sum: number, e: any) => sum + e.amount, 0);
-    const vorschuss = sessionAdvances.length > 0
-      ? sessionAdvances.reduce((sum: number, a: any) => sum + a.amount, 0)
-      : (session?.vorschuss || 0);
+  if (!hasAnyData && previousCarry === 0) return null;
 
-    const dayTransfers = transfers.filter((t: any) => t.transfer_date === date);
-    const transferEffect = dayTransfers.reduce((sum: number, t: any) => {
-      return t.direction === 'to_restaurant' ? sum + Number(t.amount) : sum - Number(t.amount);
-    }, 0);
-
-    const rawBargeld = tagesumsatz + gutscheineVK + sonstigeEinnahme
-      - kreditkarten - ordersmart - wolt - gutscheineEL - finedine - einladung
-      - totalOpenInvoices - vorschuss - totalExpenses
-      + transferEffect;
-
-    const bargeld = rawBargeld + carryOver;
-    carryOver = bargeld < 0 ? bargeld : 0;
-    dailyBargeld.push(rawBargeld);
-
-    if (date === upToDate) {
-      targetDetails = {
-        kreditkarten,
-        ordersmart,
-        wolt,
-        gutscheineEL,
-        finedine,
-        gutscheineVK,
-        einladung,
-        offeneRE: totalOpenInvoices,
-        vorschuss,
-        ausgaben: totalExpenses,
-        sonstigeEinnahme,
-        bargeld,
-      };
-    }
-  }
-
-  let kassenbestand = pettyCash;
-  for (const bargeld of dailyBargeld) {
-    kassenbestand += bargeld;
-    if (kassenbestand > pettyCash) {
-      kassenbestand = pettyCash;
-    }
-  }
-
-  return { kassenbestand, details: targetDetails };
+  return {
+    kassenbestand: remainingCash,
+    details: {
+      kreditkarten,
+      ordersmart,
+      wolt,
+      gutscheineEL,
+      finedine,
+      gutscheineVK,
+      einladung,
+      offeneRE: totalOpenInvoices,
+      vorschuss,
+      ausgaben: totalExpenses,
+      sonstigeEinnahme,
+      bargeld: displayBargeld,
+    },
+  };
 }
 
 function getYesterday(): string {
