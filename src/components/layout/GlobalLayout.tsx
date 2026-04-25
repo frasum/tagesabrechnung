@@ -75,11 +75,11 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
         Planung
       </p>
       <Link
-        to="/kueche-plan"
+        to="/spicery/kueche-plan"
         onClick={onClickLink}
-        className={linkClasses('/kueche-plan')}
+        className={linkClasses('/spicery/kueche-plan')}
       >
-        <ChefHat className={iconClasses('/kueche-plan')} />
+        <ChefHat className={iconClasses('/spicery/kueche-plan')} />
         Küchenplan
       </Link>
       <Link
