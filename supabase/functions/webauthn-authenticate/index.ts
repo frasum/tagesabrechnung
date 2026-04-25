@@ -39,7 +39,7 @@ async function importPublicKey(publicKeyBase64: string, alg: number): Promise<Cr
     // RS256 - SPKI format
     return crypto.subtle.importKey(
       "spki",
-      keyBytes,
+      keyBytes as BufferSource,
       { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
       false,
       ["verify"]
