@@ -133,13 +133,30 @@ export function useCashBalanceData(restaurantId: string | null, fromDate?: strin
 
       let carryOver = initialCarryOver;
 
-      // Rolling operative deficit (≤ 0): mirrors usePreviousDayDeficit /
-      // DailySummary. Surpluses are skimmed each day (tresor); only unbalanced
-      // deficits chain forward. Seeded with the negative portion of the
-      // pre-window operative balance so very old deficits aren't lost.
-      let operativeBalance = Math.min(0, initialCarryOver);
+      // First pass: compute pure operative dailyCash per date (no transfers,
+      // no deposits) — needed to mirror usePreviousDayDeficit exactly.
+      type Row = {
+        date: string;
+        session: typeof sessions extends (infer U)[] | null ? U | undefined : never;
+        dailyCash: number;
+        rawBargeld: number;
+        transferEffect: number;
+        depositEffect: number;
+        tagesumsatz: number;
+        kreditkarten: number;
+        ordersmart: number;
+        wolt: number;
+        gutscheineEL: number;
+        finedine: number;
+        gutscheineVK: number;
+        einladung: number;
+        sonstigeEinnahme: number;
+        vorschuss: number;
+        totalOpenInvoices: number;
+        totalExpenses: number;
+      };
 
-      return allDates.map((date) => {
+      const baseRows: Row[] = allDates.map((date) => {
         const session = sessionMap.get(date);
         const shifts = session ? allShifts.filter((s) => s.session_id === session.id) : [];
         const sessionExpenses = session ? allExpenses.filter((e) => e.session_id === session.id) : [];
@@ -183,42 +200,68 @@ export function useCashBalanceData(restaurantId: string | null, fromDate?: strin
           .filter(d => d.deposit_date === date)
           .reduce((sum, d) => sum + Number(d.amount), 0);
 
-        const previousCarry = carryOver;
         const rawBargeld = dailyCash + transferEffect;
-        const chainedBargeld = rawBargeld + previousCarry;
-        const remainingCash = chainedBargeld - depositEffect;
 
-        // Display value uses the rolling operative deficit (matches the
-        // "Differenz zum Wechselgeldbestand" shown in the daily summary).
-        // Step 1: read the previous days' carried operative deficit (≤ 0)
-        // and net it into today's raw cash. Step 2: update the rolling
-        // operativeBalance for the next iteration (skim positive surplus).
-        const displayBargeld = rawBargeld + operativeBalance;
-        operativeBalance = Math.min(0, operativeBalance + rawBargeld);
+        return {
+          date, session: session as any, dailyCash, rawBargeld, transferEffect, depositEffect,
+          tagesumsatz, kreditkarten, ordersmart, wolt, gutscheineEL, finedine,
+          gutscheineVK, einladung, sonstigeEinnahme, vorschuss, totalOpenInvoices, totalExpenses,
+        };
+      });
 
-        // Chain forward (positive AND negative)
+      // Index for 90-day operative balance lookup (only session days have dailyCash).
+      const sessionDayCash: { date: string; dailyCash: number }[] = baseRows
+        .filter(r => r.session)
+        .map(r => ({ date: r.date, dailyCash: r.dailyCash }));
+
+      const ninetyDaysMs = 90 * 24 * 60 * 60 * 1000;
+      const computeDisplayBargeld = (date: string, todayDailyCash: number): number => {
+        // Mirror usePreviousDayDeficit: walk operative cash for all session
+        // days strictly before `date` within a 90-day look-back window,
+        // skim on surplus, keep deficit.
+        const todayMs = new Date(date + 'T00:00:00').getTime();
+        const fromMs = todayMs - ninetyDaysMs;
+        let balance = 0;
+        for (const r of sessionDayCash) {
+          const rMs = new Date(r.date + 'T00:00:00').getTime();
+          if (rMs >= todayMs) break;
+          if (rMs < fromMs) continue;
+          balance += r.dailyCash;
+          if (balance > 0) balance = 0;
+        }
+        return todayDailyCash + balance;
+      };
+
+      return baseRows.map((r) => {
+        const previousCarry = carryOver;
+        const chainedBargeld = r.rawBargeld + previousCarry;
+        const remainingCash = chainedBargeld - r.depositEffect;
+
+        const displayBargeld = computeDisplayBargeld(r.date, r.dailyCash);
+
+        // Chain forward (positive AND negative) for the cumulative pipeline
         carryOver = remainingCash;
 
         return {
-          date,
-          kellnerUmsatz: tagesumsatz,
-          kreditkarten,
-          ordersmart,
-          wolt,
-          gutscheineEL,
-          finedine,
-          gutscheineVK,
-          einladung,
-          offeneRE: totalOpenInvoices,
-          vorschuss,
-          ausgaben: totalExpenses,
-          sonstigeEinnahme,
-          rawBargeld,
+          date: r.date,
+          kellnerUmsatz: r.tagesumsatz,
+          kreditkarten: r.kreditkarten,
+          ordersmart: r.ordersmart,
+          wolt: r.wolt,
+          gutscheineEL: r.gutscheineEL,
+          finedine: r.finedine,
+          gutscheineVK: r.gutscheineVK,
+          einladung: r.einladung,
+          offeneRE: r.totalOpenInvoices,
+          vorschuss: r.vorschuss,
+          ausgaben: r.totalExpenses,
+          sonstigeEinnahme: r.sonstigeEinnahme,
+          rawBargeld: r.rawBargeld,
           // Keep legacy `bargeld` semantics for exports = pure daily (no carry)
-          bargeld: rawBargeld,
+          bargeld: r.rawBargeld,
           displayBargeld,
-          transferEffect,
-          depositEffect,
+          transferEffect: r.transferEffect,
+          depositEffect: r.depositEffect,
           previousCarry,
           chainedBargeld,
           remainingCash,

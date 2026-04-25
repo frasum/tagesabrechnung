@@ -1,52 +1,36 @@
-## Erklärung der Diskrepanz (24.04. – YUM)
+## Problem
 
-Beide Werte basieren auf der **gleichen Tagesformel**, nutzen aber **unterschiedliche „Vortags-Fehlbetrag"-Quellen**:
+Die Spalte „Bargeld" zeigt **−5.854,23 €** statt der erwarteten **−6,24 €** (Wert aus der Tagesabrechnung).
 
-**Heutige reine Tageskasse (rawBargeld) am 24.04.:**
-```
-6.811,50 (POS) − 6.054,53 (Karten) − 158,60 (Wolt) − 50,00 (Gutschein EL)
-= 548,37 €
-```
+## Ursachenanalyse
 
-**Bargeldbestand-Tabelle, Spalte „Bargeld" (112,20 €):**
-- Formel: `displayBargeld = rawBargeld(heute) + min(0, rawBargeld(gestern))`
-- Nimmt **nur den Vortag (23.04.)** als Fehlbetrag-Quelle.
-- 23.04. rawBargeld = 5.389,20 − 2.211,08 − 3.274,24 − 321,00 = **−417,12 €**
-- → 548,37 + (−417,12) ≈ **131,25 €**
+`useCashBalanceData` lädt **6 Monate** Sessions; meine vorherige Änderung akkumuliert den operativen Saldo über das gesamte Fenster. Über 6 Monate sammeln sich „Operative Defizite", die in Wirklichkeit längst durch **Bankeinzahlungen / Kassentransfers** ausgeglichen wurden — diese werden vom operativen Saldo absichtlich ignoriert, weil sie laut Memory zur Bargeldbestand-Pipeline gehören.
 
-(Der angezeigte Wert 112,20 € weicht minimal ab — vermutlich Rundungen oder kleine Felder, die ich übersehe; die Mechanik stimmt.)
+`usePreviousDayDeficit` (Tagesabrechnung) hat dieselbe konzeptionelle Schwäche, fällt aber nicht auf, weil das Fenster nur **90 Tage** ist.
 
-**Tagesabrechnung, „Differenz zum Wechselgeldbestand" (−6,24 €):**
-- Formel: `bargeld = rawBargeld(heute) + min(0, rollender operativer Fehlbetrag)`
-- Der **rollende operative Fehlbetrag** läuft über bis zu 90 Tage rückwärts und akkumuliert alle vorherigen unausgeglichenen Defizite. Überschüsse werden täglich „skimmed" (Tresor), Fehlbeträge bleiben offen, bis sie kompensiert werden.
-- D.h. der 23.04. ist nicht nur −417,12 €, sondern enthält noch **alte ungetilgte Defizite aus früheren Tagen**.
-- → 548,37 + (−554,61) ≈ **−6,24 €**
+## Lösung
 
-## Wo die Logik nicht stimmt
+`displayBargeld` pro Zeile soll **exakt den Wert** zeigen, den `usePreviousDayDeficit` für diesen Tag liefert (= rollender 90-Tage-Operativsaldo + heutiger `dailyCash`).
 
-Die beiden Sichten **widersprechen sich konzeptionell**:
+### Umsetzung in `src/hooks/useCashBalanceData.ts`
 
-| Sicht | Vortagsbetrachtung | Konsequenz |
-|---|---|---|
-| Bargeldbestand-Spalte „Bargeld" | nur 1 Tag zurück | **unterschätzt** Fehlbeträge, wenn ältere Defizite noch offen sind |
-| Tagesabrechnung „BARGELD" | rollend bis 90 Tage | korrekt operativ |
+1. **Operative Tageskasse separat berechnen** (`dailyCash` ohne Transfers, ohne Deposits — exakt wie in `usePreviousDayDeficit.ts` Zeilen 89–102).
 
-Beides soll laut Memory denselben „Differenz zum Wechselgeldbestand"-Gedanken abbilden — daher sollten sie identisch sein.
+2. **Pro Zeile** den Operativsaldo neu aufbauen, aber nur über die letzten **90 Tage vor diesem Datum**:
+   - Tage in chronologischer Reihenfolge durchlaufen
+   - Für jeden Tag im 90-Tage-Fenster: `balance += dailyCash; balance = min(0, balance)` (Skim-on-Surplus)
+   - `displayBargeld[heute] = dailyCash[heute] + balance_vor_heute`
 
-## Vorschlag zur Behebung
+3. **Performance**: Vorberechnung — eine sortierte Liste `[{date, dailyCash}]` einmal aufbauen, dann mit Two-Pointer-Sliding-Window in O(n) durchlaufen.
 
-**Variante A (empfohlen):** Spalte „Bargeld" in der Bargeldbestand-Tabelle auf den **rollenden operativen Fehlbetrag** umstellen, identisch zur Tagesabrechnung.
+### Konsequenz
 
-- Datei: `src/hooks/useCashBalanceData.ts`
-- Statt `displayBargeld = rawBargeld + min(0, prevRawBargeld)` (nur Vortag) eine laufende Variable `operativeBalance` mitführen, die täglich `rawBargeld` aufaddiert, Überschüsse als Skim entfernt und nur Defizite überträgt — exakt wie in `usePreviousDayDeficit.ts` (Zeilen 73–110).
-- Damit zeigt die Spalte am 24.04. denselben Wert wie die Tagesabrechnung (≈ −6,24 €).
+- Spalte „Bargeld" am 24.04. zeigt exakt den Wert aus der Tagesabrechnung (−6,24 €)
+- Bankeinzahlungen / Kassentransfers beeinflussen die Spalte nicht (laut Memory korrekt — sie gehören zur kumulativen Bargeldbestand-Spalte „remainingCash")
+- 90-Tage-Fenster verhindert das Aufstauen alter „Pseudo-Defizite"
 
-**Variante B:** Tagesabrechnung auf „nur Vortag" reduzieren — verwerfen, weil das echte Defizite verschleiert.
+### Files
 
-## Umsetzung (wenn freigegeben)
-
-1. `src/hooks/useCashBalanceData.ts`: Berechnung von `displayBargeld` ersetzen durch laufenden Operativ-Saldo (Skim-on-Surplus über alle geladenen Tage seit `effectiveFromDate`, plus `initialCarryOver` als Startwert nur für den negativen Anteil).
-2. Kommentar/Doku im Hook anpassen.
-3. Memory-Eintrag `mem://features/reconciliation/cash-balance-visualization` aktualisieren.
+- `src/hooks/useCashBalanceData.ts` (nur die `displayBargeld`-Berechnung, kein Schemaeingriff)
 
 Keine UI-Änderung, keine DB-Migration nötig.
