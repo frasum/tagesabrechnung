@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
           challenge,
           rp: { name: "Tagesabrechnung", id: rpId },
           user: {
-            id: base64urlEncode(new TextEncoder().encode(staffId)),
+            id: base64urlEncode(new TextEncoder().encode(staffId).buffer as ArrayBuffer),
             name: staff.name,
             displayName: staff.name,
           },
