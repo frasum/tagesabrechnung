@@ -420,7 +420,7 @@ export default function CashBalance() {
                         <TableCell
                           className={cn(
                             'text-right tabular-nums font-bold',
-                            row.displayBargeld >= 0 ? 'text-success' : 'text-destructive'
+                            row.rawBargeld >= 0 ? 'text-success' : 'text-destructive'
                           )}
                         >
                           {row.displayBargeld !== row.rawBargeld ? (
@@ -428,22 +428,22 @@ export default function CashBalance() {
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <span className="cursor-help underline decoration-dotted underline-offset-4">
-                                    {formatCurrency(row.displayBargeld)}
+                                    {formatCurrency(row.rawBargeld)}
                                   </span>
                                 </TooltipTrigger>
                                 <TooltipContent side="left" className="max-w-sm">
                                   <div className="text-xs font-mono space-y-0.5">
                                     <div className="font-semibold mb-1 text-sm">Bargeld {formatDate(row.date)}</div>
                                     <div className="flex justify-between gap-4">
-                                      <span>Tageskasse</span>
+                                      <span>Tageskasse (Spalte)</span>
                                       <span className="tabular-nums">{formatCurrency(row.rawBargeld)}</span>
                                     </div>
-                                    <div className="flex justify-between gap-4">
-                                      <span>− Fehlbetrag Vortag</span>
+                                    <div className="flex justify-between gap-4 text-muted-foreground">
+                                      <span>kum. Fehlbetrag Vortage</span>
                                       <span className="tabular-nums">{formatCurrency(row.displayBargeld - row.rawBargeld)}</span>
                                     </div>
-                                    <div className="border-t border-border mt-1 pt-1 flex justify-between gap-4 font-semibold">
-                                      <span>= in den Tresor</span>
+                                    <div className="border-t border-border mt-1 pt-1 flex justify-between gap-4 font-semibold text-muted-foreground">
+                                      <span>= in den Tresor (Tagesabr.)</span>
                                       <span className="tabular-nums">{formatCurrency(row.displayBargeld)}</span>
                                     </div>
                                   </div>
@@ -451,7 +451,7 @@ export default function CashBalance() {
                               </Tooltip>
                             </TooltipProvider>
                           ) : (
-                            formatCurrency(row.displayBargeld)
+                            formatCurrency(row.rawBargeld)
                           )}
                         </TableCell>
                       </TableRow>

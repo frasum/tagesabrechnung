@@ -683,7 +683,7 @@ export const generateCashBalancePDF = (data: CashBalancePDFData, options?: { pre
       '-' + formatCurrency(row.offeneRE),
       '-' + formatCurrency(row.vorschuss),
       '-' + formatCurrency(row.ausgaben),
-      formatCurrency(row.displayBargeld ?? row.bargeld),
+      formatCurrency(row.bargeld),
     ];
     return cols;
   });
@@ -758,7 +758,7 @@ export const generateCashBalancePDF = (data: CashBalancePDFData, options?: { pre
       const bargeldColIdx = showFinedine ? 12 : 11;
       if (cellHookData.section === 'body' && cellHookData.column.index === bargeldColIdx) {
         const rowIndex = cellHookData.row.index;
-        const bargeldValue = rowIndex === tableBody.length - 1 ? totals.bargeld : (data.rows[rowIndex]?.displayBargeld ?? data.rows[rowIndex]?.bargeld ?? 0);
+        const bargeldValue = rowIndex === tableBody.length - 1 ? totals.bargeld : (data.rows[rowIndex]?.bargeld ?? 0);
         if (bargeldValue >= 0) {
           cellHookData.cell.styles.textColor = [22, 101, 52];
         } else {
