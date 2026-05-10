@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Users, ChefHat, UtensilsCrossed, Search, Trophy, ChevronDown, UserPlus, Eye, EyeOff } from 'lucide-react';
+import { Users, ChefHat, UtensilsCrossed, Search, Trophy, ChevronDown, UserPlus, Eye, EyeOff, Download } from 'lucide-react';
+import { toast } from 'sonner';
+import { exportStaffToCsv } from '@/utils/staffCsvExport';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
