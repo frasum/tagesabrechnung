@@ -104,12 +104,31 @@ export function exportStaffToCsv(staff: Staff[]): void {
 
   // UTF-8 BOM for German Excel compatibility
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const fileName = `Mitarbeiter_${format(new Date(), 'yyyy-MM-dd')}.csv`;
   const url = URL.createObjectURL(blob);
+
   const a = document.createElement('a');
   a.href = url;
-  a.download = `Mitarbeiter_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+  a.download = fileName;
+  a.rel = 'noopener';
+  a.target = '_blank';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+  // Fallback for sandboxed iframes (Lovable preview) that block downloads:
+  // open in new tab so the user can save manually
+  setTimeout(() => {
+    try {
+      const w = window.open(url, '_blank');
+      if (!w) {
+        // Popup blocked — last resort: navigate top window
+        window.location.href = url;
+      }
+    } catch {
+      /* ignore */
+    }
+  }, 100);
+
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
