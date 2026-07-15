@@ -1,62 +1,34 @@
-## CSV-Export für Mitarbeiterdaten
+## Kurzfassung
 
-Ein neuer "Exportieren"-Button auf der Mitarbeiterverwaltung-Seite (`/staff`) lädt die aktuell sichtbare Mitarbeiterliste als CSV herunter — mit allen verfügbaren Stammdatenfeldern.
+Es ist **keine Code-Änderung nötig**. Das Bearbeiten von Schichten im ZE-Wochenplan (Start/Ende, Pausen, Stunden, Abwesenheiten) ist im Code nicht an eine Rolle gebunden — es hängt nur an `isLocked` der Periode. Wer die Seite `Zeiterfassung → Wochenplan` sehen darf, darf dort auch bearbeiten. Der einzige Gate für Manager ist die **Navigations-Berechtigung**.
 
-### UI
+## Was du machen musst (Klick-Anleitung)
 
-- Neuer Button **"CSV Export"** (Icon: `Download`) im Hero-Header neben "Neuer Mitarbeiter".
-- Exportiert genau die Liste, die durch den aktuellen Filter (Alle / Service / Küche), die Suche und den "Inaktive anzeigen"-Toggle bestimmt wird (`filteredStaff`).
-- Dateiname: `Mitarbeiter_YYYY-MM-DD.csv`.
+**Zugriff jetzt gewähren:**
+1. Als Admin einloggen → Sidebar → **Berechtigungen**
+2. Den gewünschten Manager auswählen
+3. Häkchen setzen bei:
+   - `ZE – Wochenplan`
+   - (optional, falls er auch die Übersicht/Perioden-Sperre braucht:) `ZE – Zusammenfassung`, `ZE – Perioden`
+4. Speichern → Manager sieht ab sofort den Tab und kann Schichten bearbeiten.
 
-### CSV-Format (deutsches Excel-kompatibel)
+**Wichtig für Juli konkret:**
+- Die Juli-Periode (26.06.–25.07.) darf **nicht gesperrt** sein — sonst sind alle Eingaben disabled. Prüfen unter `ZE → Perioden`.
 
-Folgt der bestehenden Konvention im Projekt (siehe Memory: Export System):
-- UTF-8 mit BOM
-- Semikolon (`;`) als Trennzeichen
-- Werte mit `;`, `"`, oder Zeilenumbruch werden in `"..."` eingeschlossen, interne `"` verdoppelt
-- Datumsfelder im Format `DD.MM.YYYY`
-- Boolean als `Ja` / `Nein`
-- Numerische Beträge mit Komma als Dezimaltrenner
+**Zugriff nach Monatsabschluss wieder entziehen (manuell, wie gewünscht):**
+- Berechtigungen-Seite → gleiche Häkchen entfernen → Speichern.
+- Oder: Juli-Periode auf `locked` setzen → Manager sieht sie zwar noch, kann aber nichts mehr ändern.
 
-### Spalten (alle Felder aus `staff` + Restaurant-Zuordnungen)
+## Was NICHT geändert wird
 
-Persönlich: Personalnummer, Name, Vorname, Nachname, Spitzname, Geburtsdatum, Nationalität, Adresse (Straße, PLZ, Ort)
+- Keine Datenbank-Migration.
+- Keine neuen Rollen, kein Ablaufdatum-Feature (das wurde in der Frage als „mehr Aufwand" markiert und nicht gewählt).
+- SFN-/Gehaltsspalten bleiben verborgen — das ist Absicht (Datenschutz) und wurde von dir auch nicht angefragt.
 
-Beschäftigung: Rolle, Tätigkeit, Beschäftigungsart, Eintritt, Austritt, Aktiv, Personengruppe
+## Technischer Hintergrund (für dich zur Info)
 
-Lohn: Stundenlohn, Vertragsstunden/Monat, Tip-Pool
+- `src/pages/zeiterfassung/ZtLayout.tsx` filtert Tabs für Manager über `useManagerNavPermissions` → Tabelle `manager_nav_permissions`.
+- Der Tab-Key ist `zeiterfassung` (Wochenplan), `zeiterfassung/zusammenfassung`, `zeiterfassung/perioden` etc. — genau die Einträge, die auf der Berechtigungen-Seite anklickbar sind.
+- Innerhalb von `ZtWochenplan.tsx` gibt es **keinen** Admin-Only-Check auf Bearbeiten; nur `showSfn = hasPermission('admin')` blendet SFN-Spalten aus. Speichern/Löschen von Schichten ist frei, sofern die Periode offen ist.
 
-Steuer/SV: Steuerklasse, Steuer-ID, SV-Nummer, Krankenkasse, Minijob, SV-frei
-
-Bank: Bank, IBAN, BIC
-
-Urlaub/Krank: Urlaub vertraglich, Vorjahr, aktuell, genommen, Krankheitstage gesamt
-
-Restaurants: Eine Spalte "Restaurants" mit kommaseparierter Liste der zugewiesenen Restaurants inkl. Abteilung (z. B. `Spicery (service), Bottega (kitchen)`), plus optional Stundenlohn pro Restaurant.
-
-Sonstiges: Notizen, Arbeitsbeginn
-
-### Technische Umsetzung
-
-1. **Neue Datei `src/utils/staffCsvExport.ts`**
-   - Funktion `exportStaffToCsv(staff: Staff[], restaurants: Restaurant[]): void`
-   - CSV-Helper (escape, BOM, Blob-Download — analog zu `excelExport.ts`)
-   - Holt Restaurant-Zuordnungen via `staff_restaurants` (mit `restaurant_id`, `zt_department`, `zt_hourly_rate`) für die ausgewählten Staff-IDs in einer einzigen Query
-   - Mappt restaurant_id → restaurant.name aus dem `useRestaurants`-Cache
-
-2. **`src/pages/StaffManagement.tsx`**
-   - Import `Download` Icon und neue Export-Funktion
-   - Button im Header-Bereich neben "Neuer Mitarbeiter"
-   - Handler ruft `exportStaffToCsv(filteredStaff, restaurants)` auf
-   - Toast-Feedback bei Erfolg/Fehler
-
-### Datei-Änderungen
-
-- `src/utils/staffCsvExport.ts` (neu)
-- `src/pages/StaffManagement.tsx` (Button + Handler)
-
-### Was nicht enthalten ist
-
-- Kein Excel/PDF (nur CSV gewünscht)
-- Keine Spalten-Auswahl (alle Felder)
-- Kein Server-seitiger Export (Client-seitig ausreichend, da Mitarbeiterzahl klein)
+Willst du, dass ich zusätzlich eine kleine Warnung/Notiz einbaue („Diese Periode ist gesperrt — Änderungen nicht möglich"), oder passt das so und du erledigst es rein über die Berechtigungen-Seite?
