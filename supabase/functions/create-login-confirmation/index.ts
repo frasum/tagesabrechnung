@@ -37,8 +37,13 @@ Deno.serve(async (req) => {
           .from("profiles")
           .select("staff_id")
           .eq("user_id", user.id)
-          .single();
-        staff_id = profile?.staff_id ?? null;
+          .maybeSingle();
+        if (profile?.staff_id) {
+          const { data: permLevel } = await supabaseAdmin.rpc("get_staff_permission", { p_staff_id: profile.staff_id });
+          if (permLevel && permLevel !== "staff") {
+            staff_id = profile.staff_id;
+          }
+        }
       }
     }
 
@@ -46,11 +51,18 @@ Deno.serve(async (req) => {
     if (!staff_id) {
       const headerStaffId = req.headers.get("x-staff-id");
       if (headerStaffId) {
-        const permLevel = await supabaseAdmin.rpc("get_staff_permission", { p_staff_id: headerStaffId });
-        if (permLevel.data && permLevel.data !== "staff") {
+        const { data: permLevel } = await supabaseAdmin.rpc("get_staff_permission", { p_staff_id: headerStaffId });
+        if (permLevel && permLevel !== "staff") {
           staff_id = headerStaffId;
         }
       }
+    }
+
+    if (!staff_id) {
+      console.warn("create-login-confirmation: no authorized caller", {
+        hasAuthHeader: !!authHeader,
+        hasStaffHeader: !!req.headers.get("x-staff-id"),
+      });
     }
 
     if (!staff_id) {
