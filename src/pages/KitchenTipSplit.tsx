@@ -27,6 +27,7 @@ import {
   useDeleteKitchenShift,
 } from '@/hooks/useSession';
 import { MonthlyKitchenTipCard } from '@/components/kitchen/MonthlyKitchenTipCard';
+import { distributeByHoursCocoModel, eurosToCents } from '@/lib/tipPoolCoco';
 
 export default function KitchenTipSplit() {
   const { selectedDate, setSelectedDate } = useSelectedDate();
@@ -74,6 +75,12 @@ export default function KitchenTipSplit() {
 
   // Tip per hour based on pool participants only
   const tipPerHour = totalPoolHours > 0 ? totalKitchenTip / totalPoolHours : 0;
+
+  // COCO-Verteilung: Anteile auf volle Euro abgerundet (Anzeige-Parität mit Tagesabrechnung)
+  const kitchenDistribution = distributeByHoursCocoModel(
+    eurosToCents(totalKitchenTip),
+    poolShifts.map((s) => ({ key: s.id, hours: s.hours_worked })),
+  );
 
   const handleCreateSession = async () => {
     if (!restaurantId) return;
@@ -284,7 +291,7 @@ export default function KitchenTipSplit() {
                           {kitchenShifts.map((shift) => {
                             const inPool = isPoolParticipant(shift.staff_name);
                             const percentage = inPool && totalPoolHours > 0 ? (shift.hours_worked / totalPoolHours) * 100 : 0;
-                            const tipAmount = inPool && totalPoolHours > 0 ? (shift.hours_worked / totalPoolHours) * totalKitchenTip : 0;
+                            const tipAmount = inPool ? (kitchenDistribution.sharesCents.get(shift.id) ?? 0) / 100 : 0;
 
                             return (
                               <TableRow key={shift.id} className={!inPool ? 'opacity-50' : ''}>
