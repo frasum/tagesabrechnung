@@ -203,7 +203,7 @@ export default function KitchenTipSplit() {
               />
               <StatCard
                 label="Trinkgeld pro Stunde"
-                value={floorToEuroCents(tipPerHour)}
+                value={roundToHalfEuro(tipPerHour)}
               />
             </div>
 
