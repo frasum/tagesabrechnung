@@ -1092,7 +1092,7 @@ export default function DailySummary() {
       previousDeficit={previousDeficit}
       previousDeficitDate={previousDeficitDate}
       remainingCash={remainingCash}
-      todaySkimAmount={todaySkimAmount}
+      todaySkimAmount={todaySkimAmount > 0 ? todaySkimAmount + tipRoundingLeftover : todaySkimAmount}
       createdByName={session?.created_by_name || undefined}
       updatedByName={session?.updated_by_name || undefined}
       guestCount={formData.guest_count}
