@@ -27,8 +27,6 @@ import {
   useDeleteKitchenShift,
 } from '@/hooks/useSession';
 import { MonthlyKitchenTipCard } from '@/components/kitchen/MonthlyKitchenTipCard';
-import { distributeByHoursCocoModel, eurosToCents } from '@/lib/tipPoolCoco';
-import { floorToEuroCents } from '@/lib/tipRounding';
 
 export default function KitchenTipSplit() {
   const { selectedDate, setSelectedDate } = useSelectedDate();
@@ -76,12 +74,6 @@ export default function KitchenTipSplit() {
 
   // Tip per hour based on pool participants only
   const tipPerHour = totalPoolHours > 0 ? totalKitchenTip / totalPoolHours : 0;
-
-  // COCO-Verteilung: Anteile auf volle Euro abgerundet (Anzeige-Parität mit Tagesabrechnung)
-  const kitchenDistribution = distributeByHoursCocoModel(
-    eurosToCents(totalKitchenTip),
-    poolShifts.map((s) => ({ key: s.id, hours: s.hours_worked })),
-  );
 
   const handleCreateSession = async () => {
     if (!restaurantId) return;
@@ -192,7 +184,7 @@ export default function KitchenTipSplit() {
             <div className="grid sm:grid-cols-3 gap-4">
               <StatCard
                 label="Küchen Trinkgeld Pool"
-                value={floorToEuroCents(totalKitchenTip)}
+                value={totalKitchenTip}
                 icon={<ChefHat className="w-5 h-5" />}
                 variant="success"
               />
@@ -203,7 +195,7 @@ export default function KitchenTipSplit() {
               />
               <StatCard
                 label="Trinkgeld pro Stunde"
-                value={floorToEuroCents(tipPerHour)}
+                value={tipPerHour}
               />
             </div>
 
@@ -292,7 +284,7 @@ export default function KitchenTipSplit() {
                           {kitchenShifts.map((shift) => {
                             const inPool = isPoolParticipant(shift.staff_name);
                             const percentage = inPool && totalPoolHours > 0 ? (shift.hours_worked / totalPoolHours) * 100 : 0;
-                            const tipAmount = inPool ? (kitchenDistribution.sharesCents.get(shift.id) ?? 0) / 100 : 0;
+                            const tipAmount = inPool && totalPoolHours > 0 ? (shift.hours_worked / totalPoolHours) * totalKitchenTip : 0;
 
                             return (
                               <TableRow key={shift.id} className={!inPool ? 'opacity-50' : ''}>
