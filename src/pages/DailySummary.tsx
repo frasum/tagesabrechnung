@@ -45,6 +45,7 @@ import { OrdersmartTakeawaySetting } from '@/components/settings/OrdersmartTakea
 import { usePreviousDayDeficit } from '@/hooks/usePreviousDayDeficit';
 import { useRemainingCash } from '@/hooks/useRemainingCash';
 import { useTelegramSettings } from '@/hooks/useTelegramSettings';
+import { floorToEuroCents, computeTipRestEuros } from '@/lib/tipRounding';
 
 export default function DailySummary() {
   const { selectedDate, setSelectedDate } = useSelectedDate();
@@ -303,6 +304,18 @@ export default function DailySummary() {
   // "Differenz zum Wechselgeldbestand" = today's effect + only NEGATIVE previous carry.
   // Positive historical surplus belongs to the bank-deposit pipeline (see Cash Balance page).
   const bargeld = bargeldRaw + Math.min(previousDeficit, 0);
+
+  // ---- Display-only tip rounding (Frank 19.07.2026) --------------------------
+  // Trinkgeld-Auszahlungen werden auf volle Euro abgerundet; die Cent-Reste
+  // aus Kellner-Pool + Küche fließen still ins angezeigte Tages-Bargeld ein.
+  // Verteilschlüssel, gespeicherte Werte und Exporte bleiben UNVERÄNDERT.
+  const waiterTipRest = computeTipRestEuros(waiterTipPool, waiterShareCount);
+  const kitchenTipRest = computeTipRestEuros(totalKitchenTip, uniqueKitchenStaff);
+  const tipRoundingLeftover = waiterTipRest + kitchenTipRest;
+  const tipPerWaiterDisplay = floorToEuroCents(tipPerWaiter);
+  const tipPerKitchenDisplay = floorToEuroCents(tipPerKitchen);
+  const bargeldRawDisplay = bargeldRaw + tipRoundingLeftover;
+  const bargeldDisplay = bargeld + tipRoundingLeftover;
 
   // Format submission timestamp
   const formatSubmittedAt = (timestamp: string | null) => {
@@ -962,7 +975,7 @@ export default function DailySummary() {
             {uniqueKitchenStaff > 0 && (
               <TableRow>
                 <TableCell className="py-2 pl-6 text-muted-foreground">→ Pro Küche ({uniqueKitchenStaff})</TableCell>
-                <TableCell className="text-right tabular-nums text-success py-2">{formatCurrency(tipPerKitchen)}</TableCell>
+                <TableCell className="text-right tabular-nums text-success py-2">{formatCurrency(tipPerKitchenDisplay)}</TableCell>
               </TableRow>
             )}
             <TableRow>
@@ -972,7 +985,7 @@ export default function DailySummary() {
             {waiterShareCount > 0 && (
               <TableRow>
                 <TableCell className="py-2 pl-6 text-muted-foreground">→ Pro Mitarbeiter ({waiterShareCount})</TableCell>
-                <TableCell className="text-right tabular-nums text-success py-2">{formatCurrency(tipPerWaiter)}</TableCell>
+                <TableCell className="text-right tabular-nums text-success py-2">{formatCurrency(tipPerWaiterDisplay)}</TableCell>
               </TableRow>
             )}
             <TableRow className="border-t-2">
@@ -1005,7 +1018,7 @@ export default function DailySummary() {
             });
             const teamSize = allMembers.length;
             const posSales = (shift.pos_sales || 0) / teamSize;
-            const poolShare = shift.participates_in_pool ? tipPerWaiter : 0;
+            const poolShare = shift.participates_in_pool ? tipPerWaiterDisplay : 0;
             const tipPct = posSales > 0 && shift.participates_in_pool
               ? ((poolShare / posSales) * 100).toFixed(1).replace('.', ',') + '%'
               : null;
@@ -1067,11 +1080,11 @@ export default function DailySummary() {
       totalKitchenTip={totalKitchenTip}
       waiterTipPool={waiterTipPool}
       waiterShareCount={waiterShareCount}
-      tipPerWaiter={tipPerWaiter}
+      tipPerWaiter={tipPerWaiterDisplay}
       uniqueKitchenStaff={uniqueKitchenStaff}
-      tipPerKitchen={tipPerKitchen}
-      bargeld={bargeld}
-      bargeldRaw={bargeldRaw}
+      tipPerKitchen={tipPerKitchenDisplay}
+      bargeld={bargeldDisplay}
+      bargeldRaw={bargeldRawDisplay}
       totalAdvances={totalAdvances}
       locked={locked}
       getLabel={getLabel}
