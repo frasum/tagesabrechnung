@@ -28,7 +28,7 @@ import {
 } from '@/hooks/useSession';
 import { MonthlyKitchenTipCard } from '@/components/kitchen/MonthlyKitchenTipCard';
 import { distributeByHoursCocoModel, eurosToCents } from '@/lib/tipPoolCoco';
-import { floorToEuroCents } from '@/lib/tipRounding';
+import { floorToEuroCents, roundToHalfEuro } from '@/lib/tipRounding';
 
 export default function KitchenTipSplit() {
   const { selectedDate, setSelectedDate } = useSelectedDate();
