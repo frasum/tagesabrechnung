@@ -16,12 +16,6 @@ export function floorToEuroCents(amountEuros: number): number {
   return (Math.floor(cents / 100) * 100) / 100;
 }
 
-/** Rundet einen Euro-Betrag auf die nächsten 0,50 € (kaufmännisch). Beispiel: 3,71 → 3,50; 3,76 → 4,00. */
-export function roundToHalfEuro(amountEuros: number): number {
-  const cents = Math.round(amountEuros * 100);
-  return (Math.round(cents / 50) * 50) / 100;
-}
-
 /**
  * Abrundungs-Rest eines Trinkgeld-Topfes, der gleichmäßig auf N Anteile verteilt wird.
  *   rest = pool − floor(pool/anteile auf ganze Euro) * anteile
