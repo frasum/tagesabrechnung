@@ -455,7 +455,7 @@ export default function WaiterCashUp() {
               <div className="space-y-4">
                     {/* Pool Summary - 4 colored StatCards */}
                     <div className="grid grid-cols-2 gap-3">
-                      <StatCard label="Trinkgeld ohne Küche" value={totalPool} icon={<Users className="w-5 h-5" />} variant={totalPool >= 0 ? 'success' : 'error'} />
+                      <StatCard label="Trinkgeld ohne Küche" value={floorToEuroCents(totalPool)} icon={<Users className="w-5 h-5" />} variant={totalPool >= 0 ? 'success' : 'error'} />
                       <StatCard label="Trinkgeld %" value={`${tipPercentage.toFixed(1)} %`} icon={<Percent className="w-5 h-5" />} variant="success" />
                       <StatCard label={`Pro Mitarbeiter (${waiterShareCount})`} value={floorToEuroCents(tipPerWaiter)} icon={<User className="w-5 h-5" />} variant={tipPerWaiter >= 0 ? 'success' : 'error'} />
                       <StatCard label="TG / Stunde" value={totalPoolHours > 0 ? floorToEuroCents(tipPerHour) : '—'} icon={<Clock className="w-5 h-5" />} variant="success" />
