@@ -291,7 +291,7 @@ export default function KitchenTipSplit() {
                           {kitchenShifts.map((shift) => {
                             const inPool = isPoolParticipant(shift.staff_name);
                             const percentage = inPool && totalPoolHours > 0 ? (shift.hours_worked / totalPoolHours) * 100 : 0;
-                            const tipAmount = inPool && totalPoolHours > 0 ? (shift.hours_worked / totalPoolHours) * totalKitchenTip : 0;
+                            const tipAmount = inPool ? (kitchenDistribution.sharesCents.get(shift.id) ?? 0) / 100 : 0;
 
                             return (
                               <TableRow key={shift.id} className={!inPool ? 'opacity-50' : ''}>
