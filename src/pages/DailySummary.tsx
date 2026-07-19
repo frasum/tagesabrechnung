@@ -975,7 +975,7 @@ export default function DailySummary() {
             {uniqueKitchenStaff > 0 && (
               <TableRow>
                 <TableCell className="py-2 pl-6 text-muted-foreground">→ Pro Küche ({uniqueKitchenStaff})</TableCell>
-                <TableCell className="text-right tabular-nums text-success py-2">{formatCurrency(tipPerKitchen)}</TableCell>
+                <TableCell className="text-right tabular-nums text-success py-2">{formatCurrency(tipPerKitchenDisplay)}</TableCell>
               </TableRow>
             )}
             <TableRow>
@@ -985,7 +985,7 @@ export default function DailySummary() {
             {waiterShareCount > 0 && (
               <TableRow>
                 <TableCell className="py-2 pl-6 text-muted-foreground">→ Pro Mitarbeiter ({waiterShareCount})</TableCell>
-                <TableCell className="text-right tabular-nums text-success py-2">{formatCurrency(tipPerWaiter)}</TableCell>
+                <TableCell className="text-right tabular-nums text-success py-2">{formatCurrency(tipPerWaiterDisplay)}</TableCell>
               </TableRow>
             )}
             <TableRow className="border-t-2">
