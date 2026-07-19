@@ -1080,11 +1080,11 @@ export default function DailySummary() {
       totalKitchenTip={totalKitchenTip}
       waiterTipPool={waiterTipPool}
       waiterShareCount={waiterShareCount}
-      tipPerWaiter={tipPerWaiter}
+      tipPerWaiter={tipPerWaiterDisplay}
       uniqueKitchenStaff={uniqueKitchenStaff}
-      tipPerKitchen={tipPerKitchen}
-      bargeld={bargeld}
-      bargeldRaw={bargeldRaw}
+      tipPerKitchen={tipPerKitchenDisplay}
+      bargeld={bargeldDisplay}
+      bargeldRaw={bargeldRawDisplay}
       totalAdvances={totalAdvances}
       locked={locked}
       getLabel={getLabel}
