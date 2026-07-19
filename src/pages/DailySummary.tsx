@@ -305,6 +305,18 @@ export default function DailySummary() {
   // Positive historical surplus belongs to the bank-deposit pipeline (see Cash Balance page).
   const bargeld = bargeldRaw + Math.min(previousDeficit, 0);
 
+  // ---- Display-only tip rounding (Frank 19.07.2026) --------------------------
+  // Trinkgeld-Auszahlungen werden auf volle Euro abgerundet; die Cent-Reste
+  // aus Kellner-Pool + Küche fließen still ins angezeigte Tages-Bargeld ein.
+  // Verteilschlüssel, gespeicherte Werte und Exporte bleiben UNVERÄNDERT.
+  const waiterTipRest = computeTipRestEuros(waiterTipPool, waiterShareCount);
+  const kitchenTipRest = computeTipRestEuros(totalKitchenTip, uniqueKitchenStaff);
+  const tipRoundingLeftover = waiterTipRest + kitchenTipRest;
+  const tipPerWaiterDisplay = floorToEuroCents(tipPerWaiter);
+  const tipPerKitchenDisplay = floorToEuroCents(tipPerKitchen);
+  const bargeldRawDisplay = bargeldRaw + tipRoundingLeftover;
+  const bargeldDisplay = bargeld + tipRoundingLeftover;
+
   // Format submission timestamp
   const formatSubmittedAt = (timestamp: string | null) => {
     if (!timestamp) return null;
