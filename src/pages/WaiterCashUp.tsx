@@ -26,6 +26,7 @@ import { useLabels } from '@/hooks/useLabels';
 import { useToggleLock } from '@/hooks/useToggleLock';
 import { useActiveStaffByRestaurant } from '@/hooks/useStaff';
 import type { WaiterShift } from '@/types/database';
+import { floorToEuroCents } from '@/lib/tipRounding';
 
 export default function WaiterCashUp() {
   const { selectedDate, setSelectedDate } = useSelectedDate();
@@ -456,8 +457,8 @@ export default function WaiterCashUp() {
                     <div className="grid grid-cols-2 gap-3">
                       <StatCard label="Trinkgeld ohne Küche" value={totalPool} icon={<Users className="w-5 h-5" />} variant={totalPool >= 0 ? 'success' : 'error'} />
                       <StatCard label="Trinkgeld %" value={`${tipPercentage.toFixed(1)} %`} icon={<Percent className="w-5 h-5" />} variant="success" />
-                      <StatCard label={`Pro Mitarbeiter (${waiterShareCount})`} value={tipPerWaiter} icon={<User className="w-5 h-5" />} variant={tipPerWaiter >= 0 ? 'success' : 'error'} />
-                      <StatCard label="TG / Stunde" value={totalPoolHours > 0 ? tipPerHour : '—'} icon={<Clock className="w-5 h-5" />} variant="success" />
+                      <StatCard label={`Pro Mitarbeiter (${waiterShareCount})`} value={floorToEuroCents(tipPerWaiter)} icon={<User className="w-5 h-5" />} variant={tipPerWaiter >= 0 ? 'success' : 'error'} />
+                      <StatCard label="TG / Stunde" value={totalPoolHours > 0 ? floorToEuroCents(tipPerHour) : '—'} icon={<Clock className="w-5 h-5" />} variant="success" />
                     </div>
 
                     {/* Pool Breakdown Table */}
@@ -498,7 +499,7 @@ export default function WaiterCashUp() {
                               }
                                 </TableCell>
                                 <TableCell className={`text-right tabular-nums ${perPersonContribution >= 0 ? 'text-success' : 'text-destructive'}`}>
-                                  {formatCurrency(perPersonContribution)}
+                                  {formatCurrency(floorToEuroCents(perPersonContribution))}
                                 </TableCell>
                                 
                                 {isAdmin && <TableCell className="text-right tabular-nums">
