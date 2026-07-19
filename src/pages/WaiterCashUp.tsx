@@ -499,7 +499,7 @@ export default function WaiterCashUp() {
                               }
                                 </TableCell>
                                 <TableCell className={`text-right tabular-nums ${perPersonContribution >= 0 ? 'text-success' : 'text-destructive'}`}>
-                                  {formatCurrency(perPersonContribution)}
+                                  {formatCurrency(floorToEuroCents(perPersonContribution))}
                                 </TableCell>
                                 
                                 {isAdmin && <TableCell className="text-right tabular-nums">
