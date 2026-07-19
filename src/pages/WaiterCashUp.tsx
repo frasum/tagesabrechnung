@@ -26,6 +26,7 @@ import { useLabels } from '@/hooks/useLabels';
 import { useToggleLock } from '@/hooks/useToggleLock';
 import { useActiveStaffByRestaurant } from '@/hooks/useStaff';
 import type { WaiterShift } from '@/types/database';
+import { floorToEuroCents } from '@/lib/tipRounding';
 
 export default function WaiterCashUp() {
   const { selectedDate, setSelectedDate } = useSelectedDate();
