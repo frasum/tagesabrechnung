@@ -27,6 +27,7 @@ import {
   useDeleteKitchenShift,
 } from '@/hooks/useSession';
 import { MonthlyKitchenTipCard } from '@/components/kitchen/MonthlyKitchenTipCard';
+import { distributeByHoursCocoModel, eurosToCents } from '@/lib/tipPoolCoco';
 
 export default function KitchenTipSplit() {
   const { selectedDate, setSelectedDate } = useSelectedDate();
