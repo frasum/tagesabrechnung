@@ -28,6 +28,7 @@ import {
 } from '@/hooks/useSession';
 import { MonthlyKitchenTipCard } from '@/components/kitchen/MonthlyKitchenTipCard';
 import { distributeByHoursCocoModel, eurosToCents } from '@/lib/tipPoolCoco';
+import { floorToEuroCents } from '@/lib/tipRounding';
 
 export default function KitchenTipSplit() {
   const { selectedDate, setSelectedDate } = useSelectedDate();
@@ -191,7 +192,7 @@ export default function KitchenTipSplit() {
             <div className="grid sm:grid-cols-3 gap-4">
               <StatCard
                 label="Küchen Trinkgeld Pool"
-                value={totalKitchenTip}
+                value={floorToEuroCents(totalKitchenTip)}
                 icon={<ChefHat className="w-5 h-5" />}
                 variant="success"
               />
@@ -202,7 +203,7 @@ export default function KitchenTipSplit() {
               />
               <StatCard
                 label="Trinkgeld pro Stunde"
-                value={tipPerHour}
+                value={floorToEuroCents(tipPerHour)}
               />
             </div>
 
