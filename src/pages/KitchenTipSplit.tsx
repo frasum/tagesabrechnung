@@ -76,6 +76,12 @@ export default function KitchenTipSplit() {
   // Tip per hour based on pool participants only
   const tipPerHour = totalPoolHours > 0 ? totalKitchenTip / totalPoolHours : 0;
 
+  // COCO-Verteilung: Anteile auf volle Euro abgerundet (Anzeige-Parität mit Tagesabrechnung)
+  const kitchenDistribution = distributeByHoursCocoModel(
+    eurosToCents(totalKitchenTip),
+    poolShifts.map((s) => ({ key: s.id, hours: s.hours_worked })),
+  );
+
   const handleCreateSession = async () => {
     if (!restaurantId) return;
     try {
