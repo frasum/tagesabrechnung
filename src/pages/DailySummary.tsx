@@ -1018,7 +1018,7 @@ export default function DailySummary() {
             });
             const teamSize = allMembers.length;
             const posSales = (shift.pos_sales || 0) / teamSize;
-            const poolShare = shift.participates_in_pool ? tipPerWaiter : 0;
+            const poolShare = shift.participates_in_pool ? tipPerWaiterDisplay : 0;
             const tipPct = posSales > 0 && shift.participates_in_pool
               ? ((poolShare / posSales) * 100).toFixed(1).replace('.', ',') + '%'
               : null;
