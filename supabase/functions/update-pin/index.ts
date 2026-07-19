@@ -88,20 +88,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Complexity: block weak PINs
-    const WEAK_PINS = new Set([
-      "0000","1111","2222","3333","4444","5555","6666","7777","8888","9999",
-      "1234","2345","3456","4567","5678","6789","7890",
-      "0987","9876","8765","7654","6543","5432","4321","3210",
-      "1212","2121","1122","2211","1010","0101","1313","6969","4711",
-    ]);
-    if (WEAK_PINS.has(pin_code)) {
-      return new Response(
-        JSON.stringify({ success: false, error: "PIN ist zu schwach. Bitte wählen Sie eine sicherere Kombination." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(body.staff_id)) {
       return new Response(
