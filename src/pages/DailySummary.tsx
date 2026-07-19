@@ -997,31 +997,37 @@ export default function DailySummary() {
               <TableCell className="py-2">Küche (2%)</TableCell>
               <TableCell className="text-right tabular-nums font-medium text-success py-2">{formatCurrency(totalKitchenTip)}</TableCell>
             </TableRow>
-            {uniqueKitchenStaff > 0 && (
-              <TableRow>
-                <TableCell className="py-2 pl-6 text-muted-foreground">→ Pro Küche ({uniqueKitchenStaff})</TableCell>
-                <TableCell className="text-right tabular-nums text-success py-2">{formatCurrency(tipPerKitchenDisplay)}</TableCell>
+            {Array.from(kitchenShareByName).map(([name, amount]) => (
+              <TableRow key={`k-${name}`}>
+                <TableCell className="py-2 pl-6 text-muted-foreground">→ {name}</TableCell>
+                <TableCell className="text-right tabular-nums text-success py-2">{formatCurrency(amount)}</TableCell>
               </TableRow>
-            )}
+            ))}
             <TableRow>
               <TableCell className="py-2">Mitarbeiter Pool</TableCell>
               <TableCell className="text-right tabular-nums font-medium text-success py-2">{formatCurrency(waiterTipPool)}</TableCell>
             </TableRow>
-            {waiterShareCount > 0 && (
-              <TableRow>
-                <TableCell className="py-2 pl-6 text-muted-foreground">→ Pro Mitarbeiter ({waiterShareCount})</TableCell>
-                <TableCell className="text-right tabular-nums text-success py-2">{formatCurrency(tipPerWaiterDisplay)}</TableCell>
+            {Array.from(waiterShareByName).map(([name, amount]) => (
+              <TableRow key={`w-${name}`}>
+                <TableCell className="py-2 pl-6 text-muted-foreground">→ {name}</TableCell>
+                <TableCell className="text-right tabular-nums text-success py-2">{formatCurrency(amount)}</TableCell>
               </TableRow>
-            )}
+            ))}
             <TableRow className="border-t-2">
               <TableCell className="font-semibold py-2">Gesamt</TableCell>
               <TableCell className="text-right tabular-nums font-semibold text-success py-2">{formatCurrency(totalKitchenTip + totalWaiterTip)}</TableCell>
             </TableRow>
           </TableBody>
         </Table>
+        {hasAdditionalWaiters && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Zusatzkellner erfasst — Rest kann von COCO abweichen.
+          </p>
+        )}
       </CardContent>
     </Card>
   );
+
 
   const waiterStatusComponent = waiterShifts.length > 0 ? (
     <Card>
@@ -1043,7 +1049,10 @@ export default function DailySummary() {
             });
             const teamSize = allMembers.length;
             const posSales = (shift.pos_sales || 0) / teamSize;
-            const poolShare = shift.participates_in_pool ? tipPerWaiterDisplay : 0;
+            const teamPoolShare = shift.participates_in_pool
+              ? allMembers.reduce((s, n) => s + (waiterShareByName.get(n) ?? 0), 0)
+              : 0;
+            const poolShare = teamSize > 0 ? teamPoolShare / teamSize : 0;
             const tipPct = posSales > 0 && shift.participates_in_pool
               ? ((poolShare / posSales) * 100).toFixed(1).replace('.', ',') + '%'
               : null;
@@ -1105,9 +1114,9 @@ export default function DailySummary() {
       totalKitchenTip={totalKitchenTip}
       waiterTipPool={waiterTipPool}
       waiterShareCount={waiterShareCount}
-      tipPerWaiter={tipPerWaiterDisplay}
+      tipPerWaiter={0}
       uniqueKitchenStaff={uniqueKitchenStaff}
-      tipPerKitchen={tipPerKitchenDisplay}
+      tipPerKitchen={0}
       bargeld={bargeldDisplay}
       bargeldRaw={bargeldRawDisplay}
       totalAdvances={totalAdvances}
