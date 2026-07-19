@@ -45,7 +45,7 @@ import { OrdersmartTakeawaySetting } from '@/components/settings/OrdersmartTakea
 import { usePreviousDayDeficit } from '@/hooks/usePreviousDayDeficit';
 import { useRemainingCash } from '@/hooks/useRemainingCash';
 import { useTelegramSettings } from '@/hooks/useTelegramSettings';
-import { floorToEuroCents, computeTipRestEuros } from '@/lib/tipRounding';
+import { distributeByHoursCocoModel, eurosToCents, type TipParticipant } from '@/lib/tipPoolCoco';
 
 export default function DailySummary() {
   const { selectedDate, setSelectedDate } = useSelectedDate();
@@ -305,15 +305,40 @@ export default function DailySummary() {
   // Positive historical surplus belongs to the bank-deposit pipeline (see Cash Balance page).
   const bargeld = bargeldRaw + Math.min(previousDeficit, 0);
 
-  // ---- Display-only tip rounding (Frank 19.07.2026) --------------------------
-  // Trinkgeld-Auszahlungen werden auf volle Euro abgerundet; die Cent-Reste
-  // aus Kellner-Pool + Küche fließen still ins angezeigte Tages-Bargeld ein.
-  // Verteilschlüssel, gespeicherte Werte und Exporte bleiben UNVERÄNDERT.
-  const waiterTipRest = computeTipRestEuros(waiterTipPool, waiterShareCount);
-  const kitchenTipRest = computeTipRestEuros(totalKitchenTip, uniqueKitchenStaff);
-  const tipRoundingLeftover = waiterTipRest + kitchenTipRest;
-  const tipPerWaiterDisplay = floorToEuroCents(tipPerWaiter);
-  const tipPerKitchenDisplay = floorToEuroCents(tipPerKitchen);
+  // ---- COCO-Modell: stundenbasierte Trinkgeld-Anzeige (Frank 19.07.2026) ------
+  // Anzeige (nicht Speicherung/Exporte): pro Topf stundenbasiert verteilen und
+  // auf volle Euro abrunden; die Reste beider Töpfe fließen still ins angezeigte
+  // Tages-Bargeld. Pool-Bildung, Erfassung, Exporte und History bleiben LEGACY.
+  const waiterParticipants: TipParticipant[] = [];
+  let hasAdditionalWaiters = false;
+  for (const shift of waiterShifts) {
+    if (shift.participates_in_pool === false) continue;
+    const members = getAllTeamMembers({
+      waiter_name: shift.waiter_name,
+      second_waiter_name: shift.second_waiter_name,
+      additional_waiters: (shift as any).additional_waiters || [],
+    });
+    if ((shift as any).additional_waiters?.length) hasAdditionalWaiters = true;
+    const teamSize = members.length || 1;
+    const perMemberHours = ((shift as any).hours_worked || 0) / teamSize;
+    for (const name of members) {
+      waiterParticipants.push({ key: name, hours: perMemberHours });
+    }
+  }
+  const waiterDist = distributeByHoursCocoModel(eurosToCents(waiterTipPool), waiterParticipants);
+
+  const kitchenParticipants: TipParticipant[] = kitchenShifts.map((k) => ({
+    key: k.staff_name,
+    hours: k.hours_worked || 0,
+  }));
+  const kitchenDist = distributeByHoursCocoModel(eurosToCents(totalKitchenTip), kitchenParticipants);
+
+  const waiterShareByName = new Map<string, number>();
+  for (const [k, cents] of waiterDist.sharesCents) waiterShareByName.set(k, cents / 100);
+  const kitchenShareByName = new Map<string, number>();
+  for (const [k, cents] of kitchenDist.sharesCents) kitchenShareByName.set(k, cents / 100);
+
+  const tipRoundingLeftover = (waiterDist.restCents + kitchenDist.restCents) / 100;
   const bargeldRawDisplay = bargeldRaw + tipRoundingLeftover;
   const bargeldDisplay = bargeld + tipRoundingLeftover;
 
@@ -972,31 +997,37 @@ export default function DailySummary() {
               <TableCell className="py-2">Küche (2%)</TableCell>
               <TableCell className="text-right tabular-nums font-medium text-success py-2">{formatCurrency(totalKitchenTip)}</TableCell>
             </TableRow>
-            {uniqueKitchenStaff > 0 && (
-              <TableRow>
-                <TableCell className="py-2 pl-6 text-muted-foreground">→ Pro Küche ({uniqueKitchenStaff})</TableCell>
-                <TableCell className="text-right tabular-nums text-success py-2">{formatCurrency(tipPerKitchenDisplay)}</TableCell>
+            {Array.from(kitchenShareByName).map(([name, amount]) => (
+              <TableRow key={`k-${name}`}>
+                <TableCell className="py-2 pl-6 text-muted-foreground">→ {name}</TableCell>
+                <TableCell className="text-right tabular-nums text-success py-2">{formatCurrency(amount)}</TableCell>
               </TableRow>
-            )}
+            ))}
             <TableRow>
               <TableCell className="py-2">Mitarbeiter Pool</TableCell>
               <TableCell className="text-right tabular-nums font-medium text-success py-2">{formatCurrency(waiterTipPool)}</TableCell>
             </TableRow>
-            {waiterShareCount > 0 && (
-              <TableRow>
-                <TableCell className="py-2 pl-6 text-muted-foreground">→ Pro Mitarbeiter ({waiterShareCount})</TableCell>
-                <TableCell className="text-right tabular-nums text-success py-2">{formatCurrency(tipPerWaiterDisplay)}</TableCell>
+            {Array.from(waiterShareByName).map(([name, amount]) => (
+              <TableRow key={`w-${name}`}>
+                <TableCell className="py-2 pl-6 text-muted-foreground">→ {name}</TableCell>
+                <TableCell className="text-right tabular-nums text-success py-2">{formatCurrency(amount)}</TableCell>
               </TableRow>
-            )}
+            ))}
             <TableRow className="border-t-2">
               <TableCell className="font-semibold py-2">Gesamt</TableCell>
               <TableCell className="text-right tabular-nums font-semibold text-success py-2">{formatCurrency(totalKitchenTip + totalWaiterTip)}</TableCell>
             </TableRow>
           </TableBody>
         </Table>
+        {hasAdditionalWaiters && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Zusatzkellner erfasst — Rest kann von COCO abweichen.
+          </p>
+        )}
       </CardContent>
     </Card>
   );
+
 
   const waiterStatusComponent = waiterShifts.length > 0 ? (
     <Card>
@@ -1018,7 +1049,10 @@ export default function DailySummary() {
             });
             const teamSize = allMembers.length;
             const posSales = (shift.pos_sales || 0) / teamSize;
-            const poolShare = shift.participates_in_pool ? tipPerWaiterDisplay : 0;
+            const teamPoolShare = shift.participates_in_pool
+              ? allMembers.reduce((s, n) => s + (waiterShareByName.get(n) ?? 0), 0)
+              : 0;
+            const poolShare = teamSize > 0 ? teamPoolShare / teamSize : 0;
             const tipPct = posSales > 0 && shift.participates_in_pool
               ? ((poolShare / posSales) * 100).toFixed(1).replace('.', ',') + '%'
               : null;
@@ -1080,9 +1114,9 @@ export default function DailySummary() {
       totalKitchenTip={totalKitchenTip}
       waiterTipPool={waiterTipPool}
       waiterShareCount={waiterShareCount}
-      tipPerWaiter={tipPerWaiterDisplay}
+      tipPerWaiter={0}
       uniqueKitchenStaff={uniqueKitchenStaff}
-      tipPerKitchen={tipPerKitchenDisplay}
+      tipPerKitchen={0}
       bargeld={bargeldDisplay}
       bargeldRaw={bargeldRawDisplay}
       totalAdvances={totalAdvances}
