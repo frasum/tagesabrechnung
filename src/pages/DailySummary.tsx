@@ -45,6 +45,7 @@ import { OrdersmartTakeawaySetting } from '@/components/settings/OrdersmartTakea
 import { usePreviousDayDeficit } from '@/hooks/usePreviousDayDeficit';
 import { useRemainingCash } from '@/hooks/useRemainingCash';
 import { useTelegramSettings } from '@/hooks/useTelegramSettings';
+import { floorToEuroCents, computeTipRestEuros } from '@/lib/tipRounding';
 
 export default function DailySummary() {
   const { selectedDate, setSelectedDate } = useSelectedDate();
