@@ -45,7 +45,7 @@ import { OrdersmartTakeawaySetting } from '@/components/settings/OrdersmartTakea
 import { usePreviousDayDeficit } from '@/hooks/usePreviousDayDeficit';
 import { useRemainingCash } from '@/hooks/useRemainingCash';
 import { useTelegramSettings } from '@/hooks/useTelegramSettings';
-import { floorToEuroCents, computeTipRestEuros } from '@/lib/tipRounding';
+import { distributeByHoursCocoModel, eurosToCents, type TipParticipant } from '@/lib/tipPoolCoco';
 
 export default function DailySummary() {
   const { selectedDate, setSelectedDate } = useSelectedDate();
@@ -305,15 +305,40 @@ export default function DailySummary() {
   // Positive historical surplus belongs to the bank-deposit pipeline (see Cash Balance page).
   const bargeld = bargeldRaw + Math.min(previousDeficit, 0);
 
-  // ---- Display-only tip rounding (Frank 19.07.2026) --------------------------
-  // Trinkgeld-Auszahlungen werden auf volle Euro abgerundet; die Cent-Reste
-  // aus Kellner-Pool + Küche fließen still ins angezeigte Tages-Bargeld ein.
-  // Verteilschlüssel, gespeicherte Werte und Exporte bleiben UNVERÄNDERT.
-  const waiterTipRest = computeTipRestEuros(waiterTipPool, waiterShareCount);
-  const kitchenTipRest = computeTipRestEuros(totalKitchenTip, uniqueKitchenStaff);
-  const tipRoundingLeftover = waiterTipRest + kitchenTipRest;
-  const tipPerWaiterDisplay = floorToEuroCents(tipPerWaiter);
-  const tipPerKitchenDisplay = floorToEuroCents(tipPerKitchen);
+  // ---- COCO-Modell: stundenbasierte Trinkgeld-Anzeige (Frank 19.07.2026) ------
+  // Anzeige (nicht Speicherung/Exporte): pro Topf stundenbasiert verteilen und
+  // auf volle Euro abrunden; die Reste beider Töpfe fließen still ins angezeigte
+  // Tages-Bargeld. Pool-Bildung, Erfassung, Exporte und History bleiben LEGACY.
+  const waiterParticipants: TipParticipant[] = [];
+  let hasAdditionalWaiters = false;
+  for (const shift of waiterShifts) {
+    if (shift.participates_in_pool === false) continue;
+    const members = getAllTeamMembers({
+      waiter_name: shift.waiter_name,
+      second_waiter_name: shift.second_waiter_name,
+      additional_waiters: (shift as any).additional_waiters || [],
+    });
+    if ((shift as any).additional_waiters?.length) hasAdditionalWaiters = true;
+    const teamSize = members.length || 1;
+    const perMemberHours = ((shift as any).hours_worked || 0) / teamSize;
+    for (const name of members) {
+      waiterParticipants.push({ key: name, hours: perMemberHours });
+    }
+  }
+  const waiterDist = distributeByHoursCocoModel(eurosToCents(waiterTipPool), waiterParticipants);
+
+  const kitchenParticipants: TipParticipant[] = kitchenShifts.map((k) => ({
+    key: k.staff_name,
+    hours: k.hours_worked || 0,
+  }));
+  const kitchenDist = distributeByHoursCocoModel(eurosToCents(totalKitchenTip), kitchenParticipants);
+
+  const waiterShareByName = new Map<string, number>();
+  for (const [k, cents] of waiterDist.sharesCents) waiterShareByName.set(k, cents / 100);
+  const kitchenShareByName = new Map<string, number>();
+  for (const [k, cents] of kitchenDist.sharesCents) kitchenShareByName.set(k, cents / 100);
+
+  const tipRoundingLeftover = (waiterDist.restCents + kitchenDist.restCents) / 100;
   const bargeldRawDisplay = bargeldRaw + tipRoundingLeftover;
   const bargeldDisplay = bargeld + tipRoundingLeftover;
 
